@@ -1,19 +1,17 @@
 import { Stack, useFocusEffect } from 'expo-router';
 import { View, StyleSheet, StatusBar, Platform } from 'react-native';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import Map from '~/components/Map';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 
 export default function MapScreen() {
-  // Set status bar style when screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      StatusBar.setBarStyle('light-content', true);
-      if (Platform.OS === 'android' && StatusBar.setBackgroundColor) {
-        StatusBar.setBackgroundColor('transparent', true);
-      }
-    }, [])
-  );
+  // Set status bar style when component mounts
+  useEffect(() => {
+    StatusBar.setBarStyle('light-content', true);
+    if (Platform.OS === 'android' && StatusBar.setBackgroundColor) {
+      StatusBar.setBackgroundColor('transparent', true);
+    }
+  }, []);
 
   return (
     <View style={styles.container}>
