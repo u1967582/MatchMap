@@ -1,49 +1,104 @@
 // components/SearchBar.tsx
-import { View, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet, Platform } from 'react-native';
+import { useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { memo } from 'react';
 
-interface Props {
+interface SearchBarProps {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
+  editable?: boolean;
 }
 
-export default function SearchBar({ value, onChangeText, placeholder = 'Buscar ubicación...' }: Props) {
+const SearchBar: React.FC<SearchBarProps> = ({ 
+  value, 
+  onChangeText, 
+  placeholder = 'Buscar ubicación...', 
+  editable = true 
+}) => {
+  
+  const handleTextChange = useCallback((text: string) => {
+    onChangeText(text);
+  }, [onChangeText]);
+
+  const handleClear = useCallback(() => {
+    onChangeText('');
+  }, [onChangeText]);
+
   return (
     <View style={styles.searchContainer}>
-      <TextInput
-        style={styles.searchInput}
-        placeholder={placeholder}
-        placeholderTextColor="#999"
-        value={value}
-        onChangeText={onChangeText}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+      <View style={styles.inputContainer}>
+        <Ionicons 
+          name="search" 
+          size={20} 
+          color="#8E8E93" 
+          style={styles.searchIcon} 
+        />
+        <TextInput
+          style={styles.searchInput}
+          placeholder={placeholder}
+          placeholderTextColor="#8E8E93"
+          value={value}
+          onChangeText={handleTextChange}
+          autoCapitalize="none"
+          autoCorrect={false}
+          editable={editable}
+          returnKeyType="search"
+          clearButtonMode="never"
+        />
+        {value.length > 0 && (
+          <Ionicons 
+            name="close-circle" 
+            size={20} 
+            color="#8E8E93" 
+            style={styles.clearIcon}
+            onPress={handleClear}
+          />
+        )}
+      </View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   searchContainer: {
     position: 'absolute',
-    top: 60,
+    top: Platform.OS === 'ios' ? 60 : 40,
     left: 20,
     right: 20,
     zIndex: 1000,
   },
-  searchInput: {
-    backgroundColor: 'white',
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3A4A5C',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    paddingVertical: 16,
+    minHeight: 50,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#FFFFFF',
+    paddingVertical: 0,
+  },
+  clearIcon: {
+    marginLeft: 8,
+    padding: 4,
   },
 });
+
+export default memo(SearchBar);
