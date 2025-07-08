@@ -1,62 +1,150 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView } from 'react-native';
+import { useState, useCallback, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Linking } from 'react-native';
 import { Link, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
+import { useAuthStateChange, getOAuthRedirectUrl } from '~/utils/auth';
 import ScreenTitle from '~/components/ui/ScreenTitle';
 import InputField from '~/components/ui/InputField';
 import CustomButton from '~/components/ui/CustomButton';
+import { memo } from 'react';
+
+interface RegisterFormData {
+  name: string;
+  email: string;
+  password: string;
+  username: string;
+  isBarOwner: boolean;
+}
+
+interface LoadingState {
+  register: boolean;
+  google: boolean;
+  facebook: boolean;
+}
+
+interface FormValidation {
+  isValid: boolean;
+  errors: string[];
+}
 
 const RegisterScreen: React.FC = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [isBarOwner, setIsBarOwner] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState<RegisterFormData>({
+    name: '',
+    email: '',
+    password: '',
+    username: '',
+    isBarOwner: false,
+  });
+
+  const [loading, setLoading] = useState<LoadingState>({
+    register: false,
+    google: false,
+    facebook: false,
+  });
+
   const router = useRouter();
 
-  const validateForm = () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'El nombre es requerido');
-      return false;
-    }
-    if (!username.trim()) {
-      Alert.alert('Error', 'El nombre de usuario es requerido');
-      return false;
-    }
-    if (!email.trim()) {
-      Alert.alert('Error', 'El email es requerido');
-      return false;
-    }
-    if (!email.includes('@')) {
-      Alert.alert('Error', 'Ingresa un email válido');
-      return false;
-    }
-    if (!password.trim()) {
-      Alert.alert('Error', 'La contraseña es requerida');
-      return false;
-    }
-    if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+  // Listen for auth state changes (including OAuth callbacks)
+  useAuthStateChange();
+
+  // Memoized form validation
+  const formValidation = useMemo((): FormValidation => {
+    const errors: string[] = [];
+    
+    if (!formData.name.trim()) errors.push('El nombre es requerido');
+    if (!formData.username.trim()) errors.push('El nombre de usuario es requerido');
+    if (!formData.email.trim()) errors.push('El email es requerido');
+    if (formData.email.trim() && !formData.email.includes('@')) errors.push('Ingresa un email válido');
+    if (!formData.password.trim()) errors.push('La contraseña es requerida');
+    if (formData.password.trim() && formData.password.length < 6) errors.push('La contraseña debe tener al menos 6 caracteres');
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }, [formData]);
+
+  // Optimized form update handlers
+  const handleNameChange = useCallback((name: string) => {
+    setFormData(prev => ({ ...prev, name }));
+  }, []);
+
+  const handleUsernameChange = useCallback((username: string) => {
+    setFormData(prev => ({ ...prev, username }));
+  }, []);
+
+  const handleEmailChange = useCallback((email: string) => {
+    setFormData(prev => ({ ...prev, email }));
+  }, []);
+
+  const handlePasswordChange = useCallback((password: string) => {
+    setFormData(prev => ({ ...prev, password }));
+  }, []);
+
+  const handleBarOwnerToggle = useCallback(() => {
+    setFormData(prev => ({ ...prev, isBarOwner: !prev.isBarOwner }));
+  }, []);
+
+  // Optimized loading state helpers
+  const setLoadingState = useCallback((type: keyof LoadingState, isLoading: boolean) => {
+    setLoading(prev => ({ ...prev, [type]: isLoading }));
+  }, []);
+
+  // Form validation helper
+  const validateAndShowErrors = useCallback(() => {
+    if (!formValidation.isValid) {
+      Alert.alert('Error', formValidation.errors[0]);
       return false;
     }
     return true;
-  };
+  }, [formValidation]);
 
-  const handleRegister = async () => {
-    if (!validateForm()) return;
+  // Error handling helper
+  const handleOAuthError = useCallback((error: any, provider: string) => {
+    console.error(`${provider} OAuth error:`, error);
+    
+    if (error?.message?.includes('provider is not enabled') || 
+        error?.message?.includes('Unsupported provider')) {
+      Alert.alert(
+        'Servicio no disponible', 
+        `El registro con ${provider} no está configurado en este momento. Por favor, completa el formulario de registro.`,
+        [{ text: 'Entendido' }]
+      );
+    } else {
+      Alert.alert(`Error de ${provider}`, error?.message || `Error inesperado con ${provider}`);
+    }
+  }, []);
 
-    setLoading(true);
+  // OAuth URL opening helper
+  const openOAuthUrl = useCallback(async (url: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'No se puede abrir el navegador');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo abrir la URL de autenticación');
+    }
+  }, []);
+
+  // Main registration handler
+  const handleRegister = useCallback(async () => {
+    if (!validateAndShowErrors()) return;
+
+    setLoadingState('register', true);
+    
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: password.trim(),
+        email: formData.email.trim(),
+        password: formData.password.trim(),
         options: {
           data: {
-            name: name.trim(),
-            username: username.trim(),
-            is_bar_owner: isBarOwner
+            name: formData.name.trim(),
+            username: formData.username.trim(),
+            is_bar_owner: formData.isBarOwner
           }
         }
       });
@@ -68,25 +156,86 @@ const RegisterScreen: React.FC = () => {
 
       if (authData.user) {
         Alert.alert('Éxito', 'Usuario registrado correctamente', [
-          { text: 'OK', onPress: () => router.push('/') }
+          { text: 'OK', onPress: () => router.replace('/(protected)/map' as any) }
         ]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Registration error:', error);
       Alert.alert('Error', 'Error inesperado durante el registro');
     } finally {
-      setLoading(false);
+      setLoadingState('register', false);
     }
-  };
+  }, [formData, validateAndShowErrors, setLoadingState, router]);
 
-  const handleGoogleRegister = () => {
-    // TODO: Implement Google registration
-    Alert.alert('Función próximamente', 'El registro con Google estará disponible pronto');
-  };
+  // Google OAuth handler
+  const handleGoogleRegister = useCallback(async () => {
+    setLoadingState('google', true);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getOAuthRedirectUrl(),
+        },
+      });
 
-  const handleFacebookRegister = () => {
-    // TODO: Implement Facebook registration
-    Alert.alert('Función próximamente', 'El registro con Facebook estará disponible pronto');
-  };
+      if (error) {
+        handleOAuthError(error, 'Google');
+        return;
+      }
+
+      if (data.url) {
+        await openOAuthUrl(data.url);
+      }
+    } catch (error: any) {
+      handleOAuthError(error, 'Google');
+    } finally {
+      setLoadingState('google', false);
+    }
+  }, [setLoadingState, handleOAuthError, openOAuthUrl]);
+
+  // Facebook OAuth handler
+  const handleFacebookRegister = useCallback(async () => {
+    setLoadingState('facebook', true);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: getOAuthRedirectUrl(),
+        },
+      });
+
+      if (error) {
+        handleOAuthError(error, 'Facebook');
+        return;
+      }
+
+      if (data.url) {
+        await openOAuthUrl(data.url);
+      }
+    } catch (error: any) {
+      handleOAuthError(error, 'Facebook');
+    } finally {
+      setLoadingState('facebook', false);
+    }
+  }, [setLoadingState, handleOAuthError, openOAuthUrl]);
+
+  // Back navigation handler
+  const handleBackPress = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  // Check if any loading state is active
+  const isAnyLoading = useMemo(() => {
+    return Object.values(loading).some(Boolean);
+  }, [loading]);
+
+  // Memoized checkbox style
+  const checkboxStyle = useMemo(() => [
+    styles.checkbox,
+    formData.isBarOwner && styles.checkboxChecked
+  ], [formData.isBarOwner]);
 
   return (
     <>
@@ -95,7 +244,8 @@ const RegisterScreen: React.FC = () => {
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={handleBackPress}
+            disabled={isAnyLoading}
           >
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -115,11 +265,12 @@ const RegisterScreen: React.FC = () => {
               <Text style={styles.fieldLabel}>Name</Text>
               <InputField
                 placeholder="Enter your name"
-                value={name}
-                onChangeText={setName}
+                value={formData.name}
+                onChangeText={handleNameChange}
                 autoCapitalize="words"
                 autoCorrect={false}
                 theme="dark"
+                editable={!isAnyLoading}
               />
             </View>
 
@@ -127,11 +278,12 @@ const RegisterScreen: React.FC = () => {
               <Text style={styles.fieldLabel}>User Name</Text>
               <InputField
                 placeholder="Enter your user name"
-                value={username}
-                onChangeText={setUsername}
+                value={formData.username}
+                onChangeText={handleUsernameChange}
                 autoCapitalize="none"
                 autoCorrect={false}
                 theme="dark"
+                editable={!isAnyLoading}
               />
             </View>
 
@@ -139,12 +291,13 @@ const RegisterScreen: React.FC = () => {
               <Text style={styles.fieldLabel}>Email</Text>
               <InputField
                 placeholder="Enter your email"
-                value={email}
-                onChangeText={setEmail}
+                value={formData.email}
+                onChangeText={handleEmailChange}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
                 theme="dark"
+                editable={!isAnyLoading}
               />
             </View>
 
@@ -152,20 +305,22 @@ const RegisterScreen: React.FC = () => {
               <Text style={styles.fieldLabel}>Password</Text>
               <InputField
                 placeholder="Enter your password"
-                value={password}
-                onChangeText={setPassword}
+                value={formData.password}
+                onChangeText={handlePasswordChange}
                 secureTextEntry
                 autoCapitalize="none"
                 theme="dark"
+                editable={!isAnyLoading}
               />
             </View>
 
             <TouchableOpacity 
               style={styles.checkboxContainer}
-              onPress={() => setIsBarOwner(!isBarOwner)}
+              onPress={handleBarOwnerToggle}
+              disabled={isAnyLoading}
             >
-              <View style={[styles.checkbox, isBarOwner && styles.checkboxChecked]}>
-                {isBarOwner && <Text style={styles.checkmark}>✓</Text>}
+              <View style={checkboxStyle}>
+                {formData.isBarOwner && <Text style={styles.checkmark}>✓</Text>}
               </View>
               <Text style={styles.checkboxLabel}>¿Eres propietario de un bar?</Text>
             </TouchableOpacity>
@@ -176,19 +331,24 @@ const RegisterScreen: React.FC = () => {
               text="Sign up"
               onPress={handleRegister}
               variant="primary"
-              loading={loading}
+              loading={loading.register}
+              disabled={!formValidation.isValid || isAnyLoading}
             />
             
             <CustomButton
               text="Continue with Google"
               onPress={handleGoogleRegister}
               variant="social"
+              loading={loading.google}
+              disabled={isAnyLoading}
             />
             
             <CustomButton
               text="Continuar con Facebook"
               onPress={handleFacebookRegister}
               variant="social"
+              loading={loading.facebook}
+              disabled={isAnyLoading}
             />
           </View>
 
@@ -285,4 +445,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RegisterScreen;
+export default memo(RegisterScreen);

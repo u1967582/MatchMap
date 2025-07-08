@@ -30,6 +30,11 @@
         {
           "android": {
             "edgeToEdgeEnabled": true
+          },
+          "ios": {
+            "infoPlist": {
+              "UIViewControllerBasedStatusBarAppearance": true
+            }
           }
         }
       ]
@@ -51,7 +56,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.MatchMap"
+      "bundleIdentifier": "com.anonymous.MatchMap",
+      "infoPlist": {
+        "UIViewControllerBasedStatusBarAppearance": true
+      }
     },
     "android": {
       "adaptiveIcon": {
