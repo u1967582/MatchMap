@@ -4,7 +4,7 @@ import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-nat
 interface CustomButtonProps {
   text: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'dark' | 'social';
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
@@ -34,6 +34,12 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       case 'outline':
         baseStyle.push(styles.outline);
         break;
+      case 'dark':
+        baseStyle.push(styles.dark);
+        break;
+      case 'social':
+        baseStyle.push(styles.social);
+        break;
     }
     
     return baseStyle;
@@ -52,9 +58,29 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       case 'outline':
         baseStyle.push(styles.outlineText);
         break;
+      case 'dark':
+        baseStyle.push(styles.darkText);
+        break;
+      case 'social':
+        baseStyle.push(styles.socialText);
+        break;
     }
     
     return baseStyle;
+  };
+
+  const getLoadingColor = () => {
+    switch (variant) {
+      case 'primary':
+      case 'dark':
+        return '#FFFFFF';
+      case 'secondary':
+      case 'outline':
+      case 'social':
+        return '#8E8E93';
+      default:
+        return '#FFFFFF';
+    }
   };
 
   return (
@@ -65,10 +91,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator 
-          color={variant === 'primary' ? '#1E2A38' : '#CDE6FF'} 
-          size="small" 
-        />
+        <ActivityIndicator color={getLoadingColor()} size="small" />
       ) : (
         <Text style={getTextStyle()}>{text}</Text>
       )}
@@ -78,19 +101,12 @@ const CustomButton: React.FC<CustomButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 18,
-    paddingHorizontal: 40,
-    borderRadius: 30,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    minHeight: 50,
   },
   fullWidth: {
     width: '100%',
@@ -99,7 +115,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   primary: {
-    backgroundColor: '#CDE6FF',
+    backgroundColor: '#007AFF',
   },
   secondary: {
     backgroundColor: '#1E2A38',
@@ -109,18 +125,30 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#CDE6FF',
   },
+  dark: {
+    backgroundColor: '#3A4A5C',
+  },
+  social: {
+    backgroundColor: '#2C3E50',
+  },
   buttonText: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
   },
   primaryText: {
-    color: '#1E2A38',
+    color: '#FFFFFF',
   },
   secondaryText: {
     color: '#CDE6FF',
   },
   outlineText: {
     color: '#CDE6FF',
+  },
+  darkText: {
+    color: '#FFFFFF',
+  },
+  socialText: {
+    color: '#FFFFFF',
   },
 });
 
