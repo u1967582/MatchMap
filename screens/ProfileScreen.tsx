@@ -122,7 +122,7 @@ export default function ProfileScreen() {
   }, [router]);
 
   const handleViewPlans = useCallback(() => {
-    router.push('/plans' as any);
+    router.push('/(protected)/plans' as any);
   }, [router]);
 
   useEffect(() => {
