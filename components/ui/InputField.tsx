@@ -12,6 +12,7 @@ interface InputFieldProps {
   multiline?: boolean;
   numberOfLines?: number;
   maxLength?: number;
+  theme?: 'light' | 'dark';
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -26,12 +27,20 @@ const InputField: React.FC<InputFieldProps> = ({
   multiline = false,
   numberOfLines = 1,
   maxLength,
+  theme = 'light',
 }) => {
+  const inputStyle = [
+    styles.input,
+    theme === 'dark' ? styles.darkInput : styles.lightInput,
+  ];
+
+  const placeholderColor = theme === 'dark' ? '#8E8E93' : '#999';
+
   return (
     <TextInput
-      style={styles.input}
+      style={inputStyle}
       placeholder={placeholder}
-      placeholderTextColor="#999"
+      placeholderTextColor={placeholderColor}
       value={value}
       onChangeText={onChangeText}
       secureTextEntry={secureTextEntry}
@@ -48,15 +57,23 @@ const InputField: React.FC<InputFieldProps> = ({
 
 const styles = StyleSheet.create({
   input: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     fontSize: 16,
-    marginBottom: 15,
+    marginBottom: 16,
+    minHeight: 50,
+  },
+  lightInput: {
+    backgroundColor: 'white',
     borderWidth: 1,
     borderColor: '#ddd',
-    minHeight: 48,
+    color: '#000',
+  },
+  darkInput: {
+    backgroundColor: '#3A4A5C',
+    borderWidth: 0,
+    color: '#FFFFFF',
   },
 });
 

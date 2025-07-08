@@ -23,13 +23,13 @@ const WelcomeScreen: React.FC = () => {
           
           <View style={styles.buttonsContainer}>
             <CustomButton
-              text="Log In"
+              text="Iniciar sesión"
               onPress={handleLoginPress}
               variant="primary"
             />
             
             <CustomButton
-              text="Sign Up"
+              text="Registrarse"
               onPress={handleSignUpPress}
               variant="secondary"
             />
