@@ -12,13 +12,17 @@ export const getOAuthRedirectUrl = () => {
   }
 };
 
-export const useAuthStateChange = () => {
+export const useAuthStateChange = (onUserSignedIn?: (user: any) => Promise<void>) => {
   const router = useRouter();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
+          // Handle OAuth user profile creation if callback provided
+          if (onUserSignedIn && session.user) {
+            await onUserSignedIn(session.user);
+          }
           // User successfully signed in (including OAuth) - redirect to protected map
           router.replace('/(protected)/map' as any);
         } else if (event === 'SIGNED_OUT') {
@@ -29,7 +33,7 @@ export const useAuthStateChange = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [router, onUserSignedIn]);
 };
 
 export const getCurrentUser = async () => {

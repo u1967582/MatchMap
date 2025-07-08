@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 
 interface TabItem {
   icon: keyof typeof Feather.glyphMap;
@@ -10,7 +10,7 @@ interface TabItem {
 }
 
 const tabs: TabItem[] = [
-  { icon: 'home', label: 'Inicio', route: '/home' },
+  { icon: 'home', label: 'Inicio', route: '/(protected)/map' },
   { icon: 'search', label: 'Buscar', route: '/search' },
   { icon: 'heart', label: 'Favoritos', route: '/favorites' },
   { icon: 'user', label: 'Profile', route: '/profile' },
@@ -18,22 +18,38 @@ const tabs: TabItem[] = [
 
 const BottomTabBar = () => {
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleTabPress = useCallback((route: string) => {
     router.push(route as any);
   }, [router]);
 
-  const renderTab = useCallback(({ icon, label, route }: TabItem) => (
-    <TouchableOpacity
-      key={route}
-      style={styles.tab}
-      onPress={() => handleTabPress(route)}
-      activeOpacity={0.7}
-    >
-      <Feather name={icon} size={24} color="#A3B3CC" />
-      <Text style={styles.tabLabel}>{label}</Text>
-    </TouchableOpacity>
-  ), [handleTabPress]);
+  const isActiveTab = useCallback((route: string) => {
+    // Special handling for map route
+    if (route === '/(protected)/map') {
+      return pathname === '/(protected)/map' || pathname === '/map';
+    }
+    // Check if current pathname matches the tab route
+    return pathname === route || pathname.includes(route.replace('/', ''));
+  }, [pathname]);
+
+  const renderTab = useCallback(({ icon, label, route }: TabItem) => {
+    const isActive = isActiveTab(route);
+    const iconColor = isActive ? '#FFFFFF' : '#A3B3CC';
+    const textColor = isActive ? '#FFFFFF' : '#A3B3CC';
+    
+    return (
+      <TouchableOpacity
+        key={route}
+        style={styles.tab}
+        onPress={() => handleTabPress(route)}
+        activeOpacity={0.7}
+      >
+        <Feather name={icon} size={24} color={iconColor} />
+        <Text style={[styles.tabLabel, { color: textColor }]}>{label}</Text>
+      </TouchableOpacity>
+    );
+  }, [handleTabPress, isActiveTab]);
 
   return (
     <View style={styles.container}>
@@ -70,7 +86,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tabLabel: {
-    color: '#A3B3CC',
     fontSize: 12,
     fontWeight: '500',
     marginTop: 4,
