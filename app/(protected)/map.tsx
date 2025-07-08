@@ -2,6 +2,7 @@ import { Stack, useFocusEffect } from 'expo-router';
 import { View, StyleSheet, StatusBar, Platform } from 'react-native';
 import { useCallback } from 'react';
 import Map from '~/components/Map';
+import BottomTabBar from '~/components/ui/BottomTabBar';
 
 export default function MapScreen() {
   // Set status bar style when screen is focused
@@ -24,6 +25,7 @@ export default function MapScreen() {
         }} 
       />
       <Map />
+      <BottomTabBar />
     </View>
   );
 }
@@ -32,10 +34,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1C2A3A',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
 }); 
