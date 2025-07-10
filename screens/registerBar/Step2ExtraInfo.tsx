@@ -1,0 +1,253 @@
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import { useRouter, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useBarRegisterStore } from '~/stores/barRegisterStore';
+import CheckboxGroup from '~/components/Form/CheckboxGroup';
+import PrimaryButton from '~/components/ui/PrimaryButton';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '~/utils/supabase';
+
+interface SelectOption {
+  id: string;
+  label: string;
+}
+
+const Step2ExtraInfo: React.FC = () => {
+  const router = useRouter();
+  const { languageIds, foodTypeIds, featureIds, setField } = useBarRegisterStore();
+  const [loading, setLoading] = useState(false);
+  const [languages, setLanguages] = useState<SelectOption[]>([]);
+  const [foodTypes, setFoodTypes] = useState<SelectOption[]>([]);
+  const [features, setFeatures] = useState<SelectOption[]>([]);
+
+  // Fetch languages from database
+  const fetchLanguages = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('languages')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching languages:', error);
+        return;
+      }
+
+      const mappedLanguages = data?.map(lang => ({ id: lang.id.toString(), label: lang.name })) || [];
+      console.log('🗣️ Loaded languages:', mappedLanguages);
+      setLanguages(mappedLanguages);
+    } catch (error) {
+      console.error('Error fetching languages:', error);
+    }
+  }, []);
+
+  // Fetch food types from database
+  const fetchFoodTypes = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('food_types')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching food types:', error);
+        return;
+      }
+
+      const mappedFoodTypes = data?.map(food => ({ id: food.id.toString(), label: food.name })) || [];
+      console.log('🍕 Loaded food types:', mappedFoodTypes);
+      setFoodTypes(mappedFoodTypes);
+    } catch (error) {
+      console.error('Error fetching food types:', error);
+    }
+  }, []);
+
+  // Fetch features from database
+  const fetchFeatures = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bar_features')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching features:', error);
+        return;
+      }
+
+      const mappedFeatures = data?.map(feature => ({ id: feature.id.toString(), label: feature.name })) || [];
+      console.log('⭐ Loaded features:', mappedFeatures);
+      setFeatures(mappedFeatures);
+    } catch (error) {
+      console.error('Error fetching features:', error);
+    }
+  }, []);
+
+  // Load all data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchLanguages(),
+        fetchFoodTypes(),
+        fetchFeatures(),
+      ]);
+      setLoading(false);
+    };
+
+    loadData();
+  }, [fetchLanguages, fetchFoodTypes, fetchFeatures]);
+
+  const handleNext = () => {
+    router.push('/register-bar/step3' as any);
+  };
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Información Extra</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressStep, styles.progressStepActive]} />
+            <View style={[styles.progressStep, styles.progressStepActive]} />
+            <View style={styles.progressStep} />
+            <View style={styles.progressStep} />
+          </View>
+          <Text style={styles.progressText}>Paso 2 de 4</Text>
+        </View>
+
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.content}>
+            <Text style={styles.title}>Detalles adicionales</Text>
+            <Text style={styles.subtitle}>
+              Información que ayudará a los usuarios a encontrar exactamente lo que buscan.
+            </Text>
+
+            <CheckboxGroup
+              label="Idiomas que se hablan"
+              options={languages}
+              selectedIds={languageIds}
+              onSelectionChange={(ids) => {
+                console.log('🗣️ Languages selected:', ids);
+                setField('languageIds', ids);
+              }}
+            />
+
+            <CheckboxGroup
+              label="Tipos de comida disponibles"
+              options={foodTypes}
+              selectedIds={foodTypeIds}
+              onSelectionChange={(ids) => {
+                console.log('🍕 Food types selected:', ids);
+                setField('foodTypeIds', ids);
+              }}
+            />
+
+            <CheckboxGroup
+              label="Características del bar"
+              options={features}
+              selectedIds={featureIds}
+              onSelectionChange={(ids) => {
+                console.log('⭐ Features selected:', ids);
+                setField('featureIds', ids);
+              }}
+            />
+          </View>
+        </ScrollView>
+
+        <View style={styles.buttonContainer}>
+          <PrimaryButton
+            title="Siguiente"
+            onPress={handleNext}
+            loading={loading}
+          />
+        </View>
+      </SafeAreaView>
+    </>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1C2A3A',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 32,
+  },
+  progressContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  progressBar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  progressStep: {
+    flex: 1,
+    height: 4,
+    backgroundColor: '#374151',
+    borderRadius: 2,
+  },
+  progressStepActive: {
+    backgroundColor: '#007AFF',
+  },
+  progressText: {
+    color: '#8E8E93',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: '#8E8E93',
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  buttonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+});
+
+export default Step2ExtraInfo; 
