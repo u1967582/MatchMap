@@ -1,17 +1,236 @@
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Alert, Image, Dimensions } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useBarRegisterStore } from '~/stores/barRegisterStore';
 import PrimaryButton from '~/components/ui/PrimaryButton';
 import { supabase } from '~/utils/supabase';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { useImageUpload } from '~/hooks/useImageUpload';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+interface ImageItem {
+  id: string;
+  uri: string;
+  uploading: boolean;
+  order: number;
+}
+
+const { width } = Dimensions.get('window');
+const IMAGE_WIDTH = (width - 60) / 2; // 2 columns with padding
 
 const Step4Photos: React.FC = () => {
   const router = useRouter();
   const { getFormData, resetForm } = useBarRegisterStore();
+  const { uploadMultipleBarImages } = useImageUpload();
+  
   const [loading, setLoading] = useState(false);
+  const [barImages, setBarImages] = useState<ImageItem[]>([]);
+  const [menuImages, setMenuImages] = useState<ImageItem[]>([]);
 
-  const handleSubmit = async () => {
+  // Generate unique ID for images
+  const generateId = () => Math.random().toString(36).substring(7);
+
+  // Request permissions
+  const requestPermissions = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permisos requeridos',
+        'Necesitamos acceso a tu galería para seleccionar imágenes.',
+        [{ text: 'OK' }]
+      );
+      return false;
+    }
+    return true;
+  }, []);
+
+  // Pick images from gallery
+  const pickImages = useCallback(async (type: 'bar' | 'menu') => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 0.8,
+        aspect: type === 'bar' ? [16, 9] : [3, 4],
+        allowsEditing: false,
+      });
+
+      if (!result.canceled && result.assets) {
+        const currentImages = type === 'bar' ? barImages : menuImages;
+        const maxImages = type === 'bar' ? 5 : 3;
+        
+        // Check if we can add more images
+        const remainingSlots = maxImages - currentImages.length;
+        if (remainingSlots <= 0) {
+          Alert.alert(
+            'Límite alcanzado',
+            `Solo puedes agregar ${maxImages} imágenes para ${type === 'bar' ? 'fotos del bar' : 'fotos del menú'}.`
+          );
+          return;
+        }
+
+        // Take only the images that fit
+        const imagesToAdd = result.assets.slice(0, remainingSlots);
+        
+        const newImages = imagesToAdd.map((asset, index) => ({
+          id: generateId(),
+          uri: asset.uri,
+          uploading: false,
+          order: currentImages.length + index + 1,
+        }));
+
+        if (type === 'bar') {
+          setBarImages(prev => [...prev, ...newImages]);
+        } else {
+          setMenuImages(prev => [...prev, ...newImages]);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking images:', error);
+      Alert.alert('Error', 'No se pudieron seleccionar las imágenes');
+    }
+  }, [barImages, menuImages, requestPermissions]);
+
+  // Remove image
+  const removeImage = useCallback((id: string, type: 'bar' | 'menu') => {
+    if (type === 'bar') {
+      setBarImages(prev => {
+        const filtered = prev.filter(img => img.id !== id);
+        // Reorder remaining images
+        return filtered.map((img, index) => ({ ...img, order: index + 1 }));
+      });
+    } else {
+      setMenuImages(prev => {
+        const filtered = prev.filter(img => img.id !== id);
+        // Reorder remaining images
+        return filtered.map((img, index) => ({ ...img, order: index + 1 }));
+      });
+    }
+  }, []);
+
+  // Handle drag end for reordering
+  const handleDragEnd = useCallback((data: ImageItem[], type: 'bar' | 'menu') => {
+    // Update order based on new positions
+    const reorderedImages = data.map((img, index) => ({
+      ...img,
+      order: index + 1,
+    }));
+
+    if (type === 'bar') {
+      setBarImages(reorderedImages);
+    } else {
+      setMenuImages(reorderedImages);
+    }
+  }, []);
+
+  // Render draggable image item
+  const renderImageItem = useCallback(({ item, drag, isActive }: RenderItemParams<ImageItem>, type: 'bar' | 'menu') => {
+    const imageStyle = type === 'bar' 
+      ? { width: IMAGE_WIDTH, height: IMAGE_WIDTH * 9 / 16 } // 16:9 ratio
+      : { width: IMAGE_WIDTH, height: IMAGE_WIDTH * 4 / 3 }; // 3:4 ratio
+
+    return (
+      <TouchableOpacity
+        style={[styles.imageContainer, isActive && styles.activeImageContainer]}
+        onLongPress={drag}
+        disabled={isActive}
+      >
+        <Image source={{ uri: item.uri }} style={[styles.image, imageStyle]} />
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={() => removeImage(item.id, type)}
+        >
+          <Ionicons name="close-circle" size={24} color="#FF6B6B" />
+        </TouchableOpacity>
+        <View style={styles.orderBadge}>
+          <Text style={styles.orderText}>{item.order}</Text>
+        </View>
+        <View style={styles.dragHandle}>
+          <Ionicons name="reorder-three" size={20} color="#666" />
+        </View>
+      </TouchableOpacity>
+    );
+  }, [removeImage]);
+
+  // Insert relationships helper
+  const insertRelationships = useCallback(async (barId: string, formData: any) => {
+    const relationships = [
+      {
+        table: 'bar_languages',
+        data: formData.languageIds?.map((id: string) => ({
+          bar_id: barId,
+          language_id: parseInt(id)
+        })) || [],
+      },
+      {
+        table: 'bar_food_types',
+        data: formData.foodTypeIds?.map((id: string) => ({
+          bar_id: barId,
+          food_type_id: parseInt(id)
+        })) || [],
+      },
+      {
+        table: 'bar_selected_features',
+        data: formData.featureIds?.map((id: string) => ({
+          bar_id: barId,
+          feature_id: parseInt(id)
+        })) || [],
+      },
+    ];
+
+    for (const { table, data } of relationships) {
+      if (data.length > 0) {
+        const { error } = await supabase.from(table).insert(data);
+        if (error) {
+          console.error(`Error inserting ${table}:`, error);
+        }
+      }
+    }
+  }, []);
+
+  // Upload images and save to database with order
+  const uploadImages = useCallback(async (barId: string, images: ImageItem[], type: 'bar' | 'menu') => {
+    const table = type === 'bar' ? 'bar_images' : 'bar_menus';
+    
+    try {
+      // Prepare images for upload with proper structure
+      const imagesToUpload = images.map(image => ({
+        uri: image.uri,
+        order: image.order
+      }));
+
+      // Upload all images using the new organized structure
+      const uploadedImages = await uploadMultipleBarImages(imagesToUpload, barId, type);
+
+      // Save to database with order
+      for (const uploadedImage of uploadedImages) {
+        const insertData = {
+          bar_id: barId,
+          image_url: uploadedImage.url,
+          ...(type === 'bar' ? { image_order: uploadedImage.order } : { image_order: uploadedImage.order }),
+        };
+
+        const { error } = await supabase.from(table).insert(insertData);
+
+        if (error) {
+          console.error(`Error saving ${type} image to database:`, error);
+        } else {
+          console.log(`✅ ${type} image saved:`, uploadedImage.path);
+        }
+      }
+    } catch (error) {
+      console.error(`Error uploading ${type} images:`, error);
+      throw error; // Re-throw to handle in the main submit function
+    }
+  }, [uploadMultipleBarImages]);
+
+  // Main submit handler
+  const handleSubmit = useCallback(async () => {
     setLoading(true);
     
     try {
@@ -19,13 +238,12 @@ const Step4Photos: React.FC = () => {
       
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
       if (userError || !user) {
         Alert.alert('Error', 'Debes estar autenticado para registrar un bar');
         return;
       }
 
-      // Simple bar registration without images for now
+      // Create bar
       const { data: barData, error: barError } = await supabase
         .from('bars')
         .insert({
@@ -44,76 +262,48 @@ const Step4Photos: React.FC = () => {
         .single();
 
       if (barError) {
-        console.error('Error creating bar:', barError);
-        Alert.alert('Error', 'No se pudo registrar el bar: ' + barError.message);
-        return;
+        throw new Error(barError.message);
       }
 
-      // Insert relationships with detailed logging
-      console.log('📊 Form data for relationships:', {
-        languageIds: formData.languageIds,
-        foodTypeIds: formData.foodTypeIds,
-        featureIds: formData.featureIds,
-        barId: barData.id
-      });
+      // Insert relationships
+      await insertRelationships(barData.id, formData);
 
-      if (formData.languageIds && formData.languageIds.length > 0) {
-        console.log('🗣️ Inserting languages:', formData.languageIds);
-        const languageInserts = formData.languageIds.map((languageId: string) => ({
-          bar_id: barData.id,
-          language_id: parseInt(languageId),
-        }));
-        console.log('🗣️ Language inserts:', languageInserts);
+      // Upload images with order
+      let uploadSuccess = true;
+      let uploadErrors: string[] = [];
 
-        const { error: languageError } = await supabase.from('bar_languages').insert(languageInserts);
-        if (languageError) {
-          console.error('❌ Error inserting languages:', languageError);
-        } else {
-          console.log('✅ Languages inserted successfully');
+      if (barImages.length > 0) {
+        try {
+          await uploadImages(barData.id, barImages, 'bar');
+          console.log(`✅ Uploaded ${barImages.length} bar images`);
+        } catch (error) {
+          uploadSuccess = false;
+          uploadErrors.push('fotos del bar');
+          console.error('Error uploading bar images:', error);
         }
-      } else {
-        console.log('⚠️ No languages to insert');
       }
-
-      if (formData.foodTypeIds && formData.foodTypeIds.length > 0) {
-        console.log('🍕 Inserting food types:', formData.foodTypeIds);
-        const foodTypeInserts = formData.foodTypeIds.map((foodTypeId: string) => ({
-          bar_id: barData.id,
-          food_type_id: parseInt(foodTypeId),
-        }));
-        console.log('🍕 Food type inserts:', foodTypeInserts);
-
-        const { error: foodTypeError } = await supabase.from('bar_food_types').insert(foodTypeInserts);
-        if (foodTypeError) {
-          console.error('❌ Error inserting food types:', foodTypeError);
-        } else {
-          console.log('✅ Food types inserted successfully');
+      
+      if (menuImages.length > 0) {
+        try {
+          await uploadImages(barData.id, menuImages, 'menu');
+          console.log(`✅ Uploaded ${menuImages.length} menu images`);
+        } catch (error) {
+          uploadSuccess = false;
+          uploadErrors.push('fotos del menú');
+          console.error('Error uploading menu images:', error);
         }
-      } else {
-        console.log('⚠️ No food types to insert');
       }
 
-      if (formData.featureIds && formData.featureIds.length > 0) {
-        console.log('⭐ Inserting features:', formData.featureIds);
-        const featureInserts = formData.featureIds.map((featureId: string) => ({
-          bar_id: barData.id,
-          feature_id: parseInt(featureId),
-        }));
-        console.log('⭐ Feature inserts:', featureInserts);
-
-        const { error: featureError } = await supabase.from('bar_selected_features').insert(featureInserts);
-        if (featureError) {
-          console.error('❌ Error inserting features:', featureError);
-        } else {
-          console.log('✅ Features inserted successfully');
-        }
-      } else {
-        console.log('⚠️ No features to insert');
-      }
+      // Show appropriate success/warning message
+      const successMessage = uploadSuccess 
+        ? 'Tu bar ha sido registrado correctamente con todas las imágenes. Será revisado por nuestro equipo antes de ser publicado.'
+        : uploadErrors.length > 0
+        ? `Tu bar ha sido registrado correctamente, pero hubo problemas subiendo las ${uploadErrors.join(' y ')}. Puedes intentar subirlas más tarde desde tu perfil.`
+        : 'Tu bar ha sido registrado correctamente. Será revisado por nuestro equipo antes de ser publicado.';
 
       Alert.alert(
-        '¡Éxito!',
-        'Tu bar ha sido registrado correctamente. Será revisado por nuestro equipo antes de ser publicado.',
+        uploadSuccess ? '¡Éxito!' : '¡Registro Completado!',
+        successMessage,
         [
           {
             text: 'Continuar',
@@ -124,151 +314,260 @@ const Step4Photos: React.FC = () => {
           }
         ]
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting form:', error);
-      Alert.alert('Error', 'No se pudo completar el registro. Inténtalo de nuevo.');
+      Alert.alert('Error', error.message || 'No se pudo completar el registro. Inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [getFormData, insertRelationships, uploadImages, barImages, menuImages, resetForm, router]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     router.back();
-  };
+  }, [router]);
 
   return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
+    <GestureHandlerRootView style={styles.container}>
       <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ title: 'Fotos del Bar', headerShown: false }} />
+        
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Fotos</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressStep, styles.progressStepActive]} />
-            <View style={[styles.progressStep, styles.progressStepActive]} />
-            <View style={[styles.progressStep, styles.progressStepActive]} />
-            <View style={[styles.progressStep, styles.progressStepActive]} />
-          </View>
-          <Text style={styles.progressText}>Paso 4 de 4</Text>
+          <Text style={styles.title}>Fotos del Bar</Text>
+          <Text style={styles.subtitle}>Paso 4 de 4</Text>
         </View>
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
-            <Text style={styles.title}>Finalizar Registro</Text>
-            <Text style={styles.subtitle}>
-              Tu bar está listo para ser registrado. Las fotos se podrán agregar más tarde.
-            </Text>
+            {/* Bar Images Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Fotos del Bar</Text>
+                <Text style={styles.sectionSubtitle}>Máximo 5 imágenes (16:9) - Mantén presionado para reordenar</Text>
+              </View>
+              
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => pickImages('bar')}
+                disabled={loading || barImages.length >= 5}
+              >
+                <Ionicons name="camera" size={24} color="#007AFF" />
+                <Text style={styles.addButtonText}>
+                  {barImages.length >= 5 ? 'Máximo alcanzado' : 'Agregar fotos del bar'}
+                </Text>
+              </TouchableOpacity>
 
+              {barImages.length > 0 && (
+                <View style={styles.imageGrid}>
+                  <DraggableFlatList
+                    data={barImages}
+                    renderItem={(params: any) => renderImageItem(params, 'bar')}
+                    keyExtractor={(item: ImageItem) => item.id}
+                    onDragEnd={({ data }: any) => handleDragEnd(data, 'bar')}
+                    numColumns={2}
+                    scrollEnabled={false}
+                  />
+                </View>
+              )}
+              
+              <Text style={styles.counter}>{barImages.length}/5 fotos</Text>
+            </View>
+
+            {/* Menu Images Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Fotos del Menú</Text>
+                <Text style={styles.sectionSubtitle}>Máximo 3 imágenes (3:4) - Mantén presionado para reordenar</Text>
+              </View>
+              
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => pickImages('menu')}
+                disabled={loading || menuImages.length >= 3}
+              >
+                <Ionicons name="restaurant" size={24} color="#007AFF" />
+                <Text style={styles.addButtonText}>
+                  {menuImages.length >= 3 ? 'Máximo alcanzado' : 'Agregar fotos del menú'}
+                </Text>
+              </TouchableOpacity>
+
+              {menuImages.length > 0 && (
+                <View style={styles.imageGrid}>
+                  <DraggableFlatList
+                    data={menuImages}
+                    renderItem={(params: any) => renderImageItem(params, 'menu')}
+                    keyExtractor={(item: ImageItem) => item.id}
+                    onDragEnd={({ data }: any) => handleDragEnd(data, 'menu')}
+                    numColumns={2}
+                    scrollEnabled={false}
+                  />
+                </View>
+              )}
+              
+              <Text style={styles.counter}>{menuImages.length}/3 fotos</Text>
+            </View>
+
+            {/* Info Box */}
             <View style={styles.infoBox}>
               <Ionicons name="information-circle" size={20} color="#007AFF" />
               <Text style={styles.infoText}>
-                Tu bar será revisado por nuestro equipo antes de ser publicado. Podrás agregar fotos después de la aprobación.
+                Las imágenes son opcionales. El orden de las fotos importa - la primera será la imagen principal.
+                Mantén presionado para reordenar.
               </Text>
             </View>
           </View>
         </ScrollView>
 
-        <View style={styles.buttonContainer}>
+        <View style={styles.footer}>
           <PrimaryButton
-            title="Completar Registro"
+            title="Finalizar Registro"
             onPress={handleSubmit}
             loading={loading}
           />
         </View>
       </SafeAreaView>
-    </>
+    </GestureHandlerRootView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C2A3A',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerSpacer: {
-    width: 32,
-  },
-  progressContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  progressBar: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  progressStep: {
-    flex: 1,
-    height: 4,
-    backgroundColor: '#374151',
-    borderRadius: 2,
-  },
-  progressStepActive: {
-    backgroundColor: '#007AFF',
-  },
-  progressText: {
-    color: '#8E8E93',
-    fontSize: 14,
-    textAlign: 'center',
+    backgroundColor: '#fff',
   },
   scrollView: {
     flex: 1,
   },
-  content: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  header: {
+    padding: 20,
+    paddingTop: 60,
+    alignItems: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 60,
+    padding: 8,
   },
   title: {
-    color: '#FFFFFF',
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 8,
   },
   subtitle: {
-    color: '#8E8E93',
     fontSize: 16,
-    lineHeight: 24,
+    color: '#666',
+  },
+  content: {
+    padding: 20,
+  },
+  section: {
     marginBottom: 32,
   },
-
+  sectionHeader: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderStyle: 'dashed',
+    marginBottom: 16,
+  },
+  addButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  imageGrid: {
+    marginBottom: 12,
+  },
+  imageContainer: {
+    position: 'relative',
+    margin: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  activeImageContainer: {
+    opacity: 0.8,
+    transform: [{ scale: 1.05 }],
+  },
+  image: {
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  removeButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+  },
+  orderBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  dragHandle: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 8,
+    padding: 4,
+  },
+  counter: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'right',
+  },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#f0f8ff',
     padding: 16,
     borderRadius: 12,
     gap: 12,
   },
   infoText: {
-    color: '#93C5FD',
-    fontSize: 14,
-    lineHeight: 20,
     flex: 1,
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
   },
-  buttonContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  footer: {
+    padding: 20,
+    paddingBottom: 40,
   },
 });
 
