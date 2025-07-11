@@ -125,6 +125,10 @@ export default function ProfileScreen() {
     router.push('/(protected)/plans' as any);
   }, [router]);
 
+  const handleAddBar = useCallback(() => {
+    router.push('/register-bar/step1' as any);
+  }, [router]);
+
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
@@ -160,7 +164,9 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Perfil</Text>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity style={styles.headerPlanButton} onPress={handleViewPlans}>
+            <Text style={styles.headerPlanButtonText}>Ver Planes</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Profile Section */}
@@ -176,11 +182,12 @@ export default function ProfileScreen() {
           <Text style={styles.userHandle}>{displayHandle}</Text>
         </View>
 
-        {/* Promote Bar Section */}
+        {/* Add Bar Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Promociona tu Bar</Text>
-          <TouchableOpacity style={styles.planButton} onPress={handleViewPlans}>
-            <Text style={styles.planButtonText}>Ver Planes</Text>
+          <Text style={styles.sectionTitle}>Gestiona tu Bar</Text>
+          <TouchableOpacity style={styles.addBarButton} onPress={handleAddBar}>
+            <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.addBarButtonText}>Añadir Bar</Text>
           </TouchableOpacity>
         </View>
 
@@ -232,8 +239,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  headerSpacer: {
-    width: 32,
+  headerPlanButton: {
+    backgroundColor: '#1976D2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  headerPlanButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   profileSection: {
     alignItems: 'center',
@@ -285,6 +300,21 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   planButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addBarButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  addBarButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
