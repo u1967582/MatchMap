@@ -4,6 +4,7 @@
     "slug": "MatchMap",
     "version": "1.0.0",
     "scheme": "MatchMap",
+    "jsEngine": "hermes",
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -23,6 +24,13 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Show current location on map."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with other users.",
+          "cameraPermission": "The app accesses your camera to let you take photos and share them with other users."
         }
       ],
       [
