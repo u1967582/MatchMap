@@ -4,6 +4,7 @@
     "slug": "MatchMap",
     "version": "1.0.0",
     "scheme": "MatchMap",
+    "jsEngine": "hermes",
     "web": {
       "bundler": "metro",
       "output": "static",

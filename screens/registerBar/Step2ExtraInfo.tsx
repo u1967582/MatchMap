@@ -33,9 +33,7 @@ const Step2ExtraInfo: React.FC = () => {
         return;
       }
 
-      const mappedLanguages = data?.map(lang => ({ id: lang.id.toString(), label: lang.name })) || [];
-      console.log('🗣️ Loaded languages:', mappedLanguages);
-      setLanguages(mappedLanguages);
+      setLanguages(data?.map(lang => ({ id: lang.id.toString(), label: lang.name })) || []);
     } catch (error) {
       console.error('Error fetching languages:', error);
     }
@@ -54,9 +52,7 @@ const Step2ExtraInfo: React.FC = () => {
         return;
       }
 
-      const mappedFoodTypes = data?.map(food => ({ id: food.id.toString(), label: food.name })) || [];
-      console.log('🍕 Loaded food types:', mappedFoodTypes);
-      setFoodTypes(mappedFoodTypes);
+      setFoodTypes(data?.map(food => ({ id: food.id.toString(), label: food.name })) || []);
     } catch (error) {
       console.error('Error fetching food types:', error);
     }
@@ -75,9 +71,7 @@ const Step2ExtraInfo: React.FC = () => {
         return;
       }
 
-      const mappedFeatures = data?.map(feature => ({ id: feature.id.toString(), label: feature.name })) || [];
-      console.log('⭐ Loaded features:', mappedFeatures);
-      setFeatures(mappedFeatures);
+      setFeatures(data?.map(feature => ({ id: feature.id.toString(), label: feature.name })) || []);
     } catch (error) {
       console.error('Error fetching features:', error);
     }
@@ -139,30 +133,21 @@ const Step2ExtraInfo: React.FC = () => {
               label="Idiomas que se hablan"
               options={languages}
               selectedIds={languageIds}
-              onSelectionChange={(ids) => {
-                console.log('🗣️ Languages selected:', ids);
-                setField('languageIds', ids);
-              }}
+              onSelectionChange={(ids) => setField('languageIds', ids)}
             />
 
             <CheckboxGroup
               label="Tipos de comida disponibles"
               options={foodTypes}
               selectedIds={foodTypeIds}
-              onSelectionChange={(ids) => {
-                console.log('🍕 Food types selected:', ids);
-                setField('foodTypeIds', ids);
-              }}
+              onSelectionChange={(ids) => setField('foodTypeIds', ids)}
             />
 
             <CheckboxGroup
               label="Características del bar"
               options={features}
               selectedIds={featureIds}
-              onSelectionChange={(ids) => {
-                console.log('⭐ Features selected:', ids);
-                setField('featureIds', ids);
-              }}
+              onSelectionChange={(ids) => setField('featureIds', ids)}
             />
           </View>
         </ScrollView>
