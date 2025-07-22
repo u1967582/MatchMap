@@ -26,16 +26,31 @@ interface SettingsRowProps {
   title: string;
   onPress: () => void;
   isLast?: boolean;
+  isDestructive?: boolean;
 }
 
-const SettingsRow: React.FC<SettingsRowProps> = ({ title, onPress, isLast = false }) => (
+const SettingsRow: React.FC<SettingsRowProps> = ({ 
+  title, 
+  onPress, 
+  isLast = false, 
+  isDestructive = false 
+}) => (
   <TouchableOpacity
     style={[styles.settingsRow, isLast && styles.settingsRowLast]}
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <Text style={styles.settingsText}>{title}</Text>
-    <Ionicons name="chevron-forward" size={20} color="#A3B3CC" />
+    <Text style={[
+      styles.settingsText, 
+      isDestructive && styles.destructiveText
+    ]}>
+      {title}
+    </Text>
+    <Ionicons 
+      name="chevron-forward" 
+      size={20} 
+      color={isDestructive ? "#FF6B6B" : "#A3B3CC"} 
+    />
   </TouchableOpacity>
 );
 
@@ -81,27 +96,36 @@ export default function ProfileScreen() {
 
   const handleLogout = useCallback(async () => {
     Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
+      '¿Seguro que quieres salir?',
+      'Tu sesión se cerrará y volverás al login.',
       [
         {
           text: 'Cancelar',
           style: 'cancel',
         },
         {
-          text: 'Cerrar Sesión',
+          text: 'Salir',
           style: 'destructive',
           onPress: async () => {
             try {
-              await supabase.auth.signOut();
-              router.replace('/login');
+              const { error } = await supabase.auth.signOut();
+              if (error) {
+                console.error('Error al cerrar sesión:', error);
+                Alert.alert('Error', 'No se pudo cerrar la sesión');
+                return;
+              }
+              
+              // The auth layouts will handle the redirect automatically
+              // But we can also explicitly redirect to ensure immediate feedback
+              router.replace('/(auth)/login');
             } catch (error) {
-              console.error('Error signing out:', error);
-              Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
+              console.error('Error inesperado al cerrar sesión:', error);
+              Alert.alert('Error', 'Error inesperado al cerrar sesión. Inténtalo de nuevo.');
             }
           },
         },
-      ]
+      ],
+      { cancelable: true }
     );
   }, [router]);
 
@@ -198,7 +222,7 @@ export default function ProfileScreen() {
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
             <SettingsRow title="Notificaciones" onPress={handleNotifications} />
             <SettingsRow title="Privacidad" onPress={handlePrivacy} />
-            <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast />
+            <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast isDestructive />
           </View>
         </View>
       </ScrollView>
@@ -339,5 +363,8 @@ const styles = StyleSheet.create({
   settingsText: {
     color: '#FFFFFF',
     fontSize: 16,
+  },
+  destructiveText: {
+    color: '#FF6B6B',
   },
 }); 

@@ -3,14 +3,14 @@ import { useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useSession } from '~/hooks/useSession';
 
-export default function ProtectedLayout() {
+export default function AuthLayout() {
   const { isAuthenticated, loading } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      // Redirect to welcome screen if not authenticated
-      router.replace('/');
+    if (!loading && isAuthenticated) {
+      // If user is already logged in, redirect to main app
+      router.replace('/(protected)/map');
     }
   }, [isAuthenticated, loading, router]);
 
@@ -23,8 +23,8 @@ export default function ProtectedLayout() {
     );
   }
 
-  // If user is not authenticated, don't render anything (will redirect)
-  if (!isAuthenticated) {
+  // If user is authenticated, don't render anything (will redirect)
+  if (isAuthenticated) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -32,13 +32,13 @@ export default function ProtectedLayout() {
     );
   }
 
-  // Only render the protected screens if user is authenticated
+  // Only render the auth screens if user is NOT authenticated
   return (
     <Stack 
       screenOptions={{ 
         headerShown: false,
         presentation: 'card',
-        animation: 'none',
+        animation: 'slide_from_right',
         contentStyle: { backgroundColor: 'transparent' }
       }} 
     />
