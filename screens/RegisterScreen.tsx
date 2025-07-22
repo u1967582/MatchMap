@@ -56,22 +56,47 @@ const RegisterScreen: React.FC = () => {
         .single();
 
       if (!existingProfile) {
-                 // Create user profile for OAuth users
-         const { error: profileError } = await supabase
-           .from('users')
-           .insert({
-             id: user.id,
-             email: user.email,
-             full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
-             username: user.user_metadata?.preferred_username || user.user_metadata?.user_name || '',
-             profile_image_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
-             is_bar_owner: false, // Default for OAuth users
-             created_at: new Date().toISOString(),
-             updated_at: new Date().toISOString(),
-           });
+        // Generate a unique username for OAuth users
+        const baseUsername = user.user_metadata?.preferred_username || 
+                            user.user_metadata?.user_name || 
+                            user.email?.split('@')[0] || 
+                            `user_${user.id.slice(0, 8)}`;
+        
+        // Create user profile for OAuth users
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id, // Usar el ID del usuario autenticado
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+            username: baseUsername,
+            profile_image_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+            is_bar_owner: false,
+            updated_at: new Date().toISOString(),
+          });
 
         if (profileError) {
           console.error('OAuth profile creation error:', profileError);
+          
+          // Si hay conflicto con el username, intentar con uno único
+          if (profileError.code === '23505' && profileError.message.includes('username')) {
+            const uniqueUsername = `${baseUsername}_${Date.now()}`;
+            const { error: retryError } = await supabase
+              .from('users')
+              .insert({
+                id: user.id,
+                email: user.email,
+                full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+                username: uniqueUsername,
+                profile_image_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+                is_bar_owner: false,
+                updated_at: new Date().toISOString(),
+              });
+            
+            if (retryError) {
+              console.error('OAuth profile retry error:', retryError);
+            }
+          }
         }
       }
     } catch (error) {
@@ -189,25 +214,25 @@ const RegisterScreen: React.FC = () => {
       }
 
       if (authData.user) {
-        // Create user profile in the users table
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: formData.email.trim(),
-            full_name: formData.name.trim(),
-            username: formData.username.trim(),
-            is_bar_owner: formData.isBarOwner,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
+        console.log('User created in auth.users:', authData.user.id);
+        
+        // Usar la función de base de datos para crear el perfil
+        const { error: profileError } = await supabase.rpc('handle_new_user_registration', {
+          user_id: authData.user.id,
+          user_email: formData.email.trim(),
+          user_full_name: formData.name.trim(),
+          user_username: formData.username.trim(),
+          user_is_bar_owner: formData.isBarOwner
+        });
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          // Don't show error to user as auth was successful
-          // The profile can be created later or updated
+          Alert.alert('Error', 'Error al crear el perfil: ' + profileError.message);
+          return;
         }
 
+        console.log('Profile created successfully via function');
+        
         Alert.alert('Éxito', 'Usuario registrado correctamente', [
           { text: 'OK', onPress: () => router.replace('/(protected)/map' as any) }
         ]);
