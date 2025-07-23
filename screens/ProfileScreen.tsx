@@ -22,6 +22,13 @@ interface UserProfile {
   profile_image_url?: string;
 }
 
+interface UserBar {
+  id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+}
+
 interface SettingsRowProps {
   title: string;
   onPress: () => void;
@@ -41,6 +48,7 @@ const SettingsRow: React.FC<SettingsRowProps> = ({ title, onPress, isLast = fals
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [userBars, setUserBars] = useState<UserBar[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -57,7 +65,7 @@ export default function ProfileScreen() {
       // Try to get additional profile data from users table
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select('full_name, username, profile_image_url')
+        .select('full_name, username, profile_image_url, bar_id')
         .eq('id', authUser.id)
         .single();
 
@@ -72,6 +80,35 @@ export default function ProfileScreen() {
         username: profileData?.username,
         profile_image_url: profileData?.profile_image_url,
       });
+
+      // Fetch user's bars using the bar_id from users table
+      if (profileData?.bar_id) {
+        const { data: barData, error: barError } = await supabase
+          .from('bars')
+          .select(`
+            id,
+            name,
+            description,
+            bar_images(image_url, image_order)
+          `)
+          .eq('id', profileData.bar_id)
+          .single();
+
+        if (barError) {
+          console.error('Error fetching user bar:', barError);
+        } else if (barData) {
+          const formattedBar = {
+            id: barData.id,
+            name: barData.name,
+            description: barData.description,
+            image_url: barData.bar_images && barData.bar_images.length > 0 
+              ? barData.bar_images.sort((a, b) => (a.image_order || 0) - (b.image_order || 0))[0]?.image_url
+              : undefined,
+          };
+          setUserBars([formattedBar]);
+        }
+      }
+
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
     } finally {
@@ -129,6 +166,10 @@ export default function ProfileScreen() {
     router.push('/register-bar/step1' as any);
   }, [router]);
 
+  const handleViewBarProfile = useCallback((barId: string) => {
+    router.push(`/bar-profile/${barId}` as any);
+  }, [router]);
+
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
@@ -182,13 +223,46 @@ export default function ProfileScreen() {
           <Text style={styles.userHandle}>{displayHandle}</Text>
         </View>
 
-        {/* Add Bar Section */}
+        {/* Bar Management Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Gestiona tu Bar</Text>
-          <TouchableOpacity style={styles.addBarButton} onPress={handleAddBar}>
-            <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
-            <Text style={styles.addBarButtonText}>Añadir Bar</Text>
-          </TouchableOpacity>
+          {userBars.length > 0 ? (
+            <View>
+              {userBars.map((bar) => (
+                <TouchableOpacity 
+                  key={bar.id}
+                  style={styles.barCard} 
+                  onPress={() => handleViewBarProfile(bar.id)}
+                >
+                  <View style={styles.barImageContainer}>
+                    {bar.image_url ? (
+                      <Image source={{ uri: bar.image_url }} style={styles.barImage} />
+                    ) : (
+                      <View style={styles.defaultBarImage}>
+                        <Ionicons name="storefront" size={32} color="#A3B3CC" />
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.barInfo}>
+                    <Text style={styles.barName}>{bar.name}</Text>
+                    <View style={styles.viewProfileButton}>
+                      <Text style={styles.viewProfileButtonText}>Ver Perfil del Bar</Text>
+                      <Ionicons name="chevron-forward" size={16} color="#1976D2" />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.addAnotherBarButton} onPress={handleAddBar}>
+                <Ionicons name="add-circle-outline" size={20} color="#10B981" />
+                <Text style={styles.addAnotherBarButtonText}>Añadir Otro Bar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.addBarButton} onPress={handleAddBar}>
+              <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.addBarButtonText}>Añadir Bar</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Account Settings Section */}
@@ -339,5 +413,67 @@ const styles = StyleSheet.create({
   settingsText: {
     color: '#FFFFFF',
     fontSize: 16,
+  },
+  barCard: {
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  barImageContainer: {
+    marginRight: 16,
+  },
+  barImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  defaultBarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#2A3A4A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  barInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  barName: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+
+  viewProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewProfileButtonText: {
+    color: '#1976D2',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  addAnotherBarButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#10B981',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  addAnotherBarButtonText: {
+    color: '#10B981',
+    fontSize: 14,
+    fontWeight: '500',
   },
 }); 

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Alert, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Alert, Image, Dimensions, Platform } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useBarRegisterStore } from '~/stores/barRegisterStore';
@@ -6,7 +6,7 @@ import PrimaryButton from '~/components/ui/PrimaryButton';
 import { supabase } from '~/utils/supabase';
 import { useState, useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { useImageUpload } from '~/hooks/useImageUpload';
+import * as FileSystem from 'expo-file-system';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -23,7 +23,6 @@ const IMAGE_WIDTH = (width - 60) / 2; // 2 columns with padding
 const Step4Photos: React.FC = () => {
   const router = useRouter();
   const { getFormData, resetForm } = useBarRegisterStore();
-  const { uploadMultipleBarImages } = useImageUpload();
   
   const [loading, setLoading] = useState(false);
   const [barImages, setBarImages] = useState<ImageItem[]>([]);
@@ -31,6 +30,126 @@ const Step4Photos: React.FC = () => {
 
   // Generate unique ID for images
   const generateId = () => Math.random().toString(36).substring(7);
+
+  // Upload single image to Supabase Storage
+  const uploadSingleImage = useCallback(async (uri: string, barId: string, type: 'bar' | 'menu', order: number): Promise<string> => {
+    try {
+      console.log(`📸 Subiendo imagen ${type} para bar:`, barId, 'orden:', order);
+      console.log('📁 URI:', uri);
+
+      // Verificar que el archivo existe
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      console.log('📋 Info del archivo:', fileInfo);
+
+      if (!fileInfo.exists) {
+        throw new Error('El archivo no existe');
+      }
+
+      if (fileInfo.size === 0) {
+        throw new Error('El archivo está vacío');
+      }
+
+      // Crear path del archivo
+      const timestamp = Date.now();
+      const fileName = `${barId}/${type}/${type}_${order}_${timestamp}.jpg`;
+
+      // Método 1: Usando base64 (más confiable en simuladores iOS)
+      let uploadData, uploadError;
+      
+      try {
+        console.log('🔄 Intentando método base64...');
+        
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        console.log('📦 Base64 length:', base64.length);
+
+        if (!base64 || base64.length === 0) {
+          throw new Error('Base64 string vacío');
+        }
+
+        // Convertir base64 a ArrayBuffer
+        const binaryString = atob(base64);
+        const arrayBuffer = new Uint8Array(binaryString.length);
+        
+        for (let i = 0; i < binaryString.length; i++) {
+          arrayBuffer[i] = binaryString.charCodeAt(i);
+        }
+
+        console.log('📦 ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
+
+        const result = await supabase.storage
+          .from('bar-images')
+          .upload(fileName, arrayBuffer, {
+            contentType: 'image/jpeg',
+            upsert: true,
+          });
+
+        uploadData = result.data;
+        uploadError = result.error;
+
+        if (!uploadError) {
+          console.log('✅ Subida exitosa con base64');
+        }
+
+      } catch (base64Error) {
+        console.warn('⚠️ Método base64 falló, intentando con fetch:', base64Error);
+        
+        // Método 2: Usando fetch como fallback
+        const response = await fetch(uri);
+        console.log('🌐 Fetch response status:', response.status);
+
+        if (!response.ok) {
+          throw new Error(`Fetch failed with status: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        console.log('📦 Blob size:', blob.size, 'bytes');
+
+        if (blob.size === 0) {
+          throw new Error('El blob está vacío');
+        }
+
+        const result = await supabase.storage
+          .from('bar-images')
+          .upload(fileName, blob, {
+            contentType: blob.type || 'image/jpeg',
+            upsert: true,
+          });
+
+        uploadData = result.data;
+        uploadError = result.error;
+
+        if (!uploadError) {
+          console.log('✅ Subida exitosa con fetch');
+        }
+      }
+
+      if (uploadError) {
+        console.error('❌ Error subiendo imagen:', uploadError);
+        throw uploadError;
+      }
+
+      // Obtener URL pública
+      const { data: urlData } = supabase.storage
+        .from('bar-images')
+        .getPublicUrl(fileName);
+
+      const publicUrl = urlData?.publicUrl;
+
+      if (!publicUrl) {
+        throw new Error('No se pudo obtener la URL pública');
+      }
+
+      console.log('🔗 Public URL:', publicUrl);
+      return publicUrl;
+
+    } catch (error) {
+      console.error('❌ Error en uploadSingleImage:', error);
+      throw error;
+    }
+  }, []);
 
   // Request permissions
   const requestPermissions = useCallback(async () => {
@@ -52,12 +171,19 @@ const Step4Photos: React.FC = () => {
     if (!hasPermission) return;
 
     try {
+      console.log(`📱 Seleccionando imágenes para ${type}...`);
+      
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.8,
         aspect: type === 'bar' ? [16, 9] : [3, 4],
         allowsEditing: false,
+      });
+
+      console.log(`📱 Resultado del picker:`, {
+        canceled: result.canceled,
+        assetsLength: result.assets?.length,
       });
 
       if (!result.canceled && result.assets) {
@@ -77,12 +203,31 @@ const Step4Photos: React.FC = () => {
         // Take only the images that fit
         const imagesToAdd = result.assets.slice(0, remainingSlots);
         
-        const newImages = imagesToAdd.map((asset, index) => ({
+        // Verificar cada imagen antes de agregar
+        const validImages = [];
+        for (const asset of imagesToAdd) {
+          try {
+            const fileInfo = await FileSystem.getInfoAsync(asset.uri);
+            console.log(`📋 Verificando ${asset.uri}:`, fileInfo);
+            
+            if (fileInfo.exists && fileInfo.size > 0) {
+              validImages.push(asset);
+            } else {
+              console.warn(`⚠️ Imagen inválida: ${asset.uri}`);
+            }
+          } catch (error) {
+            console.warn(`⚠️ Error verificando imagen ${asset.uri}:`, error);
+          }
+        }
+        
+        const newImages = validImages.map((asset, index) => ({
           id: generateId(),
           uri: asset.uri,
           uploading: false,
           order: currentImages.length + index + 1,
         }));
+
+        console.log(`✅ Agregando ${newImages.length} imágenes válidas para ${type}`);
 
         if (type === 'bar') {
           setBarImages(prev => [...prev, ...newImages]);
@@ -153,6 +298,11 @@ const Step4Photos: React.FC = () => {
         <View style={styles.dragHandle}>
           <Ionicons name="reorder-three" size={20} color="#666" />
         </View>
+        {item.uploading && (
+          <View style={styles.uploadingOverlay}>
+            <Text style={styles.uploadingText}>Subiendo...</Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   }, [removeImage]);
@@ -198,36 +348,65 @@ const Step4Photos: React.FC = () => {
     const table = type === 'bar' ? 'bar_images' : 'bar_menus';
     
     try {
-      // Prepare images for upload with proper structure
-      const imagesToUpload = images.map(image => ({
-        uri: image.uri,
-        order: image.order
-      }));
+      console.log(`📤 Subiendo ${images.length} imágenes de ${type}...`);
 
-      // Upload all images using the new organized structure
-      const uploadedImages = await uploadMultipleBarImages(imagesToUpload, barId, type);
-
-      // Save to database with order
-      for (const uploadedImage of uploadedImages) {
-        const insertData = {
-          bar_id: barId,
-          image_url: uploadedImage.url,
-          ...(type === 'bar' ? { image_order: uploadedImage.order } : { image_order: uploadedImage.order }),
-        };
-
-        const { error } = await supabase.from(table).insert(insertData);
-
-        if (error) {
-          console.error(`Error saving ${type} image to database:`, error);
-        } else {
-          console.log(`✅ ${type} image saved:`, uploadedImage.path);
-        }
+      // Marcar imágenes como subiendo
+      if (type === 'bar') {
+        setBarImages(prev => prev.map(img => ({ ...img, uploading: true })));
+      } else {
+        setMenuImages(prev => prev.map(img => ({ ...img, uploading: true })));
       }
+
+      const uploadPromises = images.map(async (image) => {
+        try {
+          // Subir imagen
+          const imageUrl = await uploadSingleImage(image.uri, barId, type, image.order);
+          
+          // Guardar en base de datos
+          const insertData = {
+            bar_id: barId,
+            image_url: imageUrl,
+            image_order: image.order,
+          };
+
+          const { error } = await supabase.from(table).insert(insertData);
+
+          if (error) {
+            console.error(`Error saving ${type} image to database:`, error);
+            throw error;
+          }
+
+          console.log(`✅ ${type} image saved with order ${image.order}`);
+          return { success: true, order: image.order };
+          
+        } catch (error) {
+          console.error(`❌ Error uploading ${type} image order ${image.order}:`, error);
+          return { success: false, order: image.order, error };
+        }
+      });
+
+      const results = await Promise.all(uploadPromises);
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+
+      console.log(`📊 ${type} upload results: ${successful} exitosas, ${failed} fallidas`);
+
+      if (failed > 0) {
+        throw new Error(`${failed} de ${images.length} imágenes de ${type} no se pudieron subir`);
+      }
+
     } catch (error) {
       console.error(`Error uploading ${type} images:`, error);
-      throw error; // Re-throw to handle in the main submit function
+      throw error;
+    } finally {
+      // Quitar estado de subiendo
+      if (type === 'bar') {
+        setBarImages(prev => prev.map(img => ({ ...img, uploading: false })));
+      } else {
+        setMenuImages(prev => prev.map(img => ({ ...img, uploading: false })));
+      }
     }
-  }, [uploadMultipleBarImages]);
+  }, [uploadSingleImage]);
 
   // Main submit handler
   const handleSubmit = useCallback(async () => {
@@ -242,6 +421,8 @@ const Step4Photos: React.FC = () => {
         Alert.alert('Error', 'Debes estar autenticado para registrar un bar');
         return;
       }
+
+      console.log('🏗️ Creando bar...');
 
       // Create bar
       const { data: barData, error: barError } = await supabase
@@ -264,6 +445,8 @@ const Step4Photos: React.FC = () => {
       if (barError) {
         throw new Error(barError.message);
       }
+
+      console.log('✅ Bar creado:', barData.id);
 
       // Insert relationships
       await insertRelationships(barData.id, formData);
@@ -545,6 +728,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 8,
     padding: 4,
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  uploadingText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   counter: {
     fontSize: 14,
