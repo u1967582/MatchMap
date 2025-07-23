@@ -13,8 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { supabase } from '~/utils/supabase';
-import { ensureAvatarsBucket } from '~/utils/avatarStorage';
 import InputField from '~/components/ui/InputField';
 import CustomButton from '~/components/ui/CustomButton';
 import ScreenTitle from '~/components/ui/ScreenTitle';
@@ -198,27 +198,74 @@ export default function EditProfileScreen() {
 
   const pickImageFromGallery = useCallback(async () => {
     try {
+      console.log('📱 Iniciando selección desde galería...');
+      
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: false, // No necesitamos base64 aquí
       });
 
-      if (!result.canceled && result.assets[0]) {
-        setProfileImage(result.assets[0].uri);
+      console.log('📱 Resultado del picker:', {
+        canceled: result.canceled,
+        assetsLength: result.assets?.length,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        console.log('Usuario canceló la selección de imagen');
+        return;
       }
+
+      const file = result.assets[0];
+      console.log('📱 Archivo seleccionado:', {
+        uri: file.uri,
+        type: file.type,
+        width: file.width,
+        height: file.height,
+        fileSize: file.fileSize,
+      });
+      
+      if (!file.uri) {
+        Alert.alert('Error', 'No se pudo obtener la imagen seleccionada');
+        return;
+      }
+
+      // Verificar que el archivo es válido antes de continuar
+      const fileInfo = await FileSystem.getInfoAsync(file.uri);
+      console.log('📋 Verificación del archivo:', fileInfo);
+
+      if (!fileInfo.exists) {
+        Alert.alert('Error', 'El archivo seleccionado no existe');
+        return;
+      }
+
+      if (fileInfo.size === 0) {
+        Alert.alert('Error', 'El archivo seleccionado está vacío');
+        return;
+      }
+
+      console.log('✅ Imagen válida seleccionada desde galería');
+      setProfileImage(file.uri);
+      
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      console.error('Error picking image from gallery:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen de la galería');
     }
   }, []);
 
   const pickImageFromCamera = useCallback(async () => {
     try {
+      console.log('📷 Iniciando toma de foto con cámara...');
+      
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Error', 'Se necesitan permisos de cámara');
+        Alert.alert(
+          'Permiso denegado', 
+          'Se necesita acceso a la cámara para tomar una foto.',
+          [{ text: 'OK' }]
+        );
         return;
       }
 
@@ -228,57 +275,193 @@ export default function EditProfileScreen() {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        setProfileImage(result.assets[0].uri);
+      console.log('📷 Resultado de la cámara:', {
+        canceled: result.canceled,
+        assetsLength: result.assets?.length,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        console.log('Usuario canceló la toma de foto');
+        return;
       }
+
+      const file = result.assets[0];
+      console.log('📷 Foto tomada:', {
+        uri: file.uri,
+        type: file.type,
+        width: file.width,
+        height: file.height,
+        fileSize: file.fileSize,
+      });
+      
+      if (!file.uri) {
+        Alert.alert('Error', 'No se pudo obtener la foto tomada');
+        return;
+      }
+
+      // Verificar que el archivo es válido
+      const fileInfo = await FileSystem.getInfoAsync(file.uri);
+      console.log('📋 Verificación de la foto:', fileInfo);
+
+      if (!fileInfo.exists) {
+        Alert.alert('Error', 'La foto tomada no existe');
+        return;
+      }
+
+      if (fileInfo.size === 0) {
+        Alert.alert('Error', 'La foto tomada está vacía');
+        return;
+      }
+
+      console.log('✅ Foto válida tomada con cámara');
+      setProfileImage(file.uri);
+      
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'No se pudo tomar la foto');
+      Alert.alert('Error', 'No se pudo tomar la foto con la cámara');
     }
   }, []);
 
-  // Upload image to Supabase Storage
-  const uploadProfileImage = useCallback(async (imageUri: string): Promise<string | null> => {
+    const uploadProfileImage = useCallback(async (uri: string): Promise<string | null> => {
     if (!user) return null;
 
     try {
       setUploadingImage(true);
+      console.log('📸 Iniciando subida de imagen para usuario:', user.id);
+      console.log('📁 URI recibida:', uri);
 
-      // Create file path
-      const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `${user.id}.${fileExt}`;
-      const filePath = fileName;
+      // Verificar que el archivo existe y obtener información
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      console.log('📋 Información del archivo:', fileInfo);
 
-      // Convert image to blob
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, blob, {
-          contentType: blob.type,
-          upsert: true,
-        });
-
-      if (error) {
-        console.error('Error uploading image:', error);
-        throw new Error(error.message);
+      if (!fileInfo.exists) {
+        throw new Error('El archivo no existe en la URI proporcionada');
       }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(data.path);
+      if (fileInfo.size === 0) {
+        throw new Error('El archivo está vacío');
+      }
 
-      return publicUrl;
+      const filePath = `${user.id}/avatar_${Date.now()}.jpg`;
+      
+      // Método 1: Usando base64 (más confiable en simuladores iOS)
+      try {
+        console.log('🔄 Intentando método base64...');
+        
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        console.log('📦 Base64 length:', base64.length);
+        console.log('📦 Base64 preview:', base64.substring(0, 50) + '...');
+
+        if (!base64 || base64.length === 0) {
+          throw new Error('Base64 string está vacío');
+        }
+
+        // Convertir base64 a ArrayBuffer
+        const binaryString = atob(base64);
+        const arrayBuffer = new Uint8Array(binaryString.length);
+        
+        for (let i = 0; i < binaryString.length; i++) {
+          arrayBuffer[i] = binaryString.charCodeAt(i);
+        }
+
+        console.log('📦 ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
+
+        const { data, error } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, arrayBuffer, {
+            contentType: 'image/jpeg',
+            upsert: true,
+          });
+
+        if (error) {
+          console.error('❌ Error subiendo con base64:', error);
+          throw error;
+        }
+
+        console.log('✅ Imagen subida exitosamente con base64:', data);
+
+      } catch (base64Error) {
+        console.warn('⚠️ Método base64 falló, intentando con fetch:', base64Error);
+        
+        // Método 2: Usando fetch como fallback
+        const response = await fetch(uri);
+        console.log('🌐 Fetch response status:', response.status);
+        console.log('🌐 Fetch response headers:', response.headers);
+
+        if (!response.ok) {
+          throw new Error(`Fetch failed with status: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        console.log('📦 Blob size:', blob.size, 'bytes');
+        console.log('📦 Blob type:', blob.type);
+
+        if (blob.size === 0) {
+          throw new Error('El blob está vacío');
+        }
+
+        const { data, error } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, blob, {
+            contentType: blob.type || 'image/jpeg',
+            upsert: true,
+          });
+
+        if (error) {
+          console.error('❌ Error subiendo con fetch:', error);
+          throw error;
+        }
+
+        console.log('✅ Imagen subida exitosamente con fetch:', data);
+      }
+
+      // Obtener URL pública
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const avatarUrl = urlData?.publicUrl;
+
+      if (!avatarUrl) {
+        throw new Error('No se pudo obtener la URL pública');
+      }
+
+      console.log('🔗 Public URL:', avatarUrl);
+
+      // Actualizar perfil en la base de datos
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          profile_image_url: avatarUrl, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('❌ Error actualizando perfil:', updateError);
+        throw updateError;
+      }
+
+      console.log('✅ Perfil actualizado correctamente con nueva imagen');
+      return avatarUrl;
+
     } catch (error) {
-      console.error('Error uploading profile image:', error);
-      throw error;
+      console.error('❌ Error completo en uploadProfileImage:', error);
+      
+      // Proporcionar más contexto del error
+      if (error instanceof Error) {
+        throw new Error(`Error subiendo imagen: ${error.message}`);
+      } else {
+        throw new Error('Error desconocido subiendo imagen');
+      }
     } finally {
       setUploadingImage(false);
     }
   }, [user]);
+  
 
   // Check if any changes were made
   const hasChanges = useMemo(() => {
@@ -311,19 +494,27 @@ export default function EditProfileScreen() {
     try {
       let imageUrl: string | undefined = user.profile_image_url || undefined;
 
-      // Upload new image if selected
-      if (profileImage && profileImage !== user.profile_image_url) {
-        try {
-          const uploadedUrl = await uploadProfileImage(profileImage);
-          imageUrl = uploadedUrl || undefined;
-        } catch (error) {
-          Alert.alert('Error', 'No se pudo subir la imagen. ¿Deseas continuar sin cambiarla?', [
-            { text: 'Cancelar', style: 'cancel', onPress: () => setSaving(false) },
-            { text: 'Continuar', onPress: () => saveProfileData(user.profile_image_url || undefined) },
-          ]);
-          return;
+              // Upload new image if selected (this also updates the database)
+        if (profileImage && profileImage !== user.profile_image_url) {
+          try {
+            const uploadedUrl = await uploadProfileImage(profileImage);
+            imageUrl = uploadedUrl || undefined;
+            
+            // Refresh user data to show the new image immediately
+            await fetchUserProfile();
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            Alert.alert(
+              'Error subiendo imagen', 
+              `${errorMessage}\n\n¿Deseas continuar sin cambiar la imagen?`, 
+              [
+                { text: 'Cancelar', style: 'cancel', onPress: () => setSaving(false) },
+                { text: 'Continuar', onPress: () => saveProfileData(user.profile_image_url || undefined) },
+              ]
+            );
+            return;
+          }
         }
-      }
 
       await saveProfileData(imageUrl);
     } catch (error) {
@@ -419,7 +610,6 @@ export default function EditProfileScreen() {
 
   useEffect(() => {
     fetchUserProfile();
-    ensureAvatarsBucket(); // Initialize bucket on component mount
   }, [fetchUserProfile]);
 
   if (loading) {
