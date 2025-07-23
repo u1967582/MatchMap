@@ -6,7 +6,33 @@ declare module '@rnmapbox/maps' {
     styleURL?: string;
   }
 
+  interface CameraProps {
+    followUserLocation?: boolean;
+    followZoomLevel?: number;
+    centerCoordinate?: [number, number];
+    zoomLevel?: number;
+    animationDuration?: number;
+    onCameraChanged?: () => void;
+    ref?: any;
+  }
+
+  interface LocationPuckProps {
+    puckBearingEnabled?: boolean;
+    puckBearing?: string;
+    pulsing?: boolean;
+  }
+
+  interface CameraSetOptions {
+    centerCoordinate: [number, number];
+    zoomLevel: number;
+    animationDuration?: number;
+  }
+
   class MapView extends Component<MapViewProps> {}
+  class Camera extends Component<CameraProps> {
+    setCamera(options: CameraSetOptions): void;
+  }
+  class LocationPuck extends Component<LocationPuckProps> {}
 
   const StyleURL: {
     Street: string;
@@ -21,5 +47,5 @@ declare module '@rnmapbox/maps' {
 
   export function setAccessToken(token: string): void;
   export function setTelemetryEnabled(enabled: boolean): void;
-  export { MapView, StyleURL };
+  export { MapView, Camera, LocationPuck, StyleURL };
 } 
