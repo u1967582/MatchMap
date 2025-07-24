@@ -392,6 +392,8 @@ export default function SearchScreen() {
           </View>
         )}
       </View>
+
+      <BottomTabBar />
     </SafeAreaView>
   );
   
