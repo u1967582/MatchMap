@@ -27,7 +27,20 @@ interface BarProfile {
   images: string[];
 }
 
-
+interface BarPost {
+  id: string;
+  bar_id: string;
+  created_at: string;
+  updated_at: string;
+  title: string;
+  description: string;
+  image_url?: string;
+  start_date?: string;
+  end_date?: string;
+  post_type: 'promocion' | 'evento' | 'noticia' | 'oferta';
+  is_active: boolean;
+  pinned: boolean;
+}
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +49,7 @@ export default function BarProfileScreen() {
   const { barId } = useLocalSearchParams<{ barId: string }>();
   
   const [bar, setBar] = useState<BarProfile | null>(null);
+  const [posts, setPosts] = useState<BarPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -96,9 +110,10 @@ export default function BarProfileScreen() {
             setIsOwner(userData.bar_id === barData.id);
           }
         }
-      }
 
-      // Comments and events will be loaded from database in the future
+        // Fetch posts for this bar
+        await fetchBarPosts(barData.id, authUser);
+      }
 
     } catch (error) {
       console.error('Error in fetchBarProfile:', error);
@@ -107,6 +122,38 @@ export default function BarProfileScreen() {
       setLoading(false);
     }
   }, [barId]);
+
+  const fetchBarPosts = useCallback(async (barId: string, authUser: any) => {
+    try {
+      let query = supabase
+        .from('bar_posts')
+        .select('*')
+        .eq('bar_id', barId);
+
+      // If not the owner, only show active posts within valid date range
+      if (!authUser || authUser.id !== user?.id) {
+        const today = new Date().toISOString().split('T')[0];
+        query = query
+          .eq('is_active', true)
+          .or(`start_date.is.null,start_date.lte.${today}`)
+          .or(`end_date.is.null,end_date.gte.${today}`);
+      }
+
+      // Order by pinned first, then by creation date (newest first)
+      query = query.order('pinned', { ascending: false })
+                  .order('created_at', { ascending: false });
+
+      const { data: postsData, error: postsError } = await query;
+
+      if (postsError) {
+        console.error('Error fetching posts:', postsError);
+      } else {
+        setPosts(postsData || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchBarPosts:', error);
+    }
+  }, [user]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -120,9 +167,10 @@ export default function BarProfileScreen() {
 
   const handleCreatePost = useCallback(() => {
     if (isOwner) {
-      Alert.alert('Crear Post', 'Función de creación de posts próximamente disponible');
+      // Navigate to create post screen
+      router.push(`/create-post/${barId}` as any);
     }
-  }, [isOwner]);
+  }, [isOwner, barId, router]);
 
   const handleDeleteBar = useCallback(() => {
     if (!isOwner || !user) return;
@@ -185,13 +233,167 @@ export default function BarProfileScreen() {
     );
   }, [isOwner, user, barId, router]);
 
+  const getPostTypeIcon = useCallback((postType: string) => {
+    switch (postType) {
+      case 'promocion':
+        return 'pricetag';
+      case 'evento':
+        return 'calendar';
+      case 'noticia':
+        return 'newspaper';
+      case 'oferta':
+        return 'gift';
+      default:
+        return 'document-text';
+    }
+  }, []);
 
+  const getPostTypeColor = useCallback((postType: string) => {
+    switch (postType) {
+      case 'promocion':
+        return '#10B981';
+      case 'evento':
+        return '#3B82F6';
+      case 'noticia':
+        return '#8B5CF6';
+      case 'oferta':
+        return '#F59E0B';
+      default:
+        return '#6B7280';
+    }
+  }, []);
+
+  const getPostTypeLabel = useCallback((postType: string) => {
+    switch (postType) {
+      case 'promocion':
+        return 'Promoción';
+      case 'evento':
+        return 'Evento';
+      case 'noticia':
+        return 'Noticia';
+      case 'oferta':
+        return 'Oferta';
+      default:
+        return 'Post';
+    }
+  }, []);
+
+  const formatDate = useCallback((dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }, []);
 
   const renderImageItem = ({ item, index }: { item: string; index: number }) => (
     <View style={styles.imageItem}>
       <Image source={{ uri: item }} style={styles.galleryImage} />
     </View>
   );
+
+  const renderPostItem = ({ item }: { item: BarPost }) => (
+    <View style={styles.postCard}>
+      {item.pinned && (
+        <View style={styles.pinnedBadge}>
+          <Ionicons name="pin" size={12} color="#FFFFFF" />
+          <Text style={styles.pinnedText}>Destacado</Text>
+        </View>
+      )}
+      
+      <View style={styles.postHeader}>
+        <View style={styles.postTypeContainer}>
+          <Ionicons 
+            name={getPostTypeIcon(item.post_type) as any} 
+            size={16} 
+            color={getPostTypeColor(item.post_type)} 
+          />
+          <Text style={[styles.postTypeText, { color: getPostTypeColor(item.post_type) }]}>
+            {getPostTypeLabel(item.post_type)}
+          </Text>
+        </View>
+        <Text style={styles.postDate}>{formatDate(item.created_at)}</Text>
+      </View>
+
+      <Text style={styles.postTitle}>{item.title}</Text>
+      <Text style={styles.postDescription}>{item.description}</Text>
+
+      {item.image_url && (
+        <Image source={{ uri: item.image_url }} style={styles.postImage} />
+      )}
+
+      {(item.start_date || item.end_date) && (
+        <View style={styles.postDates}>
+          <Ionicons name="time-outline" size={16} color="#A3B3CC" />
+          <Text style={styles.postDatesText}>
+            {item.start_date && item.end_date
+              ? `${formatDate(item.start_date)} - ${formatDate(item.end_date)}`
+              : item.start_date
+              ? `Desde ${formatDate(item.start_date)}`
+              : `Hasta ${formatDate(item.end_date!)}`
+            }
+          </Text>
+        </View>
+      )}
+
+      {isOwner && (
+        <View style={styles.postActions}>
+          <TouchableOpacity 
+            style={styles.postActionButton}
+            onPress={() => router.push(`/edit-post/${item.id}` as any)}
+          >
+            <Ionicons name="create-outline" size={16} color="#007AFF" />
+            <Text style={styles.postActionText}>Editar</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.postActionButton, styles.deletePostButton]}
+            onPress={() => handleDeletePost(item.id)}
+          >
+            <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+            <Text style={[styles.postActionText, styles.deletePostText]}>Eliminar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+
+  const handleDeletePost = useCallback(async (postId: string) => {
+    Alert.alert(
+      'Eliminar Post',
+      '¿Estás seguro de que quieres eliminar este post?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('bar_posts')
+                .delete()
+                .eq('id', postId);
+
+              if (error) {
+                console.error('Error deleting post:', error);
+                Alert.alert('Error', 'No se pudo eliminar el post');
+                return;
+              }
+
+              // Refresh posts
+              if (bar) {
+                await fetchBarPosts(bar.id, user);
+              }
+            } catch (error) {
+              console.error('Error in handleDeletePost:', error);
+              Alert.alert('Error', 'Ocurrió un error al eliminar el post');
+            }
+          },
+        },
+      ]
+    );
+  }, [bar, user, fetchBarPosts]);
 
   useEffect(() => {
     fetchBarProfile();
@@ -317,13 +519,23 @@ export default function BarProfileScreen() {
             )}
           </View>
           
-          <View style={styles.noPostsContainer}>
-            <Ionicons name="document-text-outline" size={48} color="#A3B3CC" />
-            <Text style={styles.noPostsText}>No hay posts disponibles</Text>
-            <Text style={styles.noPostsSubtext}>
-              {isOwner ? 'Crea tu primer post para compartir novedades' : 'Este bar aún no ha publicado nada'}
-            </Text>
-          </View>
+          {posts.length > 0 ? (
+            <FlatList
+              data={posts}
+              renderItem={renderPostItem}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <View style={styles.noPostsContainer}>
+              <Ionicons name="document-text-outline" size={48} color="#A3B3CC" />
+              <Text style={styles.noPostsText}>No hay posts disponibles</Text>
+              <Text style={styles.noPostsSubtext}>
+                {isOwner ? 'Crea tu primer post para compartir novedades' : 'Este bar aún no ha publicado nada'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Delete Bar Section - Only for owners */}
@@ -335,9 +547,6 @@ export default function BarProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
-
-
-
 
       </ScrollView>
 
@@ -520,6 +729,107 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  postCard: {
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    position: 'relative',
+  },
+  pinnedBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 1,
+  },
+  pinnedText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  postHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  postTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  postTypeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  postDate: {
+    color: '#A3B3CC',
+    fontSize: 12,
+  },
+  postTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  postDescription: {
+    color: '#A3B3CC',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  postImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
+    resizeMode: 'cover',
+    marginBottom: 12,
+  },
+  postDates: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  postDatesText: {
+    color: '#A3B3CC',
+    fontSize: 12,
+  },
+  postActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#2A3A4A',
+  },
+  postActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  deletePostButton: {
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+  },
+  postActionText: {
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  deletePostText: {
+    color: '#FF6B6B',
+  },
   dangerSection: {
     padding: 20,
     paddingTop: 40,
@@ -542,5 +852,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-
 }); 
