@@ -18,6 +18,8 @@ import * as Location from 'expo-location';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import Dropdown from '~/components/ui/Dropdown';
+import FilterModal from '~/components/ui/FilterModal';
+import { useFilterData } from '~/hooks/useFilterData';
 
 interface Bar {
   id: string;
@@ -27,10 +29,14 @@ interface Bar {
   city: string;
   latitude?: number;
   longitude?: number;
+  category_id?: number;
   rating?: number | null;
   review_count?: number | null;
   image_url?: string;
   distance_km?: number | null;
+  bar_food_types?: { food_type_id: number }[];
+  bar_selected_features?: { feature_id: number }[];
+  bar_languages?: { language_id: number }[];
   next_match?: {
     date: string;
     time: string;
@@ -43,25 +49,9 @@ interface FilterOption {
   value: string;
 }
 
-const CATEGORIES: FilterOption[] = [
-  { id: 'all', label: 'Todas', value: 'all' },
-  { id: 'sports', label: 'Deportes', value: 'sports' },
-  { id: 'pub', label: 'Pub', value: 'pub' },
-  { id: 'restaurant', label: 'Restaurante', value: 'restaurant' },
-  { id: 'club', label: 'Club', value: 'club' },
-];
-
-const DISTANCES: FilterOption[] = [
-  { id: '5', label: '5 km', value: '5' },
-  { id: '10', label: '10 km', value: '10' },
-  { id: '20', label: '20 km', value: '20' },
-  { id: '50', label: '50 km', value: '50' },
-];
-
-const RATINGS: FilterOption[] = [
-  { id: 'desc', label: 'Mejor valorados', value: 'desc' },
-  { id: 'asc', label: 'Menos valorados', value: 'asc' },
-  { id: 'reviews', label: 'Más reseñas', value: 'reviews' },
+const SORT_OPTIONS: FilterOption[] = [
+  { id: 'proximity', label: '📍 Proximidad', value: 'proximity' },
+  { id: 'rating', label: '⭐ Mejor valorados', value: 'rating' },
 ];
 
 const { width } = Dimensions.get('window');
@@ -75,9 +65,24 @@ export default function SearchScreen() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   
   // Filters state
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDistance, setSelectedDistance] = useState('10');
-  const [selectedRating, setSelectedRating] = useState('desc');
+  const [selectedSort, setSelectedSort] = useState('proximity');
+  const [selectedBarCategories, setSelectedBarCategories] = useState<number[]>([]);
+  const [selectedFoodTypes, setSelectedFoodTypes] = useState<number[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<number[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<number[]>([]);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+
+  // Load filter data
+  const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
+
+  // Debug logs
+  console.log('Filter data loaded:', {
+    barCategories: barCategories.length,
+    foodTypes: foodTypes.length,
+    barFeatures: barFeatures.length,
+    languages: languages.length,
+    loading: filtersLoading
+  });
 
   // Get user location
   const getUserLocation = useCallback(async () => {
@@ -122,7 +127,11 @@ export default function SearchScreen() {
           city,
           latitude,
           longitude,
-          bar_images(image_url, image_order)
+          category_id,
+          bar_images(image_url, image_order),
+          bar_food_types(food_type_id),
+          bar_selected_features(feature_id),
+          bar_languages(language_id)
         `)
         .eq('is_active', true);
 
@@ -131,10 +140,24 @@ export default function SearchScreen() {
         query = query.ilike('name', `%${searchQuery.trim()}%`);
       }
 
-      // Apply category filter
-      if (selectedCategory !== 'all') {
-        // Note: You might need to add a category field to your bars table
-        // For now, we'll skip category filtering
+      // Apply bar categories filter
+      if (selectedBarCategories.length > 0) {
+        query = query.in('category_id', selectedBarCategories);
+      }
+
+      // Apply food types filter
+      if (selectedFoodTypes.length > 0) {
+        // We'll filter this after fetching bars with their food types
+      }
+
+      // Apply features filter
+      if (selectedFeatures.length > 0) {
+        // We'll filter this after fetching bars with their features
+      }
+
+      // Apply languages filter
+      if (selectedLanguages.length > 0) {
+        // We'll filter this after fetching bars with their languages
       }
 
       const { data: barsData, error } = await query;
@@ -184,23 +207,47 @@ export default function SearchScreen() {
         })
       );
 
-      // Apply distance filter
-      const maxDistance = parseInt(selectedDistance);
-      const filteredByDistance = barsWithDistance.filter(
-        bar => !bar.distance_km || bar.distance_km <= maxDistance
-      );
+      // Apply additional filters after fetching data
+      let filteredBars = barsWithDistance;
 
-      // Apply rating filter
-      let sortedBars = [...filteredByDistance];
-      switch (selectedRating) {
-        case 'desc':
+      // Apply food types filter
+      if (selectedFoodTypes.length > 0) {
+        filteredBars = filteredBars.filter(bar => {
+          const barFoodTypeIds = bar.bar_food_types?.map(ft => ft.food_type_id) || [];
+          return selectedFoodTypes.some(selectedId => barFoodTypeIds.includes(selectedId));
+        });
+      }
+
+      // Apply features filter
+      if (selectedFeatures.length > 0) {
+        filteredBars = filteredBars.filter(bar => {
+          const barFeatureIds = bar.bar_selected_features?.map(f => f.feature_id) || [];
+          return selectedFeatures.some(selectedId => barFeatureIds.includes(selectedId));
+        });
+      }
+
+      // Apply languages filter
+      if (selectedLanguages.length > 0) {
+        filteredBars = filteredBars.filter(bar => {
+          const barLanguageIds = bar.bar_languages?.map(l => l.language_id) || [];
+          return selectedLanguages.some(selectedId => barLanguageIds.includes(selectedId));
+        });
+      }
+
+      // Apply sorting
+      let sortedBars = [...filteredBars];
+      switch (selectedSort) {
+        case 'proximity':
+          // Sort by distance if available
+          sortedBars.sort((a, b) => {
+            if (a.distance_km && b.distance_km) {
+              return a.distance_km - b.distance_km;
+            }
+            return 0;
+          });
+          break;
+        case 'rating':
           sortedBars.sort((a, b) => ((b.rating || 0) - (a.rating || 0)));
-          break;
-        case 'asc':
-          sortedBars.sort((a, b) => ((a.rating || 0) - (b.rating || 0)));
-          break;
-        case 'reviews':
-          sortedBars.sort((a, b) => ((b.review_count || 0) - (a.review_count || 0)));
           break;
       }
 
@@ -219,7 +266,7 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedCategory, selectedDistance, selectedRating, userLocation, getUserLocation]);
+  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, getUserLocation]);
 
   // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -306,7 +353,7 @@ export default function SearchScreen() {
     if (userLocation) {
       searchBars();
     }
-  }, [selectedCategory, selectedDistance, selectedRating, userLocation, searchBars]);
+  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, searchBars]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -336,36 +383,60 @@ export default function SearchScreen() {
         </View>
       </View>
   
+      {/* Filtros */}
       <View style={styles.filtersContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={styles.filtersScrollContent}
-        >
-          <Dropdown
-            label="Categoría"
-            options={CATEGORIES}
-            selectedValue={selectedCategory}
-            onSelect={setSelectedCategory}
-            placeholder="Categoría"
-          />
+        <View style={styles.filtersRow}>
+          <View style={styles.sortContainer}>
+            <Text style={styles.filterLabel}>Ordenar por</Text>
+            <Dropdown
+              label="Ordenar"
+              options={SORT_OPTIONS}
+              selectedValue={selectedSort}
+              onSelect={setSelectedSort}
+              placeholder="Ordenar"
+            />
+          </View>
           
-          <Dropdown
-            label="Distancia"
-            options={DISTANCES}
-            selectedValue={selectedDistance}
-            onSelect={setSelectedDistance}
-            placeholder="Distancia"
-          />
-          
-          <Dropdown
-            label="Ordenar por"
-            options={RATINGS}
-            selectedValue={selectedRating}
-            onSelect={setSelectedRating}
-            placeholder="Ordenar"
-          />
-        </ScrollView>
+          <View style={styles.filterButtonContainer}>
+            <Text style={styles.filterLabel}>Filtros</Text>
+            <TouchableOpacity 
+              style={[
+                styles.filterButton,
+                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+                 selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
+              ]}
+              onPress={() => {
+                console.log('🔘 Filter button pressed!');
+                console.log('🔘 Current filterModalVisible:', filterModalVisible);
+                setFilterModalVisible(true);
+                console.log('🔘 Setting filterModalVisible to true');
+              }}
+            >
+              <Ionicons 
+                name="filter" 
+                size={16} 
+                color={(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+                       selectedFeatures.length > 0 || selectedLanguages.length > 0) ? '#FFFFFF' : '#A3B3CC'} 
+              />
+              <Text style={[
+                styles.filterButtonText,
+                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+                 selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonTextActive
+              ]}>
+                Filtros
+              </Text>
+              {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+                selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>
+                    {selectedBarCategories.length + selectedFoodTypes.length + 
+                     selectedFeatures.length + selectedLanguages.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
   
       {/* 🔽 Resultados */}
@@ -387,13 +458,61 @@ export default function SearchScreen() {
             <Ionicons name="search" size={64} color="#A3B3CC" />
             <Text style={styles.emptyTitle}>No se encontraron bares</Text>
             <Text style={styles.emptySubtitle}>
-              {searchQuery ? 'Intenta con otros términos de búsqueda' : 'No hay bares disponibles en tu área'}
+              {searchQuery 
+                ? `No hay bares que coincidan con "${searchQuery}"`
+                : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+                   selectedFeatures.length > 0 || selectedLanguages.length > 0)
+                  ? 'No hay bares que cumplan con los filtros seleccionados'
+                  : 'No hay bares disponibles en tu área'
+              }
             </Text>
+            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+              selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+              <TouchableOpacity 
+                style={styles.clearFiltersButton}
+                onPress={() => {
+                  setSelectedBarCategories([]);
+                  setSelectedFoodTypes([]);
+                  setSelectedFeatures([]);
+                  setSelectedLanguages([]);
+                }}
+              >
+                <Text style={styles.clearFiltersButtonText}>Limpiar filtros</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
 
       <BottomTabBar />
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        barCategories={barCategories}
+        foodTypes={foodTypes}
+        barFeatures={barFeatures}
+        languages={languages}
+        selectedBarCategories={selectedBarCategories}
+        selectedFoodTypes={selectedFoodTypes}
+        selectedFeatures={selectedFeatures}
+        selectedLanguages={selectedLanguages}
+        onBarCategoriesChange={setSelectedBarCategories}
+        onFoodTypesChange={setSelectedFoodTypes}
+        onFeaturesChange={setSelectedFeatures}
+        onLanguagesChange={setSelectedLanguages}
+        onApplyFilters={() => {
+          console.log('🎉 Filtros aplicados:', {
+            selectedBarCategories,
+            selectedFoodTypes,
+            selectedFeatures,
+            selectedLanguages,
+          });
+          setFilterModalVisible(false); // Esto también lo puedes hacer aquí si prefieres
+        }}
+        loading={filtersLoading}
+      />
     </SafeAreaView>
   );
   
@@ -439,8 +558,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  filtersScrollContent: {
-    paddingRight: 20,
+  filtersRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  sortContainer: {
+    flex: 1,
+  },
+  filterButtonContainer: {
+    flex: 1,
+  },
+  filterLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A3A4A',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+    position: 'relative',
+  },
+  filterButtonActive: {
+    backgroundColor: '#1976D2',
+  },
+  filterButtonText: {
+    color: '#A3B3CC',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  filterButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  filterBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   resultsContainer: {
     flex: 1,
@@ -531,5 +703,17 @@ const styles = StyleSheet.create({
   barAddress: {
     color: '#A3B3CC',
     fontSize: 14,
+  },
+  clearFiltersButton: {
+    marginTop: 20,
+    backgroundColor: '#EF4444',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  clearFiltersButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
