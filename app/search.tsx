@@ -117,7 +117,17 @@ export default function SearchScreen() {
     setLoading(true);
 
     try {
-      let query = supabase
+      console.log('🔍 Starting bar search with filters:', {
+        searchQuery,
+        selectedBarCategories,
+        selectedFoodTypes,
+        selectedFeatures,
+        selectedLanguages,
+        selectedSort
+      });
+
+      // Paso 1. Cargar los bares activos
+      let barsQuery = supabase
         .from('bars')
         .select(`
           id,
@@ -128,49 +138,125 @@ export default function SearchScreen() {
           latitude,
           longitude,
           category_id,
-          bar_images(image_url, image_order),
-          bar_food_types(food_type_id),
-          bar_selected_features(feature_id),
-          bar_languages(language_id)
+          bar_images(image_url, image_order)
         `)
         .eq('is_active', true);
 
-      // Apply search filter
+      // Aplicar filtro de búsqueda
       if (searchQuery.trim()) {
-        query = query.ilike('name', `%${searchQuery.trim()}%`);
+        barsQuery = barsQuery.ilike('name', `%${searchQuery.trim()}%`);
+        console.log('🔍 Applied search filter:', searchQuery.trim());
       }
 
-      // Apply bar categories filter
+      // Aplicar filtro de categorías (esto se puede hacer a nivel de DB)
       if (selectedBarCategories.length > 0) {
-        query = query.in('category_id', selectedBarCategories);
+        barsQuery = barsQuery.in('category_id', selectedBarCategories);
+        console.log('🔍 Applied category filter at DB level:', selectedBarCategories);
       }
 
-      // Apply food types filter
-      if (selectedFoodTypes.length > 0) {
-        // We'll filter this after fetching bars with their food types
-      }
-
-      // Apply features filter
-      if (selectedFeatures.length > 0) {
-        // We'll filter this after fetching bars with their features
-      }
-
-      // Apply languages filter
-      if (selectedLanguages.length > 0) {
-        // We'll filter this after fetching bars with their languages
-      }
-
-      const { data: barsData, error } = await query;
+      const { data: barsData, error } = await barsQuery;
 
       if (error) {
-        console.error('Error fetching bars:', error);
+        console.error('❌ Error fetching bars:', error);
         Alert.alert('Error', 'No se pudieron cargar los bares');
         return;
       }
 
+      console.log('📊 Initial bars fetched:', barsData?.length || 0);
+
+      if (!barsData || barsData.length === 0) {
+        setBars([]);
+        return;
+      }
+
+      // Paso 2. Cargar relaciones N:N por separado
+      const barIds = barsData.map(bar => bar.id);
+      console.log('🔍 Loading N:N relationships for bar IDs:', barIds);
+
+      // Cargar todos los datos N:N
+      const { data: foodTypes } = await supabase
+        .from('bar_food_types')
+        .select('*')
+        .in('bar_id', barIds);
+
+      const { data: features } = await supabase
+        .from('bar_selected_features')
+        .select('*')
+        .in('bar_id', barIds);
+
+      const { data: languages } = await supabase
+        .from('bar_languages')
+        .select('*')
+        .in('bar_id', barIds);
+
+      console.log('📊 N:N relationships loaded:', {
+        foodTypes: foodTypes?.length || 0,
+        features: features?.length || 0,
+        languages: languages?.length || 0
+      });
+
+      // Paso 3. Crear mapas para todos los tipos de datos
+      const foodTypesMap = new Map();
+      foodTypes?.forEach(({ bar_id, food_type_id }) => {
+        if (!foodTypesMap.has(bar_id)) foodTypesMap.set(bar_id, []);
+        foodTypesMap.get(bar_id).push({ food_type_id });
+      });
+
+      const featuresMap = new Map();
+      features?.forEach(({ bar_id, feature_id }) => {
+        if (!featuresMap.has(bar_id)) featuresMap.set(bar_id, []);
+        featuresMap.get(bar_id).push({ feature_id });
+      });
+
+      const languagesMap = new Map();
+      languages?.forEach(({ bar_id, language_id }) => {
+        if (!languagesMap.has(bar_id)) languagesMap.set(bar_id, []);
+        languagesMap.get(bar_id).push({ language_id });
+      });
+
+      console.log('🗺️ Maps created:', {
+        foodTypesMapSize: foodTypesMap.size,
+        featuresMapSize: featuresMap.size,
+        languagesMapSize: languagesMap.size
+      });
+
+      // Paso 4. Fusionar la información por bar
+      const enrichedBars = barsData.map(bar => {
+        const enrichedBar = {
+          ...bar,
+          bar_food_types: foodTypesMap.get(bar.id) || [],
+          bar_selected_features: featuresMap.get(bar.id) || [],
+          bar_languages: languagesMap.get(bar.id) || [],
+        };
+
+        // Log explícito para verificar que los datos se asignan correctamente
+        console.log('✅ Bar enriched:', bar.name, {
+          foods: enrichedBar.bar_food_types,
+          features: enrichedBar.bar_selected_features,
+          languages: enrichedBar.bar_languages
+        });
+
+        return enrichedBar;
+      });
+
+      console.log('🔍 Enriched bars data:');
+      enrichedBars.forEach(bar => {
+        console.log(`📋 ${bar.name}:`, {
+          category_id: bar.category_id,
+          foodTypes: bar.bar_food_types,
+          features: bar.bar_selected_features,
+          languages: bar.bar_languages
+        });
+      });
+
+      // Debug: Log complete example bar
+      if (enrichedBars.length > 0) {
+        console.log('🧪 Bar ejemplo completo:', JSON.stringify(enrichedBars[0], null, 2));
+      }
+
       // Calculate distances and add next match info
       const barsWithDistance = await Promise.all(
-        (barsData || []).map(async (bar) => {
+        (enrichedBars || []).map(async (bar) => {
           let distance = null;
           if (bar.latitude && bar.longitude) {
             distance = calculateDistance(
@@ -207,61 +293,111 @@ export default function SearchScreen() {
         })
       );
 
-      // Apply additional filters after fetching data
+      // Apply client-side filtering for N:N relationships
       let filteredBars = barsWithDistance;
 
-      // Apply food types filter
+      // Apply food types filter (client-side)
       if (selectedFoodTypes.length > 0) {
+        const beforeCount = filteredBars.length;
+        console.log('🍕 Starting food types filter with:', selectedFoodTypes);
+        
         filteredBars = filteredBars.filter(bar => {
-          const barFoodTypeIds = bar.bar_food_types?.map(ft => ft.food_type_id) || [];
-          return selectedFoodTypes.some(selectedId => barFoodTypeIds.includes(selectedId));
+          const foodIds = bar.bar_food_types?.map((ft: { food_type_id: number }) => ft.food_type_id) || [];
+          
+          // Check if bar has ALL selected food types (AND logic)
+          const matchesFood = selectedFoodTypes.every(selectedId => {
+            const hasFoodType = foodIds.includes(selectedId);
+            console.log(`  🍕 Bar "${bar.name}": checking food_type_id ${selectedId} -> ${hasFoodType ? '✅' : '❌'}`);
+            return hasFoodType;
+          });
+          
+          console.log(`🧪 Bar "${bar.name}":`, {
+            foodIds,
+            selectedFoodTypes,
+            matchesFood: matchesFood ? '✅' : '❌'
+          });
+          
+          return matchesFood;
         });
+        console.log('🍕 Applied food types filter (client-side):', selectedFoodTypes, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Apply features filter
+      // Apply features filter (client-side)
       if (selectedFeatures.length > 0) {
+        const beforeCount = filteredBars.length;
+        console.log('✨ Starting features filter with:', selectedFeatures);
+        
         filteredBars = filteredBars.filter(bar => {
-          const barFeatureIds = bar.bar_selected_features?.map(f => f.feature_id) || [];
-          return selectedFeatures.some(selectedId => barFeatureIds.includes(selectedId));
+          const featureIds = bar.bar_selected_features?.map((f: { feature_id: number }) => f.feature_id) || [];
+          
+          // Check if bar has ALL selected features (AND logic)
+          const matchesFeatures = selectedFeatures.every(selectedId => {
+            const hasFeature = featureIds.includes(selectedId);
+            console.log(`  ✨ Bar "${bar.name}": checking feature_id ${selectedId} -> ${hasFeature ? '✅' : '❌'}`);
+            return hasFeature;
+          });
+          
+          console.log(`🧪 Bar "${bar.name}":`, {
+            featureIds,
+            selectedFeatures,
+            matchesFeatures: matchesFeatures ? '✅' : '❌'
+          });
+          
+          return matchesFeatures;
         });
+        console.log('✨ Applied features filter (client-side):', selectedFeatures, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Apply languages filter
+      // Apply languages filter (client-side)
       if (selectedLanguages.length > 0) {
+        const beforeCount = filteredBars.length;
+        console.log('🌍 Starting languages filter with:', selectedLanguages);
+        
         filteredBars = filteredBars.filter(bar => {
-          const barLanguageIds = bar.bar_languages?.map(l => l.language_id) || [];
-          return selectedLanguages.some(selectedId => barLanguageIds.includes(selectedId));
+          const languageIds = bar.bar_languages?.map((l: { language_id: number }) => l.language_id) || [];
+          
+          // Check if bar has ALL selected languages (AND logic)
+          const matchesLanguages = selectedLanguages.every(selectedId => {
+            const hasLanguage = languageIds.includes(selectedId);
+            console.log(`  🌍 Bar "${bar.name}": checking language_id ${selectedId} -> ${hasLanguage ? '✅' : '❌'}`);
+            return hasLanguage;
+          });
+          
+          console.log(`🧪 Bar "${bar.name}":`, {
+            languageIds,
+            selectedLanguages,
+            matchesLanguages: matchesLanguages ? '✅' : '❌'
+          });
+          
+          return matchesLanguages;
         });
+        console.log('🌍 Applied languages filter (client-side):', selectedLanguages, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
       // Apply sorting
       let sortedBars = [...filteredBars];
       switch (selectedSort) {
         case 'proximity':
-          // Sort by distance if available
           sortedBars.sort((a, b) => {
             if (a.distance_km && b.distance_km) {
               return a.distance_km - b.distance_km;
             }
             return 0;
           });
+          console.log('📍 Sorted by proximity');
           break;
         case 'rating':
           sortedBars.sort((a, b) => ((b.rating || 0) - (a.rating || 0)));
+          console.log('⭐ Sorted by rating');
           break;
       }
 
-      // Sort by distance if available
-      sortedBars.sort((a, b) => {
-        if (a.distance_km && b.distance_km) {
-          return a.distance_km - b.distance_km;
-        }
-        return 0;
-      });
+      console.log('✅ Final bars after filtering and sorting:', sortedBars.length);
+      console.log('📋 Bars found:', sortedBars.map(bar => bar.name));
 
       setBars(sortedBars);
     } catch (error) {
-      console.error('Error in searchBars:', error);
+      console.error('❌ Error in searchBars:', error);
       Alert.alert('Error', 'Ocurrió un error al buscar bares');
     } finally {
       setLoading(false);
@@ -285,6 +421,85 @@ export default function SearchScreen() {
   const handleSearch = useCallback(() => {
     searchBars();
   }, [searchBars]);
+
+  // Handle apply filters
+  const handleApplyFilters = useCallback(() => {
+    console.log('🎉 Applying filters and searching bars...');
+    searchBars();
+    setFilterModalVisible(false);
+  }, [searchBars]);
+
+  // Handle clear all filters
+  const handleClearAllFilters = useCallback(() => {
+    console.log('🧹 Clearing all filters...');
+    setSelectedBarCategories([]);
+    setSelectedFoodTypes([]);
+    setSelectedFeatures([]);
+    setSelectedLanguages([]);
+    setSearchQuery('');
+    // The search will be triggered automatically by the useEffect
+  }, []);
+
+  // Check and create sample data for N:N relationships
+  const checkAndCreateSampleData = useCallback(async () => {
+    try {
+      console.log('🔍 Checking N:N relationship data...');
+      
+      // Check if we have any data in the N:N tables
+      const { data: foodTypesData } = await supabase
+        .from('bar_food_types')
+        .select('*')
+        .limit(5);
+      
+      const { data: featuresData } = await supabase
+        .from('bar_selected_features')
+        .select('*')
+        .limit(5);
+      
+      const { data: languagesData } = await supabase
+        .from('bar_languages')
+        .select('*')
+        .limit(5);
+      
+      console.log('📊 N:N data check:', {
+        hasFoodTypes: foodTypesData && foodTypesData.length > 0,
+        hasFeatures: featuresData && featuresData.length > 0,
+        hasLanguages: languagesData && languagesData.length > 0,
+        foodTypesCount: foodTypesData?.length || 0,
+        featuresCount: featuresData?.length || 0,
+        languagesCount: languagesData?.length || 0
+      });
+      
+      // Show sample data if available
+      if (foodTypesData && foodTypesData.length > 0) {
+        console.log('🍕 Sample food types data:', foodTypesData);
+      }
+      
+      if (featuresData && featuresData.length > 0) {
+        console.log('✨ Sample features data:', featuresData);
+      }
+      
+      if (languagesData && languagesData.length > 0) {
+        console.log('🌍 Sample languages data:', languagesData);
+      }
+      
+      // If no data exists, we might need to create some sample data
+      if (!foodTypesData || foodTypesData.length === 0) {
+        console.log('⚠️ No food types data found in bar_food_types table');
+      }
+      
+      if (!featuresData || featuresData.length === 0) {
+        console.log('⚠️ No features data found in bar_selected_features table');
+      }
+      
+      if (!languagesData || languagesData.length === 0) {
+        console.log('⚠️ No languages data found in bar_languages table');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error checking N:N data:', error);
+    }
+  }, []);
 
   // Handle bar selection
   const handleBarPress = useCallback((barId: string) => {
@@ -346,11 +561,13 @@ export default function SearchScreen() {
   // Load initial data
   useEffect(() => {
     getUserLocation();
-  }, [getUserLocation]);
+    checkAndCreateSampleData(); // Check N:N relationship data
+  }, [getUserLocation, checkAndCreateSampleData]);
 
   // Search when filters change
   useEffect(() => {
     if (userLocation) {
+      console.log('🔄 Filters changed, triggering search...');
       searchBars();
     }
   }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, searchBars]);
@@ -402,8 +619,7 @@ export default function SearchScreen() {
             <TouchableOpacity 
               style={[
                 styles.filterButton,
-                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-                 selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
+                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
               ]}
               onPress={() => {
                 console.log('🔘 Filter button pressed!');
@@ -415,22 +631,18 @@ export default function SearchScreen() {
               <Ionicons 
                 name="filter" 
                 size={16} 
-                color={(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-                       selectedFeatures.length > 0 || selectedLanguages.length > 0) ? '#FFFFFF' : '#A3B3CC'} 
+                color={(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) ? '#FFFFFF' : '#A3B3CC'} 
               />
               <Text style={[
                 styles.filterButtonText,
-                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-                 selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonTextActive
+                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonTextActive
               ]}>
                 Filtros
               </Text>
-              {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-                selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+              {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
                 <View style={styles.filterBadge}>
                   <Text style={styles.filterBadgeText}>
-                    {selectedBarCategories.length + selectedFoodTypes.length + 
-                     selectedFeatures.length + selectedLanguages.length}
+                    {selectedBarCategories.length + selectedFoodTypes.length + selectedFeatures.length + selectedLanguages.length}
                   </Text>
                 </View>
               )}
@@ -460,24 +672,33 @@ export default function SearchScreen() {
             <Text style={styles.emptySubtitle}>
               {searchQuery 
                 ? `No hay bares que coincidan con "${searchQuery}"`
-                : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-                   selectedFeatures.length > 0 || selectedLanguages.length > 0)
-                  ? 'No hay bares que cumplan con los filtros seleccionados'
+                : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0)
+                  ? `No hay bares que cumplan con los filtros seleccionados${
+                      selectedBarCategories.length > 0 ? ` (${selectedBarCategories.length} categorías)` : ''
+                    }${
+                      selectedFoodTypes.length > 0 ? ` (${selectedFoodTypes.length} tipos de comida)` : ''
+                    }${
+                      selectedFeatures.length > 0 ? ` (${selectedFeatures.length} características)` : ''
+                    }${
+                      selectedLanguages.length > 0 ? ` (${selectedLanguages.length} idiomas)` : ''
+                    }`
                   : 'No hay bares disponibles en tu área'
               }
             </Text>
-            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-              selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
               <TouchableOpacity 
                 style={styles.clearFiltersButton}
-                onPress={() => {
-                  setSelectedBarCategories([]);
-                  setSelectedFoodTypes([]);
-                  setSelectedFeatures([]);
-                  setSelectedLanguages([]);
-                }}
+                onPress={handleClearAllFilters}
               >
                 <Text style={styles.clearFiltersButtonText}>Limpiar filtros</Text>
+              </TouchableOpacity>
+            )}
+            {searchQuery && (
+              <TouchableOpacity 
+                style={styles.clearFiltersButton}
+                onPress={() => setSearchQuery('')}
+              >
+                <Text style={styles.clearFiltersButtonText}>Limpiar búsqueda</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -502,21 +723,11 @@ export default function SearchScreen() {
         onFoodTypesChange={setSelectedFoodTypes}
         onFeaturesChange={setSelectedFeatures}
         onLanguagesChange={setSelectedLanguages}
-        onApplyFilters={() => {
-          console.log('🎉 Filtros aplicados:', {
-            selectedBarCategories,
-            selectedFoodTypes,
-            selectedFeatures,
-            selectedLanguages,
-          });
-          setFilterModalVisible(false); // Esto también lo puedes hacer aquí si prefieres
-        }}
+        onApplyFilters={handleApplyFilters}
         loading={filtersLoading}
       />
     </SafeAreaView>
   );
-  
-  
 }
 
 const styles = StyleSheet.create({
