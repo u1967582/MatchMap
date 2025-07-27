@@ -18,6 +18,8 @@ import * as Location from 'expo-location';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import Dropdown from '~/components/ui/Dropdown';
+import FilterModal from '~/components/ui/FilterModal';
+import { useFilterData } from '~/hooks/useFilterData';
 
 interface Bar {
   id: string;
@@ -27,10 +29,14 @@ interface Bar {
   city: string;
   latitude?: number;
   longitude?: number;
+  category_id?: number;
   rating?: number | null;
   review_count?: number | null;
   image_url?: string;
   distance_km?: number | null;
+  bar_food_types?: { food_type_id: number }[];
+  bar_selected_features?: { feature_id: number }[];
+  bar_languages?: { language_id: number }[];
   next_match?: {
     date: string;
     time: string;
@@ -43,25 +49,9 @@ interface FilterOption {
   value: string;
 }
 
-const CATEGORIES: FilterOption[] = [
-  { id: 'all', label: 'Todas', value: 'all' },
-  { id: 'sports', label: 'Deportes', value: 'sports' },
-  { id: 'pub', label: 'Pub', value: 'pub' },
-  { id: 'restaurant', label: 'Restaurante', value: 'restaurant' },
-  { id: 'club', label: 'Club', value: 'club' },
-];
-
-const DISTANCES: FilterOption[] = [
-  { id: '5', label: '5 km', value: '5' },
-  { id: '10', label: '10 km', value: '10' },
-  { id: '20', label: '20 km', value: '20' },
-  { id: '50', label: '50 km', value: '50' },
-];
-
-const RATINGS: FilterOption[] = [
-  { id: 'desc', label: 'Mejor valorados', value: 'desc' },
-  { id: 'asc', label: 'Menos valorados', value: 'asc' },
-  { id: 'reviews', label: 'Más reseñas', value: 'reviews' },
+const SORT_OPTIONS: FilterOption[] = [
+  { id: 'proximity', label: '📍 Proximidad', value: 'proximity' },
+  { id: 'rating', label: '⭐ Mejor valorados', value: 'rating' },
 ];
 
 const { width } = Dimensions.get('window');
@@ -75,9 +65,24 @@ export default function SearchScreen() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   
   // Filters state
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDistance, setSelectedDistance] = useState('10');
-  const [selectedRating, setSelectedRating] = useState('desc');
+  const [selectedSort, setSelectedSort] = useState('proximity');
+  const [selectedBarCategories, setSelectedBarCategories] = useState<number[]>([]);
+  const [selectedFoodTypes, setSelectedFoodTypes] = useState<number[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<number[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<number[]>([]);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+
+  // Load filter data
+  const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
+
+  // Debug logs
+  console.log('Filter data loaded:', {
+    barCategories: barCategories.length,
+    foodTypes: foodTypes.length,
+    barFeatures: barFeatures.length,
+    languages: languages.length,
+    loading: filtersLoading
+  });
 
   // Get user location
   const getUserLocation = useCallback(async () => {
@@ -112,7 +117,17 @@ export default function SearchScreen() {
     setLoading(true);
 
     try {
-      let query = supabase
+      console.log('🔍 Starting bar search with filters:', {
+        searchQuery,
+        selectedBarCategories,
+        selectedFoodTypes,
+        selectedFeatures,
+        selectedLanguages,
+        selectedSort
+      });
+
+      // Paso 1. Cargar los bares activos
+      let barsQuery = supabase
         .from('bars')
         .select(`
           id,
@@ -122,32 +137,126 @@ export default function SearchScreen() {
           city,
           latitude,
           longitude,
+          category_id,
           bar_images(image_url, image_order)
         `)
         .eq('is_active', true);
 
-      // Apply search filter
+      // Aplicar filtro de búsqueda
       if (searchQuery.trim()) {
-        query = query.ilike('name', `%${searchQuery.trim()}%`);
+        barsQuery = barsQuery.ilike('name', `%${searchQuery.trim()}%`);
+        console.log('🔍 Applied search filter:', searchQuery.trim());
       }
 
-      // Apply category filter
-      if (selectedCategory !== 'all') {
-        // Note: You might need to add a category field to your bars table
-        // For now, we'll skip category filtering
+      // Aplicar filtro de categorías (esto se puede hacer a nivel de DB)
+      if (selectedBarCategories.length > 0) {
+        barsQuery = barsQuery.in('category_id', selectedBarCategories);
+        console.log('🔍 Applied category filter at DB level:', selectedBarCategories);
       }
 
-      const { data: barsData, error } = await query;
+      const { data: barsData, error } = await barsQuery;
 
       if (error) {
-        console.error('Error fetching bars:', error);
+        console.error('❌ Error fetching bars:', error);
         Alert.alert('Error', 'No se pudieron cargar los bares');
         return;
       }
 
+      console.log('📊 Initial bars fetched:', barsData?.length || 0);
+
+      if (!barsData || barsData.length === 0) {
+        setBars([]);
+        return;
+      }
+
+      // Paso 2. Cargar relaciones N:N por separado
+      const barIds = barsData.map(bar => bar.id);
+      console.log('🔍 Loading N:N relationships for bar IDs:', barIds);
+
+      // Cargar todos los datos N:N
+      const { data: foodTypes } = await supabase
+        .from('bar_food_types')
+        .select('*')
+        .in('bar_id', barIds);
+
+      const { data: features } = await supabase
+        .from('bar_selected_features')
+        .select('*')
+        .in('bar_id', barIds);
+
+      const { data: languages } = await supabase
+        .from('bar_languages')
+        .select('*')
+        .in('bar_id', barIds);
+
+      console.log('📊 N:N relationships loaded:', {
+        foodTypes: foodTypes?.length || 0,
+        features: features?.length || 0,
+        languages: languages?.length || 0
+      });
+
+      // Paso 3. Crear mapas para todos los tipos de datos
+      const foodTypesMap = new Map();
+      foodTypes?.forEach(({ bar_id, food_type_id }) => {
+        if (!foodTypesMap.has(bar_id)) foodTypesMap.set(bar_id, []);
+        foodTypesMap.get(bar_id).push({ food_type_id });
+      });
+
+      const featuresMap = new Map();
+      features?.forEach(({ bar_id, feature_id }) => {
+        if (!featuresMap.has(bar_id)) featuresMap.set(bar_id, []);
+        featuresMap.get(bar_id).push({ feature_id });
+      });
+
+      const languagesMap = new Map();
+      languages?.forEach(({ bar_id, language_id }) => {
+        if (!languagesMap.has(bar_id)) languagesMap.set(bar_id, []);
+        languagesMap.get(bar_id).push({ language_id });
+      });
+
+      console.log('🗺️ Maps created:', {
+        foodTypesMapSize: foodTypesMap.size,
+        featuresMapSize: featuresMap.size,
+        languagesMapSize: languagesMap.size
+      });
+
+      // Paso 4. Fusionar la información por bar
+      const enrichedBars = barsData.map(bar => {
+        const enrichedBar = {
+          ...bar,
+          bar_food_types: foodTypesMap.get(bar.id) || [],
+          bar_selected_features: featuresMap.get(bar.id) || [],
+          bar_languages: languagesMap.get(bar.id) || [],
+        };
+
+        // Log explícito para verificar que los datos se asignan correctamente
+        console.log('✅ Bar enriched:', bar.name, {
+          foods: enrichedBar.bar_food_types,
+          features: enrichedBar.bar_selected_features,
+          languages: enrichedBar.bar_languages
+        });
+
+        return enrichedBar;
+      });
+
+      console.log('🔍 Enriched bars data:');
+      enrichedBars.forEach(bar => {
+        console.log(`📋 ${bar.name}:`, {
+          category_id: bar.category_id,
+          foodTypes: bar.bar_food_types,
+          features: bar.bar_selected_features,
+          languages: bar.bar_languages
+        });
+      });
+
+      // Debug: Log complete example bar
+      if (enrichedBars.length > 0) {
+        console.log('🧪 Bar ejemplo completo:', JSON.stringify(enrichedBars[0], null, 2));
+      }
+
       // Calculate distances and add next match info
       const barsWithDistance = await Promise.all(
-        (barsData || []).map(async (bar) => {
+        (enrichedBars || []).map(async (bar) => {
           let distance = null;
           if (bar.latitude && bar.longitude) {
             distance = calculateDistance(
@@ -170,10 +279,22 @@ export default function SearchScreen() {
             .limit(1)
             .single();
 
+          // Find image with image_order = 1
+          const mainImage = bar.bar_images
+            ?.find((img: any) => img.image_order === 1)?.image_url || 
+            bar.bar_images?.[0]?.image_url || null;
+
+          console.log(`🖼️ Bar "${bar.name}":`, {
+            totalImages: bar.bar_images?.length || 0,
+            imageOrder1: bar.bar_images?.find((img: any) => img.image_order === 1)?.image_url,
+            fallbackImage: bar.bar_images?.[0]?.image_url,
+            selectedImage: mainImage
+          });
+
           return {
             ...bar,
             distance_km: distance,
-            image_url: bar.bar_images?.[0]?.image_url,
+            image_url: mainImage,
             rating: 0, // Default rating until we have the actual data
             review_count: 0, // Default review count until we have the actual data
             next_match: nextMatch ? {
@@ -184,42 +305,116 @@ export default function SearchScreen() {
         })
       );
 
-      // Apply distance filter
-      const maxDistance = parseInt(selectedDistance);
-      const filteredByDistance = barsWithDistance.filter(
-        bar => !bar.distance_km || bar.distance_km <= maxDistance
-      );
+      // Apply client-side filtering for N:N relationships
+      let filteredBars = barsWithDistance;
 
-      // Apply rating filter
-      let sortedBars = [...filteredByDistance];
-      switch (selectedRating) {
-        case 'desc':
+      // Apply food types filter (client-side)
+      if (selectedFoodTypes.length > 0) {
+        const beforeCount = filteredBars.length;
+        console.log('🍕 Starting food types filter with:', selectedFoodTypes);
+        
+        filteredBars = filteredBars.filter(bar => {
+          const foodIds = bar.bar_food_types?.map((ft: { food_type_id: number }) => ft.food_type_id) || [];
+          
+          // Check if bar has ALL selected food types (AND logic)
+          const matchesFood = selectedFoodTypes.every(selectedId => {
+            const hasFoodType = foodIds.includes(selectedId);
+            console.log(`  🍕 Bar "${bar.name}": checking food_type_id ${selectedId} -> ${hasFoodType ? '✅' : '❌'}`);
+            return hasFoodType;
+          });
+          
+          console.log(`🧪 Bar "${bar.name}":`, {
+            foodIds,
+            selectedFoodTypes,
+            matchesFood: matchesFood ? '✅' : '❌'
+          });
+          
+          return matchesFood;
+        });
+        console.log('🍕 Applied food types filter (client-side):', selectedFoodTypes, `(${beforeCount} -> ${filteredBars.length} bars)`);
+      }
+
+      // Apply features filter (client-side)
+      if (selectedFeatures.length > 0) {
+        const beforeCount = filteredBars.length;
+        console.log('✨ Starting features filter with:', selectedFeatures);
+        
+        filteredBars = filteredBars.filter(bar => {
+          const featureIds = bar.bar_selected_features?.map((f: { feature_id: number }) => f.feature_id) || [];
+          
+          // Check if bar has ALL selected features (AND logic)
+          const matchesFeatures = selectedFeatures.every(selectedId => {
+            const hasFeature = featureIds.includes(selectedId);
+            console.log(`  ✨ Bar "${bar.name}": checking feature_id ${selectedId} -> ${hasFeature ? '✅' : '❌'}`);
+            return hasFeature;
+          });
+          
+          console.log(`🧪 Bar "${bar.name}":`, {
+            featureIds,
+            selectedFeatures,
+            matchesFeatures: matchesFeatures ? '✅' : '❌'
+          });
+          
+          return matchesFeatures;
+        });
+        console.log('✨ Applied features filter (client-side):', selectedFeatures, `(${beforeCount} -> ${filteredBars.length} bars)`);
+      }
+
+      // Apply languages filter (client-side)
+      if (selectedLanguages.length > 0) {
+        const beforeCount = filteredBars.length;
+        console.log('🌍 Starting languages filter with:', selectedLanguages);
+        
+        filteredBars = filteredBars.filter(bar => {
+          const languageIds = bar.bar_languages?.map((l: { language_id: number }) => l.language_id) || [];
+          
+          // Check if bar has ALL selected languages (AND logic)
+          const matchesLanguages = selectedLanguages.every(selectedId => {
+            const hasLanguage = languageIds.includes(selectedId);
+            console.log(`  🌍 Bar "${bar.name}": checking language_id ${selectedId} -> ${hasLanguage ? '✅' : '❌'}`);
+            return hasLanguage;
+          });
+          
+          console.log(`🧪 Bar "${bar.name}":`, {
+            languageIds,
+            selectedLanguages,
+            matchesLanguages: matchesLanguages ? '✅' : '❌'
+          });
+          
+          return matchesLanguages;
+        });
+        console.log('🌍 Applied languages filter (client-side):', selectedLanguages, `(${beforeCount} -> ${filteredBars.length} bars)`);
+      }
+
+      // Apply sorting
+      let sortedBars = [...filteredBars];
+      switch (selectedSort) {
+        case 'proximity':
+          sortedBars.sort((a, b) => {
+            if (a.distance_km && b.distance_km) {
+              return a.distance_km - b.distance_km;
+            }
+            return 0;
+          });
+          console.log('📍 Sorted by proximity');
+          break;
+        case 'rating':
           sortedBars.sort((a, b) => ((b.rating || 0) - (a.rating || 0)));
-          break;
-        case 'asc':
-          sortedBars.sort((a, b) => ((a.rating || 0) - (b.rating || 0)));
-          break;
-        case 'reviews':
-          sortedBars.sort((a, b) => ((b.review_count || 0) - (a.review_count || 0)));
+          console.log('⭐ Sorted by rating');
           break;
       }
 
-      // Sort by distance if available
-      sortedBars.sort((a, b) => {
-        if (a.distance_km && b.distance_km) {
-          return a.distance_km - b.distance_km;
-        }
-        return 0;
-      });
+      console.log('✅ Final bars after filtering and sorting:', sortedBars.length);
+      console.log('📋 Bars found:', sortedBars.map(bar => bar.name));
 
       setBars(sortedBars);
     } catch (error) {
-      console.error('Error in searchBars:', error);
+      console.error('❌ Error in searchBars:', error);
       Alert.alert('Error', 'Ocurrió un error al buscar bares');
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedCategory, selectedDistance, selectedRating, userLocation, getUserLocation]);
+  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, getUserLocation]);
 
   // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -239,6 +434,85 @@ export default function SearchScreen() {
     searchBars();
   }, [searchBars]);
 
+  // Handle apply filters
+  const handleApplyFilters = useCallback(() => {
+    console.log('🎉 Applying filters and searching bars...');
+    searchBars();
+    setFilterModalVisible(false);
+  }, [searchBars]);
+
+  // Handle clear all filters
+  const handleClearAllFilters = useCallback(() => {
+    console.log('🧹 Clearing all filters...');
+    setSelectedBarCategories([]);
+    setSelectedFoodTypes([]);
+    setSelectedFeatures([]);
+    setSelectedLanguages([]);
+    setSearchQuery('');
+    // The search will be triggered automatically by the useEffect
+  }, []);
+
+  // Check and create sample data for N:N relationships
+  const checkAndCreateSampleData = useCallback(async () => {
+    try {
+      console.log('🔍 Checking N:N relationship data...');
+      
+      // Check if we have any data in the N:N tables
+      const { data: foodTypesData } = await supabase
+        .from('bar_food_types')
+        .select('*')
+        .limit(5);
+      
+      const { data: featuresData } = await supabase
+        .from('bar_selected_features')
+        .select('*')
+        .limit(5);
+      
+      const { data: languagesData } = await supabase
+        .from('bar_languages')
+        .select('*')
+        .limit(5);
+      
+      console.log('📊 N:N data check:', {
+        hasFoodTypes: foodTypesData && foodTypesData.length > 0,
+        hasFeatures: featuresData && featuresData.length > 0,
+        hasLanguages: languagesData && languagesData.length > 0,
+        foodTypesCount: foodTypesData?.length || 0,
+        featuresCount: featuresData?.length || 0,
+        languagesCount: languagesData?.length || 0
+      });
+      
+      // Show sample data if available
+      if (foodTypesData && foodTypesData.length > 0) {
+        console.log('🍕 Sample food types data:', foodTypesData);
+      }
+      
+      if (featuresData && featuresData.length > 0) {
+        console.log('✨ Sample features data:', featuresData);
+      }
+      
+      if (languagesData && languagesData.length > 0) {
+        console.log('🌍 Sample languages data:', languagesData);
+      }
+      
+      // If no data exists, we might need to create some sample data
+      if (!foodTypesData || foodTypesData.length === 0) {
+        console.log('⚠️ No food types data found in bar_food_types table');
+      }
+      
+      if (!featuresData || featuresData.length === 0) {
+        console.log('⚠️ No features data found in bar_selected_features table');
+      }
+      
+      if (!languagesData || languagesData.length === 0) {
+        console.log('⚠️ No languages data found in bar_languages table');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error checking N:N data:', error);
+    }
+  }, []);
+
   // Handle bar selection
   const handleBarPress = useCallback((barId: string) => {
     router.push(`/bar-profile/${barId}` as any);
@@ -253,12 +527,25 @@ export default function SearchScreen() {
         style={styles.barCard}
         onPress={() => handleBarPress(item.id)}
       >
-        <Image
-          source={{
-            uri: item.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
-          }}
-          style={styles.barImage}
-        />
+        <View style={styles.imageContainer}>
+          <Image
+            source={{
+              uri: item.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
+            }}
+            style={styles.barImage}
+          />
+          
+          {/* Favorites Button */}
+          <TouchableOpacity 
+            style={styles.favoritesButton}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent triggering the card press
+              console.log('❤️ Add to favorites:', item.name);
+            }}
+          >
+            <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
     
         <View style={styles.barInfo}>
           <Text style={styles.barName}>{item.name}</Text>
@@ -299,14 +586,16 @@ export default function SearchScreen() {
   // Load initial data
   useEffect(() => {
     getUserLocation();
-  }, [getUserLocation]);
+    checkAndCreateSampleData(); // Check N:N relationship data
+  }, [getUserLocation, checkAndCreateSampleData]);
 
   // Search when filters change
   useEffect(() => {
     if (userLocation) {
+      console.log('🔄 Filters changed, triggering search...');
       searchBars();
     }
-  }, [selectedCategory, selectedDistance, selectedRating, userLocation, searchBars]);
+  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, searchBars]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -336,36 +625,55 @@ export default function SearchScreen() {
         </View>
       </View>
   
+      {/* Filtros */}
       <View style={styles.filtersContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={styles.filtersScrollContent}
-        >
-          <Dropdown
-            label="Categoría"
-            options={CATEGORIES}
-            selectedValue={selectedCategory}
-            onSelect={setSelectedCategory}
-            placeholder="Categoría"
-          />
+        <View style={styles.filtersRow}>
+          <View style={styles.filterColumn}>
+            <Text style={styles.filterLabel}>Ordenar por</Text>
+            <Dropdown
+              label="Ordenar"
+              options={SORT_OPTIONS}
+              selectedValue={selectedSort}
+              onSelect={setSelectedSort}
+              placeholder="Ordenar"
+            />
+          </View>
           
-          <Dropdown
-            label="Distancia"
-            options={DISTANCES}
-            selectedValue={selectedDistance}
-            onSelect={setSelectedDistance}
-            placeholder="Distancia"
-          />
-          
-          <Dropdown
-            label="Ordenar por"
-            options={RATINGS}
-            selectedValue={selectedRating}
-            onSelect={setSelectedRating}
-            placeholder="Ordenar"
-          />
-        </ScrollView>
+          <View style={styles.filterColumn}>
+            <Text style={styles.filterLabel}>Filtros</Text>
+            <TouchableOpacity 
+              style={[
+                styles.filterButton,
+                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
+              ]}
+              onPress={() => {
+                console.log('🔘 Filter button pressed!');
+                console.log('🔘 Current filterModalVisible:', filterModalVisible);
+                setFilterModalVisible(true);
+                console.log('🔘 Setting filterModalVisible to true');
+              }}
+            >
+              <Ionicons 
+                name="filter" 
+                size={16} 
+                color={(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) ? '#FFFFFF' : '#A3B3CC'} 
+              />
+              <Text style={[
+                styles.filterButtonText,
+                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonTextActive
+              ]}>
+                Filtros
+              </Text>
+              {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>
+                    {selectedBarCategories.length + selectedFoodTypes.length + selectedFeatures.length + selectedLanguages.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
   
       {/* 🔽 Resultados */}
@@ -387,17 +695,64 @@ export default function SearchScreen() {
             <Ionicons name="search" size={64} color="#A3B3CC" />
             <Text style={styles.emptyTitle}>No se encontraron bares</Text>
             <Text style={styles.emptySubtitle}>
-              {searchQuery ? 'Intenta con otros términos de búsqueda' : 'No hay bares disponibles en tu área'}
+              {searchQuery 
+                ? `No hay bares que coincidan con "${searchQuery}"`
+                : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0)
+                  ? `No hay bares que cumplan con los filtros seleccionados${
+                      selectedBarCategories.length > 0 ? ` (${selectedBarCategories.length} categorías)` : ''
+                    }${
+                      selectedFoodTypes.length > 0 ? ` (${selectedFoodTypes.length} tipos de comida)` : ''
+                    }${
+                      selectedFeatures.length > 0 ? ` (${selectedFeatures.length} características)` : ''
+                    }${
+                      selectedLanguages.length > 0 ? ` (${selectedLanguages.length} idiomas)` : ''
+                    }`
+                  : 'No hay bares disponibles en tu área'
+              }
             </Text>
+            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+              <TouchableOpacity 
+                style={styles.clearFiltersButton}
+                onPress={handleClearAllFilters}
+              >
+                <Text style={styles.clearFiltersButtonText}>Limpiar filtros</Text>
+              </TouchableOpacity>
+            )}
+            {searchQuery && (
+              <TouchableOpacity 
+                style={styles.clearFiltersButton}
+                onPress={() => setSearchQuery('')}
+              >
+                <Text style={styles.clearFiltersButtonText}>Limpiar búsqueda</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
 
       <BottomTabBar />
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        barCategories={barCategories}
+        foodTypes={foodTypes}
+        barFeatures={barFeatures}
+        languages={languages}
+        selectedBarCategories={selectedBarCategories}
+        selectedFoodTypes={selectedFoodTypes}
+        selectedFeatures={selectedFeatures}
+        selectedLanguages={selectedLanguages}
+        onBarCategoriesChange={setSelectedBarCategories}
+        onFoodTypesChange={setSelectedFoodTypes}
+        onFeaturesChange={setSelectedFeatures}
+        onLanguagesChange={setSelectedLanguages}
+        onApplyFilters={handleApplyFilters}
+        loading={filtersLoading}
+      />
     </SafeAreaView>
   );
-  
-  
 }
 
 const styles = StyleSheet.create({
@@ -439,8 +794,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  filtersScrollContent: {
-    paddingRight: 20,
+  filtersRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  filterColumn: {
+    flex: 1,
+  },
+  filterLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A3A4A',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+    position: 'relative',
+    minHeight: 44, // Ensure consistent height
+    justifyContent: 'center', // Center content
+  },
+  filterButtonActive: {
+    backgroundColor: '#1976D2',
+  },
+  filterButtonText: {
+    color: '#A3B3CC',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  filterButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  filterBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   resultsContainer: {
     flex: 1,
@@ -483,10 +890,27 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
   },
-  barImage: {
+  imageContainer: {
+    position: 'relative',
     width: '100%',
     height: 200,
+  },
+  barImage: {
+    width: '100%',
+    height: '100%',
     resizeMode: 'cover',
+  },
+  favoritesButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   barInfo: {
     padding: 16,
@@ -531,5 +955,17 @@ const styles = StyleSheet.create({
   barAddress: {
     color: '#A3B3CC',
     fontSize: 14,
+  },
+  clearFiltersButton: {
+    marginTop: 20,
+    backgroundColor: '#EF4444',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  clearFiltersButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

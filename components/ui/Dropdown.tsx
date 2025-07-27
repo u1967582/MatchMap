@@ -153,11 +153,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#2A3A4A',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
     marginRight: 12,
     gap: 6,
     minWidth: 100,
+    minHeight: 44, // Match the filter button height
+    justifyContent: 'center', // Center content
   },
   dropdownButtonActive: {
     backgroundColor: '#1976D2',
