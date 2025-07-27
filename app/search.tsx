@@ -279,10 +279,22 @@ export default function SearchScreen() {
             .limit(1)
             .single();
 
+          // Find image with image_order = 1
+          const mainImage = bar.bar_images
+            ?.find((img: any) => img.image_order === 1)?.image_url || 
+            bar.bar_images?.[0]?.image_url || null;
+
+          console.log(`🖼️ Bar "${bar.name}":`, {
+            totalImages: bar.bar_images?.length || 0,
+            imageOrder1: bar.bar_images?.find((img: any) => img.image_order === 1)?.image_url,
+            fallbackImage: bar.bar_images?.[0]?.image_url,
+            selectedImage: mainImage
+          });
+
           return {
             ...bar,
             distance_km: distance,
-            image_url: bar.bar_images?.[0]?.image_url,
+            image_url: mainImage,
             rating: 0, // Default rating until we have the actual data
             review_count: 0, // Default review count until we have the actual data
             next_match: nextMatch ? {
@@ -515,12 +527,25 @@ export default function SearchScreen() {
         style={styles.barCard}
         onPress={() => handleBarPress(item.id)}
       >
-        <Image
-          source={{
-            uri: item.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
-          }}
-          style={styles.barImage}
-        />
+        <View style={styles.imageContainer}>
+          <Image
+            source={{
+              uri: item.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
+            }}
+            style={styles.barImage}
+          />
+          
+          {/* Favorites Button */}
+          <TouchableOpacity 
+            style={styles.favoritesButton}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent triggering the card press
+              console.log('❤️ Add to favorites:', item.name);
+            }}
+          >
+            <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
     
         <View style={styles.barInfo}>
           <Text style={styles.barName}>{item.name}</Text>
@@ -603,7 +628,7 @@ export default function SearchScreen() {
       {/* Filtros */}
       <View style={styles.filtersContainer}>
         <View style={styles.filtersRow}>
-          <View style={styles.sortContainer}>
+          <View style={styles.filterColumn}>
             <Text style={styles.filterLabel}>Ordenar por</Text>
             <Dropdown
               label="Ordenar"
@@ -614,7 +639,7 @@ export default function SearchScreen() {
             />
           </View>
           
-          <View style={styles.filterButtonContainer}>
+          <View style={styles.filterColumn}>
             <Text style={styles.filterLabel}>Filtros</Text>
             <TouchableOpacity 
               style={[
@@ -775,10 +800,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 12,
   },
-  sortContainer: {
-    flex: 1,
-  },
-  filterButtonContainer: {
+  filterColumn: {
     flex: 1,
   },
   filterLabel: {
@@ -796,6 +818,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     position: 'relative',
+    minHeight: 44, // Ensure consistent height
+    justifyContent: 'center', // Center content
   },
   filterButtonActive: {
     backgroundColor: '#1976D2',
@@ -866,10 +890,27 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
   },
-  barImage: {
+  imageContainer: {
+    position: 'relative',
     width: '100%',
     height: 200,
+  },
+  barImage: {
+    width: '100%',
+    height: '100%',
     resizeMode: 'cover',
+  },
+  favoritesButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   barInfo: {
     padding: 16,
