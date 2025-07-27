@@ -25,6 +25,10 @@ interface BarProfile {
   phone?: string;
   website?: string;
   images: string[];
+  category?: { id: number; name: string };
+  bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
+  bar_languages?: { language_id: number; language: { name: string } }[];
+  bar_selected_features?: { feature_id: number; feature: { name: string } }[];
 }
 
 interface BarPost {
@@ -73,7 +77,8 @@ export default function BarProfileScreen() {
           city,
           phone,
           website,
-          bar_images(image_url, image_order)
+          bar_images(image_url, image_order),
+          category_id
         `)
         .eq('id', barId)
         .single();
@@ -85,6 +90,82 @@ export default function BarProfileScreen() {
       }
 
       if (barData) {
+        // Load N:N relationships separately (only IDs first)
+        const { data: foodTypes } = await supabase
+          .from('bar_food_types')
+          .select('food_type_id')
+          .eq('bar_id', barId);
+
+        const { data: languages } = await supabase
+          .from('bar_languages')
+          .select('language_id')
+          .eq('bar_id', barId);
+
+        const { data: features } = await supabase
+          .from('bar_selected_features')
+          .select('feature_id')
+          .eq('bar_id', barId);
+
+        console.log('🔍 Bar profile N:N data loaded:', {
+          foodTypes: foodTypes?.length || 0,
+          languages: languages?.length || 0,
+          features: features?.length || 0,
+          foodTypeIds: foodTypes?.map(item => item.food_type_id) || [],
+          languageIds: languages?.map(item => item.language_id) || [],
+          featureIds: features?.map(item => item.feature_id) || []
+        });
+
+        // Load category name
+        let categoryName = '';
+        if (barData.category_id) {
+          const { data: categoryData } = await supabase
+            .from('bar_categories')
+            .select('name')
+            .eq('id', barData.category_id)
+            .single();
+          categoryName = categoryData?.name || '';
+        }
+
+        // Load food type names
+        const foodTypeIds = foodTypes?.map(item => item.food_type_id) || [];
+        const { data: foodTypeNames } = await supabase
+          .from('food_types')
+          .select('id, name')
+          .in('id', foodTypeIds);
+
+        // Load language names
+        const languageIds = languages?.map(item => item.language_id) || [];
+        const { data: languageNames } = await supabase
+          .from('languages')
+          .select('id, name')
+          .in('id', languageIds);
+
+        // Load feature names
+        const featureIds = features?.map(item => item.feature_id) || [];
+        const { data: featureNames } = await supabase
+          .from('bar_features')
+          .select('id, name')
+          .in('id', featureIds);
+
+        // Create maps for quick lookup
+        const foodTypeMap = new Map();
+        foodTypeNames?.forEach(item => foodTypeMap.set(item.id, item.name));
+
+        const languageMap = new Map();
+        languageNames?.forEach(item => languageMap.set(item.id, item.name));
+
+        const featureMap = new Map();
+        featureNames?.forEach(item => featureMap.set(item.id, item.name));
+
+        console.log('🔍 Bar profile names loaded:', {
+          foodTypeNames: foodTypeNames?.length || 0,
+          languageNames: languageNames?.length || 0,
+          featureNames: featureNames?.length || 0,
+          foodTypeMap: Object.fromEntries(foodTypeMap),
+          languageMap: Object.fromEntries(languageMap),
+          featureMap: Object.fromEntries(featureMap)
+        });
+
         setBar({
           id: barData.id,
           name: barData.name,
@@ -94,8 +175,38 @@ export default function BarProfileScreen() {
           phone: barData.phone,
           website: barData.website,
           images: barData.bar_images
-            ?.sort((a, b) => (a.image_order || 0) - (b.image_order || 0))
-            .map(img => img.image_url) || [],
+            ?.sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))
+            .map((img: any) => img.image_url) || [],
+          category: barData.category_id ? { id: barData.category_id, name: categoryName } : undefined,
+          bar_food_types: foodTypes?.map(item => ({
+            food_type_id: item.food_type_id,
+            food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
+          })) || [],
+          bar_languages: languages?.map(item => ({
+            language_id: item.language_id,
+            language: { name: languageMap.get(item.language_id) || 'Unknown' }
+          })) || [],
+          bar_selected_features: features?.map(item => ({
+            feature_id: item.feature_id,
+            feature: { name: featureMap.get(item.feature_id) || 'Unknown' }
+          })) || [],
+        });
+
+        console.log('✅ Bar profile set:', {
+          name: barData.name,
+          category: barData.category_id ? { id: barData.category_id, name: categoryName } : undefined,
+          foodTypes: foodTypes?.map(item => ({
+            food_type_id: item.food_type_id,
+            food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
+          })) || [],
+          languages: languages?.map(item => ({
+            language_id: item.language_id,
+            language: { name: languageMap.get(item.language_id) || 'Unknown' }
+          })) || [],
+          features: features?.map(item => ({
+            feature_id: item.feature_id,
+            feature: { name: featureMap.get(item.feature_id) || 'Unknown' }
+          })) || []
         });
 
         // Check if current user is the owner by checking if their bar_id matches this bar's id
@@ -438,16 +549,30 @@ export default function BarProfileScreen() {
         {/* Images Gallery */}
         <View style={styles.imagesSection}>
           {bar.images.length > 0 ? (
-            <FlatList
-              data={bar.images}
-              renderItem={renderImageItem}
-              keyExtractor={(item, index) => `image-${index}`}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={width - 40}
-              decelerationRate="fast"
-              contentContainerStyle={styles.imagesList}
-            />
+            <View style={styles.imageContainer}>
+              <FlatList
+                data={bar.images}
+                renderItem={renderImageItem}
+                keyExtractor={(item, index) => `image-${index}`}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={width - 40}
+                decelerationRate="fast"
+                contentContainerStyle={styles.imagesList}
+              />
+              
+              {/* Favorites Button - Only show when user is not the owner */}
+              {!isOwner && (
+                <TouchableOpacity 
+                  style={styles.favoritesButton}
+                  onPress={() => {
+                    console.log('❤️ Add to favorites:', bar.name);
+                  }}
+                >
+                  <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
+            </View>
           ) : (
             <View style={styles.defaultImageContainer}>
               <Ionicons name="storefront" size={64} color="#A3B3CC" />
@@ -506,6 +631,45 @@ export default function BarProfileScreen() {
             </View>
           )}
         </View>
+
+        {/* Bar Tags Section */}
+        {(bar.category || (bar.bar_food_types?.length ?? 0) > 0 || (bar.bar_languages?.length ?? 0) > 0 || (bar.bar_selected_features?.length ?? 0) > 0) && (
+          <View style={styles.tagsSection}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tagsContainer}
+            >
+              {/* Categoría */}
+              {bar.category && (
+                <View style={[styles.tag, { backgroundColor: '#1976D2' }]}>
+                  <Text style={styles.tagText}>📂 {bar.category.name}</Text>
+                </View>
+              )}
+
+              {/* Tipos de comida */}
+              {bar.bar_food_types?.map((item, index) => (
+                <View key={`food-${index}`} style={[styles.tag, { backgroundColor: '#FF6B35' }]}>
+                  <Text style={styles.tagText}>🍽️ {item.food_type.name}</Text>
+                </View>
+              ))}
+
+              {/* Lenguajes */}
+              {bar.bar_languages?.map((item, index) => (
+                <View key={`lang-${index}`} style={[styles.tag, { backgroundColor: '#4CAF50' }]}>
+                  <Text style={styles.tagText}>🗣️ {item.language.name}</Text>
+                </View>
+              ))}
+
+              {/* Características */}
+              {bar.bar_selected_features?.map((item, index) => (
+                <View key={`feat-${index}`} style={[styles.tag, { backgroundColor: '#9C27B0' }]}>
+                  <Text style={styles.tagText}>✨ {item.feature.name}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Posts Section */}
         <View style={styles.section}>
@@ -598,6 +762,9 @@ const styles = StyleSheet.create({
   imagesSection: {
     position: 'relative',
   },
+  imageContainer: {
+    position: 'relative',
+  },
   imagesList: {
     paddingHorizontal: 20,
   },
@@ -647,6 +814,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '500',
+  },
+  favoritesButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255, 0, 0, 0.5)',
+    padding: 8,
+    borderRadius: 15,
+    zIndex: 1,
   },
   section: {
     padding: 20,
@@ -851,5 +1027,36 @@ const styles = StyleSheet.create({
     color: '#FF6B6B',
     fontSize: 16,
     fontWeight: '500',
+  },
+  tagsSection: {
+    padding: 20,
+    backgroundColor: 'transparent', // Changed to transparent
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  tagsContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  tag: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  tagText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 
