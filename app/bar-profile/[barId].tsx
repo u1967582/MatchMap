@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
+import { useFavorites } from '~/hooks/useFavorites';
 
 interface BarProfile {
   id: string;
@@ -57,6 +58,10 @@ export default function BarProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [isFav, setIsFav] = useState(false);
+
+  // Load favorites functionality
+  const { toggleFavorite, isFavorite } = useFavorites();
 
   const fetchBarProfile = useCallback(async () => {
     if (!barId) return;
@@ -510,6 +515,27 @@ export default function BarProfileScreen() {
     fetchBarProfile();
   }, [fetchBarProfile]);
 
+  // Check if bar is in favorites when bar loads
+  useEffect(() => {
+    if (barId) {
+      const checkFavorite = async () => {
+        const favorite = await isFavorite(barId);
+        setIsFav(favorite);
+      };
+      checkFavorite();
+    }
+  }, [barId, isFavorite]);
+
+  const handleFavoriteToggle = async () => {
+    if (!barId) return;
+    
+    const success = await toggleFavorite(barId);
+    if (success) {
+      setIsFav(!isFav);
+      console.log(isFav ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', bar?.name);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -564,12 +590,14 @@ export default function BarProfileScreen() {
               {/* Favorites Button - Only show when user is not the owner */}
               {!isOwner && (
                 <TouchableOpacity 
-                  style={styles.favoritesButton}
-                  onPress={() => {
-                    console.log('❤️ Add to favorites:', bar.name);
-                  }}
+                  style={[styles.favoritesButton, isFav && styles.favoritesButtonActive]}
+                  onPress={handleFavoriteToggle}
                 >
-                  <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
+                  <Ionicons 
+                    name={isFav ? "heart" : "heart-outline"} 
+                    size={20} 
+                    color="#FFFFFF" 
+                  />
                 </TouchableOpacity>
               )}
             </View>
@@ -823,6 +851,9 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 15,
     zIndex: 1,
+  },
+  favoritesButtonActive: {
+    backgroundColor: 'rgba(255, 0, 0, 0.7)',
   },
   section: {
     padding: 20,
