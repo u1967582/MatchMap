@@ -25,6 +25,7 @@ interface BarRegisterState {
   postalCode: string;
   latitude: number;
   longitude: number;
+  doorNumber: number | null;
   
   // Step 4: Photos
   barPhotos: string[];
@@ -54,6 +55,7 @@ const initialState = {
   postalCode: '',
   latitude: 0,
   longitude: 0,
+  doorNumber: null,
   barPhotos: [],
   menuPhotos: [],
   categories: [],

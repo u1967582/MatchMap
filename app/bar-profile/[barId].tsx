@@ -1,18 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Alert,
-  Dimensions,
-  FlatList,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, Dimensions, Alert } from 'react-native';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { useFavorites } from '~/hooks/useFavorites';
@@ -52,16 +41,206 @@ const { width } = Dimensions.get('window');
 export default function BarProfileScreen() {
   const router = useRouter();
   const { barId } = useLocalSearchParams<{ barId: string }>();
+  const { isFavorite, toggleFavorite } = useFavorites();
   
   const [bar, setBar] = useState<BarProfile | null>(null);
   const [posts, setPosts] = useState<BarPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
-  const [user, setUser] = useState<any>(null);
   const [isFav, setIsFav] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
-  // Load favorites functionality
-  const { toggleFavorite, isFavorite } = useFavorites();
+  // Create sections for FlatList
+  const sections = [
+    { type: 'header', key: 'header' },
+    { type: 'images', key: 'images' },
+    { type: 'info', key: 'info' },
+    { type: 'tags', key: 'tags' },
+    { type: 'posts', key: 'posts' },
+    { type: 'danger', key: 'danger' },
+  ];
+
+  const renderSection = ({ item }: { item: { type: string; key: string } }) => {
+    switch (item.type) {
+      case 'header':
+        return (
+          <View style={styles.headerContainer}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={styles.headerContent}>
+              <Text style={styles.barName}>{bar?.name}</Text>
+            </View>
+            <View style={styles.headerSpacer} />
+          </View>
+        );
+
+      case 'images':
+        return (
+          <View style={styles.imagesSection}>
+            {bar?.images.length ? (
+              <View style={styles.imageContainer}>
+                <FlatList
+                  data={bar.images}
+                  renderItem={renderImageItem}
+                  keyExtractor={(item, index) => `image-${index}`}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={width - 40}
+                  decelerationRate="fast"
+                  contentContainerStyle={styles.imagesList}
+                  scrollEnabled={false}
+                />
+                
+                {!isOwner && (
+                  <TouchableOpacity 
+                    style={[styles.favoritesButton, isFav && styles.favoritesButtonActive]}
+                    onPress={handleFavoriteToggle}
+                  >
+                    <Ionicons 
+                      name={isFav ? "heart" : "heart-outline"} 
+                      size={20} 
+                      color="#FFFFFF" 
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={styles.defaultImageContainer}>
+                <Ionicons name="storefront" size={64} color="#A3B3CC" />
+                <Text style={styles.noImagesText}>No hay imágenes disponibles</Text>
+              </View>
+            )}
+            
+            {isOwner && (
+              <TouchableOpacity style={styles.editButton} onPress={handleEditInfo}>
+                <Ionicons name="create-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.editButtonText}>Editar información</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+
+      case 'info':
+        return (
+          <View style={styles.infoSection}>
+            <Text style={styles.sectionTitle}>Información del Bar</Text>
+            
+            {bar?.description && (
+              <View style={styles.infoItem}>
+                <Ionicons name="information-circle-outline" size={20} color="#A3B3CC" />
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Descripción</Text>
+                  <Text style={styles.infoText}>{bar.description}</Text>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.infoItem}>
+              <Ionicons name="location-outline" size={20} color="#A3B3CC" />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Dirección</Text>
+                <Text style={styles.infoText}>{bar?.address}, {bar?.city}</Text>
+              </View>
+            </View>
+
+            {bar?.phone && (
+              <View style={styles.infoItem}>
+                <Ionicons name="call-outline" size={20} color="#A3B3CC" />
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Teléfono</Text>
+                  <Text style={styles.infoText}>{bar.phone}</Text>
+                </View>
+              </View>
+            )}
+
+            {bar?.website && (
+              <View style={styles.infoItem}>
+                <Ionicons name="globe-outline" size={20} color="#A3B3CC" />
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Sitio Web</Text>
+                  <Text style={styles.infoText}>{bar.website}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        );
+
+      case 'tags':
+        return (
+          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_languages?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
+            <View style={styles.tagsSection}>
+              <View style={styles.tagsContainer}>
+                {bar?.category && (
+                  <View style={[styles.tag, { backgroundColor: '#1976D2' }]}>
+                    <Text style={styles.tagText}>📂 {bar.category.name}</Text>
+                  </View>
+                )}
+                {bar?.bar_food_types?.map((item, index) => (
+                  <View key={`food-${index}`} style={[styles.tag, { backgroundColor: '#FF6B35' }]}>
+                    <Text style={styles.tagText}>🍽️ {item.food_type.name}</Text>
+                  </View>
+                ))}
+                {bar?.bar_languages?.map((item, index) => (
+                  <View key={`lang-${index}`} style={[styles.tag, { backgroundColor: '#4CAF50' }]}>
+                    <Text style={styles.tagText}>🗣️ {item.language.name}</Text>
+                  </View>
+                ))}
+                {bar?.bar_selected_features?.map((item, index) => (
+                  <View key={`feat-${index}`} style={[styles.tag, { backgroundColor: '#9C27B0' }]}>
+                    <Text style={styles.tagText}>✨ {item.feature.name}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null
+        );
+
+      case 'posts':
+        return (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Posts</Text>
+              {isOwner && (
+                <TouchableOpacity style={styles.createPostButton} onPress={handleCreatePost}>
+                  <Ionicons name="add" size={16} color="#FFFFFF" />
+                  <Text style={styles.createPostButtonText}>Crear Post</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            {posts.length > 0 ? (
+              <View>
+                {posts.map((post) => renderPostItem({ item: post }))}
+              </View>
+            ) : (
+              <View style={styles.noPostsContainer}>
+                <Ionicons name="document-text-outline" size={48} color="#A3B3CC" />
+                <Text style={styles.noPostsText}>No hay posts disponibles</Text>
+                <Text style={styles.noPostsSubtext}>
+                  {isOwner ? 'Crea tu primer post para compartir novedades' : 'Este bar aún no ha publicado nada'}
+                </Text>
+              </View>
+            )}
+          </View>
+        );
+
+      case 'danger':
+        return (
+          isOwner ? (
+            <View style={styles.dangerSection}>
+              <TouchableOpacity style={styles.deleteBarButton} onPress={handleDeleteBar}>
+                <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+                <Text style={styles.deleteBarButtonText}>Eliminar Bar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        );
+
+      default:
+        return null;
+    }
+  };
 
   const fetchBarProfile = useCallback(async () => {
     if (!barId) return;
@@ -69,7 +248,7 @@ export default function BarProfileScreen() {
     try {
       // Get current user
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      setUser(authUser);
+      setUser(authUser); // This line was removed as per the new_code, as user state is no longer managed here.
 
       // Fetch bar data
       const { data: barData, error: barError } = await supabase
@@ -560,187 +739,13 @@ export default function BarProfileScreen() {
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header with Bar Name */}
-        <View style={styles.headerContainer}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.barName}>{bar.name}</Text>
-          </View>
-          <View style={styles.headerSpacer} />
-        </View>
-
-        {/* Images Gallery */}
-        <View style={styles.imagesSection}>
-          {bar.images.length > 0 ? (
-            <View style={styles.imageContainer}>
-              <FlatList
-                data={bar.images}
-                renderItem={renderImageItem}
-                keyExtractor={(item, index) => `image-${index}`}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                snapToInterval={width - 40}
-                decelerationRate="fast"
-                contentContainerStyle={styles.imagesList}
-              />
-              
-              {/* Favorites Button - Only show when user is not the owner */}
-              {!isOwner && (
-                <TouchableOpacity 
-                  style={[styles.favoritesButton, isFav && styles.favoritesButtonActive]}
-                  onPress={handleFavoriteToggle}
-                >
-                  <Ionicons 
-                    name={isFav ? "heart" : "heart-outline"} 
-                    size={20} 
-                    color="#FFFFFF" 
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <View style={styles.defaultImageContainer}>
-              <Ionicons name="storefront" size={64} color="#A3B3CC" />
-              <Text style={styles.noImagesText}>No hay imágenes disponibles</Text>
-            </View>
-          )}
-          
-          {/* Edit Button */}
-          {isOwner && (
-            <TouchableOpacity style={styles.editButton} onPress={handleEditInfo}>
-              <Ionicons name="create-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.editButtonText}>Editar información</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Bar Information */}
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Información del Bar</Text>
-          
-          {bar.description && (
-            <View style={styles.infoItem}>
-              <Ionicons name="information-circle-outline" size={20} color="#A3B3CC" />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Descripción</Text>
-                <Text style={styles.infoText}>{bar.description}</Text>
-              </View>
-            </View>
-          )}
-
-          <View style={styles.infoItem}>
-            <Ionicons name="location-outline" size={20} color="#A3B3CC" />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Dirección</Text>
-              <Text style={styles.infoText}>{bar.address}, {bar.city}</Text>
-            </View>
-          </View>
-
-          {bar.phone && (
-            <View style={styles.infoItem}>
-              <Ionicons name="call-outline" size={20} color="#A3B3CC" />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Teléfono</Text>
-                <Text style={styles.infoText}>{bar.phone}</Text>
-              </View>
-            </View>
-          )}
-
-          {bar.website && (
-            <View style={styles.infoItem}>
-              <Ionicons name="globe-outline" size={20} color="#A3B3CC" />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Sitio Web</Text>
-                <Text style={styles.infoText}>{bar.website}</Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Bar Tags Section */}
-        {(bar.category || (bar.bar_food_types?.length ?? 0) > 0 || (bar.bar_languages?.length ?? 0) > 0 || (bar.bar_selected_features?.length ?? 0) > 0) && (
-          <View style={styles.tagsSection}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tagsContainer}
-            >
-              {/* Categoría */}
-              {bar.category && (
-                <View style={[styles.tag, { backgroundColor: '#1976D2' }]}>
-                  <Text style={styles.tagText}>📂 {bar.category.name}</Text>
-                </View>
-              )}
-
-              {/* Tipos de comida */}
-              {bar.bar_food_types?.map((item, index) => (
-                <View key={`food-${index}`} style={[styles.tag, { backgroundColor: '#FF6B35' }]}>
-                  <Text style={styles.tagText}>🍽️ {item.food_type.name}</Text>
-                </View>
-              ))}
-
-              {/* Lenguajes */}
-              {bar.bar_languages?.map((item, index) => (
-                <View key={`lang-${index}`} style={[styles.tag, { backgroundColor: '#4CAF50' }]}>
-                  <Text style={styles.tagText}>🗣️ {item.language.name}</Text>
-                </View>
-              ))}
-
-              {/* Características */}
-              {bar.bar_selected_features?.map((item, index) => (
-                <View key={`feat-${index}`} style={[styles.tag, { backgroundColor: '#9C27B0' }]}>
-                  <Text style={styles.tagText}>✨ {item.feature.name}</Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Posts Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Posts</Text>
-            {isOwner && (
-              <TouchableOpacity style={styles.createPostButton} onPress={handleCreatePost}>
-                <Ionicons name="add" size={16} color="#FFFFFF" />
-                <Text style={styles.createPostButtonText}>Crear Post</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          {posts.length > 0 ? (
-            <FlatList
-              data={posts}
-              renderItem={renderPostItem}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
-          ) : (
-            <View style={styles.noPostsContainer}>
-              <Ionicons name="document-text-outline" size={48} color="#A3B3CC" />
-              <Text style={styles.noPostsText}>No hay posts disponibles</Text>
-              <Text style={styles.noPostsSubtext}>
-                {isOwner ? 'Crea tu primer post para compartir novedades' : 'Este bar aún no ha publicado nada'}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Delete Bar Section - Only for owners */}
-        {isOwner && (
-          <View style={styles.dangerSection}>
-            <TouchableOpacity style={styles.deleteBarButton} onPress={handleDeleteBar}>
-              <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-              <Text style={styles.deleteBarButtonText}>Eliminar Bar</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-      </ScrollView>
+      <FlatList
+        data={sections}
+        renderItem={renderSection}
+        keyExtractor={(item) => item.key}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollViewContent}
+      />
 
       <BottomTabBar />
     </SafeAreaView>
@@ -752,8 +757,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0e1b2c',
   },
-  scrollView: {
-    flex: 1,
+  scrollViewContent: {
+    paddingBottom: 80, // Add padding for the bottom tab bar
   },
   loadingContainer: {
     flex: 1,
