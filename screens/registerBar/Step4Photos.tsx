@@ -415,6 +415,24 @@ const Step4Photos: React.FC = () => {
     try {
       const formData = getFormData();
       
+      // Validate precise coordinates
+      if (formData.latitude === 0 || formData.longitude === 0) {
+        Alert.alert('Error', 'Debes seleccionar una ubicación precisa para el bar');
+        return;
+      }
+
+      // Log the data being saved
+      console.log('🏗️ Datos del bar a guardar:', {
+        name: formData.name,
+        address: formData.address,
+        city: formData.city,
+        postalCode: formData.postalCode,
+        doorNumber: formData.doorNumber,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        isPreciseLocation: formData.doorNumber ? 'Sí (con número de puerta)' : 'No (ubicación aproximada)'
+      });
+      
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
@@ -438,6 +456,7 @@ const Step4Photos: React.FC = () => {
           postal_code: formData.postalCode,
           latitude: formData.latitude || 0,
           longitude: formData.longitude || 0,
+          doorNumber: formData.doorNumber,
         })
         .select()
         .single();
