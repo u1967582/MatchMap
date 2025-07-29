@@ -49,6 +49,7 @@ export default function BarProfileScreen() {
   const [isOwner, setIsOwner] = useState(false);
   const [isFav, setIsFav] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Create sections for FlatList
   const sections = [
@@ -89,8 +90,28 @@ export default function BarProfileScreen() {
                   snapToInterval={width - 40}
                   decelerationRate="fast"
                   contentContainerStyle={styles.imagesList}
-                  scrollEnabled={false}
+                  scrollEnabled={bar.images.length > 1}
+                  pagingEnabled={bar.images.length > 1}
+                  onMomentumScrollEnd={(event) => {
+                    const index = Math.round(event.nativeEvent.contentOffset.x / (width - 40));
+                    setCurrentImageIndex(index);
+                  }}
                 />
+                
+                {/* Page indicators */}
+                {bar.images.length > 1 && (
+                  <View style={styles.pageIndicators}>
+                    {bar.images.map((_, index) => (
+                      <View
+                        key={index}
+                        style={[
+                          styles.pageIndicator,
+                          index === currentImageIndex && styles.pageIndicatorActive
+                        ]}
+                      />
+                    ))}
+                  </View>
+                )}
                 
                 {!isOwner && (
                   <TouchableOpacity 
@@ -1104,6 +1125,26 @@ const styles = StyleSheet.create({
   tagsScrollContainer: {
     paddingHorizontal: 20,
     paddingVertical: 8,
+  },
+  pageIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 16,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+  },
+  pageIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    marginHorizontal: 4,
+  },
+  pageIndicatorActive: {
+    backgroundColor: '#FFFFFF',
   },
   tag: {
     paddingVertical: 6,
