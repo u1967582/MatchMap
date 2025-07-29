@@ -9,6 +9,7 @@ import {
   Alert,
   Dimensions,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,7 +33,10 @@ export default function FavoritesScreen() {
   const { getFavoriteBars, removeFromFavorites } = useFavorites();
   
   const [favoriteBars, setFavoriteBars] = useState<FavoriteBar[]>([]);
+  const [filteredBars, setFilteredBars] = useState<FavoriteBar[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
   // Load favorite bars
   const loadFavoriteBars = useCallback(async () => {
@@ -40,12 +44,41 @@ export default function FavoritesScreen() {
     try {
       const bars = await getFavoriteBars();
       setFavoriteBars(bars as unknown as FavoriteBar[]);
+      setFilteredBars(bars as unknown as FavoriteBar[]);
     } catch (error) {
       console.error('❌ Error loading favorite bars:', error);
     } finally {
       setLoading(false);
     }
   }, [getFavoriteBars]);
+
+  // Filter bars based on search text
+  const filterBars = useCallback((text: string) => {
+    if (!text.trim()) {
+      setFilteredBars(favoriteBars);
+      return;
+    }
+    
+    const filtered = favoriteBars.filter(bar => 
+      bar.name.toLowerCase().includes(text.toLowerCase())
+    );
+    setFilteredBars(filtered);
+  }, [favoriteBars]);
+
+  // Handle search text change
+  const handleSearchTextChange = useCallback((text: string) => {
+    setSearchText(text);
+    filterBars(text);
+  }, [filterBars]);
+
+  // Toggle search visibility
+  const toggleSearch = useCallback(() => {
+    setSearchVisible(!searchVisible);
+    if (searchVisible) {
+      setSearchText('');
+      setFilteredBars(favoriteBars);
+    }
+  }, [searchVisible, favoriteBars]);
 
   // Load favorites on mount
   useEffect(() => {
@@ -72,6 +105,7 @@ export default function FavoritesScreen() {
             if (success) {
               // Remove from local state
               setFavoriteBars(prev => prev.filter(bar => bar.id !== barId));
+              setFilteredBars(prev => prev.filter(bar => bar.id !== barId));
               console.log('🗑️ Removed from favorites:', barName);
             } else {
               Alert.alert('Error', 'No se pudo eliminar de favoritos');
@@ -134,10 +168,35 @@ export default function FavoritesScreen() {
   
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Favoritos</Text>
-        <TouchableOpacity style={styles.searchButton}>
+        <TouchableOpacity style={styles.searchButton} onPress={toggleSearch}>
           <Ionicons name="search" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
+
+      {/* Search Bar */}
+      {searchVisible && (
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color="#A3B3CC" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar bares..."
+              placeholderTextColor="#A3B3CC"
+              value={searchText}
+              onChangeText={handleSearchTextChange}
+              autoFocus={true}
+            />
+            {searchText.length > 0 && (
+              <TouchableOpacity 
+                style={styles.clearButton}
+                onPress={() => handleSearchTextChange('')}
+              >
+                <Ionicons name="close-circle" size={20} color="#A3B3CC" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* Sort Options */}
       <View style={styles.sortContainer}>
@@ -156,9 +215,9 @@ export default function FavoritesScreen() {
 
       {/* Favorite Bars List */}
       <View style={styles.content}>
-        {favoriteBars.length > 0 ? (
+        {filteredBars.length > 0 ? (
           <FlatList
-            data={favoriteBars}
+            data={filteredBars}
             renderItem={renderFavoriteBar}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
@@ -166,17 +225,35 @@ export default function FavoritesScreen() {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Ionicons name="heart-outline" size={64} color="#A3B3CC" />
-            <Text style={styles.emptyTitle}>No tienes favoritos</Text>
-            <Text style={styles.emptySubtitle}>
-              Explora bares y añádelos a tus favoritos para verlos aquí
-            </Text>
-            <TouchableOpacity 
-              style={styles.exploreButton}
-              onPress={() => router.push('/search' as any)}
-            >
-              <Text style={styles.exploreButtonText}>Explorar Bares</Text>
-            </TouchableOpacity>
+            {searchText.length > 0 ? (
+              <>
+                <Ionicons name="search-outline" size={64} color="#A3B3CC" />
+                <Text style={styles.emptyTitle}>No se encontraron resultados</Text>
+                <Text style={styles.emptySubtitle}>
+                  No hay bares favoritos que coincidan con "{searchText}"
+                </Text>
+                <TouchableOpacity 
+                  style={styles.exploreButton}
+                  onPress={() => handleSearchTextChange('')}
+                >
+                  <Text style={styles.exploreButtonText}>Limpiar búsqueda</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Ionicons name="heart-outline" size={64} color="#A3B3CC" />
+                <Text style={styles.emptyTitle}>No tienes favoritos</Text>
+                <Text style={styles.emptySubtitle}>
+                  Explora bares y añádelos a tus favoritos para verlos aquí
+                </Text>
+                <TouchableOpacity 
+                  style={styles.exploreButton}
+                  onPress={() => router.push('/search' as any)}
+                >
+                  <Text style={styles.exploreButtonText}>Explorar Bares</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
       </View>
@@ -204,6 +281,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   searchButton: {
+    padding: 4,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  clearButton: {
     padding: 4,
   },
   sortContainer: {
