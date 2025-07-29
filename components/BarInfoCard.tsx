@@ -127,10 +127,9 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 80, // Position above BottomTabBar (estimated height)
+    bottom: 70, // Position above BottomTabBar (reduced height)
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     paddingHorizontal: 16,
     paddingBottom: 20,
     zIndex: 1000,
