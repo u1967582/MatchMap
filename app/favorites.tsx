@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
+import * as Location from 'expo-location';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { useFavorites } from '~/hooks/useFavorites';
 
@@ -24,6 +25,10 @@ interface FavoriteBar {
   address: string;
   city: string;
   image_url?: string;
+  latitude?: number;
+  longitude?: number;
+  rating?: number;
+  review_count?: number;
 }
 
 const { width } = Dimensions.get('window');
@@ -37,6 +42,38 @@ export default function FavoritesScreen() {
   const [loading, setLoading] = useState(true);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'recommended' | 'nearby' | 'top_rated'>('recommended');
+
+  // Get user location
+  const getUserLocation = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('📍 Location permission denied');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setUserLocation(location);
+      console.log('📍 User location obtained:', location.coords);
+    } catch (error) {
+      console.error('❌ Error getting user location:', error);
+    }
+  }, []);
+
+  // Calculate distance between two points
+  const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in kilometers
+  }, []);
 
   // Load favorite bars
   const loadFavoriteBars = useCallback(async () => {
@@ -68,22 +105,21 @@ export default function FavoritesScreen() {
   // Handle search text change
   const handleSearchTextChange = useCallback((text: string) => {
     setSearchText(text);
-    filterBars(text);
-  }, [filterBars]);
+  }, []);
 
   // Toggle search visibility
   const toggleSearch = useCallback(() => {
     setSearchVisible(!searchVisible);
     if (searchVisible) {
       setSearchText('');
-      setFilteredBars(favoriteBars);
     }
-  }, [searchVisible, favoriteBars]);
+  }, [searchVisible]);
 
-  // Load favorites on mount
+  // Load favorites and user location on mount
   useEffect(() => {
     loadFavoriteBars();
-  }, [loadFavoriteBars]);
+    getUserLocation();
+  }, [loadFavoriteBars, getUserLocation]);
 
   // Handle bar press
   const handleBarPress = useCallback((barId: string) => {
@@ -116,41 +152,141 @@ export default function FavoritesScreen() {
     );
   }, [removeFromFavorites]);
 
-  // Render favorite bar card
-  const renderFavoriteBar = useCallback(({ item }: { item: FavoriteBar }) => (
-    <View style={styles.barCard}>
-      <TouchableOpacity 
-        style={styles.imageContainer}
-        onPress={() => handleBarPress(item.id)}
-      >
-        <Image
-          source={{
-            uri: item.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
-          }}
-          style={styles.barImage}
-        />
-      </TouchableOpacity>
+  // Apply filters and sorting
+  const applyFilters = useCallback(() => {
+    let currentBars = [...favoriteBars];
 
-      <View style={styles.barInfo}>
-        <View style={styles.barHeader}>
-          <View style={styles.barTextContainer}>
-            <Text style={styles.barName}>{item.name}</Text>
-            {item.description && (
-              <Text style={styles.barDescription}>{item.description}</Text>
-            )}
-            <Text style={styles.barAddress}>{item.address}, {item.city}</Text>
+    // Apply search filter first
+    if (searchText.trim()) {
+      const lowerCaseSearchText = searchText.toLowerCase();
+      currentBars = currentBars.filter(bar =>
+        bar.name.toLowerCase().includes(lowerCaseSearchText)
+      );
+    }
+
+    // Apply active filter/sort
+    switch (activeFilter) {
+      case 'recommended':
+        // For now, 'recommended' just means no specific sorting beyond search
+        // In a real app, this would involve a recommendation algorithm
+        break;
+      case 'nearby':
+        if (userLocation && userLocation.coords) {
+          // Sort by distance (closest first)
+          currentBars.sort((a, b) => {
+            if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) {
+              return 0; // Keep original order if location data is missing
+            }
+            
+            const distanceA = calculateDistance(
+              userLocation.coords.latitude,
+              userLocation.coords.longitude,
+              a.latitude,
+              a.longitude
+            );
+            const distanceB = calculateDistance(
+              userLocation.coords.latitude,
+              userLocation.coords.longitude,
+              b.latitude,
+              b.longitude
+            );
+            
+            return distanceA - distanceB; // Ascending order (closest first)
+          });
+        } else {
+          console.log('📍 Cannot sort by nearby - no user location available');
+        }
+        break;
+      case 'top_rated':
+        // Sort by rating (descending - highest first)
+        currentBars.sort((a, b) => {
+          const ratingA = a.rating || 0;
+          const ratingB = b.rating || 0;
+          return ratingB - ratingA; // Descending order (highest first)
+        });
+        break;
+      default:
+        break;
+    }
+
+    setFilteredBars(currentBars);
+  }, [favoriteBars, searchText, activeFilter, userLocation, calculateDistance]);
+
+  // Apply filters when dependencies change
+  useEffect(() => {
+    applyFilters();
+  }, [favoriteBars, searchText, activeFilter, userLocation, applyFilters]);
+
+  // Render favorite bar card
+  const renderFavoriteBar = useCallback(({ item }: { item: FavoriteBar }) => {
+    // Calculate distance if user location is available
+    let distance: number | null = null;
+    if (userLocation && userLocation.coords && item.latitude && item.longitude) {
+      distance = calculateDistance(
+        userLocation.coords.latitude,
+        userLocation.coords.longitude,
+        item.latitude,
+        item.longitude
+      );
+    }
+
+    return (
+      <View style={styles.barCard}>
+        <TouchableOpacity 
+          style={styles.imageContainer}
+          onPress={() => handleBarPress(item.id)}
+        >
+          <Image
+            source={{
+              uri: item.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
+            }}
+            style={styles.barImage}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.barInfo}>
+          <View style={styles.barHeader}>
+            <View style={styles.barTextContainer}>
+              <Text style={styles.barName}>{item.name}</Text>
+              {item.description && (
+                <Text style={styles.barDescription}>{item.description}</Text>
+              )}
+              <Text style={styles.barAddress}>{item.address}, {item.city}</Text>
+              
+              {/* Rating and Distance Info */}
+              <View style={styles.barDetails}>
+                {typeof item.rating === 'number' && (
+                  <View style={styles.ratingContainer}>
+                    <Ionicons name="star" size={14} color="#FFD700" />
+                    <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+                    {typeof item.review_count === 'number' && (
+                      <Text style={styles.reviewCountText}>
+                        ({item.review_count} reseñas)
+                      </Text>
+                    )}
+                  </View>
+                )}
+                
+                {distance !== null && (
+                  <View style={styles.distanceContainer}>
+                    <Ionicons name="location-outline" size={14} color="#4CAF50" />
+                    <Text style={styles.distanceText}>{distance.toFixed(1)} km</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.removeButton}
+              onPress={() => handleRemoveFromFavorites(item.id, item.name)}
+            >
+              <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+            </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.removeButton}
-            onPress={() => handleRemoveFromFavorites(item.id, item.name)}
-          >
-            <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-          </TouchableOpacity>
         </View>
       </View>
-    </View>
-  ), [handleBarPress, handleRemoveFromFavorites]);
+    );
+  }, [handleBarPress, handleRemoveFromFavorites, userLocation, calculateDistance]);
 
   if (loading) {
     return (
@@ -201,13 +337,22 @@ export default function FavoritesScreen() {
       {/* Sort Options */}
       <View style={styles.sortContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity style={[styles.sortButton, styles.sortButtonActive]}>
+          <TouchableOpacity 
+            style={[styles.sortButton, activeFilter === 'recommended' && styles.sortButtonActive]}
+            onPress={() => setActiveFilter('recommended')}
+          >
             <Text style={styles.sortButtonText}>Recomendados</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.sortButton}>
+          <TouchableOpacity 
+            style={[styles.sortButton, activeFilter === 'nearby' && styles.sortButtonActive]}
+            onPress={() => setActiveFilter('nearby')}
+          >
             <Text style={styles.sortButtonText}>Cercanos</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.sortButton}>
+          <TouchableOpacity 
+            style={[styles.sortButton, activeFilter === 'top_rated' && styles.sortButtonActive]}
+            onPress={() => setActiveFilter('top_rated')}
+          >
             <Text style={styles.sortButtonText}>Mejor valorado</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -415,6 +560,38 @@ const styles = StyleSheet.create({
   barAddress: {
     color: '#A3B3CC',
     fontSize: 14,
+  },
+  barDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  ratingText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  reviewCountText: {
+    color: '#A3B3CC',
+    fontSize: 10,
+    marginLeft: 4,
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  distanceText: {
+    color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
   },
   removeButton: {
     padding: 8,
