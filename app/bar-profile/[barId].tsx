@@ -170,28 +170,52 @@ export default function BarProfileScreen() {
         return (
           (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_languages?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
             <View style={styles.tagsSection}>
-              <View style={styles.tagsContainer}>
-                {bar?.category && (
-                  <View style={[styles.tag, { backgroundColor: '#1976D2' }]}>
-                    <Text style={styles.tagText}>📂 {bar.category.name}</Text>
-                  </View>
-                )}
-                {bar?.bar_food_types?.map((item, index) => (
-                  <View key={`food-${index}`} style={[styles.tag, { backgroundColor: '#FF6B35' }]}>
-                    <Text style={styles.tagText}>🍽️ {item.food_type.name}</Text>
-                  </View>
-                ))}
-                {bar?.bar_languages?.map((item, index) => (
-                  <View key={`lang-${index}`} style={[styles.tag, { backgroundColor: '#4CAF50' }]}>
-                    <Text style={styles.tagText}>🗣️ {item.language.name}</Text>
-                  </View>
-                ))}
-                {bar?.bar_selected_features?.map((item, index) => (
-                  <View key={`feat-${index}`} style={[styles.tag, { backgroundColor: '#9C27B0' }]}>
-                    <Text style={styles.tagText}>✨ {item.feature.name}</Text>
-                  </View>
-                ))}
-              </View>
+              <FlatList
+                data={[
+                  ...(bar?.category ? [{ type: 'category', data: bar.category }] : []),
+                  ...(bar?.bar_food_types?.map((item, index) => ({ type: 'food', data: item, index })) || []),
+                  ...(bar?.bar_languages?.map((item, index) => ({ type: 'language', data: item, index })) || []),
+                  ...(bar?.bar_selected_features?.map((item, index) => ({ type: 'feature', data: item, index })) || [])
+                ]}
+                renderItem={({ item }) => {
+                  let backgroundColor = '#1976D2';
+                  let icon = '📂';
+                  let text = '';
+                  
+                  switch (item.type) {
+                    case 'category':
+                      backgroundColor = '#1976D2';
+                      icon = '📂';
+                      text = (item.data as { name: string }).name;
+                      break;
+                    case 'food':
+                      backgroundColor = '#FF6B35';
+                      icon = '🍽️';
+                      text = (item.data as { food_type: { name: string } }).food_type.name;
+                      break;
+                    case 'language':
+                      backgroundColor = '#4CAF50';
+                      icon = '🗣️';
+                      text = (item.data as { language: { name: string } }).language.name;
+                      break;
+                    case 'feature':
+                      backgroundColor = '#9C27B0';
+                      icon = '✨';
+                      text = (item.data as { feature: { name: string } }).feature.name;
+                      break;
+                  }
+                  
+                  return (
+                    <View style={[styles.tag, { backgroundColor }]}>
+                      <Text style={styles.tagText}>{icon} {text}</Text>
+                    </View>
+                  );
+                }}
+                keyExtractor={(item, index) => `${item.type}-${(item as any).index || index}`}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tagsScrollContainer}
+              />
             </View>
           ) : null
         );
@@ -1072,11 +1096,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tagsContainer: {
-    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  tagsScrollContainer: {
+    paddingHorizontal: 20,
     paddingVertical: 8,
   },
   tag: {
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
     marginRight: 8,
