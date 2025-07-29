@@ -267,6 +267,17 @@ export default function BarProfileScreen() {
                 </Text>
               </View>
             )}
+            
+            {/* Write Review Button */}
+            {!isOwner && (
+              <TouchableOpacity
+                style={styles.reviewButton}
+                onPress={() => router.push(`/write-review/${barId}` as any)}
+              >
+                <Ionicons name="star-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.reviewButtonText}>Write a Review</Text>
+              </TouchableOpacity>
+            )}
           </View>
         );
 
@@ -1164,6 +1175,22 @@ const styles = StyleSheet.create({
   tagText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  reviewButton: {
+    backgroundColor: '#1D4ED8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+  },
+  reviewButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 }); 
