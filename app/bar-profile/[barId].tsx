@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { useFavorites } from '~/hooks/useFavorites';
+import BarReviewsSection from '~/components/BarReviewsSection';
 
 interface BarProfile {
   id: string;
@@ -58,6 +59,7 @@ export default function BarProfileScreen() {
     { type: 'info', key: 'info' },
     { type: 'tags', key: 'tags' },
     { type: 'posts', key: 'posts' },
+    { type: 'reviews', key: 'reviews' },
     { type: 'danger', key: 'danger' },
   ];
 
@@ -279,6 +281,11 @@ export default function BarProfileScreen() {
               </TouchableOpacity>
             )}
           </View>
+        );
+
+      case 'reviews':
+        return (
+          <BarReviewsSection barId={barId} />
         );
 
       case 'danger':
