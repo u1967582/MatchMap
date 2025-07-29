@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
   },
   centerButton: {
     position: 'absolute',
-    bottom: 120,
+    bottom: 100,
     right: 20,
     backgroundColor: '#3A4A5C',
     borderRadius: 25,

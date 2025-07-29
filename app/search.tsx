@@ -10,6 +10,7 @@ import {
   FlatList,
   Alert,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -918,7 +919,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   barsList: {
-    paddingBottom: 20,
+    paddingBottom: Platform.OS === 'ios' ? 100 : 80, // Space for footer
   },
   barCard: {
     backgroundColor: '#1A2332',
