@@ -144,6 +144,8 @@ export default function SearchScreen() {
           latitude,
           longitude,
           category_id,
+          rating,
+          review_count,
           bar_images(image_url, image_order)
         `)
         .eq('is_active', true);
@@ -301,8 +303,8 @@ export default function SearchScreen() {
             ...bar,
             distance_km: distance,
             image_url: mainImage,
-            rating: 0, // Default rating until we have the actual data
-            review_count: 0, // Default review count until we have the actual data
+            rating: bar.rating || 0, // Use real rating from database
+            review_count: bar.review_count || 0, // Use real review count from database
             next_match: nextMatch ? {
               date: nextMatch.start_date,
               time: '18:00', // Default time, you might want to store this in your posts
