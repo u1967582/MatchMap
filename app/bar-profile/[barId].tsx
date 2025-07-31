@@ -86,7 +86,7 @@ export default function BarProfileScreen() {
                 <FlatList
                   data={bar.images}
                   renderItem={renderImageItem}
-                  keyExtractor={(item, index) => `image-${index}`}
+                  keyExtractor={(item, index) => `image-${index}-${item}`}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   snapToInterval={width - 40}
@@ -103,15 +103,15 @@ export default function BarProfileScreen() {
                 {/* Page indicators */}
                 {bar.images.length > 1 && (
                   <View style={styles.pageIndicators}>
-                    {bar.images.map((_, index) => (
-                      <View
-                        key={index}
-                        style={[
-                          styles.pageIndicator,
-                          index === currentImageIndex && styles.pageIndicatorActive
-                        ]}
-                      />
-                    ))}
+                                    {bar.images.map((_, index) => (
+                  <View
+                    key={`indicator-${index}`}
+                    style={[
+                      styles.pageIndicator,
+                      index === currentImageIndex && styles.pageIndicatorActive
+                    ]}
+                  />
+                ))}
                   </View>
                 )}
                 
@@ -195,10 +195,10 @@ export default function BarProfileScreen() {
             <View style={styles.tagsSection}>
               <FlatList
                 data={[
-                  ...(bar?.category ? [{ type: 'category', data: bar.category }] : []),
-                  ...(bar?.bar_food_types?.map((item, index) => ({ type: 'food', data: item, index })) || []),
-                  ...(bar?.bar_languages?.map((item, index) => ({ type: 'language', data: item, index })) || []),
-                  ...(bar?.bar_selected_features?.map((item, index) => ({ type: 'feature', data: item, index })) || [])
+                  ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
+                  ...(bar?.bar_food_types?.map((item) => ({ type: 'food', data: item, id: `food-${item.food_type_id}` })) || []),
+                  ...(bar?.bar_languages?.map((item) => ({ type: 'language', data: item, id: `language-${item.language_id}` })) || []),
+                  ...(bar?.bar_selected_features?.map((item) => ({ type: 'feature', data: item, id: `feature-${item.feature_id}` })) || [])
                 ]}
                 renderItem={({ item }) => {
                   let backgroundColor = '#1976D2';
@@ -234,7 +234,7 @@ export default function BarProfileScreen() {
                     </View>
                   );
                 }}
-                keyExtractor={(item, index) => `${item.type}-${(item as any).index || index}`}
+                keyExtractor={(item) => (item as any).id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.tagsScrollContainer}
