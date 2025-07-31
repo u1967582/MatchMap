@@ -18,26 +18,40 @@ const BarReviewsSection: React.FC<{ barId: string }> = ({ barId }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [distribution, setDistribution] = useState<number[]>([0, 0, 0, 0, 0]);
   const [average, setAverage] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchReviews = async () => {
+    const fetchReviewsAndBarData = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // Fetch reviews
+        const { data: reviewsData, error: reviewsError } = await supabase
           .from('reviews')
           .select(`id, rating, comment, created_at, user:users(username, profile_image_url)`)
           .eq('bar_id', barId)
           .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('❌ Error loading reviews:', error);
+        if (reviewsError) {
+          console.error('❌ Error loading reviews:', reviewsError);
           return;
         }
 
-        if (data) {
+        // Fetch bar data for real rating and review count
+        const { data: barData, error: barError } = await supabase
+          .from('bars')
+          .select('rating, review_count')
+          .eq('id', barId)
+          .single();
+
+        if (barError) {
+          console.error('❌ Error loading bar data:', barError);
+          return;
+        }
+
+        if (reviewsData) {
           // Transform the data to match our interface
-          const transformedData = data.map((item: any) => ({
+          const transformedData = reviewsData.map((item: any) => ({
             id: item.id,
             rating: item.rating,
             comment: item.comment,
@@ -49,26 +63,29 @@ const BarReviewsSection: React.FC<{ barId: string }> = ({ barId }) => {
           }));
           
           setReviews(transformedData);
+          
+          // Calculate distribution from reviews
           const ratings = [0, 0, 0, 0, 0];
-          let total = 0;
           transformedData.forEach((r) => {
             ratings[r.rating - 1]++;
-            total += r.rating;
           });
           setDistribution(ratings);
-          setAverage(transformedData.length ? total / transformedData.length : 0);
+          
+          // Use real data from bars table
+          setAverage(barData?.rating || 0);
+          setTotalReviews(barData?.review_count || 0);
         }
       } catch (error) {
-        console.error('❌ Error fetching reviews:', error);
+        console.error('❌ Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchReviews();
+    fetchReviewsAndBarData();
   }, [barId]);
 
-  const totalReviews = reviews.length;
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
