@@ -36,6 +36,7 @@ const Map: React.FC = () => {
   const [isSearching, setIsSearching] = React.useState(false);
   const [cameraCenter, setCameraCenter] = React.useState<[number, number] | null>(null);
   const [cameraZoom, setCameraZoom] = React.useState(15);
+  const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
 
   // Create vector collection from bars
   const barsVector = React.useMemo(() => ({
@@ -49,10 +50,11 @@ const Map: React.FC = () => {
       properties: {
         barId: bar.id,
         barName: bar.name,
-        barData: bar
+        barData: bar,
+        isSelected: bar.id === selectedMarkerId
       }
     }))
-  }), [bars]);
+  }), [bars, selectedMarkerId]);
 
   // Handle marker press
   const handleMarkerPress = React.useCallback((bar: Bar) => {
@@ -65,6 +67,7 @@ const Map: React.FC = () => {
       image_url: bar.image_url
     });
     setSelectedBar(bar);
+    setSelectedMarkerId(bar.id);
     setShowBarCard(true);
   }, []);
 
@@ -94,10 +97,16 @@ const Map: React.FC = () => {
     console.log('📍 Bars state updated - count:', bars.length);
   }, [bars]);
 
+  // Debug effect for selected marker
+  React.useEffect(() => {
+    console.log('📍 Selected marker changed:', selectedMarkerId);
+  }, [selectedMarkerId]);
+
   // Handle close bar card
   const handleCloseBarCard = React.useCallback(() => {
     setShowBarCard(false);
     setSelectedBar(null);
+    setSelectedMarkerId(null);
   }, []);
 
   // Handle navigate to bar
@@ -383,20 +392,49 @@ const Map: React.FC = () => {
               }}
             />
 
-            {/* Only show bar icons if NOT clustered */}
+            {/* Selected bar markers */}
             <MapboxGL.SymbolLayer
-              id="barMarkers"
-              filter={['!', ['has', 'point_count']]}
+              id="selectedBarMarkers"
+              filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], true]]}
+              style={{
+                iconImage: 'bar_marker_selected',
+                iconAllowOverlap: true,
+                iconSize: 0.048,
+                iconAnchor: 'bottom',
+                iconRotationAlignment: 'map',
+                iconPitchAlignment: 'map',
+                iconTextFit: 'none',
+                iconKeepUpright: true,
+                //iconMirror: true,
+              }}
+            />
+
+            {/* Normal bar markers */}
+            <MapboxGL.SymbolLayer
+              id="normalBarMarkers"
+              filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], false]]}
               style={{
                 iconImage: 'bar_marker',
                 iconAllowOverlap: true,
                 iconSize: 0.1,
                 iconAnchor: 'bottom',
+                iconRotationAlignment: 'map',
+                iconPitchAlignment: 'map',
+                iconTextFit: 'none',
+                iconKeepUpright: true,
               }}
             />
 
-            {/* Register marker image */}
-            <MapboxGL.Images images={{ bar_marker: require('~/assets/marker.png') }} />
+            {/* Register marker images */}
+            {/* 
+              Nota: marker.png (494x505) vs marker_clicked.png (1024x1024)
+              Por eso el iconSize del marker seleccionado es 0.048 vs 0.1
+              Además, marker_clicked.png está boca abajo, por eso se usa iconRotate: 180
+            */}
+            <MapboxGL.Images images={{ 
+              bar_marker: require('~/assets/marker.png'),
+              bar_marker_selected: require('~/assets/marker_clicked.png')
+            }} />
           </MapboxGL.ShapeSource>
         )}
 
