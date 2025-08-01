@@ -32,5 +32,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1C2A3A',
+    paddingBottom: Platform.OS === 'ios' ? 80 : 60, // Space for footer
   },
 }); 

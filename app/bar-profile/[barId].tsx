@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { useFavorites } from '~/hooks/useFavorites';
+import BarReviewsSection from '~/components/BarReviewsSection';
 
 interface BarProfile {
   id: string;
@@ -49,6 +50,7 @@ export default function BarProfileScreen() {
   const [isOwner, setIsOwner] = useState(false);
   const [isFav, setIsFav] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Create sections for FlatList
   const sections = [
@@ -57,6 +59,7 @@ export default function BarProfileScreen() {
     { type: 'info', key: 'info' },
     { type: 'tags', key: 'tags' },
     { type: 'posts', key: 'posts' },
+    { type: 'reviews', key: 'reviews' },
     { type: 'danger', key: 'danger' },
   ];
 
@@ -83,14 +86,34 @@ export default function BarProfileScreen() {
                 <FlatList
                   data={bar.images}
                   renderItem={renderImageItem}
-                  keyExtractor={(item, index) => `image-${index}`}
+                  keyExtractor={(item, index) => `image-${index}-${item}`}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   snapToInterval={width - 40}
                   decelerationRate="fast"
                   contentContainerStyle={styles.imagesList}
-                  scrollEnabled={false}
+                  scrollEnabled={bar.images.length > 1}
+                  pagingEnabled={bar.images.length > 1}
+                  onMomentumScrollEnd={(event) => {
+                    const index = Math.round(event.nativeEvent.contentOffset.x / (width - 40));
+                    setCurrentImageIndex(index);
+                  }}
                 />
+                
+                {/* Page indicators */}
+                {bar.images.length > 1 && (
+                  <View style={styles.pageIndicators}>
+                                    {bar.images.map((_, index) => (
+                  <View
+                    key={`indicator-${index}`}
+                    style={[
+                      styles.pageIndicator,
+                      index === currentImageIndex && styles.pageIndicatorActive
+                    ]}
+                  />
+                ))}
+                  </View>
+                )}
                 
                 {!isOwner && (
                   <TouchableOpacity 
@@ -170,28 +193,52 @@ export default function BarProfileScreen() {
         return (
           (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_languages?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
             <View style={styles.tagsSection}>
-              <View style={styles.tagsContainer}>
-                {bar?.category && (
-                  <View style={[styles.tag, { backgroundColor: '#1976D2' }]}>
-                    <Text style={styles.tagText}>📂 {bar.category.name}</Text>
-                  </View>
-                )}
-                {bar?.bar_food_types?.map((item, index) => (
-                  <View key={`food-${index}`} style={[styles.tag, { backgroundColor: '#FF6B35' }]}>
-                    <Text style={styles.tagText}>🍽️ {item.food_type.name}</Text>
-                  </View>
-                ))}
-                {bar?.bar_languages?.map((item, index) => (
-                  <View key={`lang-${index}`} style={[styles.tag, { backgroundColor: '#4CAF50' }]}>
-                    <Text style={styles.tagText}>🗣️ {item.language.name}</Text>
-                  </View>
-                ))}
-                {bar?.bar_selected_features?.map((item, index) => (
-                  <View key={`feat-${index}`} style={[styles.tag, { backgroundColor: '#9C27B0' }]}>
-                    <Text style={styles.tagText}>✨ {item.feature.name}</Text>
-                  </View>
-                ))}
-              </View>
+              <FlatList
+                data={[
+                  ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
+                  ...(bar?.bar_food_types?.map((item) => ({ type: 'food', data: item, id: `food-${item.food_type_id}` })) || []),
+                  ...(bar?.bar_languages?.map((item) => ({ type: 'language', data: item, id: `language-${item.language_id}` })) || []),
+                  ...(bar?.bar_selected_features?.map((item) => ({ type: 'feature', data: item, id: `feature-${item.feature_id}` })) || [])
+                ]}
+                renderItem={({ item }) => {
+                  let backgroundColor = '#1976D2';
+                  let icon = '📂';
+                  let text = '';
+                  
+                  switch (item.type) {
+                    case 'category':
+                      backgroundColor = '#1976D2';
+                      icon = '📂';
+                      text = (item.data as { name: string }).name;
+                      break;
+                    case 'food':
+                      backgroundColor = '#FF6B35';
+                      icon = '🍽️';
+                      text = (item.data as { food_type: { name: string } }).food_type.name;
+                      break;
+                    case 'language':
+                      backgroundColor = '#4CAF50';
+                      icon = '🗣️';
+                      text = (item.data as { language: { name: string } }).language.name;
+                      break;
+                    case 'feature':
+                      backgroundColor = '#9C27B0';
+                      icon = '✨';
+                      text = (item.data as { feature: { name: string } }).feature.name;
+                      break;
+                  }
+                  
+                  return (
+                    <View style={[styles.tag, { backgroundColor }]}>
+                      <Text style={styles.tagText}>{icon} {text}</Text>
+                    </View>
+                  );
+                }}
+                keyExtractor={(item) => (item as any).id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tagsScrollContainer}
+              />
             </View>
           ) : null
         );
@@ -222,7 +269,23 @@ export default function BarProfileScreen() {
                 </Text>
               </View>
             )}
+            
+            {/* Write Review Button */}
+            {!isOwner && (
+              <TouchableOpacity
+                style={styles.reviewButton}
+                onPress={() => router.push(`/write-review/${barId}` as any)}
+              >
+                <Ionicons name="star-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.reviewButtonText}>Write a Review</Text>
+              </TouchableOpacity>
+            )}
           </View>
+        );
+
+      case 'reviews':
+        return (
+          <BarReviewsSection barId={barId} />
         );
 
       case 'danger':
@@ -1072,11 +1135,37 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tagsContainer: {
-    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     paddingVertical: 8,
   },
-  tag: {
+  tagsScrollContainer: {
+    paddingHorizontal: 20,
     paddingVertical: 8,
+  },
+  pageIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 16,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+  },
+  pageIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    marginHorizontal: 4,
+  },
+  pageIndicatorActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  tag: {
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
     marginRight: 8,
@@ -1093,6 +1182,22 @@ const styles = StyleSheet.create({
   tagText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  reviewButton: {
+    backgroundColor: '#1D4ED8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+  },
+  reviewButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 }); 

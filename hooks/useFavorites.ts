@@ -117,6 +117,8 @@ export const useFavorites = () => {
             description,
             address,
             city,
+            rating,
+            review_count,
             bar_images(image_url, image_order)
           )
         `)
