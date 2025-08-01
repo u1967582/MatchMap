@@ -99,7 +99,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, isSelected, onSelect }) => {
 
       <View style={styles.featuresContainer}>
         {plan.features.map((feature, index) => (
-          <View key={index} style={styles.featureRow}>
+          <View key={`feature-${plan.id}-${index}`} style={styles.featureRow}>
             <Ionicons name="checkmark" size={20} color="#10B981" />
             <Text style={styles.featureText}>{feature.text}</Text>
           </View>

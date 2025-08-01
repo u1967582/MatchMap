@@ -1,9 +1,9 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import SearchBar from '~/components/SearchBar';
+import SearchBarWithResults from '~/components/SearchBarWithResults';
 import BarInfoCard from '~/components/BarInfoCard';
 import { supabase } from '~/utils/supabase';
 
@@ -32,6 +32,11 @@ const Map: React.FC = () => {
   const [searchText, setSearchText] = React.useState('');
   const [selectedBar, setSelectedBar] = React.useState<Bar | null>(null);
   const [showBarCard, setShowBarCard] = React.useState(false);
+  const [searchResults, setSearchResults] = React.useState<any[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [cameraCenter, setCameraCenter] = React.useState<[number, number] | null>(null);
+  const [cameraZoom, setCameraZoom] = React.useState(15);
+  const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
 
   // Create vector collection from bars
   const barsVector = React.useMemo(() => ({
@@ -45,10 +50,11 @@ const Map: React.FC = () => {
       properties: {
         barId: bar.id,
         barName: bar.name,
-        barData: bar
+        barData: bar,
+        isSelected: bar.id === selectedMarkerId
       }
     }))
-  }), [bars]);
+  }), [bars, selectedMarkerId]);
 
   // Handle marker press
   const handleMarkerPress = React.useCallback((bar: Bar) => {
@@ -61,6 +67,7 @@ const Map: React.FC = () => {
       image_url: bar.image_url
     });
     setSelectedBar(bar);
+    setSelectedMarkerId(bar.id);
     setShowBarCard(true);
   }, []);
 
@@ -90,10 +97,16 @@ const Map: React.FC = () => {
     console.log('📍 Bars state updated - count:', bars.length);
   }, [bars]);
 
+  // Debug effect for selected marker
+  React.useEffect(() => {
+    console.log('📍 Selected marker changed:', selectedMarkerId);
+  }, [selectedMarkerId]);
+
   // Handle close bar card
   const handleCloseBarCard = React.useCallback(() => {
     setShowBarCard(false);
     setSelectedBar(null);
+    setSelectedMarkerId(null);
   }, []);
 
   // Handle navigate to bar
@@ -217,15 +230,97 @@ const Map: React.FC = () => {
     fetchBars();
   }, []);
 
+  // Search for locations using Mapbox Geocoding API
+  const searchLocations = React.useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const encodedQuery = encodeURIComponent(query);
+      // Búsqueda más genérica: incluye ciudades, regiones, países, POI y direcciones
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${MAPBOX_ACCESS_TOKEN}&types=place,poi,address&limit=8&language=es&autocomplete=true`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.features) {
+        setSearchResults(data.features);
+        console.log('📍 Search results:', data.features.length, 'locations found');
+        console.log('📍 Sample results:', data.features.slice(0, 3).map((f: any) => f.place_name));
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('❌ Error searching locations:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Handle search text change with debouncing
   const handleSearchChange = React.useCallback((text: string) => {
     setSearchText(text);
+  }, []);
+
+  // Debounced search effect
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchText.trim()) {
+        searchLocations(searchText);
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchText, searchLocations]);
+
+  // Handle location selection
+  const handleLocationSelect = React.useCallback((location: any) => {
+    const [longitude, latitude] = location.center;
+    
+    console.log('📍 Selected location:', location.place_name);
+    console.log('📍 Coordinates:', latitude, longitude);
+    console.log('📍 Place type:', location.place_type);
+    
+    // Determine appropriate zoom level based on place type
+    let zoomLevel = 16; // Default for specific addresses/POIs
+    
+    if (location.place_type?.includes('place')) {
+      // Cities, regions, countries - use wider zoom
+      zoomLevel = 12;
+    } else if (location.place_type?.includes('poi')) {
+      // Points of interest - medium zoom
+      zoomLevel = 15;
+    } else if (location.place_type?.includes('address')) {
+      // Specific addresses - close zoom
+      zoomLevel = 16;
+    }
+    
+    // Center camera on selected location
+    setCameraCenter([longitude, latitude]);
+    setCameraZoom(zoomLevel);
+    
+    // Clear search
+    setSearchText(location.place_name);
+    setSearchResults([]);
   }, []);
 
   if (!hasPermission) {
     return (
       <View style={styles.container}>
         <View style={styles.permissionContainer}>
-          <SearchBar value={searchText} onChangeText={handleSearchChange} />
+          <SearchBarWithResults 
+            value={searchText} 
+            onChangeText={handleSearchChange}
+            searchResults={[]}
+            isSearching={false}
+            onLocationSelect={() => {}}
+          />
         </View>
       </View>
     );
@@ -237,14 +332,14 @@ const Map: React.FC = () => {
         style={styles.map} 
         styleURL="mapbox://styles/mapbox/dark-v11"
       >
-        {/* Camera that centers on user location */}
+        {/* Camera that centers on user location or search result */}
         <MapboxGL.Camera
           centerCoordinate={
-            userLocation
+            cameraCenter || (userLocation
               ? [userLocation.coords.longitude, userLocation.coords.latitude]
-              : undefined
+              : undefined)
           }
-          zoomLevel={15}
+          zoomLevel={cameraZoom}
           animationMode="flyTo"
           animationDuration={1000}
         />
@@ -297,20 +392,49 @@ const Map: React.FC = () => {
               }}
             />
 
-            {/* Only show bar icons if NOT clustered */}
+            {/* Selected bar markers */}
             <MapboxGL.SymbolLayer
-              id="barMarkers"
-              filter={['!', ['has', 'point_count']]}
+              id="selectedBarMarkers"
+              filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], true]]}
+              style={{
+                iconImage: 'bar_marker_selected',
+                iconAllowOverlap: true,
+                iconSize: 0.048,
+                iconAnchor: 'bottom',
+                iconRotationAlignment: 'map',
+                iconPitchAlignment: 'map',
+                iconTextFit: 'none',
+                iconKeepUpright: true,
+                //iconMirror: true,
+              }}
+            />
+
+            {/* Normal bar markers */}
+            <MapboxGL.SymbolLayer
+              id="normalBarMarkers"
+              filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], false]]}
               style={{
                 iconImage: 'bar_marker',
                 iconAllowOverlap: true,
                 iconSize: 0.1,
                 iconAnchor: 'bottom',
+                iconRotationAlignment: 'map',
+                iconPitchAlignment: 'map',
+                iconTextFit: 'none',
+                iconKeepUpright: true,
               }}
             />
 
-            {/* Register marker image */}
-            <MapboxGL.Images images={{ bar_marker: require('~/assets/marker.png') }} />
+            {/* Register marker images */}
+            {/* 
+              Nota: marker.png (494x505) vs marker_clicked.png (1024x1024)
+              Por eso el iconSize del marker seleccionado es 0.048 vs 0.1
+              Además, marker_clicked.png está boca abajo, por eso se usa iconRotate: 180
+            */}
+            <MapboxGL.Images images={{ 
+              bar_marker: require('~/assets/marker.png'),
+              bar_marker_selected: require('~/assets/marker_clicked.png')
+            }} />
           </MapboxGL.ShapeSource>
         )}
 
@@ -325,7 +449,26 @@ const Map: React.FC = () => {
         )}
       </MapboxGL.MapView>
 
-      <SearchBar value={searchText} onChangeText={handleSearchChange} />
+      <SearchBarWithResults 
+        value={searchText} 
+        onChangeText={handleSearchChange}
+        searchResults={searchResults}
+        isSearching={isSearching}
+        onLocationSelect={handleLocationSelect}
+      />
+
+      {/* Center on user location button */}
+      {userLocation && (
+        <TouchableOpacity
+          style={styles.centerButton}
+          onPress={() => {
+            setCameraCenter([userLocation.coords.longitude, userLocation.coords.latitude]);
+            setCameraZoom(15);
+          }}
+        >
+          <Ionicons name="locate" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
       
       {/* Bar Info Card */}
       <BarInfoCard
@@ -363,6 +506,25 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  centerButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    backgroundColor: '#3A4A5C',
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
