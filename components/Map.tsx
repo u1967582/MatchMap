@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert, Platform } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,8 +11,6 @@ const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.e
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
-
-
 const Map: React.FC = () => {
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
@@ -21,8 +19,6 @@ const Map: React.FC = () => {
   const [isSearching, setIsSearching] = React.useState(false);
   const [cameraCenter, setCameraCenter] = React.useState<[number, number] | null>(null);
   const [cameraZoom, setCameraZoom] = React.useState(15);
-
-
 
   React.useEffect(() => {
     const requestLocationPermission = async () => {
@@ -42,8 +38,6 @@ const Map: React.FC = () => {
 
     requestLocationPermission();
   }, []);
-
-
 
   // Search for locations using Mapbox Geocoding API
   const searchLocations = React.useCallback(async (query: string) => {
@@ -148,19 +142,17 @@ const Map: React.FC = () => {
         styleURL="mapbox://styles/mapbox/dark-v11"
         scaleBarEnabled={false}
       >
-        {/* Camera that centers on user location or search result */}
         <MapboxGL.Camera
           centerCoordinate={
             cameraCenter || (userLocation
               ? [userLocation.coords.longitude, userLocation.coords.latitude]
-              : undefined)
+              : [0, 0])
           }
           zoomLevel={cameraZoom}
           animationMode="flyTo"
           animationDuration={1000}
         />
 
-        {/* User location indicator */}
         <MapboxGL.UserLocation
           visible={true}
           showsUserHeadingIndicator={true}
@@ -188,8 +180,6 @@ const Map: React.FC = () => {
           <Ionicons name="locate" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       )}
-      
-
     </View>
   );
 };

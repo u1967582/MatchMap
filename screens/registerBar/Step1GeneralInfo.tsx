@@ -152,12 +152,6 @@ const Step1GeneralInfo: React.FC = () => {
                       <Text style={styles.retryButtonText}>Reintentar</Text>
                     </TouchableOpacity>
                   </View>
-                ) : categories.length > 0 ? (
-                  <View style={styles.successContainer}>
-                    <Text style={styles.successText}>
-                      ✅ Categorías cargadas desde la base de datos
-                    </Text>
-                  </View>
                 ) : null}
               </View>
             )}
@@ -278,18 +272,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  successContainer: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#065F46',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  successText: {
-    color: '#10B981',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+
 });
 
 export default Step1GeneralInfo; 
