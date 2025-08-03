@@ -519,9 +519,9 @@ export default function BarProfileScreen() {
 
   const handleEditInfo = useCallback(() => {
     if (isOwner) {
-      Alert.alert('Editar Información', 'Función de edición próximamente disponible');
+      router.push(`/edit-bar-info/${barId}` as any);
     }
-  }, [isOwner]);
+  }, [isOwner, barId, router]);
 
   const handleCreatePost = useCallback(() => {
     if (isOwner) {
