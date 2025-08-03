@@ -37,6 +37,21 @@ interface BarPost {
   pinned: boolean;
 }
 
+interface UpcomingMatch {
+  id: string;
+  start_time: string;
+  date: string;
+  time: string;
+  home_team_id: string;
+  away_team_id: string;
+  competition_id: number;
+  home_team_name: string;
+  away_team_name: string;
+  competition_name: string;
+  home_team_logo_url?: string;
+  away_team_logo_url?: string;
+}
+
 const { width } = Dimensions.get('window');
 
 export default function BarProfileScreen() {
@@ -51,12 +66,14 @@ export default function BarProfileScreen() {
   const [isFav, setIsFav] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
 
   // Create sections for FlatList
   const sections = [
     { type: 'header', key: 'header' },
     { type: 'images', key: 'images' },
     { type: 'matches', key: 'matches' },
+    { type: 'upcoming-matches', key: 'upcoming-matches' },
     { type: 'info', key: 'info' },
     { type: 'tags', key: 'tags' },
     { type: 'posts', key: 'posts' },
@@ -318,6 +335,87 @@ export default function BarProfileScreen() {
           ) : null
         );
 
+      case 'upcoming-matches':
+        return (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>📺 Próximos partidos</Text>
+            </View>
+            
+            {upcomingMatches.length > 0 ? (
+              <View style={styles.upcomingMatchesContainer}>
+                {upcomingMatches.map((match) => (
+                  <View key={match.id} style={styles.upcomingMatchCard}>
+                    <View style={styles.upcomingMatchTeams}>
+                      <View style={styles.upcomingTeamContainer}>
+                        <Image
+                          source={{
+                            uri: match.home_team_logo_url || `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${match.home_team_id}.png`
+                          }}
+                          style={styles.upcomingTeamLogo}
+                          defaultSource={require('~/assets/icon.png')}
+                        />
+                        <Text style={styles.upcomingTeamName} numberOfLines={2}>
+                          {match.home_team_name}
+                        </Text>
+                      </View>
+                      
+                      <View style={styles.upcomingVsContainer}>
+                        <Text style={styles.upcomingVsText}>VS</Text>
+                      </View>
+                      
+                      <View style={styles.upcomingTeamContainer}>
+                        <Image
+                          source={{
+                            uri: match.away_team_logo_url || `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${match.away_team_id}.png`
+                          }}
+                          style={styles.upcomingTeamLogo}
+                          defaultSource={require('~/assets/icon.png')}
+                        />
+                        <Text style={styles.upcomingTeamName} numberOfLines={2}>
+                          {match.away_team_name}
+                        </Text>
+                      </View>
+                    </View>
+                    
+
+                    
+                    <Text style={styles.upcomingMatchTime}>
+                      {new Date(`${match.date} ${match.time}`).toLocaleString('es-ES', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                    
+                    <Text style={styles.upcomingMatchCompetition}>
+                      {match.competition_name}
+                    </Text>
+                    
+                    {isOwner && (
+                      <TouchableOpacity
+                        style={styles.deleteMatchButton}
+                        onPress={() => handleDeleteMatch(match.id)}
+                      >
+                        <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+                        <Text style={styles.deleteMatchButtonText}>Eliminar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyUpcomingMatches}>
+                <Text style={styles.emptyUpcomingMatchesText}>
+                  Este bar no tiene retransmisiones programadas actualmente
+                </Text>
+              </View>
+            )}
+          </View>
+        );
+
       case 'danger':
         return (
           isOwner ? (
@@ -501,6 +599,9 @@ export default function BarProfileScreen() {
 
         // Fetch posts for this bar
         await fetchBarPosts(barData.id, authUser);
+        
+        // Fetch upcoming matches for this bar
+        await fetchUpcomingMatches(barData.id);
       }
 
     } catch (error) {
@@ -542,6 +643,62 @@ export default function BarProfileScreen() {
       console.error('Error in fetchBarPosts:', error);
     }
   }, [user]);
+
+  const fetchUpcomingMatches = useCallback(async (barId: string) => {
+    try {
+      console.log('📺 Fetching upcoming matches for bar:', barId);
+      
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('events')
+        .select(`
+          start_time,
+          matches!inner(
+            id,
+            date,
+            time,
+            home_team_id,
+            away_team_id,
+            competition_id,
+            home_team:teams!matches_home_team_id_fkey(id, name, logo_url),
+            away_team:teams!matches_away_team_id_fkey(id, name, logo_url),
+            competition:competitions!inner(id, name)
+          )
+        `)
+        .eq('bar_id', barId)
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true });
+
+      if (matchesError) {
+        console.error('Error fetching upcoming matches:', matchesError);
+        return;
+      }
+
+      if (matchesData && matchesData.length > 0) {
+        const upcomingMatches: UpcomingMatch[] = matchesData.map((event: any) => ({
+          id: event.matches.id,
+          start_time: event.start_time,
+          date: event.matches.date,
+          time: event.matches.time,
+          home_team_id: event.matches.home_team_id,
+          away_team_id: event.matches.away_team_id,
+          competition_id: event.matches.competition_id,
+          home_team_name: event.matches.home_team.name,
+          away_team_name: event.matches.away_team.name,
+          competition_name: event.matches.competition.name,
+          home_team_logo_url: event.matches.home_team.logo_url,
+          away_team_logo_url: event.matches.away_team.logo_url,
+        }));
+
+        setUpcomingMatches(upcomingMatches);
+        console.log('📺 Upcoming matches loaded:', upcomingMatches.length);
+      } else {
+        setUpcomingMatches([]);
+        console.log('📺 No upcoming matches found for bar:', barId);
+      }
+    } catch (error) {
+      console.error('Error in fetchUpcomingMatches:', error);
+    }
+  }, []);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -806,6 +963,46 @@ export default function BarProfileScreen() {
       setIsFav(!isFav);
       console.log(isFav ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', bar?.name);
     }
+  };
+
+  const handleDeleteMatch = async (matchId: string) => {
+    Alert.alert(
+      'Eliminar Partido',
+      '¿Estás seguro de que quieres eliminar este partido de la programación?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('events')
+                .delete()
+                .eq('bar_id', barId)
+                .eq('match_id', matchId);
+
+              if (error) {
+                console.error('Error deleting match:', error);
+                Alert.alert('Error', 'No se pudo eliminar el partido');
+                return;
+              }
+
+              // Refresh upcoming matches
+              await fetchUpcomingMatches(barId);
+              
+              Alert.alert('Éxito', 'Partido eliminado correctamente');
+            } catch (error) {
+              console.error('Error in handleDeleteMatch:', error);
+              Alert.alert('Error', 'Ocurrió un error al eliminar el partido');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -1272,5 +1469,87 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     fontSize: 15,
     fontWeight: '600',
+  },
+  // Upcoming matches styles
+  upcomingMatchesContainer: {
+    paddingHorizontal: 20,
+  },
+  upcomingMatchCard: {
+    backgroundColor: '#1E3A5F',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  upcomingMatchTeams: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  upcomingTeamContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  upcomingTeamLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginBottom: 8,
+    resizeMode: 'contain',
+  },
+  upcomingTeamName: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  upcomingVsContainer: {
+    paddingHorizontal: 16,
+  },
+  upcomingVsText: {
+    color: '#A3B3CC',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  upcomingMatchTime: {
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  upcomingMatchCompetition: {
+    color: '#A3B3CC',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  emptyUpcomingMatches: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyUpcomingMatchesText: {
+    color: '#8E8E93',
+    fontSize: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  deleteMatchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 8,
+    alignSelf: 'center',
+    gap: 4,
+  },
+  deleteMatchButtonText: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    fontWeight: '500',
   },
 }); 

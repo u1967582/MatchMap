@@ -51,6 +51,7 @@ export default function ManualMatchSelectionScreen() {
   
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [matches, setMatches] = useState<Match[]>([]);
+  const [selectedMatches, setSelectedMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showCalendar, setShowCalendar] = useState(true);
@@ -173,19 +174,24 @@ export default function ManualMatchSelectionScreen() {
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
+    // Keep selected matches from other dates, just load new matches for this date
   };
 
-  const toggleMatchSelection = (matchId: string) => {
-    setMatches(prev => prev.map(match => 
-      match.id === matchId 
-        ? { ...match, isSelected: !match.isSelected }
-        : match
-    ));
+  const toggleMatchSelection = (match: Match) => {
+    setSelectedMatches(prev => {
+      const isAlreadySelected = prev.some(selected => selected.id === match.id);
+      
+      if (isAlreadySelected) {
+        // Remove from selected matches
+        return prev.filter(selected => selected.id !== match.id);
+      } else {
+        // Add to selected matches
+        return [...prev, match];
+      }
+    });
   };
 
   const handleSaveSelectedMatches = async () => {
-    const selectedMatches = matches.filter(match => match.isSelected);
-    
     if (selectedMatches.length === 0) {
       Alert.alert('Info', 'No has seleccionado ningún partido');
       return;
@@ -277,22 +283,22 @@ export default function ManualMatchSelectionScreen() {
       </View>
       
       <TouchableOpacity
-        style={[styles.selectButton, item.isSelected && styles.selectButtonActive]}
-        onPress={() => toggleMatchSelection(item.id)}
+        style={[styles.selectButton, selectedMatches.some(selected => selected.id === item.id) && styles.selectButtonActive]}
+        onPress={() => toggleMatchSelection(item)}
       >
         <Ionicons
-          name={item.isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+          name={selectedMatches.some(selected => selected.id === item.id) ? 'checkmark-circle' : 'ellipse-outline'}
           size={24}
-          color={item.isSelected ? '#4CAF50' : '#A3B3CC'}
+          color={selectedMatches.some(selected => selected.id === item.id) ? '#4CAF50' : '#A3B3CC'}
         />
-        <Text style={[styles.selectButtonText, item.isSelected && styles.selectButtonTextActive]}>
-          {item.isSelected ? 'Seleccionado' : 'Seleccionar'}
+        <Text style={[styles.selectButtonText, selectedMatches.some(selected => selected.id === item.id) && styles.selectButtonTextActive]}>
+          {selectedMatches.some(selected => selected.id === item.id) ? 'Seleccionado' : 'Seleccionar'}
         </Text>
       </TouchableOpacity>
     </View>
   );
 
-  const selectedMatchesCount = matches.filter(match => match.isSelected).length;
+  const selectedMatchesCount = selectedMatches.length;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -341,6 +347,43 @@ export default function ManualMatchSelectionScreen() {
         >
           <Ionicons name="chevron-down" size={20} color="#A3B3CC" />
         </TouchableOpacity>
+      )}
+
+      {/* Selected Matches Summary */}
+      {selectedMatches.length > 0 && (
+        <View style={styles.selectedMatchesSection}>
+          <Text style={styles.selectedMatchesTitle}>
+            Partidos seleccionados
+          </Text>
+                      <FlatList
+              data={selectedMatches}
+              renderItem={({ item }) => (
+                <View style={styles.selectedMatchItem}>
+                  <Text style={styles.selectedMatchText}>
+                    {item.home_team?.name} vs {item.away_team?.name}
+                  </Text>
+                  <Text style={styles.selectedMatchDate}>
+                    {new Date(`${item.date} ${item.time}`).toLocaleString('es-ES', {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => toggleMatchSelection(item)}
+                    style={styles.removeButton}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#FF6B6B" />
+                  </TouchableOpacity>
+                </View>
+              )}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.selectedMatchesList}
+            />
+        </View>
       )}
 
       {/* Matches List */}
@@ -553,5 +596,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  // Selected matches styles
+  selectedMatchesSection: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  selectedMatchesTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  selectedMatchesList: {
+    paddingVertical: 8,
+    paddingBottom: 16,
+  },
+  selectedMatchItem: {
+    backgroundColor: '#1E3A5F',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectedMatchText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  selectedMatchDate: {
+    color: '#4CAF50',
+    fontSize: 12,
+    marginRight: 8,
+  },
+  removeButton: {
+    padding: 4,
   },
 }); 
