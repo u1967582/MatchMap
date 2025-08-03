@@ -743,6 +743,7 @@ export default function EditProfileScreen() {
                         autoCapitalize="none"
                         theme="dark"
                         editable={!saving}
+                        showPasswordToggle
                       />
                     </View>
 
@@ -756,6 +757,7 @@ export default function EditProfileScreen() {
                         autoCapitalize="none"
                         theme="dark"
                         editable={!saving}
+                        showPasswordToggle
                       />
                     </View>
                   </>

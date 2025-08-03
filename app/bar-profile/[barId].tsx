@@ -276,7 +276,11 @@ export default function BarProfileScreen() {
             
             {posts.length > 0 ? (
               <View>
-                {posts.map((post) => renderPostItem({ item: post }))}
+                {posts.map((post) => (
+                  <View key={post.id}>
+                    {renderPostItem({ item: post })}
+                  </View>
+                ))}
               </View>
             ) : (
               <View style={styles.noPostsContainer}>

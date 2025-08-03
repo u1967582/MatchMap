@@ -389,6 +389,7 @@ const RegisterScreen: React.FC = () => {
                 autoCapitalize="none"
                 theme="dark"
                 editable={!isAnyLoading}
+                showPasswordToggle
               />
             </View>
 
