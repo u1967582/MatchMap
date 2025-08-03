@@ -331,6 +331,7 @@ const Map: React.FC = () => {
       <MapboxGL.MapView 
         style={styles.map} 
         styleURL="mapbox://styles/mapbox/dark-v11"
+        scaleBarEnabled={false}
       >
         {/* Camera that centers on user location or search result */}
         <MapboxGL.Camera
