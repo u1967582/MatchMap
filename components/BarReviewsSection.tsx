@@ -144,7 +144,6 @@ const BarReviewsSection: React.FC<{ barId: string }> = ({ barId }) => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.sectionTitle}>Reviews</Text>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading reviews...</Text>
         </View>
@@ -155,7 +154,6 @@ const BarReviewsSection: React.FC<{ barId: string }> = ({ barId }) => {
   if (totalReviews === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.sectionTitle}>Reviews</Text>
         <View style={styles.emptyContainer}>
           <Ionicons name="chatbubble-outline" size={48} color="#94A3B8" />
           <Text style={styles.emptyTitle}>No reviews yet</Text>
@@ -167,7 +165,6 @@ const BarReviewsSection: React.FC<{ barId: string }> = ({ barId }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Reviews</Text>
 
       <View style={styles.headerRow}>
         <View style={styles.avgColumn}>
