@@ -56,6 +56,7 @@ export default function BarProfileScreen() {
   const sections = [
     { type: 'header', key: 'header' },
     { type: 'images', key: 'images' },
+    { type: 'matches', key: 'matches' },
     { type: 'info', key: 'info' },
     { type: 'tags', key: 'tags' },
     { type: 'posts', key: 'posts' },
@@ -286,6 +287,35 @@ export default function BarProfileScreen() {
       case 'reviews':
         return (
           <BarReviewsSection barId={barId} />
+        );
+
+      case 'matches':
+        return (
+          isOwner ? (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>⚽ Gestión de Partidos</Text>
+              </View>
+              
+              <View style={styles.matchesContainer}>
+                <TouchableOpacity
+                  style={styles.matchButton}
+                  onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
+                >
+                  <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+                  <Text style={styles.matchButtonText}>Añadir partido manualmente</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.matchButton, styles.matchButtonDisabled]}
+                  disabled={true}
+                >
+                  <Ionicons name="settings-outline" size={20} color="#8E8E93" />
+                  <Text style={styles.matchButtonTextDisabled}>Automatizar retransmisiones (próximamente)</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null
         );
 
       case 'danger':
@@ -1198,6 +1228,49 @@ const styles = StyleSheet.create({
   reviewButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  matchesContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  matchButton: {
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 10,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  matchButtonDisabled: {
+    backgroundColor: '#2A3A4A',
+    borderWidth: 1,
+    borderColor: '#8E8E93',
+    shadowOpacity: 0.1,
+  },
+  matchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  matchButtonTextDisabled: {
+    color: '#8E8E93',
+    fontSize: 15,
     fontWeight: '600',
   },
 }); 
