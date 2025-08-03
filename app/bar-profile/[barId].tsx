@@ -165,7 +165,7 @@ export default function BarProfileScreen() {
       case 'info':
         return (
           <View style={styles.infoSection}>
-            <Text style={styles.sectionTitle}>Información del Bar</Text>
+            <Text style={styles.sectionTitle}>📝 Información del Bar</Text>
             
             {bar?.description && (
               <View style={styles.infoItem}>
@@ -209,8 +209,8 @@ export default function BarProfileScreen() {
 
       case 'tags':
         return (
-          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_languages?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
-            <View style={styles.tagsSection}>
+                      (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_languages?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
+              <View style={styles.tagsSection}>
               <FlatList
                 data={[
                   ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
@@ -265,7 +265,7 @@ export default function BarProfileScreen() {
         return (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Posts</Text>
+              <Text style={styles.sectionTitle}>📰 Posts</Text>
               {isOwner && (
                 <TouchableOpacity style={styles.createPostButton} onPress={handleCreatePost}>
                   <Ionicons name="add" size={16} color="#FFFFFF" />
@@ -303,7 +303,10 @@ export default function BarProfileScreen() {
 
       case 'reviews':
         return (
-          <BarReviewsSection barId={barId} />
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>⭐ Reseñas</Text>
+            <BarReviewsSection barId={barId} />
+          </View>
         );
 
       case 'matches':
@@ -422,7 +425,7 @@ export default function BarProfileScreen() {
             <View style={styles.dangerSection}>
               <TouchableOpacity style={styles.deleteBarButton} onPress={handleDeleteBar}>
                 <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-                <Text style={styles.deleteBarButtonText}>Eliminar Bar</Text>
+                <Text style={styles.deleteBarButtonText}>🗑️ Eliminar Bar</Text>
               </TouchableOpacity>
             </View>
           ) : null
