@@ -76,6 +76,7 @@ export default function BarProfileScreen() {
     { type: 'upcoming-matches', key: 'upcoming-matches' },
     { type: 'info', key: 'info' },
     { type: 'tags', key: 'tags' },
+    { type: 'menu', key: 'menu' },
     { type: 'posts', key: 'posts' },
     { type: 'reviews', key: 'reviews' },
     { type: 'danger', key: 'danger' },
@@ -209,8 +210,8 @@ export default function BarProfileScreen() {
 
       case 'tags':
         return (
-                      (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_languages?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
-              <View style={styles.tagsSection}>
+          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_languages?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
+            <View style={styles.tagsSection}>
               <FlatList
                 data={[
                   ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
@@ -259,6 +260,19 @@ export default function BarProfileScreen() {
               />
             </View>
           ) : null
+        );
+
+      case 'menu':
+        return (
+          <View style={styles.menuSection}>
+            <Text style={styles.menuSectionTitle}>🍽️ La Carta</Text>
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={() => router.push(`/bar-menu/${barId}` as any)}
+            >
+              <Text style={styles.menuButtonText}>Ver Carta</Text>
+            </TouchableOpacity>
+          </View>
         );
 
       case 'posts':
@@ -1554,5 +1568,41 @@ const styles = StyleSheet.create({
     color: '#FF6B6B',
     fontSize: 12,
     fontWeight: '500',
+  },
+  menuSection: {
+    padding: 20,
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  menuSectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  menuButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    gap: 10,
+    backgroundColor: '#007AFF',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  menuButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 }); 
