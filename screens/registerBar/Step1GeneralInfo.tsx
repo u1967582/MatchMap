@@ -152,12 +152,6 @@ const Step1GeneralInfo: React.FC = () => {
                       <Text style={styles.retryButtonText}>Reintentar</Text>
                     </TouchableOpacity>
                   </View>
-                ) : categories.length > 0 ? (
-                  <View style={styles.successContainer}>
-                    <Text style={styles.successText}>
-                      ✅ Categorías cargadas desde la base de datos
-                    </Text>
-                  </View>
                 ) : null}
               </View>
             )}

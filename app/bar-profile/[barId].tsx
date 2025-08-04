@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
@@ -68,6 +68,28 @@ export default function BarProfileScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
 
+  // Functions to copy to clipboard
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await Clipboard.setString(text);
+      Alert.alert('Copiado', `${label} copiado al portapapeles`);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo copiar al portapapeles');
+    }
+  };
+
+  const copyAddress = () => {
+    if (bar?.address && bar?.city) {
+      copyToClipboard(`${bar.address}, ${bar.city}`, 'Dirección');
+    }
+  };
+
+  const copyPhone = () => {
+    if (bar?.phone) {
+      copyToClipboard(bar.phone, 'Teléfono');
+    }
+  };
+
   // Create sections for FlatList
   const sections = [
     { type: 'header', key: 'header' },
@@ -76,6 +98,7 @@ export default function BarProfileScreen() {
     { type: 'upcoming-matches', key: 'upcoming-matches' },
     { type: 'info', key: 'info' },
     { type: 'tags', key: 'tags' },
+    { type: 'menu', key: 'menu' },
     { type: 'posts', key: 'posts' },
     { type: 'reviews', key: 'reviews' },
     { type: 'danger', key: 'danger' },
@@ -165,7 +188,7 @@ export default function BarProfileScreen() {
       case 'info':
         return (
           <View style={styles.infoSection}>
-            <Text style={styles.sectionTitle}>Información del Bar</Text>
+            <Text style={styles.sectionTitle}>📝 Información del Bar</Text>
             
             {bar?.description && (
               <View style={styles.infoItem}>
@@ -183,6 +206,9 @@ export default function BarProfileScreen() {
                 <Text style={styles.infoLabel}>Dirección</Text>
                 <Text style={styles.infoText}>{bar?.address}, {bar?.city}</Text>
               </View>
+              <TouchableOpacity style={styles.copyButton} onPress={copyAddress}>
+                <Ionicons name="copy-outline" size={18} color="#007AFF" />
+              </TouchableOpacity>
             </View>
 
             {bar?.phone && (
@@ -192,6 +218,9 @@ export default function BarProfileScreen() {
                   <Text style={styles.infoLabel}>Teléfono</Text>
                   <Text style={styles.infoText}>{bar.phone}</Text>
                 </View>
+                <TouchableOpacity style={styles.copyButton} onPress={copyPhone}>
+                  <Ionicons name="copy-outline" size={18} color="#007AFF" />
+                </TouchableOpacity>
               </View>
             )}
 
@@ -261,11 +290,24 @@ export default function BarProfileScreen() {
           ) : null
         );
 
+      case 'menu':
+        return (
+          <View style={styles.menuSection}>
+            <Text style={styles.menuSectionTitle}>🍽️ La Carta</Text>
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={() => router.push(`/bar-menu/${barId}` as any)}
+            >
+              <Text style={styles.menuButtonText}>Ver Carta</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
       case 'posts':
         return (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Posts</Text>
+              <Text style={styles.sectionTitle}>📰 Posts</Text>
               {isOwner && (
                 <TouchableOpacity style={styles.createPostButton} onPress={handleCreatePost}>
                   <Ionicons name="add" size={16} color="#FFFFFF" />
@@ -303,7 +345,10 @@ export default function BarProfileScreen() {
 
       case 'reviews':
         return (
-          <BarReviewsSection barId={barId} />
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>⭐ Reseñas</Text>
+            <BarReviewsSection barId={barId} />
+          </View>
         );
 
       case 'matches':
@@ -1551,5 +1596,46 @@ const styles = StyleSheet.create({
     color: '#FF6B6B',
     fontSize: 12,
     fontWeight: '500',
+  },
+  menuSection: {
+    padding: 20,
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  menuSectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  menuButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    gap: 10,
+    backgroundColor: '#007AFF',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  menuButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  copyButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
 }); 

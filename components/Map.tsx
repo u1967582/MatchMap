@@ -331,6 +331,7 @@ const Map: React.FC = () => {
       <MapboxGL.MapView 
         style={styles.map} 
         styleURL="mapbox://styles/mapbox/dark-v11"
+        scaleBarEnabled={false}
       >
         {/* Camera that centers on user location or search result */}
         <MapboxGL.Camera
@@ -397,15 +398,16 @@ const Map: React.FC = () => {
               id="selectedBarMarkers"
               filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], true]]}
               style={{
-                iconImage: 'bar_marker_selected',
+                iconImage: 'bar_marker',
                 iconAllowOverlap: true,
-                iconSize: 0.048,
+                iconSize: 0.1,
                 iconAnchor: 'bottom',
-                iconRotationAlignment: 'map',
-                iconPitchAlignment: 'map',
+                iconRotationAlignment: 'viewport',
+                iconPitchAlignment: 'viewport',
                 iconTextFit: 'none',
                 iconKeepUpright: true,
-                //iconMirror: true,
+                iconRotate: 0,
+                iconColor: '#38B6FF', // Azul más claro para seleccionado
               }}
             />
 
@@ -418,22 +420,18 @@ const Map: React.FC = () => {
                 iconAllowOverlap: true,
                 iconSize: 0.1,
                 iconAnchor: 'bottom',
-                iconRotationAlignment: 'map',
-                iconPitchAlignment: 'map',
+                iconRotationAlignment: 'viewport',
+                iconPitchAlignment: 'viewport',
                 iconTextFit: 'none',
                 iconKeepUpright: true,
+                iconRotate: 0,
+                iconColor: '#8E8E93', // Gris para normal
               }}
             />
 
             {/* Register marker images */}
-            {/* 
-              Nota: marker.png (494x505) vs marker_clicked.png (1024x1024)
-              Por eso el iconSize del marker seleccionado es 0.048 vs 0.1
-              Además, marker_clicked.png está boca abajo, por eso se usa iconRotate: 180
-            */}
             <MapboxGL.Images images={{ 
               bar_marker: require('~/assets/marker.png'),
-              bar_marker_selected: require('~/assets/marker_clicked.png')
             }} />
           </MapboxGL.ShapeSource>
         )}
