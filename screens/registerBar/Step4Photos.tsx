@@ -535,10 +535,20 @@ const Step4Photos: React.FC = () => {
         
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.title}>Fotos del Bar</Text>
-          <Text style={styles.subtitle}>Paso 4 de 4</Text>
+          <Text style={styles.headerTitle}>Fotos del Bar</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressStep, styles.progressStepActive]} />
+            <View style={[styles.progressStep, styles.progressStepActive]} />
+            <View style={[styles.progressStep, styles.progressStepActive]} />
+            <View style={[styles.progressStep, styles.progressStepActive]} />
+          </View>
+          <Text style={styles.progressText}>Paso 4 de 4</Text>
         </View>
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -637,31 +647,51 @@ const Step4Photos: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1E2A38',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 32,
+  },
+  progressContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  progressBar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  progressStep: {
+    flex: 1,
+    height: 4,
+    backgroundColor: '#374151',
+    borderRadius: 2,
+  },
+  progressStepActive: {
+    backgroundColor: '#007AFF',
+  },
+  progressText: {
+    color: '#8E8E93',
+    fontSize: 14,
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
-  },
-  header: {
-    padding: 20,
-    paddingTop: 60,
-    alignItems: 'center',
-  },
-  backButton: {
-    position: 'absolute',
-    left: 20,
-    top: 60,
-    padding: 8,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
   },
   content: {
     padding: 20,
@@ -675,18 +705,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#8E8E93',
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#374151',
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
@@ -715,13 +745,13 @@ const styles = StyleSheet.create({
   },
   image: {
     borderRadius: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#374151',
   },
   removeButton: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(30, 42, 56, 0.9)',
     borderRadius: 12,
   },
   orderBadge: {
@@ -736,7 +766,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   orderText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -744,7 +774,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(30, 42, 56, 0.9)',
     borderRadius: 8,
     padding: 4,
   },
@@ -760,19 +790,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   uploadingText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: 'bold',
   },
   counter: {
     fontSize: 14,
-    color: '#666',
+    color: '#8E8E93',
     textAlign: 'right',
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#f0f8ff',
+    backgroundColor: '#374151',
     padding: 16,
     borderRadius: 12,
     gap: 12,
@@ -780,7 +810,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#333',
+    color: '#FFFFFF',
     lineHeight: 20,
   },
   footer: {
