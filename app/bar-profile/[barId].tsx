@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
@@ -67,6 +67,28 @@ export default function BarProfileScreen() {
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
+
+  // Functions to copy to clipboard
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await Clipboard.setString(text);
+      Alert.alert('Copiado', `${label} copiado al portapapeles`);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo copiar al portapapeles');
+    }
+  };
+
+  const copyAddress = () => {
+    if (bar?.address && bar?.city) {
+      copyToClipboard(`${bar.address}, ${bar.city}`, 'Dirección');
+    }
+  };
+
+  const copyPhone = () => {
+    if (bar?.phone) {
+      copyToClipboard(bar.phone, 'Teléfono');
+    }
+  };
 
   // Create sections for FlatList
   const sections = [
@@ -184,6 +206,9 @@ export default function BarProfileScreen() {
                 <Text style={styles.infoLabel}>Dirección</Text>
                 <Text style={styles.infoText}>{bar?.address}, {bar?.city}</Text>
               </View>
+              <TouchableOpacity style={styles.copyButton} onPress={copyAddress}>
+                <Ionicons name="copy-outline" size={18} color="#007AFF" />
+              </TouchableOpacity>
             </View>
 
             {bar?.phone && (
@@ -193,6 +218,9 @@ export default function BarProfileScreen() {
                   <Text style={styles.infoLabel}>Teléfono</Text>
                   <Text style={styles.infoText}>{bar.phone}</Text>
                 </View>
+                <TouchableOpacity style={styles.copyButton} onPress={copyPhone}>
+                  <Ionicons name="copy-outline" size={18} color="#007AFF" />
+                </TouchableOpacity>
               </View>
             )}
 
@@ -439,7 +467,7 @@ export default function BarProfileScreen() {
             <View style={styles.dangerSection}>
               <TouchableOpacity style={styles.deleteBarButton} onPress={handleDeleteBar}>
                 <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-                <Text style={styles.deleteBarButtonText}>🗑️ Eliminar Bar</Text>
+                <Text style={styles.deleteBarButtonText}>Eliminar Bar</Text>
               </TouchableOpacity>
             </View>
           ) : null
@@ -1604,5 +1632,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
+  },
+  copyButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
 }); 
