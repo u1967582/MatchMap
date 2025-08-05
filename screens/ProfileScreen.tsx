@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
+import SubscriptionStatus from '~/components/SubscriptionStatus';
 
 interface UserProfile {
   id: string;
@@ -160,7 +161,7 @@ export default function ProfileScreen() {
   }, [router]);
 
   const handleViewPlans = useCallback(() => {
-    router.push('/(protected)/plans' as any);
+    router.push('/(protected)/subscription-plans' as any);
   }, [router]);
 
   const handleAddBar = useCallback(() => {
@@ -205,7 +206,7 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Perfil</Text>
+          <View style={styles.headerSpacer} />
           <TouchableOpacity style={styles.headerPlanButton} onPress={handleViewPlans}>
             <Text style={styles.headerPlanButtonText}>Ver Planes</Text>
           </TouchableOpacity>
@@ -266,6 +267,14 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Subscription Status Section */}
+        {userBars.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Estado de Suscripción</Text>
+            <SubscriptionStatus barId={userBars[0].id} />
+          </View>
+        )}
+
         {/* Account Settings Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Configuración de Cuenta</Text>
@@ -310,10 +319,8 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 4,
   },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
+  headerSpacer: {
+    flex: 1,
   },
   headerPlanButton: {
     backgroundColor: '#1976D2',
