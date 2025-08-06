@@ -456,7 +456,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-
   viewProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
