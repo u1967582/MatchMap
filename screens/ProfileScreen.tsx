@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import SubscriptionStatus from '~/components/SubscriptionStatus';
+import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
 
 interface UserProfile {
   id: string;
@@ -52,6 +53,7 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [userBars, setUserBars] = useState<UserBar[]>([]);
   const [loading, setLoading] = useState(true);
+  const [planName, setPlanName] = useState<string>('Cargando...');
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async () => {
@@ -108,7 +110,13 @@ export default function ProfileScreen() {
               : undefined,
           };
           setUserBars([formattedBar]);
+          
+          // Fetch plan information for the bar
+          const plan = await getBarPlanInfo(profileData.bar_id);
+          setPlanName(plan.name);
         }
+      } else {
+        setPlanName('No asignado');
       }
 
     } catch (error) {
@@ -223,6 +231,14 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.userName}>{displayName}</Text>
           <Text style={styles.userHandle}>{displayHandle}</Text>
+        </View>
+
+        {/* Plan Information Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Plan Actual</Text>
+          <View style={styles.planContainer}>
+            <Text style={styles.planText}>Tu plan actual: {planName}</Text>
+          </View>
         </View>
 
         {/* Bar Management Section */}
@@ -482,6 +498,16 @@ const styles = StyleSheet.create({
   addAnotherBarButtonText: {
     color: '#10B981',
     fontSize: 14,
+    fontWeight: '500',
+  },
+  planContainer: {
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    padding: 16,
+  },
+  planText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '500',
   },
 }); 
