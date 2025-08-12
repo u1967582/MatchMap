@@ -271,10 +271,6 @@ export default function ProfileScreen() {
                   </View>
                 </TouchableOpacity>
               ))}
-              <TouchableOpacity style={styles.addAnotherBarButton} onPress={handleAddBar}>
-                <Ionicons name="add-circle-outline" size={20} color="#10B981" />
-                <Text style={styles.addAnotherBarButtonText}>Añadir Otro Bar</Text>
-              </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity style={styles.addBarButton} onPress={handleAddBar}>
