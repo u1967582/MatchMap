@@ -186,7 +186,7 @@ export default function ProfileScreen() {
   }, [router, userBars]);
 
   const handleAddBar = useCallback(() => {
-    router.push('/register-bar/step1' as any);
+    router.push('/register-bar/step0' as any);
   }, [router]);
 
   const handleViewBarProfile = useCallback((barId: string) => {
