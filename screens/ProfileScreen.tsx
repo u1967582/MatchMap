@@ -14,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
-import SubscriptionStatus from '~/components/SubscriptionStatus';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
 import { useUserSubscription } from '~/hooks/useUserSubscription';
 import { getPlanByType, formatPrice } from '~/utils/subscription';
@@ -228,10 +227,6 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <View style={styles.headerSpacer} />
-          <TouchableOpacity style={styles.headerPlanButton} onPress={handleViewPlans}>
-            <Text style={styles.headerPlanButtonText}>Ver Planes</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Profile Section */}
@@ -245,35 +240,6 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.userName}>{displayName}</Text>
           <Text style={styles.userHandle}>{displayHandle}</Text>
-        </View>
-
-        {/* Plan Information Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Plan Actual</Text>
-          <View style={styles.planContainer}>
-            {hasActiveSubscription && planType ? (
-              <View>
-                <Text style={styles.planText}>
-                  Plan: {getPlanByType(planType)?.name || 'Plan Activo'}
-                </Text>
-                <Text style={styles.planText}>
-                  Precio: {getPlanByType(planType) ? formatPrice(getPlanByType(planType)!) : 'N/A'}
-                </Text>
-                <Text style={styles.planText}>
-                  Fotos máximas: {maxPhotosAllowed}
-                </Text>
-                <Text style={styles.planText}>
-                  Estado: {subscription?.status === 'active' ? 'Activo' : 'En período de prueba'}
-                </Text>
-              </View>
-            ) : (
-              <View>
-                <Text style={styles.planText}>Plan: Gratuito</Text>
-                <Text style={styles.planText}>Fotos máximas: 3</Text>
-                <Text style={styles.planText}>Estado: Sin suscripción activa</Text>
-              </View>
-            )}
-          </View>
         </View>
 
         {/* Bar Management Section */}
@@ -318,13 +284,217 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Subscription Status Section */}
-        {userBars.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Estado de Suscripción</Text>
-            <SubscriptionStatus barId={userBars[0].id} />
+        {/* Plan Information Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Plan Actual</Text>
+          <View style={styles.planContainer}>
+            {hasActiveSubscription && planType ? (
+              <View>
+                {/* Plan Header */}
+                <View style={styles.planHeader}>
+                  <View style={styles.planIconContainer}>
+                    <Ionicons 
+                      name={planType?.includes('elite') ? "diamond" : "star"} 
+                      size={24} 
+                      color={planType?.includes('elite') ? "#8B5CF6" : "#10B981"} 
+                    />
+                  </View>
+                  <View style={styles.planInfo}>
+                    <Text style={styles.planName}>
+                      {getPlanByType(planType)?.name || 'Plan Activo'}
+                    </Text>
+                    <Text style={styles.planPrice}>
+                      {getPlanByType(planType) ? formatPrice(getPlanByType(planType)!) : 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.planStatus}>
+                    <View style={[
+                      styles.statusBadge, 
+                      { backgroundColor: subscription?.status === 'active' ? '#10B981' : '#F59E0B' }
+                    ]}>
+                      <Text style={styles.statusText}>
+                        {subscription?.status === 'active' ? 'ACTIVO' : 'PRUEBA'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Plan Features */}
+                <View style={styles.planFeatures}>
+                  <View style={styles.featureRow}>
+                    <Ionicons name="search" size={20} color="#10B981" />
+                    <Text style={styles.featureText}>
+                      Prioridad en búsquedas: {getPlanByType(planType)?.features.search_priority === 'top' ? 'Máxima' : 
+                        getPlanByType(planType)?.features.search_priority === 'highlighted' ? 'Destacada' : 'Normal'}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons name="calendar" size={20} color="#10B981" />
+                    <Text style={styles.featureText}>
+                      Eventos: {getPlanByType(planType)?.features.events_limit === 'unlimited' ? 'Ilimitados' : 
+                        `${getPlanByType(planType)?.features.events_limit} máximo`}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons name="document-text" size={20} color="#10B981" />
+                    <Text style={styles.featureText}>
+                      Posts: {getPlanByType(planType)?.features.posts_limit === 'unlimited' ? 'Ilimitados' : 
+                        `${getPlanByType(planType)?.features.posts_limit} máximo`}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons 
+                      name={getPlanByType(planType)?.features.images_allowed ? "images" : "lock-closed"} 
+                      size={20} 
+                      color={getPlanByType(planType)?.features.images_allowed ? "#10B981" : "#EF4444"} 
+                    />
+                    <Text style={styles.featureText}>
+                      {getPlanByType(planType)?.features.images_allowed ? 
+                        `Imágenes: ${getPlanByType(planType)?.features.bar_images_limit} máximo` : 
+                        'Sin imágenes'}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons 
+                      name={getPlanByType(planType)?.features.analytics ? "analytics" : "close-circle"} 
+                      size={20} 
+                      color={getPlanByType(planType)?.features.analytics ? "#10B981" : "#A3B3CC"} 
+                    />
+                    <Text style={styles.featureText}>
+                      Analytics: {getPlanByType(planType)?.features.analytics === 'advanced' ? 'Avanzados' : 
+                        getPlanByType(planType)?.features.analytics === 'basic' ? 'Básicos' : 'No disponibles'}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons 
+                      name={getPlanByType(planType)?.features.home_promotion ? "star" : "close-circle"} 
+                      size={20} 
+                      color={getPlanByType(planType)?.features.home_promotion ? "#10B981" : "#A3B3CC"} 
+                    />
+                    <Text style={styles.featureText}>
+                      Promoción en home: {getPlanByType(planType)?.features.home_promotion ? 'Sí' : 'No'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Subscription Details */}
+                {subscription && (
+                  <View style={styles.subscriptionDetails}>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="calendar" size={16} color="#A3B3CC" />
+                      <Text style={styles.detailLabel}>Inicio:</Text>
+                      <Text style={styles.detailValue}>
+                        {new Date(subscription.start_date).toLocaleDateString('es-ES')}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="refresh" size={16} color="#A3B3CC" />
+                      <Text style={styles.detailLabel}>Renovación:</Text>
+                      <Text style={styles.detailValue}>
+                        {new Date(subscription.end_date).toLocaleDateString('es-ES')}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Usage Warning */}
+                {userBars.length > 0 && planType && (
+                  <View style={styles.usageWarning}>
+                    <Ionicons name="information-circle" size={20} color="#F59E0B" />
+                    <Text style={styles.warningText}>
+                      {!getPlanByType(planType)?.features.images_allowed ? 
+                        'Tu plan no permite imágenes. Actualiza para añadir fotos a tu bar.' :
+                        getPlanByType(planType)?.features.events_limit === 1 || getPlanByType(planType)?.features.posts_limit === 1 ?
+                        'Tu plan tiene límites bajos. Considera actualizar para más flexibilidad.' :
+                        `Tu plan permite hasta ${getPlanByType(planType)?.features.bar_images_limit} imágenes. ¡Aprovecha al máximo!`
+                      }
+                    </Text>
+                  </View>
+                )}
+
+                {/* Plan Actions */}
+                <View style={styles.planActions}>
+                  <TouchableOpacity 
+                    style={styles.upgradeButton} 
+                    onPress={handleViewPlans}
+                  >
+                    <Ionicons name="arrow-up-circle" size={20} color="#FFFFFF" />
+                    <Text style={styles.upgradeButtonText}>Cambiar Plan</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View>
+                {/* Free Plan Display */}
+                <View style={styles.planHeader}>
+                  <View style={styles.planIconContainer}>
+                    <Ionicons name="gift" size={24} color="#A3B3CC" />
+                  </View>
+                  <View style={styles.planInfo}>
+                    <Text style={styles.planName}>Plan Gratuito</Text>
+                    <Text style={styles.planPrice}>0€/mes</Text>
+                  </View>
+                  <View style={styles.planStatus}>
+                    <View style={[styles.statusBadge, { backgroundColor: '#6B7280' }]}>
+                      <Text style={styles.statusText}>GRATUITO</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Free Plan Features */}
+                <View style={styles.planFeatures}>
+                  <View style={styles.featureRow}>
+                    <Ionicons name="search" size={20} color="#A3B3CC" />
+                    <Text style={styles.featureText}>Prioridad en búsquedas: Normal</Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons name="calendar" size={20} color="#A3B3CC" />
+                    <Text style={styles.featureText}>Eventos: 1 máximo</Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons name="document-text" size={20} color="#A3B3CC" />
+                    <Text style={styles.featureText}>Posts: 1 máximo</Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons name="images" size={20} color="#A3B3CC" />
+                    <Text style={styles.featureText}>Imágenes: 2 máximo</Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons name="close-circle" size={20} color="#A3B3CC" />
+                    <Text style={styles.featureText}>Analytics: No disponibles</Text>
+                  </View>
+                  
+                  <View style={styles.featureRow}>
+                    <Ionicons name="close-circle" size={20} color="#A3B3CC" />
+                    <Text style={styles.featureText}>Promoción en home: No</Text>
+                  </View>
+                </View>
+
+                {/* Upgrade CTA */}
+                <View style={styles.planActions}>
+                  <TouchableOpacity 
+                    style={styles.upgradeButton} 
+                    onPress={handleViewPlans}
+                  >
+                    <Ionicons name="rocket" size={20} color="#FFFFFF" />
+                    <Text style={styles.upgradeButtonText}>Mejorar Plan</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
-        )}
+        </View>
+
+
 
         {/* Account Settings Section */}
         <View style={styles.section}>
@@ -539,6 +709,120 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A2332',
     borderRadius: 12,
     padding: 16,
+  },
+  planHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  planIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2A3A4A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  planInfo: {
+    flex: 1,
+  },
+  planName: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  planPrice: {
+    color: '#10B981',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  planStatus: {
+    marginLeft: 'auto',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  planFeatures: {
+    marginBottom: 20,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  featureText: {
+    color: '#E5E7EB',
+    fontSize: 14,
+    marginLeft: 12,
+    flex: 1,
+  },
+  planActions: {
+    alignItems: 'center',
+  },
+  upgradeButton: {
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    gap: 8,
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  subscriptionDetails: {
+    backgroundColor: '#2A3A4A',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 20,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  detailLabel: {
+    color: '#A3B3CC',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
+    marginRight: 8,
+    minWidth: 80,
+  },
+  detailValue: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  usageWarning: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  warningText: {
+    color: '#92400E',
+    fontSize: 13,
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 18,
   },
   planText: {
     color: '#FFFFFF',
