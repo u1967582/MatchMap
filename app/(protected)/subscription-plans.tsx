@@ -36,7 +36,7 @@ const plans = {
       subtitle: 'Plan Estándar',
       price: '9,99 €',
       period: 'mes',
-      priceId: 'price_1RrMjG7hGI6XwPtaHSZRXojJ',
+      priceId: 'price_1RvGlr7hGI6XwPtaE9d03BfI', // ✅ ACTUALIZADO
       color: '#10B981',
       features: [
         'Automatización de partidos',
@@ -54,7 +54,7 @@ const plans = {
       price: '79,99 €',
       originalPrice: '119,88 €',
       period: 'año',
-      priceId: 'price_1RsRv77hGI6XwPtaGCjuajUx',
+      priceId: 'price_1RvGlr7hGI6XwPta032XCAwP', // ✅ ACTUALIZADO
       color: '#10B981',
       features: [
         'Automatización de partidos',
@@ -76,7 +76,7 @@ const plans = {
       subtitle: 'Plan Premium',
       price: '19,99 €',
       period: 'mes',
-      priceId: 'price_1RrMjc7hGI6XwPtaCrf05aoZ',
+      priceId: 'price_1RvGmN7hGI6XwPtaye2UkCso', // ✅ ACTUALIZADO
       color: '#8B5CF6',
       features: [
         'Automatización total de partidos',
@@ -94,7 +94,7 @@ const plans = {
       price: '149,99 €',
       originalPrice: '239,88 €',
       period: 'año',
-      priceId: 'price_1RsRvc7hGI6XwPtaWvHMQD6K',
+      priceId: 'price_1RvGmN7hGI6XwPta96F6JX70', // ✅ ACTUALIZADO
       color: '#8B5CF6',
       features: [
         'Automatización total de partidos',

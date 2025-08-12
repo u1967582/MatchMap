@@ -16,6 +16,8 @@ import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import SubscriptionStatus from '~/components/SubscriptionStatus';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
+import { useUserSubscription } from '~/hooks/useUserSubscription';
+import { getPlanByType, formatPrice } from '~/utils/subscription';
 
 interface UserProfile {
   id: string;
@@ -55,6 +57,9 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [planName, setPlanName] = useState<string>('Cargando...');
   const router = useRouter();
+  
+  // Hook para obtener la suscripción del usuario
+  const { hasActiveSubscription, planType, maxPhotosAllowed, subscription } = useUserSubscription(user?.id);
 
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -169,8 +174,17 @@ export default function ProfileScreen() {
   }, [router]);
 
   const handleViewPlans = useCallback(() => {
-    router.push('/(protected)/subscription-plans' as any);
-  }, [router]);
+    // Si el usuario tiene bar, pasar barId para suscripción enlazada
+    if (userBars.length > 0) {
+      router.push({ 
+        pathname: '/subscription-plans', 
+        params: { barId: userBars[0].id } 
+      });
+    } else {
+      // Si no tiene bar, ir a la pantalla de planes sin barId
+      router.push('/subscription-plans');
+    }
+  }, [router, userBars]);
 
   const handleAddBar = useCallback(() => {
     router.push('/register-bar/step1' as any);
@@ -237,7 +251,28 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Plan Actual</Text>
           <View style={styles.planContainer}>
-            <Text style={styles.planText}>Tu plan actual: {planName}</Text>
+            {hasActiveSubscription && planType ? (
+              <View>
+                <Text style={styles.planText}>
+                  Plan: {getPlanByType(planType)?.name || 'Plan Activo'}
+                </Text>
+                <Text style={styles.planText}>
+                  Precio: {getPlanByType(planType) ? formatPrice(getPlanByType(planType)!) : 'N/A'}
+                </Text>
+                <Text style={styles.planText}>
+                  Fotos máximas: {maxPhotosAllowed}
+                </Text>
+                <Text style={styles.planText}>
+                  Estado: {subscription?.status === 'active' ? 'Activo' : 'En período de prueba'}
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <Text style={styles.planText}>Plan: Gratuito</Text>
+                <Text style={styles.planText}>Fotos máximas: 3</Text>
+                <Text style={styles.planText}>Estado: Sin suscripción activa</Text>
+              </View>
+            )}
           </View>
         </View>
 

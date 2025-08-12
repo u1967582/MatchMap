@@ -1,0 +1,5 @@
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.link-bar-to-subscription]
+verify_jwt = false
