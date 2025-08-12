@@ -7,7 +7,7 @@ export function useUserSubscription(userId?: string) {
     isLoading: true,
     hasActiveSubscription: false,
     planType: null as null | keyof typeof SUBSCRIPTION_PLANS,
-    maxPhotosAllowed: 3,
+    maxPhotosAllowed: 2,
     subscription: null as any,
   });
 
@@ -31,7 +31,7 @@ export function useUserSubscription(userId?: string) {
         const sub = data?.[0];
         const hasActive = !!sub;
         const plan = hasActive ? (sub.plan_type as keyof typeof SUBSCRIPTION_PLANS) : null;
-        const max = plan ? SUBSCRIPTION_PLANS[plan].features.maxPhotos : 3;
+        const max = plan ? SUBSCRIPTION_PLANS[plan].features.bar_images_limit : 2;
 
         if (isMounted) {
           setState({
