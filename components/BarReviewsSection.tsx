@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   container: { 
     marginTop: 24, 
     paddingHorizontal: 20,
-    backgroundColor: '#0e1b2c',
+    backgroundColor: '#1C2A3A',
   },
   sectionTitle: { 
     fontSize: 20, 

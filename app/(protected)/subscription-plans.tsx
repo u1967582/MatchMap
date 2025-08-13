@@ -443,7 +443,7 @@ const SubscriptionPlansScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E2A38',
+    backgroundColor: '#1C2A3A',
   },
   header: {
     flexDirection: 'row',

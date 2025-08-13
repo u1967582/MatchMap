@@ -1,10 +1,10 @@
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Alert, Image, Dimensions, Platform } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useBarRegisterStore } from '~/stores/barRegisterStore';
 import PrimaryButton from '~/components/ui/PrimaryButton';
 import { supabase } from '~/utils/supabase';
-import { useState, useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
@@ -29,6 +29,7 @@ const Step4Photos: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [barImages, setBarImages] = useState<ImageItem[]>([]);
   const [menuImages, setMenuImages] = useState<ImageItem[]>([]);
+  const [barCreated, setBarCreated] = useState(false);
 
   // Generate unique ID for images
   const generateId = () => Math.random().toString(36).substring(7);
@@ -533,31 +534,25 @@ const Step4Photos: React.FC = () => {
   }, [getFormData, insertRelationships, uploadImages, barImages, menuImages, resetForm, router]);
 
   const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
+    // Si el bar ya fue creado, mostrar alerta en lugar de navegar hacia atrás
+    if (barCreated) {
+      Alert.alert(
+        'Navegación bloqueada',
+        'No puedes volver atrás después de crear tu bar. Usa el botón "Ver mi Bar" para continuar.',
+        [{ text: 'OK' }]
+      );
+    } else {
+      router.back();
+    }
+  }, [router, barCreated]);
 
   // Bloquear navegación hacia atrás después de crear el bar
   useFocusEffect(
     React.useCallback(() => {
-      // Configurar opciones de navegación
-      const unsubscribe = router.addListener('beforeRemove', (e) => {
-        // Si el bar ya fue creado, prevenir la navegación hacia atrás
-        if (barCreated) {
-          e.preventDefault();
-          Alert.alert(
-            'Navegación bloqueada',
-            'No puedes volver atrás después de crear tu bar. Usa el botón "Ver mi Bar" para continuar.',
-            [{ text: 'OK' }]
-          );
-        }
-      });
-
-      return unsubscribe;
-    }, [router, barCreated])
+      // En Expo Router, no podemos usar addListener directamente
+      // En su lugar, manejamos la navegación en el handleBack
+    }, [barCreated])
   );
-
-  // Estado para trackear si el bar ya fue creado
-  const [barCreated, setBarCreated] = useState(false);
 
   return (
     <GestureHandlerRootView style={styles.container}>

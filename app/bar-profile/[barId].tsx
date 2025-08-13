@@ -1090,7 +1090,7 @@ export default function BarProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0e1b2c',
+    backgroundColor: '#1C2A3A',
   },
   scrollViewContent: {
     paddingBottom: 80, // Add padding for the bottom tab bar
@@ -1105,7 +1105,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   headerContainer: {
-    backgroundColor: '#0e1b2c',
+    backgroundColor: '#1C2A3A',
     paddingHorizontal: 20,
     paddingVertical: 16,
     flexDirection: 'row',
