@@ -10,6 +10,7 @@ import * as FileSystem from 'expo-file-system';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { waitForStripeRecords, getUserActivePlan, maxPhotosForPlan, validatePhotoLimit } from '~/utils/stripeHelpers';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface ImageItem {
   id: string;
@@ -497,26 +498,32 @@ const Step4Photos: React.FC = () => {
         }
       }
 
-      // Show appropriate success/warning message
-      const successMessage = uploadSuccess 
-        ? 'Tu bar ha sido registrado correctamente con todas las imágenes. Será revisado por nuestro equipo antes de ser publicado.'
-        : uploadErrors.length > 0
-        ? `Tu bar ha sido registrado correctamente, pero hubo problemas subiendo las ${uploadErrors.join(' y ')}. Puedes intentar subirlas más tarde desde tu perfil.`
-        : 'Tu bar ha sido registrado correctamente. Será revisado por nuestro equipo antes de ser publicado.';
+      // 5) Finalizar wizard - resetear completamente la navegación
+      console.log('✅ Bar creado exitosamente, reseteando navegación...');
+      
+      // Opción 1: Usar router.replace (más simple)
+      router.replace(`/bar-profile/${barData.id}`);
+      
+      // Opción 2: Resetear completamente el stack de navegación (más robusto)
+      // router.push({
+      //   pathname: `/bar-profile/${barData.id}`,
+      //   params: { reset: true }
+      // });
 
+      // Opcional: Mostrar mensaje de éxito
       Alert.alert(
-        uploadSuccess ? '¡Éxito!' : '¡Registro Completado!',
-        successMessage,
+        '¡Éxito!',
+        'Tu bar ha sido registrado correctamente.',
         [
           {
             text: 'Continuar',
             onPress: () => {
-              resetForm();
-              router.replace('/(protected)/profile' as any);
+              // El router.replace ya se ejecutó, esto es solo para cerrar el Alert
             }
           }
         ]
       );
+
     } catch (error: any) {
       console.error('Error submitting form:', error);
       Alert.alert('Error', error.message || 'No se pudo completar el registro. Inténtalo de nuevo.');
@@ -528,6 +535,29 @@ const Step4Photos: React.FC = () => {
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
+
+  // Bloquear navegación hacia atrás después de crear el bar
+  useFocusEffect(
+    React.useCallback(() => {
+      // Configurar opciones de navegación
+      const unsubscribe = router.addListener('beforeRemove', (e) => {
+        // Si el bar ya fue creado, prevenir la navegación hacia atrás
+        if (barCreated) {
+          e.preventDefault();
+          Alert.alert(
+            'Navegación bloqueada',
+            'No puedes volver atrás después de crear tu bar. Usa el botón "Ver mi Bar" para continuar.',
+            [{ text: 'OK' }]
+          );
+        }
+      });
+
+      return unsubscribe;
+    }, [router, barCreated])
+  );
+
+  // Estado para trackear si el bar ya fue creado
+  const [barCreated, setBarCreated] = useState(false);
 
   return (
     <GestureHandlerRootView style={styles.container}>
