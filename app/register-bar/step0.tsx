@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import * as Linking from 'expo-linking';
+import { CAP_BY_TIER } from '~/lib/planCapabilities';
+import { saveOnboardingPlan } from '~/utils/onboardingStorage';
 
 interface SubscriptionPlan {
   id: string;
@@ -22,16 +24,16 @@ interface FreePlan {
   color: string;
 }
 
-// Plan gratuito
+// Plan gratuito - usando capacidades del plan
 const FREE_PLAN: FreePlan = {
   name: 'Gratuito',
   features: [
-    '1 evento activo',
-    '1 post activo',
-    'Hasta 2 imágenes del bar',
+    `${CAP_BY_TIER.free.events_limit} evento${CAP_BY_TIER.free.events_limit === 1 ? '' : 's'} activo${CAP_BY_TIER.free.events_limit === 'unlimited' ? 's' : ''}`,
+    `${CAP_BY_TIER.free.posts_limit} post${CAP_BY_TIER.free.posts_limit === 1 ? '' : 's'} activo${CAP_BY_TIER.free.posts_limit === 'unlimited' ? 's' : ''}`,
+    `Hasta ${CAP_BY_TIER.free.bar_images_limit} imagen${CAP_BY_TIER.free.bar_images_limit === 1 ? '' : 'es'} del bar`,
     'Reseñas de clientes',
     'Perfil visible en búsquedas',
-    'Soporte estándar'
+    `Soporte ${CAP_BY_TIER.free.support}`
   ],
   color: '#6B7280'
 };
@@ -131,9 +133,17 @@ export default function Step0() {
     router.back();
   };
 
-  const continueWithFreePlan = () => {
-    // Navegar directamente al step1 del registro del bar
-    router.push('/register-bar/step1');
+  const continueWithFreePlan = async () => {
+    try {
+      // Guardar el plan seleccionado usando la utilidad
+      await saveOnboardingPlan('free');
+      // Navegar directamente al step1 del registro del bar
+      router.push('/register-bar/step1');
+    } catch (error) {
+      console.warn('Error saving onboarding plan:', error);
+      // Continuar con la navegación incluso si falla el guardado
+      router.push('/register-bar/step1');
+    }
   };
 
   const startSubscription = async (plan: SubscriptionPlan) => {
