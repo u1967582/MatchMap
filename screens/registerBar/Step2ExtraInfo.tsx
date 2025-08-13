@@ -1,10 +1,10 @@
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useBarRegisterStore } from '~/stores/barRegisterStore';
 import CheckboxGroup from '~/components/Form/CheckboxGroup';
 import PrimaryButton from '~/components/ui/PrimaryButton';
-import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '~/utils/supabase';
 
 interface SelectOption {

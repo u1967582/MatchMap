@@ -131,6 +131,11 @@ export default function Step0() {
     router.back();
   };
 
+  const continueWithFreePlan = () => {
+    // Navegar directamente al step1 del registro del bar
+    router.push('/register-bar/step1');
+  };
+
   const startSubscription = async (plan: SubscriptionPlan) => {
     if (!user?.id) {
       Alert.alert('Error', 'Usuario no autenticado');
@@ -303,7 +308,7 @@ export default function Step0() {
             </View>
 
             {/* Continue Free Button */}
-            <TouchableOpacity style={styles.continueFreeButton}>
+            <TouchableOpacity style={styles.continueFreeButton} onPress={continueWithFreePlan}>
               <Text style={styles.continueFreeButtonText}>Continuar Gratis</Text>
             </TouchableOpacity>
           </View>
@@ -364,7 +369,7 @@ export default function Step0() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0e1b2c',
+    backgroundColor: '#1C2A3A',
   },
   loadingContainer: {
     flex: 1,
