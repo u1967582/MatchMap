@@ -16,6 +16,26 @@ interface SubscriptionPlan {
   color: string;
 }
 
+interface FreePlan {
+  name: string;
+  features: string[];
+  color: string;
+}
+
+// Plan gratuito
+const FREE_PLAN: FreePlan = {
+  name: 'Gratuito',
+  features: [
+    '1 evento activo',
+    '1 post activo',
+    'Hasta 2 imágenes del bar',
+    'Reseñas de clientes',
+    'Perfil visible en búsquedas',
+    'Soporte estándar'
+  ],
+  color: '#6B7280'
+};
+
 // Planes disponibles (debe coincidir con los IDs de Stripe)
 const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
   pro_monthly: {
@@ -247,17 +267,48 @@ export default function Step0() {
               ]}>
                 Anual
               </Text>
-              {selectedPeriod === 'year' && (
-                <View style={styles.discountBadge}>
-                  <Text style={styles.discountText}>-33%</Text>
-                </View>
-              )}
+              <View style={styles.discountBadge}>
+                <Text style={styles.discountText}>-33%</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Plans */}
         <View style={styles.plansSection}>
+          {/* Free Plan Card */}
+          <View style={styles.freePlanCard}>
+            <View style={styles.planHeader}>
+              <View>
+                <Text style={styles.planType}>PLAN GRATUITO</Text>
+                <Text style={styles.planName}>{FREE_PLAN.name}</Text>
+              </View>
+              <View style={styles.planPriceContainer}>
+                <Text style={styles.freePlanPrice}>Gratis</Text>
+              </View>
+            </View>
+            
+            {/* Features */}
+            <View style={styles.planFeatures}>
+              {FREE_PLAN.features.map((feature, index) => (
+                <View key={index} style={styles.featureItem}>
+                  <View style={[styles.featureIcon, { backgroundColor: FREE_PLAN.color }]}>
+                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.featureText}>
+                    {feature}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Continue Free Button */}
+            <TouchableOpacity style={styles.continueFreeButton}>
+              <Text style={styles.continueFreeButtonText}>Continuar Gratis</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Paid Plans */}
           {filteredPlans.map(([key, plan]) => (
             <View key={key} style={styles.planCard}>
               <View style={styles.planHeader}>
@@ -497,6 +548,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#6B7280',
   },
   subscribeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  freePlanCard: {
+    backgroundColor: '#1A2332',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#10B981',
+    borderStyle: 'dashed',
+  },
+  freePlanPrice: {
+    color: '#10B981',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  continueFreeButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  continueFreeButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
