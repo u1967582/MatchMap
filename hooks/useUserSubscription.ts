@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '~/utils/supabase';
 import { SUBSCRIPTION_PLANS } from '~/utils/subscription';
+import { waitForStripeRecords, getUserActivePlan, maxPhotosForPlan, validatePhotoLimit } from '~/utils/stripeHelpers';
 
 export function useUserSubscription(userId?: string) {
   const [state, setState] = useState({
     isLoading: true,
     hasActiveSubscription: false,
     planType: null as null | keyof typeof SUBSCRIPTION_PLANS,
-    maxPhotosAllowed: 2,
-    subscription: null as any,
+    maxPhotosAllowed: 2, // Default para plan gratuito
   });
 
   useEffect(() => {
@@ -18,40 +18,29 @@ export function useUserSubscription(userId?: string) {
     
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from('subscriptions')
-          .select('plan_type, status, end_date, bar_id')
-          .eq('user_id', userId)
-          .in('status', ['active', 'trialing'])
-          .order('end_date', { ascending: false })
-          .limit(1); // más reciente
-
-        if (error) throw error;
+        // Usar la nueva función helper
+        const plan = await getUserActivePlan();
+        const hasActive = !!plan;
+        const maxPhotos = maxPhotosForPlan(plan);
         
-        const sub = data?.[0];
-        const hasActive = !!sub;
-        const plan = hasActive ? (sub.plan_type as keyof typeof SUBSCRIPTION_PLANS) : null;
-        const max = plan ? SUBSCRIPTION_PLANS[plan].features.bar_images_limit : 2;
-
         if (isMounted) {
           setState({
             isLoading: false,
             hasActiveSubscription: hasActive,
             planType: plan,
-            maxPhotosAllowed: max,
-            subscription: sub,
+            maxPhotosAllowed: maxPhotos,
           });
         }
       } catch (error) {
-        console.error('Error fetching user subscription:', error);
+        console.error('❌ Error en useUserSubscription:', error);
         if (isMounted) {
           setState(s => ({ ...s, isLoading: false }));
         }
       }
     })();
-    
-    return () => { 
-      isMounted = false; 
+
+    return () => {
+      isMounted = false;
     };
   }, [userId]);
 
