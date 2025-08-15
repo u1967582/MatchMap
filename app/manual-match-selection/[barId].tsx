@@ -15,6 +15,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import CustomCalendar from '~/components/ui/CustomCalendar';
+import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
+import { type Capabilities, CAP_BY_TIER, type Tier } from '~/lib/planCapabilities';
 
 interface Team {
   id: string;
@@ -55,6 +57,8 @@ export default function ManualMatchSelectionScreen() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showCalendar, setShowCalendar] = useState(true);
+  const [planTier, setPlanTier] = useState<Tier>('free');
+  const [capabilities, setCapabilities] = useState<Capabilities>(CAP_BY_TIER.free);
 
   // Fetch matches for selected date
   const fetchMatchesForDate = async (date: Date) => {
@@ -170,6 +174,23 @@ export default function ManualMatchSelectionScreen() {
     fetchMatchesForDate(selectedDate);
   }, [selectedDate]);
 
+  // Load bar plan capabilities
+  useEffect(() => {
+    const loadCapabilities = async () => {
+      if (!barId) return;
+      try {
+        const { tier, capabilities } = await getBarTierAndCapabilities(String(barId));
+        setPlanTier(tier);
+        setCapabilities(capabilities);
+      } catch (e) {
+        // Fallback to free
+        setPlanTier('free');
+        setCapabilities(CAP_BY_TIER.free);
+      }
+    };
+    loadCapabilities();
+  }, [barId]);
+
 
 
   const handleDateChange = (date: Date) => {
@@ -199,6 +220,25 @@ export default function ManualMatchSelectionScreen() {
 
     setSaving(true);
     try {
+      // Enforce events_limit per bar plan
+      const maxEvents = capabilities.events_limit === 'unlimited' ? Infinity : capabilities.events_limit;
+      if (maxEvents !== Infinity) {
+        const { count } = await supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('bar_id', barId)
+          .gte('start_time', new Date().toISOString());
+        if (typeof count === 'number' && count + selectedMatches.length > maxEvents) {
+          const remaining = Math.max(0, (maxEvents as number) - count);
+          Alert.alert(
+            'Límite de eventos alcanzado',
+            `Tu plan ${planTier} permite máximo ${maxEvents} eventos. ${remaining === 0 ? 'No puedes añadir más eventos.' : `Solo puedes añadir ${remaining} más.`}`
+          );
+          setSaving(false);
+          return;
+        }
+      }
+
       // Insert selected matches into events table
       const eventsToInsert = selectedMatches.map(match => ({
         bar_id: barId,
