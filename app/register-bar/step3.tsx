@@ -1,3 +1,4 @@
+import React from 'react';
 import Step3Location from '~/screens/registerBar/Step3Location';
 
 export default function Step3() {

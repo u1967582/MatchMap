@@ -166,7 +166,7 @@ export default function CustomCalendar({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0e1b2c',
+    backgroundColor: '#1C2A3A',
     borderRadius: 12,
     padding: 20,
     marginHorizontal: 20,

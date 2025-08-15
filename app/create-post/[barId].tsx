@@ -17,6 +17,8 @@ import * as FileSystem from 'expo-file-system';
 import { supabase } from '~/utils/supabase';
 import CustomButton from '~/components/ui/CustomButton';
 import ScreenTitle from '~/components/ui/ScreenTitle';
+import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
+import { CAP_BY_TIER, type Capabilities, type Tier } from '~/lib/planCapabilities';
 
 interface PostFormData {
   title: string;
@@ -53,6 +55,8 @@ export default function CreatePostScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [planTier, setPlanTier] = useState<Tier>('free');
+  const [capabilities, setCapabilities] = useState<Capabilities>(CAP_BY_TIER.free);
 
   const handleBack = useCallback(() => {
     if (formData.title || formData.description || selectedImage) {
@@ -70,6 +74,10 @@ export default function CreatePostScreen() {
   }, [router, formData, selectedImage]);
 
   const handleSelectImage = useCallback(async () => {
+    if (!capabilities.images_allowed) {
+      Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes en los posts.');
+      return;
+    }
     const hasPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (hasPermission.status !== 'granted') {
       Alert.alert(
@@ -116,6 +124,10 @@ export default function CreatePostScreen() {
   }, []);
 
   const pickImageFromCamera = useCallback(async () => {
+    if (!capabilities.images_allowed) {
+      Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes en los posts.');
+      return;
+    }
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -216,6 +228,22 @@ export default function CreatePostScreen() {
     }
   }, [barId]);
 
+  // Load bar capabilities
+  useEffect(() => {
+    const load = async () => {
+      if (!barId) return;
+      try {
+        const { tier, capabilities } = await getBarTierAndCapabilities(String(barId));
+        setPlanTier(tier);
+        setCapabilities(capabilities);
+      } catch (e) {
+        setPlanTier('free');
+        setCapabilities(CAP_BY_TIER.free);
+      }
+    };
+    load();
+  }, [barId]);
+
   const handleCreatePost = useCallback(async () => {
     if (!formData.title.trim() || !formData.description.trim()) {
       Alert.alert('Error', 'El título y la descripción son obligatorios');
@@ -230,6 +258,20 @@ export default function CreatePostScreen() {
     setLoading(true);
 
     try {
+      // Enforce posts_limit per bar plan
+      const maxPosts = capabilities.posts_limit === 'unlimited' ? Infinity : capabilities.posts_limit;
+      if (maxPosts !== Infinity) {
+        const { count } = await supabase
+          .from('bar_posts')
+          .select('id', { count: 'exact', head: true })
+          .eq('bar_id', barId);
+        if (typeof count === 'number' && count >= maxPosts) {
+          Alert.alert('Límite de publicaciones', `Tu plan ${planTier} permite máximo ${maxPosts} publicaciones.`);
+          setLoading(false);
+          return;
+        }
+      }
+
       // First create the post without image
       const postData = {
         bar_id: barId,
@@ -397,23 +439,25 @@ export default function CreatePostScreen() {
             </View>
 
             {/* Image Selection */}
-            <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Imagen (Opcional)</Text>
-              <TouchableOpacity 
-                style={styles.imageSelector}
-                onPress={handleSelectImage}
-                disabled={loading || uploadingImage}
-              >
-                {selectedImage ? (
-                  <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
-                ) : (
-                  <View style={styles.imagePlaceholder}>
-                    <Ionicons name="camera" size={32} color="#A3B3CC" />
-                    <Text style={styles.imagePlaceholderText}>Toca para agregar imagen</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
+            {capabilities.images_allowed && (
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Imagen (Opcional)</Text>
+                <TouchableOpacity 
+                  style={styles.imageSelector}
+                  onPress={handleSelectImage}
+                  disabled={loading || uploadingImage}
+                >
+                  {selectedImage ? (
+                    <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <Ionicons name="camera" size={32} color="#A3B3CC" />
+                      <Text style={styles.imagePlaceholderText}>Toca para agregar imagen</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Date Range */}
             <View style={styles.fieldContainer}>

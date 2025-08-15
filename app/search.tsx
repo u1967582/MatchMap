@@ -797,7 +797,7 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0e1b2c',
+    backgroundColor: '#1C2A3A',
   },
   header: {
     paddingHorizontal: 20,

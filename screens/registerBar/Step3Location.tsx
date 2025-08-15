@@ -1,10 +1,10 @@
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useBarRegisterStore } from '~/stores/barRegisterStore';
 import TextInputField from '~/components/Form/TextInputField';
 import PrimaryButton from '~/components/ui/PrimaryButton';
-import { useState } from 'react';
 import * as Location from 'expo-location';
 import AddressSearch from '~/components/AddressSearch';
 

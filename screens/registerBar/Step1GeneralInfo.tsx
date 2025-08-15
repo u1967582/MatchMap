@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -5,7 +6,6 @@ import { useBarRegisterStore } from '~/stores/barRegisterStore';
 import TextInputField from '~/components/Form/TextInputField';
 import RadioGroup from '~/components/Form/RadioGroup';
 import PrimaryButton from '~/components/ui/PrimaryButton';
-import { useState, useEffect } from 'react';
 import { useCategories } from '~/hooks/useCategories';
 
 const Step1GeneralInfo: React.FC = () => {
