@@ -67,6 +67,7 @@ export default function BarProfileScreen() {
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
+  const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(false);
 
   // Functions to copy to clipboard
   const copyToClipboard = async (text: string, label: string) => {
@@ -292,15 +293,17 @@ export default function BarProfileScreen() {
 
       case 'menu':
         return (
-          <View style={styles.menuSection}>
-            <Text style={styles.menuSectionTitle}>🍽️ La Carta</Text>
-            <TouchableOpacity
-              style={styles.menuButton}
-              onPress={() => router.push(`/bar-menu/${barId}` as any)}
-            >
-              <Text style={styles.menuButtonText}>Ver Carta</Text>
-            </TouchableOpacity>
-          </View>
+          canShowMenuButton ? (
+            <View style={styles.menuSection}>
+              <Text style={styles.menuSectionTitle}>🍽️ La Carta</Text>
+              <TouchableOpacity
+                style={styles.menuButton}
+                onPress={() => router.push(`/bar-menu/${barId}` as any)}
+              >
+                <Text style={styles.menuButtonText}>Ver Carta</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
         );
 
       case 'posts':
@@ -510,6 +513,19 @@ export default function BarProfileScreen() {
       }
 
       if (barData) {
+        // Check if bar has at least one active subscription (supports multiple rows)
+        const { count, error: subsError } = await supabase
+          .from('subscriptions')
+          .select('id', { count: 'exact', head: true })
+          .eq('bar_id', barData.id)
+          .eq('status', 'active');
+        if (subsError) {
+          console.warn('Error checking bar subscriptions:', subsError);
+          setCanShowMenuButton(false);
+        } else {
+          setCanShowMenuButton(!!count && count > 0);
+        }
+
         // Load N:N relationships separately (only IDs first)
         const { data: foodTypes } = await supabase
           .from('bar_food_types')
@@ -1090,7 +1106,7 @@ export default function BarProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0e1b2c',
+    backgroundColor: '#1C2A3A',
   },
   scrollViewContent: {
     paddingBottom: 80, // Add padding for the bottom tab bar
@@ -1105,7 +1121,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   headerContainer: {
-    backgroundColor: '#0e1b2c',
+    backgroundColor: '#1C2A3A',
     paddingHorizontal: 20,
     paddingVertical: 16,
     flexDirection: 'row',

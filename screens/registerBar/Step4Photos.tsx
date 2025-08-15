@@ -1,14 +1,17 @@
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Alert, Image, Dimensions, Platform } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useBarRegisterStore } from '~/stores/barRegisterStore';
 import PrimaryButton from '~/components/ui/PrimaryButton';
 import { supabase } from '~/utils/supabase';
-import { useState, useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { waitForStripeRecords, getUserActivePlan, maxPhotosForPlan, validatePhotoLimit } from '~/utils/stripeHelpers';
+import { useFocusEffect } from '@react-navigation/native';
+import { getEffectiveCapabilities } from '~/lib/getEffectivePlan';
 
 interface ImageItem {
   id: string;
@@ -20,6 +23,23 @@ interface ImageItem {
 const { width } = Dimensions.get('window');
 const IMAGE_WIDTH = (width - 60) / 2; // 2 columns with padding
 
+// Plan limits for images
+const PLAN_LIMITS = {
+  free: { bar: 2, menu: 0 },
+  pro: { bar: 10, menu: 15 },
+  elite: { bar: 25, menu: 15 }
+};
+
+// Get color for plan badge
+const getPlanColor = (plan: 'free' | 'pro' | 'elite') => {
+  switch (plan) {
+    case 'free': return '#6B7280';
+    case 'pro': return '#10B981';
+    case 'elite': return '#8B5CF6';
+    default: return '#6B7280';
+  }
+};
+
 const Step4Photos: React.FC = () => {
   const router = useRouter();
   const { getFormData, resetForm } = useBarRegisterStore();
@@ -27,9 +47,36 @@ const Step4Photos: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [barImages, setBarImages] = useState<ImageItem[]>([]);
   const [menuImages, setMenuImages] = useState<ImageItem[]>([]);
+  const [barCreated, setBarCreated] = useState(false);
+  const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'elite'>('free');
+  const [planLoading, setPlanLoading] = useState(true);
 
   // Generate unique ID for images
   const generateId = () => Math.random().toString(36).substring(7);
+
+  // Fetch user's plan and set limits
+  const fetchUserPlan = useCallback(async () => {
+    try {
+      setPlanLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setUserPlan('free');
+        return;
+      }
+      const { tier } = await getEffectiveCapabilities(user.id);
+      setUserPlan((tier as 'free' | 'pro' | 'elite') ?? 'free');
+    } catch (error) {
+      console.warn('Error fetching user plan:', error);
+      setUserPlan('free');
+    } finally {
+      setPlanLoading(false);
+    }
+  }, []);
+
+  // Load user plan on component mount
+  useEffect(() => {
+    fetchUserPlan();
+  }, [fetchUserPlan]);
 
   // Upload single image to Supabase Storage
   const uploadSingleImage = useCallback(async (uri: string, barId: string, type: 'bar' | 'menu', order: number): Promise<string> => {
@@ -188,14 +235,14 @@ const Step4Photos: React.FC = () => {
 
       if (!result.canceled && result.assets) {
         const currentImages = type === 'bar' ? barImages : menuImages;
-        const maxImages = type === 'bar' ? 5 : 3;
+        const maxImages = type === 'bar' ? PLAN_LIMITS[userPlan].bar : PLAN_LIMITS[userPlan].menu;
         
-        // Check if we can add more images
+        // Check if we can add more images based on user's plan
         const remainingSlots = maxImages - currentImages.length;
         if (remainingSlots <= 0) {
           Alert.alert(
             'Límite alcanzado',
-            `Solo puedes agregar ${maxImages} imágenes para ${type === 'bar' ? 'fotos del bar' : 'fotos del menú'}.`
+            `Tu plan ${userPlan} permite hasta ${maxImages} imágenes para ${type === 'bar' ? 'fotos del bar' : 'fotos del menú'}.`
           );
           return;
         }
@@ -239,7 +286,7 @@ const Step4Photos: React.FC = () => {
       console.error('Error picking images:', error);
       Alert.alert('Error', 'No se pudieron seleccionar las imágenes');
     }
-  }, [barImages, menuImages, requestPermissions]);
+  }, [barImages, menuImages, requestPermissions, userPlan]);
 
   // Remove image
   const removeImage = useCallback((id: string, type: 'bar' | 'menu') => {
@@ -415,6 +462,36 @@ const Step4Photos: React.FC = () => {
     try {
       const formData = getFormData();
       
+      // Get current user for plan validation
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        Alert.alert('Error', 'Debes estar autenticado para registrar un bar');
+        return;
+      }
+
+      // Validate image limits based on user's plan
+      const { tier } = await getEffectiveCapabilities(user.id);
+      const maxBarImages = PLAN_LIMITS[tier as 'free' | 'pro' | 'elite'].bar;
+      const maxMenuImages = PLAN_LIMITS[tier as 'free' | 'pro' | 'elite'].menu;
+
+      if (barImages.length > maxBarImages) {
+        Alert.alert(
+          'Límite de imágenes excedido',
+          `Tu plan (${tier}) permite hasta ${maxBarImages} imágenes del bar. Tienes ${barImages.length} seleccionadas.`
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (menuImages.length > maxMenuImages) {
+        Alert.alert(
+          'Límite de imágenes excedido',
+          `Tu plan (${tier}) permite hasta ${maxMenuImages} imágenes del menú. Tienes ${menuImages.length} seleccionadas.`
+        );
+        setLoading(false);
+        return;
+      }
+      
       // Validate precise coordinates
       if (formData.latitude === 0 || formData.longitude === 0) {
         Alert.alert('Error', 'Debes seleccionar una ubicación precisa para el bar');
@@ -433,12 +510,7 @@ const Step4Photos: React.FC = () => {
         isPreciseLocation: formData.doorNumber ? 'Sí (con número de puerta)' : 'No (ubicación aproximada)'
       });
       
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        Alert.alert('Error', 'Debes estar autenticado para registrar un bar');
-        return;
-      }
+      // User already validated above
 
       console.log('🏗️ Creando bar...');
 
@@ -496,26 +568,32 @@ const Step4Photos: React.FC = () => {
         }
       }
 
-      // Show appropriate success/warning message
-      const successMessage = uploadSuccess 
-        ? 'Tu bar ha sido registrado correctamente con todas las imágenes. Será revisado por nuestro equipo antes de ser publicado.'
-        : uploadErrors.length > 0
-        ? `Tu bar ha sido registrado correctamente, pero hubo problemas subiendo las ${uploadErrors.join(' y ')}. Puedes intentar subirlas más tarde desde tu perfil.`
-        : 'Tu bar ha sido registrado correctamente. Será revisado por nuestro equipo antes de ser publicado.';
+      // 5) Finalizar wizard - resetear completamente la navegación
+      console.log('✅ Bar creado exitosamente, reseteando navegación...');
+      
+      // Opción 1: Usar router.replace (más simple)
+      router.replace(`/bar-profile/${barData.id}`);
+      
+      // Opción 2: Resetear completamente el stack de navegación (más robusto)
+      // router.push({
+      //   pathname: `/bar-profile/${barData.id}`,
+      //   params: { reset: true }
+      // });
 
+      // Opcional: Mostrar mensaje de éxito
       Alert.alert(
-        uploadSuccess ? '¡Éxito!' : '¡Registro Completado!',
-        successMessage,
+        '¡Éxito!',
+        'Tu bar ha sido registrado correctamente.',
         [
           {
             text: 'Continuar',
             onPress: () => {
-              resetForm();
-              router.replace('/(protected)/profile' as any);
+              // El router.replace ya se ejecutó, esto es solo para cerrar el Alert
             }
           }
         ]
       );
+
     } catch (error: any) {
       console.error('Error submitting form:', error);
       Alert.alert('Error', error.message || 'No se pudo completar el registro. Inténtalo de nuevo.');
@@ -525,8 +603,25 @@ const Step4Photos: React.FC = () => {
   }, [getFormData, insertRelationships, uploadImages, barImages, menuImages, resetForm, router]);
 
   const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
+    // Si el bar ya fue creado, mostrar alerta en lugar de navegar hacia atrás
+    if (barCreated) {
+      Alert.alert(
+        'Navegación bloqueada',
+        'No puedes volver atrás después de crear tu bar. Usa el botón "Ver mi Bar" para continuar.',
+        [{ text: 'OK' }]
+      );
+    } else {
+      router.back();
+    }
+  }, [router, barCreated]);
+
+  // Bloquear navegación hacia atrás después de crear el bar
+  useFocusEffect(
+    React.useCallback(() => {
+      // En Expo Router, no podemos usar addListener directamente
+      // En su lugar, manejamos la navegación en el handleBack
+    }, [barCreated])
+  );
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -539,6 +634,11 @@ const Step4Photos: React.FC = () => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Fotos del Bar</Text>
           <View style={styles.headerSpacer} />
+          {!planLoading && (
+            <View style={[styles.planBadge, { backgroundColor: getPlanColor(userPlan) }]}>
+              <Text style={styles.planBadgeText}>{userPlan.toUpperCase()}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.progressContainer}>
@@ -557,17 +657,20 @@ const Step4Photos: React.FC = () => {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Fotos del Bar</Text>
-                <Text style={styles.sectionSubtitle}>Máximo 5 imágenes (16:9) - Mantén presionado para reordenar</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Máximo {PLAN_LIMITS[userPlan].bar} imágenes (16:9) - Mantén presionado para reordenar
+                  {planLoading ? ' - Cargando plan...' : ` - Plan ${userPlan.toUpperCase()}`}
+                </Text>
               </View>
               
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => pickImages('bar')}
-                disabled={loading || barImages.length >= 5}
+                disabled={loading || planLoading || barImages.length >= PLAN_LIMITS[userPlan].bar}
               >
                 <Ionicons name="camera" size={24} color="#007AFF" />
                 <Text style={styles.addButtonText}>
-                  {barImages.length >= 5 ? 'Máximo alcanzado' : 'Agregar fotos del bar'}
+                  {barImages.length >= PLAN_LIMITS[userPlan].bar ? 'Máximo alcanzado' : 'Agregar fotos del bar'}
                 </Text>
               </TouchableOpacity>
 
@@ -584,42 +687,47 @@ const Step4Photos: React.FC = () => {
                 </View>
               )}
               
-              <Text style={styles.counter}>{barImages.length}/5 fotos</Text>
+              <Text style={styles.counter}>{barImages.length}/{PLAN_LIMITS[userPlan].bar} fotos</Text>
             </View>
 
-            {/* Menu Images Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Fotos del Menú</Text>
-                <Text style={styles.sectionSubtitle}>Máximo 3 imágenes (3:4) - Mantén presionado para reordenar</Text>
-              </View>
-              
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => pickImages('menu')}
-                disabled={loading || menuImages.length >= 3}
-              >
-                <Ionicons name="restaurant" size={24} color="#007AFF" />
-                <Text style={styles.addButtonText}>
-                  {menuImages.length >= 3 ? 'Máximo alcanzado' : 'Agregar fotos del menú'}
-                </Text>
-              </TouchableOpacity>
-
-              {menuImages.length > 0 && (
-                <View style={styles.imageGrid}>
-                  <DraggableFlatList
-                    data={menuImages}
-                    renderItem={(params: any) => renderImageItem(params, 'menu')}
-                    keyExtractor={(item: ImageItem) => item.id}
-                    onDragEnd={({ data }: any) => handleDragEnd(data, 'menu')}
-                    numColumns={2}
-                    scrollEnabled={false}
-                  />
+            {/* Menu Images Section (hidden for free plan) */}
+            {PLAN_LIMITS[userPlan].menu > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Fotos del Menú</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Máximo {PLAN_LIMITS[userPlan].menu} imágenes (3:4) - Mantén presionado para reordenar
+                    {planLoading ? ' - Cargando plan...' : ` - Plan ${userPlan.toUpperCase()}`}
+                  </Text>
                 </View>
-              )}
-              
-              <Text style={styles.counter}>{menuImages.length}/3 fotos</Text>
-            </View>
+                
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => pickImages('menu')}
+                  disabled={loading || planLoading || menuImages.length >= PLAN_LIMITS[userPlan].menu}
+                >
+                  <Ionicons name="restaurant" size={24} color="#007AFF" />
+                  <Text style={styles.addButtonText}>
+                    {menuImages.length >= PLAN_LIMITS[userPlan].menu ? 'Máximo alcanzado' : 'Agregar fotos del menú'}
+                  </Text>
+                </TouchableOpacity>
+  
+                {menuImages.length > 0 && (
+                  <View style={styles.imageGrid}>
+                    <DraggableFlatList
+                      data={menuImages}
+                      renderItem={(params: any) => renderImageItem(params, 'menu')}
+                      keyExtractor={(item: ImageItem) => item.id}
+                      onDragEnd={({ data }: any) => handleDragEnd(data, 'menu')}
+                      numColumns={2}
+                      scrollEnabled={false}
+                    />
+                  </View>
+                )}
+                
+                <Text style={styles.counter}>{menuImages.length}/{PLAN_LIMITS[userPlan].menu} fotos</Text>
+              </View>
+            )}
 
             {/* Info Box */}
             <View style={styles.infoBox}>
@@ -666,6 +774,20 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 32,
+  },
+  planBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minWidth: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   progressContainer: {
     paddingHorizontal: 20,
