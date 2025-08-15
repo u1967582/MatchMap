@@ -333,6 +333,12 @@ const Map: React.FC = () => {
         styleURL="mapbox://styles/mapbox/dark-v11"
         scaleBarEnabled={false}
       >
+        {/* Register marker images (must be direct child of MapView) */}
+        <MapboxGL.Images
+          images={{
+            bar_marker: require('~/assets/marker.png'),
+          }}
+        />
         {/* Camera that centers on user location or search result */}
         <MapboxGL.Camera
           centerCoordinate={
@@ -358,83 +364,69 @@ const Map: React.FC = () => {
           pulsing
         />
 
-        {/* Bars ShapeSource with clustering */}
-        {bars.length > 0 && (
-          <MapboxGL.ShapeSource
-            id="bars"
-            shape={barsVector}
-            cluster={true}
-            clusterRadius={50}
-            clusterMaxZoom={14}
-            onPress={handleShapeSourcePress}
-          >
-            {/* Cluster circles */}
-            <MapboxGL.CircleLayer
-              id="clusteredBars"
-              filter={['has', 'point_count']}
-              style={{
-                circleColor: '#FF6B6B',
-                circleRadius: 20,
-                circleOpacity: 0.8,
-                circleStrokeWidth: 2,
-                circleStrokeColor: 'white',
-              }}
-            />
-
-            {/* Cluster count text */}
-            <MapboxGL.SymbolLayer
-              id="clusterCount"
-              filter={['has', 'point_count']}
-              style={{
-                textField: ['get', 'point_count'],
-                textSize: 14,
-                textColor: '#ffffff',
-                textPitchAlignment: 'map',
-              }}
-            />
-
-            {/* Selected bar markers */}
-            <MapboxGL.SymbolLayer
-              id="selectedBarMarkers"
-              filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], true]]}
-              style={{
-                iconImage: 'bar_marker',
-                iconAllowOverlap: true,
-                iconSize: 0.1,
-                iconAnchor: 'bottom',
-                iconRotationAlignment: 'viewport',
-                iconPitchAlignment: 'viewport',
-                iconTextFit: 'none',
-                iconKeepUpright: true,
-                iconRotate: 0,
-                iconColor: '#38B6FF', // Azul más claro para seleccionado
-              }}
-            />
-
-            {/* Normal bar markers */}
-            <MapboxGL.SymbolLayer
-              id="normalBarMarkers"
-              filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], false]]}
-              style={{
-                iconImage: 'bar_marker',
-                iconAllowOverlap: true,
-                iconSize: 0.1,
-                iconAnchor: 'bottom',
-                iconRotationAlignment: 'viewport',
-                iconPitchAlignment: 'viewport',
-                iconTextFit: 'none',
-                iconKeepUpright: true,
-                iconRotate: 0,
-                iconColor: '#8E8E93', // Gris para normal
-              }}
-            />
-
-            {/* Register marker images */}
-            <MapboxGL.Images images={{ 
-              bar_marker: require('~/assets/marker.png'),
-            }} />
-          </MapboxGL.ShapeSource>
-        )}
+        {/* Bars ShapeSource always rendered with empty FeatureCollection when no bars */}
+        <MapboxGL.ShapeSource
+          id="bars"
+          shape={barsVector}
+          cluster={true}
+          clusterRadius={50}
+          clusterMaxZoom={14}
+          onPress={handleShapeSourcePress}
+        >
+          <MapboxGL.CircleLayer
+            id="clusteredBars"
+            filter={['has', 'point_count']}
+            style={{
+              circleColor: '#FF6B6B',
+              circleRadius: 20,
+              circleOpacity: 0.8,
+              circleStrokeWidth: 2,
+              circleStrokeColor: 'white',
+            }}
+          />
+          <MapboxGL.SymbolLayer
+            id="clusterCount"
+            filter={['has', 'point_count']}
+            style={{
+              textField: ['get', 'point_count'],
+              textSize: 14,
+              textColor: '#ffffff',
+              textPitchAlignment: 'map',
+            }}
+          />
+          <MapboxGL.SymbolLayer
+            id="selectedBarMarkers"
+            filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], true]]}
+            style={{
+              iconImage: 'bar_marker',
+              iconAllowOverlap: true,
+              iconSize: 0.1,
+              iconAnchor: 'bottom',
+              iconRotationAlignment: 'viewport',
+              iconPitchAlignment: 'viewport',
+              iconTextFit: 'none',
+              iconKeepUpright: true,
+              iconRotate: 0,
+              iconColor: '#38B6FF',
+            }}
+          />
+          <MapboxGL.SymbolLayer
+            id="normalBarMarkers"
+            filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], false]]}
+            style={{
+              iconImage: 'bar_marker',
+              iconAllowOverlap: true,
+              iconSize: 0.1,
+              iconAnchor: 'bottom',
+              iconRotationAlignment: 'viewport',
+              iconPitchAlignment: 'viewport',
+              iconTextFit: 'none',
+              iconKeepUpright: true,
+              iconRotate: 0,
+              iconColor: '#8E8E93',
+            }}
+          />
+        </MapboxGL.ShapeSource>
 
         {/* Custom user location marker (optional - can be removed if using LocationPuck) */}
         {userLocation && (

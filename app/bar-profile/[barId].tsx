@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
@@ -1068,7 +1069,7 @@ export default function BarProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top','bottom']}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Cargando...</Text>
         </View>
@@ -1078,7 +1079,7 @@ export default function BarProfileScreen() {
 
   if (!bar) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top','bottom']}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Bar no encontrado</Text>
         </View>
@@ -1087,7 +1088,7 @@ export default function BarProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top','bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
       
       <FlatList
