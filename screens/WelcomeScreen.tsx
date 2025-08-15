@@ -1,4 +1,5 @@
-import { View, StyleSheet, SafeAreaView, Text, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, StyleSheet, Text, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BackgroundImage from '~/components/ui/BackgroundImage';
@@ -58,7 +59,7 @@ const WelcomeScreen: React.FC = () => {
   return (
     <BackgroundImage source={require('~/assets/stadium.jpg')}>
       <View style={styles.overlay}>
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
           {/* Onboarding hero (horizontal) */}
           <View style={styles.heroContainer}>
             <FlatList

@@ -1,10 +1,12 @@
 import { Stack, useFocusEffect } from 'expo-router';
 import { View, StyleSheet, StatusBar, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect } from 'react';
 import Map from '~/components/Map';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 
 export default function MapScreen() {
+  const insets = useSafeAreaInsets();
   // Set status bar style when component mounts
   useEffect(() => {
     StatusBar.setBarStyle('light-content', true);
@@ -14,7 +16,7 @@ export default function MapScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 80 : 60) } ]}>
       <Stack.Screen 
         options={{ 
           headerShown: false,
@@ -32,6 +34,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1C2A3A',
-    paddingBottom: Platform.OS === 'ios' ? 80 : 60, // Space for footer
   },
 }); 
