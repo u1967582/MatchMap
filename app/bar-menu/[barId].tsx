@@ -155,7 +155,7 @@ const BarMenuScreen: React.FC = () => {
         <FlatList
           data={menuImages}
           renderItem={renderMenuImage}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => `${item.id}-${item.image_order}`}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.galleryContainer}
