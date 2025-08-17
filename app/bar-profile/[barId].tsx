@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
@@ -68,6 +69,7 @@ export default function BarProfileScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(false);
+  const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
 
   // Functions to copy to clipboard
   const copyToClipboard = async (text: string, label: string) => {
@@ -145,15 +147,15 @@ export default function BarProfileScreen() {
                 {/* Page indicators */}
                 {bar.images.length > 1 && (
                   <View style={styles.pageIndicators}>
-                                    {bar.images.map((_, index) => (
-                  <View
-                    key={`indicator-${index}`}
-                    style={[
-                      styles.pageIndicator,
-                      index === currentImageIndex && styles.pageIndicatorActive
-                    ]}
-                  />
-                ))}
+                    {bar.images.map((imgUrl, index) => (
+                      <View
+                        key={`indicator-${bar.id}-${index}-${imgUrl}`}
+                        style={[
+                          styles.pageIndicator,
+                          index === currentImageIndex && styles.pageIndicatorActive
+                        ]}
+                      />
+                    ))}
                   </View>
                 )}
                 
@@ -320,9 +322,14 @@ export default function BarProfileScreen() {
             </View>
             
             {posts.length > 0 ? (
-              <View>
-                {posts.map((post) => renderPostItem({ item: post }))}
-              </View>
+              <FlatList
+                data={posts}
+                renderItem={({ item }) => renderPostItem({ item })}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                ListEmptyComponent={null}
+                contentContainerStyle={{ gap: 0 }}
+              />
             ) : (
               <View style={styles.noPostsContainer}>
                 <Ionicons name="document-text-outline" size={48} color="#A3B3CC" />
@@ -333,16 +340,7 @@ export default function BarProfileScreen() {
               </View>
             )}
             
-            {/* Write Review Button */}
-            {!isOwner && (
-              <TouchableOpacity
-                style={styles.reviewButton}
-                onPress={() => router.push(`/write-review/${barId}` as any)}
-              >
-                <Ionicons name="star-outline" size={20} color="#FFFFFF" />
-                <Text style={styles.reviewButtonText}>Write a Review</Text>
-              </TouchableOpacity>
-            )}
+            {/* CTA para reseña se muestra únicamente dentro del bloque de Reseñas */}
           </View>
         );
 
@@ -350,7 +348,15 @@ export default function BarProfileScreen() {
         return (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>⭐ Reseñas</Text>
-            <BarReviewsSection barId={barId} />
+            {publicReviews.length === 0 ? (
+              <View style={styles.noPostsContainer}>
+                <Ionicons name="chatbubble-outline" size={48} color="#A3B3CC" />
+                <Text style={styles.noPostsText}>Este bar aún no tiene reseñas.</Text>
+                <Text style={styles.noPostsSubtext}>Sé el primero en compartir tu experiencia.</Text>
+              </View>
+            ) : (
+              <BarReviewsSection barId={barId} showHeader title="Reseñas" />
+            )}
           </View>
         );
 
@@ -663,6 +669,14 @@ export default function BarProfileScreen() {
         
         // Fetch upcoming matches for this bar
         await fetchUpcomingMatches(barData.id);
+
+        // Fetch public reviews for this bar (for quick zero-state)
+        const { data: reviewsData } = await supabase
+          .from('reviews')
+          .select('id, rating, comment, created_at')
+          .eq('bar_id', barData.id)
+          .order('created_at', { ascending: false });
+        setPublicReviews((reviewsData as any) || []);
       }
 
     } catch (error) {
@@ -1068,7 +1082,7 @@ export default function BarProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top','bottom']}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Cargando...</Text>
         </View>
@@ -1078,7 +1092,7 @@ export default function BarProfileScreen() {
 
   if (!bar) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top','bottom']}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Bar no encontrado</Text>
         </View>
@@ -1087,13 +1101,13 @@ export default function BarProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top','bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
       
       <FlatList
         data={sections}
         renderItem={renderSection}
-        keyExtractor={(item) => item.key}
+        keyExtractor={(item) => `${bar.id}-${item.key}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollViewContent}
       />

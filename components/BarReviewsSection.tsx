@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -14,7 +15,13 @@ interface Review {
   };
 }
 
-const BarReviewsSection: React.FC<{ barId: string }> = ({ barId }) => {
+interface BarReviewsSectionProps {
+  barId: string;
+  showHeader?: boolean;
+  title?: string;
+}
+
+const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader = true, title = 'Reseñas' }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [distribution, setDistribution] = useState<number[]>([0, 0, 0, 0, 0]);
   const [average, setAverage] = useState(0);
@@ -61,19 +68,25 @@ const BarReviewsSection: React.FC<{ barId: string }> = ({ barId }) => {
               profile_image_url: item.user?.profile_image_url || '',
             },
           }));
-          
+
           setReviews(transformedData);
-          
+
           // Calculate distribution from reviews
           const ratings = [0, 0, 0, 0, 0];
           transformedData.forEach((r) => {
-            ratings[r.rating - 1]++;
+            if (r.rating >= 1 && r.rating <= 5) ratings[r.rating - 1]++;
           });
           setDistribution(ratings);
-          
-          // Use real data from bars table
-          setAverage(barData?.rating || 0);
-          setTotalReviews(barData?.review_count || 0);
+
+          // Compute totals from fetched reviews (fallback to bars data if needed)
+          const total = transformedData.length;
+          setTotalReviews(total);
+
+          const computedAvg = total > 0
+            ? transformedData.reduce((sum, r) => sum + (r.rating || 0), 0) / total
+            : 0;
+          // Prefer barData.rating if present; otherwise use computed
+          setAverage(typeof barData?.rating === 'number' && barData.rating > 0 ? barData.rating : computedAvg);
         }
       } catch (error) {
         console.error('❌ Error fetching data:', error);
@@ -100,94 +113,37 @@ const BarReviewsSection: React.FC<{ barId: string }> = ({ barId }) => {
     return `${Math.floor(diffDays / 365)} years ago`;
   };
 
-  const renderReview = ({ item }: { item: Review }) => (
-    <View style={styles.reviewCard}>
-      <View style={styles.userRow}>
-        <Image 
-          source={{ 
-            uri: item.user.profile_image_url || 'https://via.placeholder.com/32x32/2A3A4A/94A3B8?text=U'
-          }} 
-          style={styles.avatar} 
-        />
-        <View style={styles.userInfo}>
-          <Text style={styles.username}>{item.user.username || 'Anonymous'}</Text>
-          <Text style={styles.timestamp}>{formatDate(item.created_at)}</Text>
-        </View>
-      </View>
+  const renderStars = (value: number, size = 14) => {
+    const full = Math.floor(value);
+    const hasHalf = value - full >= 0.5;
+    const stars = [] as React.ReactNode[];
+    for (let i = 1; i <= 5; i++) {
+      let icon: any = 'star-outline';
+      if (i <= full) icon = 'star';
+      else if (i === full + 1 && hasHalf) icon = 'star-half';
+      stars.push(
+        <Ionicons key={`star-${i}`} name={icon} size={size} color="#1976D2" />
+      );
+    }
+    return <View style={styles.starsRow}>{stars}</View>;
+  };
 
-      <View style={styles.starsRow}>
-        {[1, 2, 3, 4, 5].map((s) => (
-          <Ionicons
-            key={s}
-            name={s <= item.rating ? 'star' : 'star-outline'}
-            color="#1976D2"
-            size={14}
-          />
-        ))}
-      </View>
-
-      <Text style={styles.comment}>{item.comment}</Text>
-
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="thumbs-up-outline" size={16} color="#94A3B8" />
-          <Text style={styles.actionText}>0</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="chatbubble-outline" size={16} color="#94A3B8" />
-          <Text style={styles.actionText}>0</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading reviews...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (totalReviews === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubble-outline" size={48} color="#94A3B8" />
-          <Text style={styles.emptyTitle}>No reviews yet</Text>
-          <Text style={styles.emptySubtitle}>Be the first to share your experience!</Text>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-
+  // Build header consistently on every render to keep hook order stable
+  const header = useMemo(() => (
+    <View style={styles.headerBlock}>
+      {/* título interno eliminado */}
       <View style={styles.headerRow}>
         <View style={styles.avgColumn}>
           <Text style={styles.avgRating}>{average.toFixed(1)}</Text>
-          <View style={styles.starsRow}>
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Ionicons
-                key={s}
-                name={s <= Math.round(average) ? 'star' : 'star-outline'}
-                color="#1976D2"
-                size={16}
-              />
-            ))}
-          </View>
-          <Text style={styles.totalReviews}>{totalReviews} reviews</Text>
+          {renderStars(average, 16)}
+          <Text style={styles.totalReviews}>{totalReviews} reseñas</Text>
         </View>
-
         <View style={styles.distribution}>
-          {[5, 4, 3, 2, 1].map((star, index) => {
+          {[5, 4, 3, 2, 1].map((star) => {
             const count = distribution[star - 1];
             const percent = totalReviews ? (count / totalReviews) * 100 : 0;
             return (
-              <View key={star} style={styles.distRow}>
+              <View key={`dist-${star}`} style={styles.distRow}>
                 <Text style={styles.distLabel}>{star}</Text>
                 <View style={styles.distBarBackground}>
                   <View style={[styles.distBarFill, { width: `${percent}%` }]} />
@@ -198,58 +154,122 @@ const BarReviewsSection: React.FC<{ barId: string }> = ({ barId }) => {
           })}
         </View>
       </View>
+    </View>
+  ), [average, totalReviews, distribution, title]);
 
-      <FlatList
-        data={reviews}
-        keyExtractor={(item) => item.id}
-        renderItem={renderReview}
-        style={styles.reviewList}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      />
+  const renderReview = ({ item }: { item: Review }) => (
+    <View style={styles.reviewCard}>
+      <View style={styles.userRow}>
+        <Image 
+          source={{ 
+            uri: item.user.profile_image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(item.user.username || 'U') + '&background=2A3A4A&color=94A3B8&size=64'
+          }} 
+          style={styles.avatar} 
+        />
+        <View style={styles.userInfo}>
+          <Text style={styles.username}>{item.user.username || 'Anonymous'}</Text>
+          <Text style={styles.timestamp}>{formatDate(item.created_at)}</Text>
+          {renderStars(item.rating, 16)}
+        </View>
+      </View>
+
+      <Text style={styles.comment}>{item.comment}</Text>
+
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.actionButton}>
+          <Ionicons name="thumbs-up-outline" size={16} color="#94A3B8" />
+          <Text style={styles.actionText}>0</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Cargando reseñas...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const hasReviews = totalReviews > 0;
+  const router = useRouter();
+
+  return (
+    <View style={styles.container}>
+      {showHeader && header}
+      {!hasReviews && (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="chatbubble-outline" size={48} color="#94A3B8" />
+          <Text style={styles.emptyTitle}>Aún no hay reseñas</Text>
+          <Text style={styles.emptySubtitle}>¡Sé el primero en compartir tu experiencia!</Text>
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.ctaButton}
+        onPress={() => router.push(`/write-review/${barId}` as any)}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="star-outline" size={18} color="#FFFFFF" />
+        <Text style={styles.ctaText}>Escribir una reseña</Text>
+      </TouchableOpacity>
+
+      {hasReviews && (
+        <FlatList
+          data={reviews}
+          keyExtractor={(item) => item.id}
+          renderItem={renderReview}
+          style={styles.reviewList}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    marginTop: 24, 
+  container: {
+    marginTop: 24,
     paddingHorizontal: 20,
     backgroundColor: '#1C2A3A',
   },
-  sectionTitle: { 
-    fontSize: 20, 
-    fontWeight: 'bold', 
-    color: '#FFFFFF', 
-    marginBottom: 16 
+  headerBlock: { marginBottom: 8, paddingHorizontal: 0 },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 12,
   },
   headerRow: { 
     flexDirection: 'row',
-    backgroundColor: '#1A2332',
+    backgroundColor: 'transparent',
     borderRadius: 12,
-    padding: 16,
+    padding: 0,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#2A3A4A',
   },
   avgColumn: { 
-    marginRight: 24, 
-    alignItems: 'center',
-    minWidth: 80,
+    marginRight: 24,
+    alignItems: 'flex-start',
+    minWidth: 120,
   },
   avgRating: { 
-    fontSize: 32, 
+    fontSize: 36,
     fontWeight: 'bold', 
     color: '#FFFFFF' 
   },
   starsRow: { 
     flexDirection: 'row', 
-    marginVertical: 4,
+    marginTop: 6,
     gap: 2,
   },
   totalReviews: { 
-    fontSize: 12, 
-    color: '#94A3B8' 
+    fontSize: 14,
+    color: '#94A3B8',
+    marginTop: 6,
   },
   distribution: { 
     flex: 1, 
@@ -258,42 +278,47 @@ const styles = StyleSheet.create({
   distRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    marginBottom: 4 
+    marginBottom: 8,
   },
   distLabel: { 
     color: '#FFFFFF', 
-    width: 14,
-    fontSize: 12,
+    width: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   distBarBackground: {
     flex: 1,
-    height: 8,
+    height: 10,
     backgroundColor: '#2A3A4A',
     borderRadius: 4,
     marginHorizontal: 8,
   },
   distBarFill: {
-    height: 8,
+    height: 10,
     backgroundColor: '#1976D2',
     borderRadius: 4,
   },
   distPercent: { 
     color: '#94A3B8', 
-    width: 40, 
-    textAlign: 'right', 
-    fontSize: 12 
+    width: 44,
+    textAlign: 'right',
+    fontSize: 14,
   },
   reviewList: { 
     marginTop: 8 
   },
   reviewCard: { 
-    backgroundColor: '#1A2332', 
+    backgroundColor: '#0F1724', 
     borderRadius: 12, 
-    padding: 16, 
+    padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#2A3A4A',
+    borderColor: '#1F2A3A',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   userRow: { 
     flexDirection: 'row', 
@@ -312,17 +337,17 @@ const styles = StyleSheet.create({
   username: { 
     color: '#FFFFFF', 
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 16,
   },
   timestamp: { 
-    fontSize: 12, 
+    fontSize: 13,
     color: '#94A3B8' 
   },
   comment: { 
     color: '#FFFFFF', 
     marginTop: 8,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
   },
   actions: { 
     flexDirection: 'row', 
@@ -349,10 +374,7 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 40,
-    backgroundColor: '#1A2332',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2A3A4A',
+    backgroundColor: 'transparent',
   },
   emptyTitle: {
     color: '#FFFFFF',
@@ -365,6 +387,27 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 14,
     textAlign: 'center',
+  },
+  ctaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1976D2',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  ctaText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 

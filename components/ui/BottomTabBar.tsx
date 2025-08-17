@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 
@@ -19,6 +20,7 @@ const tabs: TabItem[] = [
 const BottomTabBar = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   
   // Animation values for each tab
   const tabAnimations = useRef<Record<string, Animated.Value>>({
@@ -103,7 +105,10 @@ const BottomTabBar = () => {
   }, [handleTabPress, isActiveTab, tabAnimations]);
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 8) }
+    ]}>
       {tabs.map(renderTab)}
     </View>
   );
@@ -116,9 +121,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    backgroundColor: '#1A2332',
+    backgroundColor: '#0F1724',
     paddingTop: 4,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 8, // Safe area for iOS
     paddingHorizontal: 16,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
