@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    backgroundColor: '#1A2332',
+    backgroundColor: '#0F1724',
     paddingTop: 4,
     paddingHorizontal: 16,
     borderTopLeftRadius: 20,

@@ -18,8 +18,8 @@ const BackgroundImage: React.FC<BackgroundImageProps> = ({
     <ImageBackground source={source} style={styles.backgroundImage} resizeMode="cover">
       <StatusBar 
         barStyle="light-content" 
-        backgroundColor={Platform.OS === 'android' ? 'rgba(0,0,0,0.4)' : 'transparent'} 
-        translucent={Platform.OS === 'ios'} 
+        backgroundColor={Platform.OS === 'android' ? '#1C2A3A' : 'transparent'} 
+        translucent={false}
       />
       
       {overlay && <View style={[styles.overlay, { backgroundColor: overlayColor }]} />}
