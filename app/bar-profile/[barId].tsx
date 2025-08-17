@@ -69,6 +69,7 @@ export default function BarProfileScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(false);
+  const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
 
   // Functions to copy to clipboard
   const copyToClipboard = async (text: string, label: string) => {
@@ -339,16 +340,7 @@ export default function BarProfileScreen() {
               </View>
             )}
             
-            {/* Write Review Button */}
-            {!isOwner && (
-              <TouchableOpacity
-                style={styles.reviewButton}
-                onPress={() => router.push(`/write-review/${barId}` as any)}
-              >
-                <Ionicons name="star-outline" size={20} color="#FFFFFF" />
-                <Text style={styles.reviewButtonText}>Write a Review</Text>
-              </TouchableOpacity>
-            )}
+            {/* CTA para reseña se muestra únicamente dentro del bloque de Reseñas */}
           </View>
         );
 
@@ -356,7 +348,15 @@ export default function BarProfileScreen() {
         return (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>⭐ Reseñas</Text>
-            <BarReviewsSection barId={barId} />
+            {publicReviews.length === 0 ? (
+              <View style={styles.noPostsContainer}>
+                <Ionicons name="chatbubble-outline" size={48} color="#A3B3CC" />
+                <Text style={styles.noPostsText}>Este bar aún no tiene reseñas.</Text>
+                <Text style={styles.noPostsSubtext}>Sé el primero en compartir tu experiencia.</Text>
+              </View>
+            ) : (
+              <BarReviewsSection barId={barId} showHeader title="Reseñas" />
+            )}
           </View>
         );
 
@@ -669,6 +669,14 @@ export default function BarProfileScreen() {
         
         // Fetch upcoming matches for this bar
         await fetchUpcomingMatches(barData.id);
+
+        // Fetch public reviews for this bar (for quick zero-state)
+        const { data: reviewsData } = await supabase
+          .from('reviews')
+          .select('id, rating, comment, created_at')
+          .eq('bar_id', barData.id)
+          .order('created_at', { ascending: false });
+        setPublicReviews((reviewsData as any) || []);
       }
 
     } catch (error) {

@@ -234,6 +234,8 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Perfil</Text>
+          <View style={{ width: 24 }} />
         </View>
 
         {/* Profile Section */}
@@ -544,6 +546,11 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
   },
   headerSpacer: {
     flex: 1,
