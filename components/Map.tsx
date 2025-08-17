@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +37,45 @@ const Map: React.FC = () => {
   const [cameraCenter, setCameraCenter] = React.useState<[number, number] | null>(null);
   const [cameraZoom, setCameraZoom] = React.useState(15);
   const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
+
+  // Pretty marker component (inlined to keep file self-contained)
+  const BarMarker: React.FC<{ selected: boolean }> = React.useCallback(({ selected }) => {
+    const pulse = React.useRef(new Animated.Value(0)).current;
+
+    React.useEffect(() => {
+      if (selected) {
+        const loop = Animated.loop(
+          Animated.sequence([
+            Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+            Animated.timing(pulse, { toValue: 0, duration: 900, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          ])
+        );
+        loop.start();
+        return () => loop.stop();
+      }
+    }, [pulse, selected]);
+
+    const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] });
+    const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0] });
+
+    return (
+      <View style={styles.markerContainer} pointerEvents="none">
+        {selected && (
+          <Animated.View
+            style={[
+              styles.markerPulseRing,
+              {
+                transform: [{ scale: ringScale }],
+                opacity: ringOpacity,
+              },
+            ]}
+          />
+        )}
+        <View style={[styles.markerBubble, selected ? styles.markerBubbleSelected : undefined]} />
+        <View style={[styles.markerTail, selected ? styles.markerTailSelected : undefined]} />
+      </View>
+    );
+  }, []);
 
   // Create vector collection from bars
   const barsVector = React.useMemo(() => ({
@@ -345,12 +384,6 @@ const Map: React.FC = () => {
           animationDuration={1000}
         />
 
-        {/* User location indicator */}
-        <MapboxGL.UserLocation
-          visible={true}
-          showsUserHeadingIndicator={true}
-        />
-
         {/* Animated location puck */}
         <MapboxGL.LocationPuck
           puckBearingEnabled
@@ -358,93 +391,18 @@ const Map: React.FC = () => {
           pulsing
         />
 
-        {/* Bars ShapeSource with clustering */}
-        {bars.length > 0 && (
-          <MapboxGL.ShapeSource
-            id="bars"
-            shape={barsVector}
-            cluster={true}
-            clusterRadius={50}
-            clusterMaxZoom={14}
-            onPress={handleShapeSourcePress}
-          >
-            {/* Cluster circles */}
-            <MapboxGL.CircleLayer
-              id="clusteredBars"
-              filter={['has', 'point_count']}
-              style={{
-                circleColor: '#FF6B6B',
-                circleRadius: 20,
-                circleOpacity: 0.8,
-                circleStrokeWidth: 2,
-                circleStrokeColor: 'white',
-              }}
-            />
-
-            {/* Cluster count text */}
-            <MapboxGL.SymbolLayer
-              id="clusterCount"
-              filter={['has', 'point_count']}
-              style={{
-                textField: ['get', 'point_count'],
-                textSize: 14,
-                textColor: '#ffffff',
-                textPitchAlignment: 'map',
-              }}
-            />
-
-            {/* Selected bar markers */}
-            <MapboxGL.SymbolLayer
-              id="selectedBarMarkers"
-              filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], true]]}
-              style={{
-                iconImage: 'bar_marker',
-                iconAllowOverlap: true,
-                iconSize: 0.1,
-                iconAnchor: 'bottom',
-                iconRotationAlignment: 'viewport',
-                iconPitchAlignment: 'viewport',
-                iconTextFit: 'none',
-                iconKeepUpright: true,
-                iconRotate: 0,
-                iconColor: '#38B6FF', // Azul más claro para seleccionado
-              }}
-            />
-
-            {/* Normal bar markers */}
-            <MapboxGL.SymbolLayer
-              id="normalBarMarkers"
-              filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isSelected'], false]]}
-              style={{
-                iconImage: 'bar_marker',
-                iconAllowOverlap: true,
-                iconSize: 0.1,
-                iconAnchor: 'bottom',
-                iconRotationAlignment: 'viewport',
-                iconPitchAlignment: 'viewport',
-                iconTextFit: 'none',
-                iconKeepUpright: true,
-                iconRotate: 0,
-                iconColor: '#8E8E93', // Gris para normal
-              }}
-            />
-
-            {/* Register marker images */}
-            <MapboxGL.Images images={{ 
-              bar_marker: require('~/assets/marker.png'),
-            }} />
-          </MapboxGL.ShapeSource>
-        )}
-
-        {/* Custom user location marker (optional - can be removed if using LocationPuck) */}
-        {userLocation && (
+        {/* Bar markers using PointAnnotation to avoid ShapeSource cloning issues */}
+        {bars.map((bar) => (
           <MapboxGL.PointAnnotation
-            id="userLocation"
-            coordinate={[userLocation.coords.longitude, userLocation.coords.latitude]}
+            key={`bar-${bar.id}`}
+            id={`bar-${bar.id}`}
+            coordinate={[bar.longitude, bar.latitude]}
+            onSelected={() => handleMarkerPress(bar)}
+            anchor={{ x: 0.5, y: 1.0 }}
           >
-            <View style={styles.userLocationMarker} />
+            <BarMarker selected={bar.id === selectedMarkerId} />
           </MapboxGL.PointAnnotation>
-        )}
+        ))}
       </MapboxGL.MapView>
 
       <SearchBarWithResults 
@@ -512,6 +470,43 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 6,
+  },
+  // Pretty marker styles
+  markerContainer: {
+    alignItems: 'center',
+  },
+  markerPulseRing: {
+    position: 'absolute',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#38B6FF',
+  },
+  markerBubble: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#1A2332',
+    borderWidth: 2,
+    borderColor: '#38B6FF',
+  },
+  markerBubbleSelected: {
+    backgroundColor: '#1976D2',
+    borderColor: '#7FB3FF',
+  },
+  markerTail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#38B6FF',
+    marginTop: -2,
+  },
+  markerTailSelected: {
+    borderTopColor: '#7FB3FF',
   },
   centerButton: {
     position: 'absolute',

@@ -221,12 +221,21 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="always"
+        keyboardShouldPersistTaps="handled"
+        scrollIndicatorInsets={{ bottom: 100 }}
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Perfil</Text>
+          <View style={{ width: 24 }} />
         </View>
 
         {/* Profile Section */}
@@ -515,7 +524,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingBottom: Platform.OS === 'ios' ? 100 : 80, // Space for footer
+  },
+  scrollContent: {
+    paddingBottom: Platform.OS === 'ios' ? 140 : 110, // Extra space for BottomTabBar overlap
   },
   loadingContainer: {
     flex: 1,
@@ -535,6 +546,11 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
   },
   headerSpacer: {
     flex: 1,

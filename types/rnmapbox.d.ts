@@ -10,6 +10,9 @@ declare module '@rnmapbox/maps' {
   interface PointAnnotationProps extends ViewProps {
     id: string;
     coordinate: [number, number]; // [longitude, latitude]
+    anchor?: { x: number; y: number };
+    onSelected?: () => void;
+    onDeselected?: () => void;
   }
 
   interface CameraProps extends ViewProps {

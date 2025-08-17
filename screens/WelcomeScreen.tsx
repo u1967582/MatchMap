@@ -1,12 +1,15 @@
-import { View, StyleSheet, SafeAreaView, Text, Image } from 'react-native';
+import { View, StyleSheet, Text, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BackgroundImage from '~/components/ui/BackgroundImage';
-import ScreenTitle from '~/components/ui/ScreenTitle';
 import CustomButton from '~/components/ui/CustomButton';
+import { useState } from 'react';
 
 const WelcomeScreen: React.FC = () => {
   const router = useRouter();
+  const { width } = Dimensions.get('window');
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleLoginPress = () => {
     router.push('/(auth)/login');
@@ -16,57 +19,71 @@ const WelcomeScreen: React.FC = () => {
     router.push('/(auth)/register');
   };
 
+  const slides = [
+    {
+      key: 'nearby',
+      icon: 'map',
+      title: 'Encuentra bares cerca de ti',
+      description: 'Explora tu zona y descubre los mejores lugares para ver el partido.'
+    },
+    {
+      key: 'events',
+      icon: 'calendar',
+      title: 'Descubre eventos y partidos',
+      description: 'Consulta la agenda de retransmisiones y no te pierdas nada.'
+    },
+    {
+      key: 'favorites',
+      icon: 'heart',
+      title: 'Guarda tus bares favoritos',
+      description: 'Accede rápido a los sitios que más te gustan.'
+    }
+  ] as const;
+
+  const renderSlide = ({ item }: { item: typeof slides[number] }) => (
+    <View style={[styles.slide, { width }]}>      
+      <View style={styles.illustration}>
+        <Ionicons name={item.icon as any} size={120} color="#7FB3FF" />
+      </View>
+      <Text style={styles.title}>{item.title}</Text>
+      <Text style={styles.description}>{item.description}</Text>
+    </View>
+  );
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const index = Math.round(x / width);
+    if (index !== currentIndex) setCurrentIndex(index);
+  };
+
   return (
     <BackgroundImage source={require('~/assets/stadium.jpg')}>
       <View style={styles.overlay}>
-        <SafeAreaView style={styles.container}>
-          <View style={styles.contentContainer}>
-            {/* App Icon */}
-            <View style={styles.iconContainer}>
-              <Image 
-                source={require('~/assets/icon.png')} 
-                style={styles.appIcon}
-                resizeMode="contain"
-              />
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+          {/* Onboarding hero (horizontal) */}
+          <View style={styles.heroContainer}>
+            <FlatList
+              data={slides}
+              renderItem={renderSlide}
+              keyExtractor={(s) => s.key}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+            />
+            {/* Pagination dots */}
+            <View style={styles.dotsContainer}>
+              {slides.map((_, i) => (
+                <View key={`dot-${i}`} style={[styles.dot, i === currentIndex && styles.dotActive]} />
+              ))}
             </View>
-            
-            {/* Main Title */}
-            <ScreenTitle title="Encuentra los mejores bares para ver el partido" />
-            
-            {/* Subtitle */}
-            <Text style={styles.subtitle}>
-              Descubre bares deportivos cerca de ti y disfruta del fútbol con la mejor compañía
-            </Text>
-            
-            {/* Features */}
-            <View style={styles.featuresContainer}>
-              <View style={styles.featureItem}>
-                <Ionicons name="location" size={20} color="#007AFF" />
-                <Text style={styles.featureText}>Bares cercanos</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="star" size={20} color="#007AFF" />
-                <Text style={styles.featureText}>Reseñas verificadas</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="calendar" size={20} color="#007AFF" />
-                <Text style={styles.featureText}>Partidos en vivo</Text>
-              </View>
-            </View>
-            
-            <View style={styles.buttonsContainer}>
-              <CustomButton
-                text="Iniciar sesión"
-                onPress={handleLoginPress}
-                variant="primary"
-              />
-              
-              <CustomButton
-                text="Registrarse"
-                onPress={handleSignUpPress}
-                variant="secondary"
-              />
-            </View>
+          </View>
+
+          {/* Sticky bottom buttons */}
+          <View style={styles.footer}>
+            <CustomButton text="Iniciar sesión" onPress={handleLoginPress} variant="primary" />
+            <CustomButton text="Registrarse" onPress={handleSignUpPress} variant="secondary" />
           </View>
         </SafeAreaView>
       </View>
@@ -82,63 +99,60 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  contentContainer: {
+  heroContainer: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  slide: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 24,
     alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingVertical: 60,
   },
-  iconContainer: {
-    marginBottom: 20,
+  illustration: {
+    height: '50%',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  appIcon: {
-    width: 120,
-    height: 120,
-  },
-  subtitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginTop: 16,
-    marginBottom: 40,
-    opacity: 1,
-    paddingHorizontal: 20,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  featuresContainer: {
-    width: '100%',
-    marginBottom: 40,
-    paddingHorizontal: 20,
-  },
-  featureItem: {
+  dotsContainer: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    gap: 6,
   },
-  featureText: {
-    color: '#FFFFFF',
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  dotActive: {
+    backgroundColor: '#FFFFFF',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  title: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  description: {
+    color: '#C7D2FE',
     fontSize: 14,
-    marginLeft: 12,
-    fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 8,
+    paddingHorizontal: 12,
   },
-  buttonsContainer: {
-    width: '100%',
-    gap: 20,
+  footer: {
+    padding: 16,
+    gap: 12,
   },
 });
 
