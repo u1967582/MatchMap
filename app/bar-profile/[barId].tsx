@@ -378,11 +378,11 @@ export default function BarProfileScreen() {
                 </TouchableOpacity>
                 
                 <TouchableOpacity
-                  style={[styles.matchButton, styles.matchButtonDisabled]}
-                  disabled={true}
+                  style={styles.matchButtonOutline}
+                  onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
                 >
-                  <Ionicons name="settings-outline" size={20} color="#8E8E93" />
-                  <Text style={styles.matchButtonTextDisabled}>Automatizar retransmisiones (próximamente)</Text>
+                  <Ionicons name="settings-outline" size={20} color="#1976D2" />
+                  <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1504,14 +1504,14 @@ const styles = StyleSheet.create({
   },
   matchesContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#1A2332',
+    paddingVertical: 4,
+    backgroundColor: 'transparent',
     borderRadius: 12,
     marginHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   matchButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#1976D2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1529,19 +1529,25 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  matchButtonDisabled: {
-    backgroundColor: '#2A3A4A',
+  matchButtonOutline: {
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#8E8E93',
-    shadowOpacity: 0.1,
+    borderColor: '#28415F',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    gap: 10,
   },
   matchButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
   },
-  matchButtonTextDisabled: {
-    color: '#8E8E93',
+  matchButtonOutlineText: {
+    color: '#1976D2',
     fontSize: 15,
     fontWeight: '600',
   },
