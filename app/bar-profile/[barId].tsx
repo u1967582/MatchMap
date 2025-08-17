@@ -146,15 +146,15 @@ export default function BarProfileScreen() {
                 {/* Page indicators */}
                 {bar.images.length > 1 && (
                   <View style={styles.pageIndicators}>
-                                    {bar.images.map((_, index) => (
-                  <View
-                    key={`indicator-${index}`}
-                    style={[
-                      styles.pageIndicator,
-                      index === currentImageIndex && styles.pageIndicatorActive
-                    ]}
-                  />
-                ))}
+                    {bar.images.map((imgUrl, index) => (
+                      <View
+                        key={`indicator-${bar.id}-${index}-${imgUrl}`}
+                        style={[
+                          styles.pageIndicator,
+                          index === currentImageIndex && styles.pageIndicatorActive
+                        ]}
+                      />
+                    ))}
                   </View>
                 )}
                 
@@ -321,9 +321,14 @@ export default function BarProfileScreen() {
             </View>
             
             {posts.length > 0 ? (
-              <View>
-                {posts.map((post) => renderPostItem({ item: post }))}
-              </View>
+              <FlatList
+                data={posts}
+                renderItem={({ item }) => renderPostItem({ item })}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                ListEmptyComponent={null}
+                contentContainerStyle={{ gap: 0 }}
+              />
             ) : (
               <View style={styles.noPostsContainer}>
                 <Ionicons name="document-text-outline" size={48} color="#A3B3CC" />
@@ -1094,7 +1099,7 @@ export default function BarProfileScreen() {
       <FlatList
         data={sections}
         renderItem={renderSection}
-        keyExtractor={(item) => item.key}
+        keyExtractor={(item) => `${bar.id}-${item.key}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollViewContent}
       />
