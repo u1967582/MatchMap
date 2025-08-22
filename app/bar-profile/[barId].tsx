@@ -7,6 +7,8 @@ import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { useFavorites } from '~/hooks/useFavorites';
 import BarReviewsSection from '~/components/BarReviewsSection';
+import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
+import type { Tier } from '~/lib/planCapabilities';
 
 interface BarProfile {
   id: string;
@@ -68,6 +70,7 @@ export default function BarProfileScreen() {
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
+  const [planTier, setPlanTier] = useState<Tier>('free');
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(false);
   const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
 
@@ -386,13 +389,20 @@ export default function BarProfileScreen() {
                   <Text style={styles.matchButtonText}>Añadir partido manualmente</Text>
                 </TouchableOpacity>
                 
-                <TouchableOpacity
-                  style={styles.matchButtonOutline}
-                  onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
-                >
-                  <Ionicons name="settings-outline" size={20} color="#1976D2" />
-                  <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
-                </TouchableOpacity>
+                {planTier === 'free' ? (
+                  <View style={[styles.matchButtonOutline, { borderColor: '#3A4A5C' }]}> 
+                    <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" />
+                    <Text style={[styles.matchButtonOutlineText, { color: '#8E8E93' }]}>Automatizar retransmisiones</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.matchButtonOutline}
+                    onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
+                  >
+                    <Ionicons name="settings-outline" size={20} color="#1976D2" />
+                    <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           ) : null
@@ -1029,6 +1039,17 @@ export default function BarProfileScreen() {
     fetchBarProfile();
   }, [fetchBarProfile]);
 
+  useEffect(() => {
+    const loadTier = async () => {
+      if (!barId) return;
+      try {
+        const { tier } = await getBarTierAndCapabilities(String(barId));
+        setPlanTier(tier);
+      } catch {}
+    };
+    loadTier();
+  }, [barId]);
+
   // Check if bar is in favorites when bar loads
   useEffect(() => {
     if (barId) {
@@ -1540,9 +1561,9 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   matchButtonOutline: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(25, 118, 210, 0.12)',
     borderWidth: 1,
-    borderColor: '#28415F',
+    borderColor: '#1976D2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1550,6 +1571,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 10,
     gap: 10,
+    shadowColor: '#1976D2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
   matchButtonText: {
     color: '#FFFFFF',
