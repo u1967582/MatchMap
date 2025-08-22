@@ -53,6 +53,8 @@ export default function ManualMatchSelectionScreen() {
   
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [matches, setMatches] = useState<Match[]>([]);
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState<number | null>(null);
   const [selectedMatches, setSelectedMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -137,6 +139,9 @@ export default function ManualMatchSelectionScreen() {
           Alert.alert('Error', 'No se pudieron cargar las competiciones');
           return;
         }
+
+        // Persist competitions for chips
+        setCompetitions((competitionsData ?? []) as Competition[]);
 
         // Create maps for quick lookup
         const teamsMap = new Map();
@@ -339,6 +344,9 @@ export default function ManualMatchSelectionScreen() {
   );
 
   const selectedMatchesCount = selectedMatches.length;
+  const filteredMatches = selectedCompetitionId == null
+    ? matches
+    : matches.filter(m => m.competition_id === selectedCompetitionId);
 
   return (
     <SafeAreaView style={styles.container} edges={['top','bottom']}>
@@ -363,7 +371,7 @@ export default function ManualMatchSelectionScreen() {
             onPress={() => setShowCalendar(false)}
             style={{
               alignSelf: 'center',
-              marginTop: 8,
+              marginTop: 4,
               backgroundColor: '#1E3A5F',
               borderRadius: 16,
               padding: 6,
@@ -379,7 +387,7 @@ export default function ManualMatchSelectionScreen() {
           onPress={() => setShowCalendar(true)}
           style={{
             alignSelf: 'center',
-            marginVertical: 12,
+            marginVertical: 8,
             backgroundColor: '#1E3A5F',
             borderRadius: 16,
             padding: 6,
@@ -387,6 +395,39 @@ export default function ManualMatchSelectionScreen() {
         >
           <Ionicons name="chevron-down" size={20} color="#A3B3CC" />
         </TouchableOpacity>
+      )}
+
+      {/* Competitions chips */}
+      {competitions.length > 0 && (
+        <View style={{ paddingHorizontal: 20, marginTop: 8, marginBottom: 8 }}>
+          <FlatList
+            data={[{ id: -1, name: 'Todas', gender: '' } as Competition, ...competitions]}
+            keyExtractor={(item) => String(item.id)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => {
+              const isAll = item.id === -1;
+              const selected = isAll ? selectedCompetitionId === null : selectedCompetitionId === item.id;
+              const label = isAll ? 'Todas' : item.name;
+              return (
+                <TouchableOpacity
+                  onPress={() => setSelectedCompetitionId(isAll ? null : item.id)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 16,
+                    marginRight: 12,
+                    backgroundColor: selected ? '#1976D2' : '#1E3A5F',
+                    borderWidth: selected ? 0 : 1,
+                    borderColor: '#28415F',
+                  }}
+                >
+                  <Text style={{ color: selected ? '#FFFFFF' : '#A3B3CC', fontWeight: '600' }}>{label}</Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
       )}
 
       {/* Selected Matches Summary */}
@@ -437,13 +478,15 @@ export default function ManualMatchSelectionScreen() {
             <ActivityIndicator size="large" color="#4CAF50" />
             <Text style={styles.loadingText}>Cargando partidos...</Text>
           </View>
-        ) : matches.length > 0 ? (
+        ) : filteredMatches.length > 0 ? (
           <FlatList
-            data={matches}
+            data={filteredMatches}
             renderItem={renderMatchItem}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.matchesList}
+            keyboardShouldPersistTaps="handled"
+            ListFooterComponent={<View style={{ height: 12 }} />}
           />
         ) : (
           <View style={styles.emptyContainer}>
@@ -491,7 +534,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1E3A5F',
+    backgroundColor: '#0F2A45',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -541,7 +584,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   matchCard: {
-    backgroundColor: '#1E3A5F',
+    backgroundColor: '#15263A',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -653,7 +696,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   selectedMatchItem: {
-    backgroundColor: '#1E3A5F',
+    backgroundColor: '#15263A',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,

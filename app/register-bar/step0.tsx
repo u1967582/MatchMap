@@ -51,8 +51,8 @@ const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
       'Automatización de partidos',
       'Hasta 8 imágenes',
       'Carta del bar con menú',
-      'Hasta 3 posts activos',
-      'Destacar 1 post',
+      'Posts activos (hasta 3)',
+      'Eventos ilimitados',
       'Posición prioritaria en búsquedas'
     ]
   },
@@ -67,8 +67,8 @@ const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
       'Automatización de partidos',
       'Hasta 8 imágenes',
       'Carta del bar con menú',
-      'Hasta 3 posts activos',
-      'Destacar 1 post',
+      'Posts activos (hasta 3)',
+      'Eventos ilimitados',
       'Posición prioritaria en búsquedas'
     ]
   },

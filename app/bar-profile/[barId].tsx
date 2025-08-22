@@ -7,6 +7,8 @@ import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { useFavorites } from '~/hooks/useFavorites';
 import BarReviewsSection from '~/components/BarReviewsSection';
+import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
+import type { Tier } from '~/lib/planCapabilities';
 
 interface BarProfile {
   id: string;
@@ -68,6 +70,7 @@ export default function BarProfileScreen() {
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
+  const [planTier, setPlanTier] = useState<Tier>('free');
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(false);
   const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
 
@@ -90,6 +93,12 @@ export default function BarProfileScreen() {
   const copyPhone = () => {
     if (bar?.phone) {
       copyToClipboard(bar.phone, 'Teléfono');
+    }
+  };
+
+  const copyWebsite = () => {
+    if (bar?.website) {
+      copyToClipboard(bar.website, 'Sitio web');
     }
   };
 
@@ -234,6 +243,9 @@ export default function BarProfileScreen() {
                   <Text style={styles.infoLabel}>Sitio Web</Text>
                   <Text style={styles.infoText}>{bar.website}</Text>
                 </View>
+                <TouchableOpacity style={styles.copyButton} onPress={copyWebsite}>
+                  <Ionicons name="copy-outline" size={18} color="#007AFF" />
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -377,13 +389,20 @@ export default function BarProfileScreen() {
                   <Text style={styles.matchButtonText}>Añadir partido manualmente</Text>
                 </TouchableOpacity>
                 
-                <TouchableOpacity
-                  style={[styles.matchButton, styles.matchButtonDisabled]}
-                  disabled={true}
-                >
-                  <Ionicons name="settings-outline" size={20} color="#8E8E93" />
-                  <Text style={styles.matchButtonTextDisabled}>Automatizar retransmisiones (próximamente)</Text>
-                </TouchableOpacity>
+                {planTier === 'free' ? (
+                  <View style={[styles.matchButtonOutline, { borderColor: '#3A4A5C' }]}> 
+                    <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" />
+                    <Text style={[styles.matchButtonOutlineText, { color: '#8E8E93' }]}>Automatizar retransmisiones</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.matchButtonOutline}
+                    onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
+                  >
+                    <Ionicons name="settings-outline" size={20} color="#1976D2" />
+                    <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           ) : null
@@ -741,7 +760,8 @@ export default function BarProfileScreen() {
         `)
         .eq('bar_id', barId)
         .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true });
+        .order('start_time', { ascending: true })
+        .limit(5);
 
       if (matchesError) {
         console.error('Error fetching upcoming matches:', matchesError);
@@ -1018,6 +1038,17 @@ export default function BarProfileScreen() {
   useEffect(() => {
     fetchBarProfile();
   }, [fetchBarProfile]);
+
+  useEffect(() => {
+    const loadTier = async () => {
+      if (!barId) return;
+      try {
+        const { tier } = await getBarTierAndCapabilities(String(barId));
+        setPlanTier(tier);
+      } catch {}
+    };
+    loadTier();
+  }, [barId]);
 
   // Check if bar is in favorites when bar loads
   useEffect(() => {
@@ -1504,14 +1535,14 @@ const styles = StyleSheet.create({
   },
   matchesContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#1A2332',
+    paddingVertical: 4,
+    backgroundColor: 'transparent',
     borderRadius: 12,
     marginHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   matchButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#1976D2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1529,19 +1560,30 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  matchButtonDisabled: {
-    backgroundColor: '#2A3A4A',
+  matchButtonOutline: {
+    backgroundColor: 'rgba(25, 118, 210, 0.12)',
     borderWidth: 1,
-    borderColor: '#8E8E93',
-    shadowOpacity: 0.1,
+    borderColor: '#1976D2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    gap: 10,
+    shadowColor: '#1976D2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
   matchButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
   },
-  matchButtonTextDisabled: {
-    color: '#8E8E93',
+  matchButtonOutlineText: {
+    color: '#1976D2',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -1566,9 +1608,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   upcomingTeamLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 12,
     marginBottom: 8,
     resizeMode: 'contain',
   },
