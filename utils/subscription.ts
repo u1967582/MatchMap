@@ -43,7 +43,7 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     features: {
       search_priority: 'normal',
       profile_visibility: true,
-      events_limit: 1,
+      events_limit: 3,
       posts_limit: 1,
       bar_images_limit: 2,
       allow_reviews: true,
@@ -63,7 +63,7 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     features: {
       search_priority: 'highlighted',
       profile_visibility: true,
-      events_limit: 3,
+      events_limit: 'unlimited',
       posts_limit: 3,
       bar_images_limit: 10,
       allow_reviews: true,
@@ -83,7 +83,7 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     features: {
       search_priority: 'highlighted',
       profile_visibility: true,
-      events_limit: 3,
+      events_limit: 'unlimited',
       posts_limit: 3,
       bar_images_limit: 10,
       allow_reviews: true,
