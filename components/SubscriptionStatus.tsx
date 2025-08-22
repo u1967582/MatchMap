@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSubscription } from '~/hooks/useSubscription';
+import { CAP_BY_TIER } from '~/lib/planCapabilities';
 
 interface SubscriptionStatusProps {
   barId: string;
@@ -99,6 +100,13 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
             <Ionicons name="images" size={14} color={getPlanColor()} />
             <Text style={styles.featureText}>
               Hasta {maxPhotosAllowed} fotos del bar
+            </Text>
+          </View>
+
+          <View style={styles.featureRow}>
+            <Ionicons name="calendar" size={14} color={getPlanColor()} />
+            <Text style={styles.featureText}>
+              {(isPro || isElite) ? 'Eventos ilimitados' : `Hasta ${CAP_BY_TIER.free.events_limit} evento${CAP_BY_TIER.free.events_limit === 1 ? '' : 's'} activo${CAP_BY_TIER.free.events_limit === 1 ? '' : 's'}`}
             </Text>
           </View>
 

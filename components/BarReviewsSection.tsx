@@ -308,17 +308,17 @@ const styles = StyleSheet.create({
     marginTop: 8 
   },
   reviewCard: { 
-    backgroundColor: '#0F1724', 
+    backgroundColor: 'rgba(15, 23, 36, 0.35)', 
     borderRadius: 12, 
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1F2A3A',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 0,
   },
   userRow: { 
     flexDirection: 'row', 
