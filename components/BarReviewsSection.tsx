@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
@@ -13,6 +13,8 @@ interface Review {
     username: string;
     profile_image_url: string;
   };
+  likes?: number;
+  likedByMe?: boolean;
 }
 
 interface BarReviewsSectionProps {
@@ -27,15 +29,21 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   const [average, setAverage] = useState(0);
   const [totalReviews, setTotalReviews] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [busyById, setBusyById] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchReviewsAndBarData = async () => {
       setLoading(true);
       try {
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth?.user?.id || null;
+        setUserId(uid);
+
         // Fetch reviews
         const { data: reviewsData, error: reviewsError } = await supabase
           .from('reviews')
-          .select(`id, rating, comment, created_at, user:users(username, profile_image_url)`)
+          .select(`id, rating, comment, created_at, likes, user:users(username, profile_image_url)`)
           .eq('bar_id', barId)
           .order('created_at', { ascending: false });
 
@@ -58,16 +66,29 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
 
         if (reviewsData) {
           // Transform the data to match our interface
-          const transformedData = reviewsData.map((item: any) => ({
+          const transformedData: Review[] = reviewsData.map((item: any) => ({
             id: item.id,
             rating: item.rating,
             comment: item.comment,
             created_at: item.created_at,
+            likes: item.likes ?? 0,
             user: {
               username: item.user?.username || 'Anonymous',
               profile_image_url: item.user?.profile_image_url || '',
             },
           }));
+
+          // mark liked by current user
+          if (uid && transformedData.length > 0) {
+            const ids = transformedData.map(r => r.id);
+            const { data: myLikes } = await supabase
+              .from('review_likes')
+              .select('review_id')
+              .in('review_id', ids)
+              .eq('user_id', uid);
+            const likedSet = new Set((myLikes ?? []).map((r: any) => r.review_id));
+            transformedData.forEach(r => { r.likedByMe = likedSet.has(r.id); });
+          }
 
           setReviews(transformedData);
 
@@ -85,7 +106,6 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           const computedAvg = total > 0
             ? transformedData.reduce((sum, r) => sum + (r.rating || 0), 0) / total
             : 0;
-          // Prefer barData.rating if present; otherwise use computed
           setAverage(typeof barData?.rating === 'number' && barData.rating > 0 ? barData.rating : computedAvg);
         }
       } catch (error) {
@@ -98,14 +118,11 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
     fetchReviewsAndBarData();
   }, [barId]);
 
-
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
     if (diffDays === 1) return '1 day ago';
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
@@ -127,6 +144,32 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
     }
     return <View style={styles.starsRow}>{stars}</View>;
   };
+
+  const toggleLike = useCallback(async (review: Review) => {
+    if (!userId || busyById[review.id]) return;
+    setBusyById(prev => ({ ...prev, [review.id]: true }));
+    try {
+      if (review.likedByMe) {
+        const { error } = await supabase
+          .from('review_likes')
+          .delete()
+          .eq('review_id', review.id)
+          .eq('user_id', userId);
+        if (!error) {
+          setReviews(prev => prev.map(r => r.id === review.id ? { ...r, likedByMe: false, likes: (r.likes ?? 1) - 1 } : r));
+        }
+      } else {
+        const { error } = await supabase
+          .from('review_likes')
+          .insert([{ review_id: review.id, user_id: userId }]);
+        if (!error) {
+          setReviews(prev => prev.map(r => r.id === review.id ? { ...r, likedByMe: true, likes: (r.likes ?? 0) + 1 } : r));
+        }
+      }
+    } finally {
+      setBusyById(prev => ({ ...prev, [review.id]: false }));
+    }
+  }, [userId, busyById]);
 
   // Build header consistently on every render to keep hook order stable
   const header = useMemo(() => (
@@ -176,9 +219,9 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
       <Text style={styles.comment}>{item.comment}</Text>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="thumbs-up-outline" size={16} color="#94A3B8" />
-          <Text style={styles.actionText}>0</Text>
+        <TouchableOpacity style={styles.actionButton} onPress={() => toggleLike(item)} disabled={!userId || busyById[item.id]}>
+          <Ionicons name={item.likedByMe ? 'heart' : 'heart-outline'} size={16} color={item.likedByMe ? '#EF4444' : '#94A3B8'} />
+          <Text style={[styles.actionText, item.likedByMe && styles.actionTextActive]}>{item.likes ?? 0}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -308,14 +351,14 @@ const styles = StyleSheet.create({
     marginTop: 8 
   },
   reviewCard: { 
-    backgroundColor: 'rgba(15, 23, 36, 0.35)', 
+    backgroundColor: 'rgba(15, 23, 36, 0.18)', 
     borderRadius: 12, 
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.04)',
     shadowColor: '#000',
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 0,
@@ -357,11 +400,14 @@ const styles = StyleSheet.create({
   actionButton: { 
     flexDirection: 'row', 
     alignItems: 'center',
-    gap: 4,
+    gap: 4
   },
   actionText: { 
     fontSize: 12, 
     color: '#94A3B8' 
+  },
+  actionTextActive: {
+    color: '#EF4444'
   },
   loadingContainer: {
     alignItems: 'center',
