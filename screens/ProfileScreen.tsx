@@ -460,7 +460,7 @@ export default function ProfileScreen() {
                   
                   <View style={styles.featureRow}>
                     <Ionicons name="calendar" size={20} color="#A3B3CC" />
-                    <Text style={styles.featureText}>Eventos: 1 máximo</Text>
+                    <Text style={styles.featureText}>Eventos: 3 máximo</Text>
                   </View>
                   
                   <View style={styles.featureRow}>

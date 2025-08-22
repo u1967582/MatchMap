@@ -29,7 +29,7 @@ export const CAP_BY_TIER: Record<Tier, Capabilities> = {
   free: {
     search_priority: 'normal',
     profile_visibility: true,
-    events_limit: 1,
+    events_limit: 3,
     posts_limit: 1,
     bar_images_limit: 2,
     allow_reviews: true,

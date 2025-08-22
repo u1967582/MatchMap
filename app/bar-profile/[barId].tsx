@@ -1608,9 +1608,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   upcomingTeamLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 12,
     marginBottom: 8,
     resizeMode: 'contain',
   },
