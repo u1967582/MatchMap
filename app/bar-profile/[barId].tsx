@@ -93,6 +93,12 @@ export default function BarProfileScreen() {
     }
   };
 
+  const copyWebsite = () => {
+    if (bar?.website) {
+      copyToClipboard(bar.website, 'Sitio web');
+    }
+  };
+
   // Create sections for FlatList
   const sections = [
     { type: 'header', key: 'header' },
@@ -234,6 +240,9 @@ export default function BarProfileScreen() {
                   <Text style={styles.infoLabel}>Sitio Web</Text>
                   <Text style={styles.infoText}>{bar.website}</Text>
                 </View>
+                <TouchableOpacity style={styles.copyButton} onPress={copyWebsite}>
+                  <Ionicons name="copy-outline" size={18} color="#007AFF" />
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -741,7 +750,8 @@ export default function BarProfileScreen() {
         `)
         .eq('bar_id', barId)
         .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true });
+        .order('start_time', { ascending: true })
+        .limit(5);
 
       if (matchesError) {
         console.error('Error fetching upcoming matches:', matchesError);

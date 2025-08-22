@@ -42,7 +42,7 @@ export const CAP_BY_TIER: Record<Tier, Capabilities> = {
   pro: {
     search_priority: 'highlighted',
     profile_visibility: true,
-    events_limit: 3,
+    events_limit: 'unlimited',
     posts_limit: 3,
     bar_images_limit: 10,
     allow_reviews: true,

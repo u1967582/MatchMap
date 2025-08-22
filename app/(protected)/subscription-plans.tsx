@@ -42,8 +42,8 @@ const plans = {
         'Automatización de partidos',
         'Hasta 8 imágenes',
         'Carta del bar con menú',
-        'Hasta 3 posts activos',
-        'Destacar 1 post',
+        'Posts activos (hasta 3)',
+        'Eventos ilimitados',
         'Posición prioritaria en búsquedas'
       ]
     },
@@ -60,8 +60,8 @@ const plans = {
         'Automatización de partidos',
         'Hasta 8 imágenes',
         'Carta del bar con menú',
-        'Hasta 3 posts activos',
-        'Destacar 1 post',
+        'Posts activos (hasta 3)',
+        'Eventos ilimitados',
         'Posición prioritaria en búsquedas',
         'Ahorro del 33%'
       ],
@@ -83,7 +83,7 @@ const plans = {
         'Hasta 20 imágenes en galería',
         'Carta del bar con zoom optimizado',
         'Posts ilimitados con imagen',
-        'Destacar hasta 3 posts',
+        'Eventos ilimitados',
         'Máxima prioridad en búsquedas'
       ]
     },
@@ -101,7 +101,7 @@ const plans = {
         'Hasta 20 imágenes en galería',
         'Carta del bar con zoom optimizado',
         'Posts ilimitados con imagen',
-        'Destacar hasta 3 posts',
+        'Eventos ilimitados',
         'Máxima prioridad en búsquedas',
         'Ahorro del 37%'
       ],
