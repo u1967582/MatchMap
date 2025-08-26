@@ -72,7 +72,8 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#ffffff",
+        "package": "com.tuorg.matchmap"
       },
       "package": "com.anonymous.MatchMap"
     }
