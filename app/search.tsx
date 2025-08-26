@@ -886,7 +886,7 @@ export default function SearchScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Seleccionar equipo</Text>
-            <View style={styles.searchBar}>
+            <View style={styles.modalSearchBar}>
               <Ionicons name="search" size={20} color="#A3B3CC" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
@@ -911,7 +911,7 @@ export default function SearchScreen() {
               <FlatList
                 data={teamResults}
                 keyExtractor={(item) => item.id}
-                style={{ maxHeight: 300 }}
+                style={{ maxHeight: 420 }}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={[styles.teamRow, tempSelectedTeam?.id === item.id && styles.teamRowSelected]}
@@ -1229,41 +1229,52 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#1C2A3A',
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
   },
   modalTitle: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  modalSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A3A4A',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    marginBottom: 14,
   },
   teamRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1A2332',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 8,
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
   },
   teamRowSelected: {
     borderWidth: 2,
     borderColor: '#10B981',
   },
   teamLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 14,
     backgroundColor: '#2A3A4A',
+    borderWidth: 2,
+    borderColor: '#3B4B5B',
   },
   teamName: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
   teamShortName: {
     color: '#A3B3CC',
-    fontSize: 12,
+    fontSize: 13,
   },
   modalButtonsRow: {
     flexDirection: 'row',
