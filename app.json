@@ -3,7 +3,7 @@
     "name": "MatchMap",
     "slug": "MatchMap",
     "version": "1.0.0",
-    "scheme": "MatchMap",
+    "scheme": "matchmap",
     "jsEngine": "hermes",
     "web": {
       "bundler": "metro",
@@ -41,8 +41,17 @@
           },
           "ios": {
             "infoPlist": {
-              "UIViewControllerBasedStatusBarAppearance": true
+              "UIViewControllerBasedStatusBarAppearance": false
             }
+          }
+        }
+      ],
+      [
+        "react-native-edge-to-edge",
+        {
+          "android": {
+            "parentTheme": "Default",
+            "enforceNavigationBarContrast": false
           }
         }
       ]
@@ -64,18 +73,19 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.MatchMap",
+      "bundleIdentifier": "com.tuorg.matchmap",
       "infoPlist": {
-        "UIViewControllerBasedStatusBarAppearance": true
+        "UIViewControllerBasedStatusBarAppearance": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff",
-        "package": "com.tuorg.matchmap"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#1C2A3A",
+        "package": "com.tuorg.matchmap",
+        "edgeToEdgeEnabled": true
       },
-      "package": "com.anonymous.MatchMap"
+      "package": "com.tuorg.matchmap"
     }
   }
 }
