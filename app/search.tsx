@@ -11,6 +11,8 @@ import {
   Alert,
   Dimensions,
   Platform,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +24,8 @@ import Dropdown from '~/components/ui/Dropdown';
 import FilterModal from '~/components/ui/FilterModal';
 import { useFilterData } from '~/hooks/useFilterData';
 import { useFavorites } from '~/hooks/useFavorites';
+import { searchTeams, type TeamSearchResult } from '~/services/teams';
+import { fetchBarIdsByTeam } from '~/services/bars';
 
 interface Bar {
   id: string;
@@ -74,6 +78,15 @@ export default function SearchScreen() {
   const [selectedFeatures, setSelectedFeatures] = useState<number[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<number[]>([]);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+
+  // Team filter state
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [selectedTeamName, setSelectedTeamName] = useState<string | null>(null);
+  const [teamPickerOpen, setTeamPickerOpen] = useState(false);
+  const [teamSearchQuery, setTeamSearchQuery] = useState('');
+  const [teamResults, setTeamResults] = useState<TeamSearchResult[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [tempSelectedTeam, setTempSelectedTeam] = useState<TeamSearchResult | null>(null);
 
   // Load filter data
   const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
@@ -132,7 +145,22 @@ export default function SearchScreen() {
         selectedSort
       });
 
-      // Paso 1. Cargar los bares activos
+      // Paso 1. Si hay filtro por equipo, obtener barIds con eventos de ese equipo
+      let barIdsFilter: string[] | null = null;
+      if (selectedTeamId) {
+        try {
+          barIdsFilter = await fetchBarIdsByTeam(selectedTeamId, true);
+        } catch (e) {
+          console.error('❌ Error fetching barIds by team:', e);
+          barIdsFilter = [];
+        }
+        if (!barIdsFilter || barIdsFilter.length === 0) {
+          setBars([]);
+          return;
+        }
+      }
+
+      // Paso 2. Cargar los bares activos
       let barsQuery = supabase
         .from('bars')
         .select(`
@@ -154,6 +182,12 @@ export default function SearchScreen() {
       if (searchQuery.trim()) {
         barsQuery = barsQuery.ilike('name', `%${searchQuery.trim()}%`);
         console.log('🔍 Applied search filter:', searchQuery.trim());
+      }
+
+      // Aplicar filtro por equipo (IDs)
+      if (barIdsFilter) {
+        barsQuery = barsQuery.in('id', barIdsFilter);
+        console.log('🔍 Applied team filter (bar ids):', barIdsFilter.length);
       }
 
       // Aplicar filtro de categorías (esto se puede hacer a nivel de DB)
@@ -422,7 +456,7 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, getUserLocation]);
+  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, getUserLocation, selectedTeamId]);
 
   // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -634,7 +668,31 @@ export default function SearchScreen() {
       console.log('🔄 Filters changed, triggering search...');
       searchBars();
     }
-  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, searchBars]);
+  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, selectedTeamId, userLocation, searchBars]);
+
+  // Team search effect (debounced by simple length check)
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      try {
+        setTeamLoading(true);
+        if (teamSearchQuery.trim().length < 2) {
+          setTeamResults([]);
+          return;
+        }
+        const results = await searchTeams(teamSearchQuery.trim());
+        if (active) setTeamResults(results);
+      } catch (e) {
+        console.error('❌ Error searching teams:', e);
+      } finally {
+        if (active) setTeamLoading(false);
+      }
+    };
+    run();
+    return () => {
+      active = false;
+    };
+  }, [teamSearchQuery]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -645,28 +703,43 @@ export default function SearchScreen() {
       </View>
   
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#A3B3CC" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar nombre de bar..."
-            placeholderTextColor="#8E8E93"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#A3B3CC" />
-            </TouchableOpacity>
-          )}
+        <View style={styles.searchRow}>
+          <View style={[styles.searchBar, { flex: 1 }]}>
+            <Ionicons name="search" size={20} color="#A3B3CC" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar nombre de bar..."
+              placeholderTextColor="#8E8E93"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#A3B3CC" />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity
+            style={[
+              styles.filterIconButton,
+              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterIconButtonActive
+            ]}
+            onPress={() => setFilterModalVisible(true)}
+          >
+            <Ionicons name="filter" size={18} color="#A3B3CC" />
+            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+              <View style={styles.filterDot} />
+            )}
+          </TouchableOpacity>
         </View>
       </View>
   
       {/* Filtros */}
       <View style={styles.filtersContainer}>
         <View style={styles.filtersRow}>
+          {/* Ordenar */}
           <View style={styles.filterColumn}>
             <Text style={styles.filterLabel}>Ordenar por</Text>
             <Dropdown
@@ -677,38 +750,35 @@ export default function SearchScreen() {
               placeholder="Ordenar"
             />
           </View>
-          
+
+          {/* Equipo */}
           <View style={styles.filterColumn}>
-            <Text style={styles.filterLabel}>Filtros</Text>
-            <TouchableOpacity 
-              style={[
-                styles.filterButton,
-                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
-              ]}
+            <Text style={styles.filterLabel}>Equipo</Text>
+            <TouchableOpacity
+              style={[styles.filterButton, selectedTeamId && styles.filterButtonActive]}
               onPress={() => {
-                console.log('🔘 Filter button pressed!');
-                console.log('🔘 Current filterModalVisible:', filterModalVisible);
-                setFilterModalVisible(true);
-                console.log('🔘 Setting filterModalVisible to true');
+                setTempSelectedTeam(null);
+                setTeamSearchQuery('');
+                setTeamPickerOpen(true);
               }}
             >
-              <Ionicons 
-                name="filter" 
-                size={16} 
-                color={(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) ? '#FFFFFF' : '#A3B3CC'} 
-              />
+              <Text style={[styles.iconEmoji]}>⚽</Text>
               <Text style={[
                 styles.filterButtonText,
-                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonTextActive
+                selectedTeamId && styles.filterButtonTextActive
               ]}>
-                Filtros
+                {selectedTeamName ? selectedTeamName : 'Equipo'}
               </Text>
-              {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
-                <View style={styles.filterBadge}>
-                  <Text style={styles.filterBadgeText}>
-                    {selectedBarCategories.length + selectedFoodTypes.length + selectedFeatures.length + selectedLanguages.length}
-                  </Text>
-                </View>
+              {selectedTeamId && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedTeamId(null);
+                    setSelectedTeamName(null);
+                  }}
+                  style={{ position: 'absolute', right: 10, padding: 6 }}
+                >
+                  <Ionicons name="close" size={18} color="#FFFFFF" />
+                </TouchableOpacity>
               )}
             </TouchableOpacity>
           </View>
@@ -717,6 +787,8 @@ export default function SearchScreen() {
   
       {/* 🔽 Resultados */}
       <View style={styles.resultsContainer}>
+        {/* Team selector chip moved to top controls */}
+
         {loading ? (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Buscando bares...</Text>
@@ -734,7 +806,9 @@ export default function SearchScreen() {
             <Ionicons name="search" size={64} color="#A3B3CC" />
             <Text style={styles.emptyTitle}>No se encontraron bares</Text>
             <Text style={styles.emptySubtitle}>
-              {searchQuery 
+              {selectedTeamId
+                ? 'No hay bares con eventos de este equipo'
+                : searchQuery 
                 ? `No hay bares que coincidan con "${searchQuery}"`
                 : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0)
                   ? `No hay bares que cumplan con los filtros seleccionados${
@@ -765,6 +839,17 @@ export default function SearchScreen() {
                 <Text style={styles.clearFiltersButtonText}>Limpiar búsqueda</Text>
               </TouchableOpacity>
             )}
+            {selectedTeamId && (
+              <TouchableOpacity 
+                style={styles.clearFiltersButton}
+                onPress={() => {
+                  setSelectedTeamId(null);
+                  setSelectedTeamName(null);
+                }}
+              >
+                <Text style={styles.clearFiltersButtonText}>Quitar equipo</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -790,6 +875,97 @@ export default function SearchScreen() {
         onApplyFilters={handleApplyFilters}
         loading={filtersLoading}
       />
+
+      {/* Team Picker Modal */}
+      <Modal
+        visible={teamPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTeamPickerOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Seleccionar equipo</Text>
+            <View style={styles.modalSearchBar}>
+              <Ionicons name="search" size={20} color="#A3B3CC" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar equipo..."
+                placeholderTextColor="#8E8E93"
+                value={teamSearchQuery}
+                onChangeText={setTeamSearchQuery}
+                returnKeyType="search"
+              />
+              {teamSearchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setTeamSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#A3B3CC" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {teamLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="#FFFFFF" />
+              </View>
+            ) : (
+              <FlatList
+                data={teamResults}
+                keyExtractor={(item) => item.id}
+                style={{ maxHeight: 420 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.teamRow, tempSelectedTeam?.id === item.id && styles.teamRowSelected]}
+                    onPress={() => setTempSelectedTeam(item)}
+                  >
+                    <Image source={{ uri: item.logo_url || undefined }} style={styles.teamLogo} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.teamName}>{item.name}</Text>
+                      {item.short_name ? (
+                        <Text style={styles.teamShortName}>{item.short_name}</Text>
+                      ) : null}
+                    </View>
+                    {tempSelectedTeam?.id === item.id && (
+                      <Ionicons name="checkmark-circle" size={22} color="#10B981" />
+                    )}
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={() => (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptySubtitle}>
+                      {teamSearchQuery.trim().length < 2 ? 'Empieza a escribir para buscar equipos' : 'No se encontraron equipos'}
+                    </Text>
+                  </View>
+                )}
+              />
+            )}
+
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSecondary]}
+                onPress={() => {
+                  setTempSelectedTeam(null);
+                  setSelectedTeamId(null);
+                  setSelectedTeamName(null);
+                  setTeamPickerOpen(false);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Quitar selección</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={() => {
+                  setSelectedTeamId(tempSelectedTeam ? tempSelectedTeam.id : null);
+                  setSelectedTeamName(tempSelectedTeam ? tempSelectedTeam.name : null);
+                  setTeamPickerOpen(false);
+                }}
+                disabled={teamLoading}
+              >
+                <Text style={styles.modalButtonText}>Aplicar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -813,6 +989,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -820,6 +1001,28 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  filterIconButton: {
+    backgroundColor: '#243243',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 44,
+    height: 44,
+    position: 'relative',
+  },
+  filterIconButtonActive: {
+    backgroundColor: '#1976D2',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
   },
   searchIcon: {
     marginRight: 12,
@@ -851,14 +1054,14 @@ const styles = StyleSheet.create({
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2A3A4A',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    backgroundColor: '#243243',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
     gap: 8,
     position: 'relative',
-    minHeight: 44, // Ensure consistent height
-    justifyContent: 'center', // Center content
+    minHeight: 44,
+    justifyContent: 'center',
   },
   filterButtonActive: {
     backgroundColor: '#1976D2',
@@ -870,6 +1073,10 @@ const styles = StyleSheet.create({
   },
   filterButtonTextActive: {
     color: '#FFFFFF',
+  },
+  iconEmoji: {
+    fontSize: 16,
+    marginRight: 6,
   },
   filterBadge: {
     position: 'absolute',
@@ -892,6 +1099,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
+  
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1006,6 +1214,87 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   clearFiltersButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    backgroundColor: '#1C2A3A',
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  modalSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A3A4A',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    marginBottom: 14,
+  },
+  teamRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A2332',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  teamRowSelected: {
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
+  teamLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 14,
+    backgroundColor: '#2A3A4A',
+    borderWidth: 2,
+    borderColor: '#3B4B5B',
+  },
+  teamName: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  teamShortName: {
+    color: '#A3B3CC',
+    fontSize: 13,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#1976D2',
+  },
+  modalButtonSecondary: {
+    backgroundColor: '#2A3A4A',
+  },
+  modalButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
