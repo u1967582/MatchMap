@@ -3,7 +3,7 @@
     "name": "MatchMap",
     "slug": "MatchMap",
     "version": "1.0.0",
-    "scheme": "MatchMap",
+    "scheme": "matchmap",
     "jsEngine": "hermes",
     "web": {
       "bundler": "metro",

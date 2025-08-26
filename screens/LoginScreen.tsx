@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter, Stack } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import { useAuthStateChange, getOAuthRedirectUrl } from '~/utils/auth';
@@ -19,6 +20,7 @@ interface LoadingState {
   email: boolean;
   google: boolean;
   facebook: boolean;
+  reset: boolean;
 }
 
 const LoginScreen: React.FC = () => {
@@ -31,6 +33,7 @@ const LoginScreen: React.FC = () => {
     email: false,
     google: false,
     facebook: false,
+    reset: false,
   });
 
   const router = useRouter();
@@ -171,9 +174,25 @@ const LoginScreen: React.FC = () => {
   }, [setLoadingState, handleOAuthError, openOAuthUrl]);
 
   // Forgot password handler
-  const handleForgotPassword = useCallback(() => {
-    Alert.alert('Función próximamente', 'La recuperación de contraseña estará disponible pronto');
-  }, []);
+  const handleForgotPassword = useCallback(async () => {
+    const email = formData.email.trim();
+    if (!email) {
+      Alert.alert('Recuperar contraseña', 'Introduce tu correo electrónico para enviar el enlace de recuperación.');
+      return;
+    }
+    setLoadingState('reset', true);
+    try {
+      const redirectTo = __DEV__ ? Linking.createURL('/reset') : 'matchmap://reset';
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+      Alert.alert('Revisa tu correo', 'Te hemos enviado un enlace para restablecer tu contraseña.');
+    } catch (e: any) {
+      console.error('Reset password error:', e);
+      Alert.alert('Error', e?.message ?? 'No se pudo enviar el correo de recuperación.');
+    } finally {
+      setLoadingState('reset', false);
+    }
+  }, [formData.email, setLoadingState]);
 
   // Back navigation handler
   const handleBackPress = useCallback(() => {
