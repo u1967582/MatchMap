@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
-import { useAuthStateChange, signInWithGoogle } from '~/utils/auth';
+import { useAuthStateChange, signInWithGoogle, signInWithApple, getOAuthRedirectUrl } from '~/utils/auth';
 import ScreenTitle from '~/components/ui/ScreenTitle';
 import InputField from '~/components/ui/InputField';
 import CustomButton from '~/components/ui/CustomButton';
@@ -159,10 +159,24 @@ const LoginScreen: React.FC = () => {
     }
   }, [setLoadingState, handleOAuthError, openOAuthUrl]);
 
-  // Forgot password handler
+  // Forgot password handler (placeholder)
   const handleForgotPassword = useCallback(() => {
-    Alert.alert('Función próximamente', 'La recuperación de contraseña estará disponible pronto');
+    Alert.alert('Recuperar contraseña', 'Próximamente podrás restablecer tu contraseña desde aquí.');
   }, []);
+
+  // Apple OAuth handler
+  const handleAppleLogin = useCallback(async () => {
+    if (loading.google || loading.facebook || loading.email) return;
+    setLoadingState('facebook', true);
+    try {
+      const data = await signInWithApple();
+      if (!data) return;
+    } catch (error: any) {
+      handleOAuthError(error, 'Apple');
+    } finally {
+      setLoadingState('facebook', false);
+    }
+  }, [loading, setLoadingState, handleOAuthError]);
 
   // Back navigation handler
   const handleBackPress = useCallback(() => {
@@ -249,6 +263,14 @@ const LoginScreen: React.FC = () => {
               text="Continuar con Facebook"
               onPress={handleFacebookLogin}
               variant="social"
+              loading={loading.facebook}
+              disabled={isAnyLoading}
+            />
+
+            <CustomButton
+              text="Continuar con Apple"
+              onPress={handleAppleLogin}
+              variant="dark"
               loading={loading.facebook}
               disabled={isAnyLoading}
             />
