@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
-import { useAuthStateChange, getOAuthRedirectUrl } from '~/utils/auth';
+import { useAuthStateChange, signInWithGoogle } from '~/utils/auth';
 import ScreenTitle from '~/components/ui/ScreenTitle';
 import InputField from '~/components/ui/InputField';
 import CustomButton from '~/components/ui/CustomButton';
@@ -121,19 +121,8 @@ const LoginScreen: React.FC = () => {
     setLoadingState('google', true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getOAuthRedirectUrl(),
-        },
-      });
-
-      if (error) {
-        handleOAuthError(error, 'Google');
-        return;
-      }
-
-      if (data.url) {
+      const data = await signInWithGoogle();
+      if (data?.url) {
         await openOAuthUrl(data.url);
       }
     } catch (error: any) {

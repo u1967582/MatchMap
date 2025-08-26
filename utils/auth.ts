@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from './supabase';
 
 export const getOAuthRedirectUrl = () => {
@@ -45,3 +47,19 @@ export const signOut = async () => {
   const { error } = await supabase.auth.signOut();
   return { error };
 }; 
+
+// iOS-friendly Google OAuth using AuthSession redirect (matchmap://auth)
+WebBrowser.maybeCompleteAuthSession();
+
+export async function signInWithGoogle() {
+  const redirectTo = makeRedirectUri({ scheme: 'matchmap' });
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      queryParams: { access_type: 'offline', prompt: 'consent' },
+    },
+  });
+  if (error) throw error;
+  return data;
+}
