@@ -16,6 +16,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
+import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
+import { CAP_BY_TIER, type Capabilities, type Tier } from '~/lib/planCapabilities';
 
 interface Post {
   id: string;
@@ -56,6 +58,8 @@ export default function EditPostScreen() {
   const [endDate, setEndDate] = React.useState('');
   const [isActive, setIsActive] = React.useState(true);
   const [pinned, setPinned] = React.useState(false);
+  const [planTier, setPlanTier] = React.useState<Tier>('free');
+  const [capabilities, setCapabilities] = React.useState<Capabilities>(CAP_BY_TIER.free);
 
   // Fetch post data
   React.useEffect(() => {
@@ -127,7 +131,27 @@ export default function EditPostScreen() {
     fetchPost();
   }, [postId, router]);
 
+  // Load bar capabilities when bar is available
+  React.useEffect(() => {
+    const loadCapabilities = async () => {
+      if (!bar?.id) return;
+      try {
+        const { tier, capabilities } = await getBarTierAndCapabilities(String(bar.id));
+        setPlanTier(tier);
+        setCapabilities(capabilities);
+      } catch (e) {
+        setPlanTier('free');
+        setCapabilities(CAP_BY_TIER.free);
+      }
+    };
+    loadCapabilities();
+  }, [bar?.id]);
+
   const handleImagePick = async () => {
+    if (!capabilities.images_allowed) {
+      Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes en los posts.');
+      return;
+    }
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -165,8 +189,12 @@ export default function EditPostScreen() {
     try {
       let finalImageUrl = imageUrl;
 
-      // Upload new image if changed
+      // Upload new image if changed (respect plan capabilities)
       if (imageUrl && imageUrl !== post.image_url && !imageUrl.startsWith('http')) {
+        if (!capabilities.images_allowed) {
+          Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes en los posts.');
+          return;
+        }
         try {
           const fileName = `post-${post.id}-${Date.now()}.jpg`;
           
@@ -362,20 +390,22 @@ export default function EditPostScreen() {
           </View>
         </View>
 
-        {/* Image Section */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Imagen (opcional)</Text>
-          <TouchableOpacity style={styles.imageContainer} onPress={handleImagePick}>
-            {imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={styles.selectedImage} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Ionicons name="image-outline" size={32} color="#A3B3CC" />
-                <Text style={styles.imagePlaceholderText}>Seleccionar imagen</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+        {/* Image Section (only for plans that allow images) */}
+        {capabilities.images_allowed && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Imagen (opcional)</Text>
+            <TouchableOpacity style={styles.imageContainer} onPress={handleImagePick}>
+              {imageUrl ? (
+                <Image source={{ uri: imageUrl }} style={styles.selectedImage} />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Ionicons name="image-outline" size={32} color="#A3B3CC" />
+                  <Text style={styles.imagePlaceholderText}>Seleccionar imagen</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Date Range */}
         <View style={styles.inputContainer}>
