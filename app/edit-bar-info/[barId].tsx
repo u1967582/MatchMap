@@ -16,6 +16,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
+import { getEffectiveCapabilities } from '~/lib/getEffectivePlan';
+import { CAP_BY_TIER, type Tier } from '~/lib/planCapabilities';
 
 interface Bar {
   id: string;
@@ -75,6 +77,8 @@ export default function EditBarInfoScreen() {
   // Images state
   const [barImages, setBarImages] = React.useState<BarImage[]>([]);
   const [menuImages, setMenuImages] = React.useState<BarImage[]>([]);
+  const [userPlan, setUserPlan] = React.useState<Tier>('free');
+  const [planLoading, setPlanLoading] = React.useState(true);
   
   // Categories state
   const [foodTypes, setFoodTypes] = React.useState<BarCategory[]>([]);
@@ -305,8 +309,35 @@ export default function EditBarInfoScreen() {
     fetchBarData();
   }, [barId, router]);
 
+  // Load user's plan to determine image limits
+  React.useEffect(() => {
+    const loadPlan = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setUserPlan('free');
+          return;
+        }
+        const { tier } = await getEffectiveCapabilities(user.id);
+        setUserPlan((tier as Tier) ?? 'free');
+      } catch (e) {
+        setUserPlan('free');
+      } finally {
+        setPlanLoading(false);
+      }
+    };
+    loadPlan();
+  }, []);
+
+  const barImagesLimit = React.useMemo(() => CAP_BY_TIER[userPlan].bar_images_limit, [userPlan]);
+  const menuImagesLimit = React.useMemo(() => (userPlan === 'free' ? 0 : 15), [userPlan]);
+
   const handleAddBarImage = async () => {
     try {
+      if (barImages.length >= barImagesLimit) {
+        Alert.alert('Límite alcanzado', `Tu plan ${userPlan} permite hasta ${barImagesLimit} imágenes del bar.`);
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -326,10 +357,18 @@ export default function EditBarInfoScreen() {
 
   const handleAddMenuImage = async () => {
     try {
+      if (menuImagesLimit === 0) {
+        Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes del menú.');
+        return;
+      }
+      if (menuImages.length >= menuImagesLimit) {
+        Alert.alert('Límite alcanzado', `Tu plan ${userPlan} permite hasta ${menuImagesLimit} imágenes del menú.`);
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [16, 9],
+        aspect: [3, 4],
         quality: 0.8,
       });
 
@@ -976,62 +1015,70 @@ export default function EditBarInfoScreen() {
             ) : (
               <Text style={styles.noImagesText}>No hay imágenes del bar</Text>
             )}
-            <TouchableOpacity style={styles.addImageButton} onPress={handleAddBarImage}>
-              <Ionicons name="add" size={24} color="#A3B3CC" />
-              <Text style={styles.addImageText}>Añadir</Text>
-            </TouchableOpacity>
+            {barImages.length < barImagesLimit && (
+              <TouchableOpacity style={styles.addImageButton} onPress={handleAddBarImage}>
+                <Ionicons name="add" size={24} color="#A3B3CC" />
+                <Text style={styles.addImageText}>Añadir</Text>
+              </TouchableOpacity>
+            )}
           </View>
+          <Text style={styles.noImagesText}>{barImages.length}/{barImagesLimit} fotos</Text>
         </View>
 
-        {/* Menu Images Section */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Imágenes del Menú</Text>
-          <View style={styles.imagesContainer}>
-            {menuImages.length > 0 ? (
-              menuImages.map((image, index) => (
-                <View key={image.id} style={styles.imageItem}>
-                  <Image source={{ uri: image.image_url }} style={styles.imageThumbnail} />
-                  <TouchableOpacity
-                    style={styles.deleteImageButton}
-                    onPress={() => handleDeleteImage(image.id, 'menu')}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-                  </TouchableOpacity>
-                  <Text style={styles.imageOrderText}>{index + 1}</Text>
-                  <TouchableOpacity
-                    style={styles.reorderButton}
-                    onPress={() => {
-                      // Show reorder options
-                      Alert.alert(
-                        'Reordenar Imagen',
-                        'Selecciona la nueva posición:',
-                        menuImages.map((_, idx) => ({
-                          text: `Posición ${idx + 1}`,
-                          onPress: () => {
-                            if (idx !== index) {
-                              const newImages = [...menuImages];
-                              const [movedImage] = newImages.splice(index, 1);
-                              newImages.splice(idx, 0, movedImage);
-                              handleReorderImages('menu', newImages);
-                            }
-                          },
-                        }))
-                      );
-                    }}
-                  >
-                    <Ionicons name="swap-vertical" size={16} color="#A3B3CC" />
-                  </TouchableOpacity>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noImagesText}>No hay imágenes del menú</Text>
-            )}
-            <TouchableOpacity style={styles.addImageButton} onPress={handleAddMenuImage}>
-              <Ionicons name="add" size={24} color="#A3B3CC" />
-              <Text style={styles.addImageText}>Añadir</Text>
-            </TouchableOpacity>
+        {/* Menu Images Section (hidden if plan doesn't allow) */}
+        {menuImagesLimit > 0 && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Imágenes del Menú</Text>
+            <View style={styles.imagesContainer}>
+              {menuImages.length > 0 ? (
+                menuImages.map((image, index) => (
+                  <View key={image.id} style={styles.imageItem}>
+                    <Image source={{ uri: image.image_url }} style={styles.imageThumbnail} />
+                    <TouchableOpacity
+                      style={styles.deleteImageButton}
+                      onPress={() => handleDeleteImage(image.id, 'menu')}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+                    </TouchableOpacity>
+                    <Text style={styles.imageOrderText}>{index + 1}</Text>
+                    <TouchableOpacity
+                      style={styles.reorderButton}
+                      onPress={() => {
+                        // Show reorder options
+                        Alert.alert(
+                          'Reordenar Imagen',
+                          'Selecciona la nueva posición:',
+                          menuImages.map((_, idx) => ({
+                            text: `Posición ${idx + 1}`,
+                            onPress: () => {
+                              if (idx !== index) {
+                                const newImages = [...menuImages];
+                                const [movedImage] = newImages.splice(index, 1);
+                                newImages.splice(idx, 0, movedImage);
+                                handleReorderImages('menu', newImages);
+                              }
+                            },
+                          }))
+                        );
+                      }}
+                    >
+                      <Ionicons name="swap-vertical" size={16} color="#A3B3CC" />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noImagesText}>No hay imágenes del menú</Text>
+              )}
+              {menuImages.length < menuImagesLimit && (
+                <TouchableOpacity style={styles.addImageButton} onPress={handleAddMenuImage}>
+                  <Ionicons name="add" size={24} color="#A3B3CC" />
+                  <Text style={styles.addImageText}>Añadir</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <Text style={styles.noImagesText}>{menuImages.length}/{menuImagesLimit} fotos</Text>
           </View>
-        </View>
+        )}
 
       </ScrollView>
     </SafeAreaView>
