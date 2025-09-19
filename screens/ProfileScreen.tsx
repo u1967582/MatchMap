@@ -169,7 +169,7 @@ export default function ProfileScreen() {
   }, [router]);
 
   const handlePrivacy = useCallback(() => {
-    router.push('/privacy' as any);
+    router.push('/support' as any);
   }, [router]);
 
   const handleViewPlans = useCallback(() => {
@@ -506,8 +506,8 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Configuración de Cuenta</Text>
           <View style={styles.settingsContainer}>
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
-            <SettingsRow title="Notificaciones" onPress={handleNotifications} />
-            <SettingsRow title="Privacidad" onPress={handlePrivacy} />
+            <SettingsRow title="Preguntas Frequentes" onPress={handlePrivacy} />
+            <SettingsRow title="Contactar con Soporte" onPress={handleNotifications} />
             <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast />
           </View>
         </View>
