@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Link, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
-import { useAuthStateChange, getOAuthRedirectUrl, signInWithApple } from '~/utils/auth';
+import { useAuthStateChange, getOAuthRedirectUrl } from '~/utils/auth';
 import ScreenTitle from '~/components/ui/ScreenTitle';
 import InputField from '~/components/ui/InputField';
 import CustomButton from '~/components/ui/CustomButton';
@@ -421,24 +421,7 @@ const RegisterScreen: React.FC = () => {
               disabled={!formValidation.isValid || isAnyLoading}
             />
             
-            {/* Social auth buttons (mismo estilo y orden consistente en iOS) */}
-            <CustomButton
-              text="Continuar con Apple"
-              onPress={async () => {
-                if (isAnyLoading) return;
-                setLoadingState('apple', true);
-                try {
-                  await signInWithApple();
-                } catch (e: any) {
-                  Alert.alert('Error de Apple', e?.message ?? 'No se pudo iniciar sesión con Apple');
-                } finally {
-                  setLoadingState('apple', false);
-                }
-              }}
-              variant="social"
-              loading={loading.apple}
-              disabled={isAnyLoading}
-            />
+            
 
             <CustomButton
               text="Continuar con Google"
