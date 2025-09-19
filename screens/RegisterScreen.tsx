@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
@@ -22,6 +22,7 @@ interface LoadingState {
   register: boolean;
   google: boolean;
   facebook: boolean;
+  apple: boolean;
 }
 
 interface FormValidation {
@@ -42,9 +43,11 @@ const RegisterScreen: React.FC = () => {
     register: false,
     google: false,
     facebook: false,
+    apple: false,
   });
 
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Handle OAuth user profile creation
   const handleOAuthUserProfile = useCallback(async (user: any) => {
@@ -329,7 +332,7 @@ const RegisterScreen: React.FC = () => {
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <ScreenTitle 
-            title="Sign up" 
+            title="Crear cuenta" 
             color="#FFFFFF" 
             shadow={false}
             marginBottom={0}
@@ -338,12 +341,16 @@ const RegisterScreen: React.FC = () => {
           <View style={styles.placeholder} />
         </View>
 
-        <View style={styles.contentContainer}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 32 + insets.bottom }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.formContainer}>
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Name</Text>
+              <Text style={styles.fieldLabel}>Nombre</Text>
               <InputField
-                placeholder="Enter your name"
+                placeholder="Ingresa tu nombre"
                 value={formData.name}
                 onChangeText={handleNameChange}
                 autoCapitalize="words"
@@ -354,9 +361,9 @@ const RegisterScreen: React.FC = () => {
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>User Name</Text>
+              <Text style={styles.fieldLabel}>Nombre de usuario</Text>
               <InputField
-                placeholder="Enter your user name"
+                placeholder="Ingresa tu nombre de usuario"
                 value={formData.username}
                 onChangeText={handleUsernameChange}
                 autoCapitalize="none"
@@ -367,9 +374,9 @@ const RegisterScreen: React.FC = () => {
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={styles.fieldLabel}>Correo electrónico</Text>
               <InputField
-                placeholder="Enter your email"
+                placeholder="Ingresa tu correo"
                 value={formData.email}
                 onChangeText={handleEmailChange}
                 keyboardType="email-address"
@@ -381,9 +388,9 @@ const RegisterScreen: React.FC = () => {
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Password</Text>
+              <Text style={styles.fieldLabel}>Contraseña</Text>
               <InputField
-                placeholder="Enter your password"
+                placeholder="Ingresa tu contraseña"
                 value={formData.password}
                 onChangeText={handlePasswordChange}
                 secureTextEntry
@@ -407,15 +414,17 @@ const RegisterScreen: React.FC = () => {
 
           <View style={styles.buttonContainer}>
             <CustomButton
-              text="Sign up"
+              text="Crear cuenta"
               onPress={handleRegister}
               variant="primary"
               loading={loading.register}
               disabled={!formValidation.isValid || isAnyLoading}
             />
             
+            
+
             <CustomButton
-              text="Continue with Google"
+              text="Continuar con Google"
               onPress={handleGoogleRegister}
               variant="social"
               loading={loading.google}
@@ -436,7 +445,7 @@ const RegisterScreen: React.FC = () => {
               <Text style={styles.linkText}>¿Ya tienes cuenta? Inicia sesión</Text>
             </Link>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </>
   );
@@ -463,6 +472,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    paddingHorizontal: 20,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
   },
   formContainer: {
