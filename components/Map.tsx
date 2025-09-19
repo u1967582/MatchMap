@@ -34,9 +34,11 @@ const Map: React.FC = () => {
   const [showBarCard, setShowBarCard] = React.useState(false);
   const [searchResults, setSearchResults] = React.useState<any[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
+  const [searchLocked, setSearchLocked] = React.useState(false);
   const [cameraCenter, setCameraCenter] = React.useState<[number, number] | null>(null);
   const [cameraZoom, setCameraZoom] = React.useState(15);
   const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
+  const cameraRef = React.useRef<MapboxGL.Camera>(null);
 
   // Pretty marker component (inlined to keep file self-contained)
   const BarMarker: React.FC<{ selected: boolean }> = React.useCallback(({ selected }) => {
@@ -302,21 +304,23 @@ const Map: React.FC = () => {
 
   // Handle search text change with debouncing
   const handleSearchChange = React.useCallback((text: string) => {
+    setSearchLocked(false);
     setSearchText(text);
   }, []);
 
   // Debounced search effect
   React.useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (searchText.trim()) {
+      if (!searchLocked && searchText.trim()) {
         searchLocations(searchText);
       } else {
         setSearchResults([]);
+        setIsSearching(false);
       }
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchText, searchLocations]);
+  }, [searchText, searchLocked, searchLocations]);
 
   // Handle location selection
   const handleLocationSelect = React.useCallback((location: any) => {
@@ -345,8 +349,10 @@ const Map: React.FC = () => {
     setCameraZoom(zoomLevel);
     
     // Clear search
+    setSearchLocked(true);
     setSearchText(location.place_name);
     setSearchResults([]);
+    setIsSearching(false);
   }, []);
 
   if (!hasPermission) {
@@ -373,7 +379,8 @@ const Map: React.FC = () => {
         scaleBarEnabled={false}
       >
         {/* Camera that centers on user location or search result */}
-        <MapboxGL.Camera
+      <MapboxGL.Camera
+        ref={cameraRef}
           centerCoordinate={
             cameraCenter || (userLocation
               ? [userLocation.coords.longitude, userLocation.coords.latitude]
@@ -417,9 +424,46 @@ const Map: React.FC = () => {
       {userLocation && (
         <TouchableOpacity
           style={styles.centerButton}
-          onPress={() => {
-            setCameraCenter([userLocation.coords.longitude, userLocation.coords.latitude]);
-            setCameraZoom(15);
+          onPress={async () => {
+            try {
+              // Ensure permission and get fresh position
+              if (hasPermission !== true) {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                  Alert.alert('Permisos requeridos', 'Se necesitan permisos de ubicación para centrar el mapa.');
+                  return;
+                }
+              }
+
+              const fresh = await Location.getCurrentPositionAsync({});
+              const { latitude, longitude } = fresh.coords;
+              console.log('Center location button pressed:', { latitude, longitude });
+
+              // Update state similarly to initial load
+              setUserLocation(fresh);
+              setSelectedBar(null);
+              setSelectedMarkerId(null);
+              setShowBarCard(false);
+              // Use camera ref to ensure recenters even after manual pan
+              const cam: any = cameraRef.current as any;
+              if (cam?.setCamera) {
+                cam.setCamera({
+                  centerCoordinate: [longitude, latitude],
+                  zoomLevel: 15,
+                  animationDuration: 1000,
+                  animationMode: 'flyTo',
+                } as any);
+                setCameraCenter([longitude, latitude]);
+                setCameraZoom(15);
+              } else {
+                // Fallback: update props-controlled center/zoom
+                setCameraCenter([longitude, latitude]);
+                setCameraZoom(15);
+              }
+            } catch (error) {
+              console.error('Error centering on user location:', error);
+              Alert.alert('Error', 'No se pudo obtener tu ubicación actual.');
+            }
           }}
         >
           <Ionicons name="locate" size={24} color="#FFFFFF" />
