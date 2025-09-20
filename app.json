@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "MatchMap",
-    "slug": "MatchMap",
+    "slug": "matchmap",
     "version": "1.0.0",
     "scheme": "matchmap",
     "jsEngine": "hermes",
@@ -86,7 +86,19 @@
         "package": "com.tuorg.matchmap",
         "edgeToEdgeEnabled": true
       },
-      "package": "com.tuorg.matchmap"
-    }
+      "package": "com.tuorg.matchmap",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b00dc031-795d-48e3-b948-828096e7382c"
+      }
+    },
+    "owner": "koala.gost"
   }
 }
