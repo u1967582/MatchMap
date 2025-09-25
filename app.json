@@ -55,7 +55,9 @@
           }
         }
       ],
-      "expo-mail-composer"
+      "expo-mail-composer",
+      "expo-font",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -82,9 +84,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#1C2A3A",
-        "package": "com.tuorg.matchmap",
-        "edgeToEdgeEnabled": true
+        "backgroundColor": "#1C2A3A"
       },
       "package": "com.tuorg.matchmap",
       "permissions": [

@@ -2,10 +2,12 @@ import { Stack } from 'expo-router';
 import { StatusBar, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
+import { installNativeEventEmitterWorkaround } from '../utils/polyfills';
 import { requireOptionalNativeModule } from 'expo-modules-core';
 
 export default function Layout() {
   useEffect(() => {
+    installNativeEventEmitterWorkaround();
     if (Platform.OS === 'android') {
       try {
         const NavigationBar: any = requireOptionalNativeModule('ExpoNavigationBar');

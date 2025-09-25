@@ -164,6 +164,12 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
             style={styles.barImage}
             resizeMode="cover"
           />
+
+          {!bar.image_url && (
+            <View style={styles.noImageBadge} pointerEvents="none">
+              <Text style={styles.noImageText}>Sin foto</Text>
+            </View>
+          )}
           
           {/* Favorites Button */}
           <TouchableOpacity 
@@ -284,6 +290,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  noImageBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  noImageText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   favoritesButton: {
     position: 'absolute',

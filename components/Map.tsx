@@ -192,13 +192,14 @@ const Map: React.FC = () => {
             rating,
             review_count,
             category_id,
-            bar_images!inner(
+            bar_images(
               image_url,
               image_order
             )
           `)
           .eq('is_active', true)
-          .eq('bar_images.image_order', 1);
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null);
 
         if (error) {
           console.error('❌ Error fetching bars:', error);
@@ -239,9 +240,14 @@ const Map: React.FC = () => {
               .select('feature_id, bar_features(name)')
               .eq('bar_id', bar.id);
 
+            // Choose primary image if available, fallback to first image, or null
+            const primaryImage = Array.isArray(bar.bar_images)
+              ? bar.bar_images.find((i: any) => i.image_order === 1) || bar.bar_images[0]
+              : null;
+
             return {
               ...bar,
-              image_url: bar.bar_images?.[0]?.image_url || null,
+              image_url: primaryImage?.image_url || null,
               category,
               bar_food_types: foodTypes?.map((item: any) => ({
                 food_type_id: item.food_type_id,
