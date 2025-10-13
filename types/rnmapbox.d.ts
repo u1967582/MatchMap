@@ -5,6 +5,8 @@ declare module '@rnmapbox/maps' {
   interface MapViewProps extends ViewProps {
     styleURL?: string;
     scaleBarEnabled?: boolean;
+    logoEnabled?: boolean;
+    attributionEnabled?: boolean;
   }
 
   interface PointAnnotationProps extends ViewProps {

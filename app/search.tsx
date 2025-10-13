@@ -20,6 +20,7 @@ import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
+import AdBanner from '~/components/AdBanner';
 import Dropdown from '~/components/ui/Dropdown';
 import FilterModal from '~/components/ui/FilterModal';
 import { useFilterData } from '~/hooks/useFilterData';
@@ -854,6 +855,7 @@ export default function SearchScreen() {
         )}
       </View>
 
+      <AdBanner />
       <BottomTabBar />
 
       {/* Filter Modal */}

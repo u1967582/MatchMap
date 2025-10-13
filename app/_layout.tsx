@@ -3,9 +3,20 @@ import { StatusBar, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { requireOptionalNativeModule } from 'expo-modules-core';
+import Constants from 'expo-constants';
+import AppOpenAdHandler from '~/components/AppOpenAdHandler';
 
 export default function Layout() {
   useEffect(() => {
+    // Initialize Google Mobile Ads SDK early (skip in Expo Go)
+    if (Constants.appOwnership !== 'expo') {
+      import('react-native-google-mobile-ads')
+        .then(m => m.default().initialize())
+        .catch(() => {
+          // Avoid crashing if initialization fails (e.g., missing Google Services during dev)
+        });
+    }
+
     if (Platform.OS === 'android') {
       try {
         const NavigationBar: any = requireOptionalNativeModule('ExpoNavigationBar');
@@ -24,6 +35,7 @@ export default function Layout() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
+      <AppOpenAdHandler />
       <Stack 
         screenOptions={{
           headerShown: false,

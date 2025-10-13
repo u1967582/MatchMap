@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
+import AdBanner from '~/components/AdBanner';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
 import { useUserSubscription } from '~/hooks/useUserSubscription';
 import { getPlanByType, formatPrice } from '~/utils/subscription';
@@ -512,6 +513,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
+      <AdBanner />
       <BottomTabBar />
     </SafeAreaView>
   );

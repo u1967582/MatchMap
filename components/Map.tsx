@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +27,7 @@ interface Bar {
 }
 
 const Map: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
   const [bars, setBars] = React.useState<Bar[]>([]);
@@ -373,10 +375,13 @@ const Map: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/** extra props as any to avoid type mismatch in community types */}
+      {(() => null)()}
       <MapboxGL.MapView 
         style={styles.map} 
         styleURL="mapbox://styles/mapbox/dark-v11"
         scaleBarEnabled={false}
+        {...({ logoEnabled: false, attributionEnabled: false } as any)}
       >
         {/* Camera that centers on user location or search result */}
       <MapboxGL.Camera
@@ -418,6 +423,7 @@ const Map: React.FC = () => {
         searchResults={searchResults}
         isSearching={isSearching}
         onLocationSelect={handleLocationSelect}
+        topInset={insets.top}
       />
 
       {/* Center on user location button */}
@@ -484,11 +490,7 @@ const Map: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    backgroundColor: '#000',
   },
   map: {
     flex: 1,

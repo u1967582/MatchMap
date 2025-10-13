@@ -14,6 +14,13 @@
       "expo-router",
       "expo-web-browser",
       [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-5753100822208837~2057521072",
+          "iosAppId": "ca-app-pub-5753100822208837~8426530446"
+        }
+      ],
+      [
         "@rnmapbox/maps",
         {
           "RNMapboxMapsDownloadToken": "sk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jcTZrN2k0MGM3ZDJqczZtNGxvZGJmciJ9.VBbbRIxQnFym0vb3MVL02A",

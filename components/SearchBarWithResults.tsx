@@ -28,6 +28,7 @@ interface SearchBarWithResultsProps {
   searchResults: SearchResult[];
   isSearching: boolean;
   onLocationSelect: (location: SearchResult) => void;
+  topInset?: number;
 }
 
 const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({ 
@@ -37,7 +38,8 @@ const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({
   editable = true,
   searchResults,
   isSearching,
-  onLocationSelect
+  onLocationSelect,
+  topInset = 0
 }) => {
   
   const handleTextChange = useCallback((text: string) => {
@@ -102,7 +104,7 @@ const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({
   }, [onLocationSelect]);
 
   return (
-    <View style={styles.searchContainer}>
+    <View style={[styles.searchContainer, { top: (Platform.OS === 'ios' ? 28 : 18) + Math.max(topInset, 0) }]}> 
       <View style={styles.inputContainer}>
         <Ionicons 
           name="search" 
