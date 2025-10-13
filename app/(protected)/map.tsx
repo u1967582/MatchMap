@@ -32,9 +32,35 @@ export default function MapScreen() {
         <Map />
       </View>
 
-      {/* Bottom area: banner above tab bar, respect safe area */}
-      <View style={{ paddingBottom: Math.max(insets.bottom, 8) }}>
-        <AdBanner size="BANNER" />
+      {/* Floating ad overlay above the tab bar */}
+      <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+        <View
+          style={{
+            position: 'absolute',
+            left: 12,
+            right: 12,
+            bottom: (Platform.OS === 'ios' ? 80 : 64) + Math.max(insets.bottom, 8),
+            alignItems: 'center',
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#1A2332',
+              borderRadius: 12,
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+              elevation: 6,
+              width: '100%',
+            }}
+          >
+            <AdBanner />
+          </View>
+        </View>
       </View>
       <BottomTabBar />
     </View>

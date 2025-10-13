@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
@@ -429,7 +429,13 @@ const Map: React.FC = () => {
       {/* Center on user location button */}
       {userLocation && (
         <TouchableOpacity
-          style={styles.centerButton}
+          style={[
+            styles.centerButton,
+            {
+              bottom:
+                ((Platform.OS === 'ios' ? 80 : 64) + Math.max(insets.bottom, 8)) + 84,
+            },
+          ]}
           onPress={async () => {
             try {
               // Ensure permission and get fresh position
