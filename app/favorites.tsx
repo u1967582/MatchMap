@@ -18,6 +18,8 @@ import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import AdBanner from '~/components/AdBanner';
+import { useUserSubscription } from '~/hooks/useUserSubscription';
+import { supabase } from '~/utils/supabase';
 import { useFavorites } from '~/hooks/useFavorites';
 
 interface FavoriteBar {
@@ -37,6 +39,9 @@ const { width } = Dimensions.get('window');
 
 export default function FavoritesScreen() {
   const router = useRouter();
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+  const { hasActiveSubscription, planType } = useUserSubscription(userId);
+  const adFree = !!(hasActiveSubscription && (planType?.includes('pro') || planType?.includes('elite')));
   const { getFavoriteBars, removeFromFavorites } = useFavorites();
   
   const [favoriteBars, setFavoriteBars] = useState<FavoriteBar[]>([]);
@@ -122,6 +127,13 @@ export default function FavoritesScreen() {
     loadFavoriteBars();
     getUserLocation();
   }, [loadFavoriteBars, getUserLocation]);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+    })();
+  }, []);
 
   // Handle bar press
   const handleBarPress = useCallback((barId: string) => {
@@ -296,12 +308,12 @@ export default function FavoritesScreen() {
     const items: FeedItem[] = [];
     filteredBars.forEach((bar, index) => {
       items.push({ type: 'bar', bar });
-      if ((index + 1) % 2 === 0) {
+      if (!adFree && (index + 1) % 2 === 0) {
         items.push({ type: 'ad', id: `ad-${index}` });
       }
     });
     return items;
-  }, [filteredBars]);
+  }, [filteredBars, adFree]);
 
   const renderFeedItem = useCallback(({ item }: { item: FeedItem }) => {
     if (item.type === 'ad') {

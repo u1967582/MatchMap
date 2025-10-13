@@ -8,37 +8,36 @@ export default function ProtectedLayout() {
   const router = useRouter();
 
   useEffect(() => {
-    const checkAuthState = async () => {
+    let isMounted = true;
+    (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const authenticated = !!session;
-      
+      if (!isMounted) return;
       if (!authenticated) {
-        // Redirect to home if not authenticated
         router.replace('/');
         return;
       }
-      
       setIsAuthenticated(authenticated);
-    };
-
-    checkAuthState();
+    })();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         const authenticated = !!session;
-        
+        if (!isMounted) return;
         if (!authenticated) {
-          // Redirect to home if user logs out
           router.replace('/');
-        } else {
+        } else if (isAuthenticated !== authenticated) {
           setIsAuthenticated(authenticated);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, [router]);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [router, isAuthenticated]);
 
   // Show loading while checking authentication
   if (isAuthenticated === null) {

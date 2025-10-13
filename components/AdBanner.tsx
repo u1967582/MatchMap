@@ -35,9 +35,11 @@ const AdBanner: React.FC<AdBannerProps> = ({ unitId, size }) => {
 
   if (useForeground) {
     useForeground(() => {
-      if (Platform.OS === 'ios') {
-        bannerRef.current?.load();
-      }
+      try {
+        if (Platform.OS === 'ios') {
+          bannerRef.current?.load?.();
+        }
+      } catch {}
     });
   }
 
@@ -55,7 +57,14 @@ const AdBanner: React.FC<AdBannerProps> = ({ unitId, size }) => {
     return null;
   }
 
-  return <BannerAd ref={bannerRef} unitId={selectedUnitId} size={resolvedSize} onAdFailedToLoad={() => {}} />;
+  return (
+    <BannerAd
+      ref={bannerRef}
+      unitId={selectedUnitId}
+      size={resolvedSize}
+      onAdFailedToLoad={() => {}}
+    />
+  );
 };
 
 export default AdBanner;

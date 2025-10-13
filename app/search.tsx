@@ -18,9 +18,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
-import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import AdBanner from '~/components/AdBanner';
+import { useUserSubscription } from '~/hooks/useUserSubscription';
+import { supabase } from '~/utils/supabase';
 import Dropdown from '~/components/ui/Dropdown';
 import FilterModal from '~/components/ui/FilterModal';
 import { useFilterData } from '~/hooks/useFilterData';
@@ -65,6 +66,9 @@ const { width } = Dimensions.get('window');
 
 export default function SearchScreen() {
   const router = useRouter();
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+  const { hasActiveSubscription, planType } = useUserSubscription(userId);
+  const adFree = !!(hasActiveSubscription && (planType?.includes('pro') || planType?.includes('elite')));
   
   const [searchQuery, setSearchQuery] = useState('');
   const [bars, setBars] = useState<Bar[]>([]);
@@ -88,6 +92,12 @@ export default function SearchScreen() {
   const [teamResults, setTeamResults] = useState<TeamSearchResult[]>([]);
   const [teamLoading, setTeamLoading] = useState(false);
   const [tempSelectedTeam, setTempSelectedTeam] = useState<TeamSearchResult | null>(null);
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+    })();
+  }, []);
 
   // Load filter data
   const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
@@ -663,12 +673,12 @@ export default function SearchScreen() {
     const items: FeedItem[] = [];
     bars.forEach((bar, index) => {
       items.push({ type: 'bar', bar });
-      if ((index + 1) % 3 === 0) {
+      if (!adFree && (index + 1) % 3 === 0) {
         items.push({ type: 'ad', id: `ad-${index}` });
       }
     });
     return items;
-  }, [bars]);
+  }, [bars, adFree]);
 
   const renderFeedItem = useCallback(({ item }: { item: FeedItem }) => {
     if (item.type === 'ad') {

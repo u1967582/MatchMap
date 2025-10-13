@@ -60,6 +60,7 @@ export default function ProfileScreen() {
   
   // Hook para obtener la suscripción del usuario
   const { hasActiveSubscription, planType, maxPhotosAllowed, subscription } = useUserSubscription(user?.id);
+  const adFree = !!(hasActiveSubscription && (planType?.includes('pro') || planType?.includes('elite')));
 
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -281,10 +282,12 @@ export default function ProfileScreen() {
                   </View>
                 </TouchableOpacity>
               ))}
-              {/* Anchored Ad below bar management card */}
-              <View style={styles.adAnchorContainer}>
-                <AdBanner />
-              </View>
+              {/* Anchored Ad below bar management card (hidden for paid plans) */}
+              {!adFree && (
+                <View style={styles.adAnchorContainer}>
+                  <AdBanner />
+                </View>
+              )}
             </View>
           ) : (
             <View>
@@ -292,10 +295,12 @@ export default function ProfileScreen() {
                 <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
                 <Text style={styles.addBarButtonText}>Añadir Bar</Text>
               </TouchableOpacity>
-              {/* Anchored Ad below the register prompt when no bar exists */}
-              <View style={styles.adAnchorContainer}>
-                <AdBanner />
-              </View>
+              {/* Anchored Ad below the register prompt when no bar exists (hidden for paid plans) */}
+              {!adFree && (
+                <View style={styles.adAnchorContainer}>
+                  <AdBanner />
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -351,6 +356,11 @@ export default function ProfileScreen() {
                       Eventos: {getPlanByType(planType)?.features.events_limit === 'unlimited' ? 'Ilimitados' : 
                         `${getPlanByType(planType)?.features.events_limit} máximo`}
                     </Text>
+                  </View>
+                  {/* Ad-free feature line */}
+                  <View style={styles.featureRow}>
+                    <Ionicons name="notifications-off" size={20} color="#10B981" />
+                    <Text style={styles.featureText}>Sin anuncios: Sí</Text>
                   </View>
                   
                   <View style={styles.featureRow}>
@@ -472,6 +482,11 @@ export default function ProfileScreen() {
                   <View style={styles.featureRow}>
                     <Ionicons name="calendar" size={20} color="#A3B3CC" />
                     <Text style={styles.featureText}>Eventos: 3 máximo</Text>
+                  </View>
+                  {/* Ad presence for free plan */}
+                  <View style={styles.featureRow}>
+                    <Ionicons name="notifications" size={20} color="#A3B3CC" />
+                    <Text style={styles.featureText}>Anuncios: Sí</Text>
                   </View>
                   
                   <View style={styles.featureRow}>

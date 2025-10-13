@@ -1,13 +1,15 @@
-import { Stack, useFocusEffect } from 'expo-router';
+import { Stack } from 'expo-router';
 import { View, StyleSheet, StatusBar, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Map from '~/components/Map';
 import AdBanner from '~/components/AdBanner';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
+  // Derive visibility directly from focus + plan to avoid state loops
+  // Map screen is ad-free to guarantee stability
   // Set status bar style when component mounts
   useEffect(() => {
     StatusBar.setBarStyle('light-content', true);
@@ -16,7 +18,11 @@ export default function MapScreen() {
     }
   }, []);
 
-  const bannerHeight = 50; // BANNER height hint
+  // No auth/subscription checks here to avoid focus loops
+
+  // No effect needed; showAd is derived, preventing update loops
+
+  const bannerHeight = 50; // reserved (unused)
 
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 80 : 60) } ]}>
