@@ -281,12 +281,22 @@ export default function ProfileScreen() {
                   </View>
                 </TouchableOpacity>
               ))}
+              {/* Anchored Ad below bar management card */}
+              <View style={styles.adAnchorContainer}>
+                <AdBanner />
+              </View>
             </View>
           ) : (
-            <TouchableOpacity style={styles.addBarButton} onPress={handleAddBar}>
-              <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.addBarButtonText}>Añadir Bar</Text>
-            </TouchableOpacity>
+            <View>
+              <TouchableOpacity style={styles.addBarButton} onPress={handleAddBar}>
+                <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+                <Text style={styles.addBarButtonText}>Añadir Bar</Text>
+              </TouchableOpacity>
+              {/* Anchored Ad below the register prompt when no bar exists */}
+              <View style={styles.adAnchorContainer}>
+                <AdBanner />
+              </View>
+            </View>
           )}
         </View>
 
@@ -513,7 +523,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
-      <AdBanner />
       <BottomTabBar />
     </SafeAreaView>
   );
@@ -636,6 +645,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  adAnchorContainer: {
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginTop: 12,
   },
   settingsContainer: {
     backgroundColor: '#1A2332',
