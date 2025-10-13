@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -657,6 +657,30 @@ export default function SearchScreen() {
     
   }, [handleBarPress, toggleFavorite, favoriteStates]);
 
+  // Build interleaved feed: 3 bars -> 1 ad -> repeat
+  type FeedItem = { type: 'bar'; bar: Bar } | { type: 'ad'; id: string };
+  const feedItems: FeedItem[] = useMemo(() => {
+    const items: FeedItem[] = [];
+    bars.forEach((bar, index) => {
+      items.push({ type: 'bar', bar });
+      if ((index + 1) % 3 === 0) {
+        items.push({ type: 'ad', id: `ad-${index}` });
+      }
+    });
+    return items;
+  }, [bars]);
+
+  const renderFeedItem = useCallback(({ item }: { item: FeedItem }) => {
+    if (item.type === 'ad') {
+      return (
+        <View style={styles.adCard}>
+          <AdBanner />
+        </View>
+      );
+    }
+    return renderBarCard({ item: item.bar });
+  }, [renderBarCard]);
+
   // Load initial data
   useEffect(() => {
     getUserLocation();
@@ -794,11 +818,11 @@ export default function SearchScreen() {
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Buscando bares...</Text>
           </View>
-        ) : bars.length > 0 ? (
+        ) : feedItems.length > 0 ? (
           <FlatList
-            data={bars}
-            renderItem={renderBarCard}
-            keyExtractor={(item) => item.id}
+            data={feedItems}
+            renderItem={renderFeedItem}
+            keyExtractor={(item, idx) => item.type === 'ad' ? `${item.id}-${idx}` : item.bar.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.barsList}
           />
@@ -855,7 +879,6 @@ export default function SearchScreen() {
         )}
       </View>
 
-      <AdBanner />
       <BottomTabBar />
 
       {/* Filter Modal */}
@@ -1132,6 +1155,14 @@ const styles = StyleSheet.create({
   },
   barsList: {
     paddingBottom: Platform.OS === 'ios' ? 100 : 80, // Space for footer
+  },
+  adCard: {
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    alignItems: 'center',
   },
   barCard: {
     backgroundColor: '#1A2332',
