@@ -268,9 +268,7 @@ export default function SearchScreen() {
       // enriched bars data (removed)
 
       // Debug: Log complete example bar
-      if (enrichedBars.length > 0) {
-        console.log('🧪 Bar ejemplo completo:', JSON.stringify(enrichedBars[0], null, 2));
-      }
+      // sample debug removed
 
       // Calculate distances and add next match info
       const barsWithDistance = await Promise.all(
@@ -436,14 +434,14 @@ export default function SearchScreen() {
 
   // Handle apply filters
   const handleApplyFilters = useCallback(() => {
-    console.log('🎉 Applying filters and searching bars...');
+    // apply filters and search
     searchBars();
     setFilterModalVisible(false);
   }, [searchBars]);
 
   // Handle clear all filters
   const handleClearAllFilters = useCallback(() => {
-    console.log('🧹 Clearing all filters...');
+    // clear all filters
     setSelectedBarCategories([]);
     setSelectedFoodTypes([]);
     setSelectedFeatures([]);
@@ -455,7 +453,7 @@ export default function SearchScreen() {
   // Check and create sample data for N:N relationships
   const checkAndCreateSampleData = useCallback(async () => {
     try {
-      console.log('🔍 Checking N:N relationship data...');
+      // checking N:N relationship data (dev only)
       
       // Check if we have any data in the N:N tables
       const { data: foodTypesData } = await supabase
@@ -473,39 +471,32 @@ export default function SearchScreen() {
         .select('*')
         .limit(5);
       
-      console.log('📊 N:N data check:', {
-        hasFoodTypes: foodTypesData && foodTypesData.length > 0,
-        hasFeatures: featuresData && featuresData.length > 0,
-        hasLanguages: languagesData && languagesData.length > 0,
-        foodTypesCount: foodTypesData?.length || 0,
-        featuresCount: featuresData?.length || 0,
-        languagesCount: languagesData?.length || 0
-      });
+      // N:N data check summary removed
       
       // Show sample data if available
       if (foodTypesData && foodTypesData.length > 0) {
-        console.log('🍕 Sample food types data:', foodTypesData);
+        // sample dumps removed
       }
       
       if (featuresData && featuresData.length > 0) {
-        console.log('✨ Sample features data:', featuresData);
+        // sample dumps removed
       }
       
       if (languagesData && languagesData.length > 0) {
-        console.log('🌍 Sample languages data:', languagesData);
+        // sample dumps removed
       }
       
       // If no data exists, we might need to create some sample data
       if (!foodTypesData || foodTypesData.length === 0) {
-        console.log('⚠️ No food types data found in bar_food_types table');
+        // missing data logs removed
       }
       
       if (!featuresData || featuresData.length === 0) {
-        console.log('⚠️ No features data found in bar_selected_features table');
+        // missing data logs removed
       }
       
       if (!languagesData || languagesData.length === 0) {
-        console.log('⚠️ No languages data found in bar_languages table');
+        // missing data logs removed
       }
       
     } catch (error) {
@@ -538,7 +529,7 @@ export default function SearchScreen() {
 
   // Render bar card
   const renderBarCard = useCallback(({ item }: { item: Bar }) => {
-    console.log("Rendering bar card for:", item.name);
+    // render bar card
   
     const handleFavoriteToggle = async (e: any) => {
       e.stopPropagation(); // Prevent triggering the card press
@@ -548,7 +539,7 @@ export default function SearchScreen() {
           ...prev,
           [item.id]: !prev[item.id]
         }));
-        console.log(favoriteStates[item.id] ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', item.name);
+        // favorite toggled
       }
     };
   
@@ -647,7 +638,7 @@ export default function SearchScreen() {
   // Search when filters change
   useEffect(() => {
     if (userLocation) {
-      console.log('🔄 Filters changed, triggering search...');
+      // trigger search on filters change
       searchBars();
     }
   }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, selectedTeamId, userLocation, searchBars]);

@@ -57,13 +57,11 @@ export default function FavoritesScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.log('📍 Location permission denied');
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({});
       setUserLocation(location);
-      console.log('📍 User location obtained:', location.coords);
     } catch (error) {
       console.error('❌ Error getting user location:', error);
     }
@@ -156,7 +154,7 @@ export default function FavoritesScreen() {
               // Remove from local state
               setFavoriteBars(prev => prev.filter(bar => bar.id !== barId));
               setFilteredBars(prev => prev.filter(bar => bar.id !== barId));
-              console.log('🗑️ Removed from favorites:', barName);
+              // removed from favorites
             } else {
               Alert.alert('Error', 'No se pudo eliminar de favoritos');
             }
@@ -207,8 +205,6 @@ export default function FavoritesScreen() {
             
             return distanceA - distanceB; // Ascending order (closest first)
           });
-        } else {
-          console.log('📍 Cannot sort by nearby - no user location available');
         }
         break;
       case 'top_rated':
