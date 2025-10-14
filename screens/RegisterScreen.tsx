@@ -218,8 +218,6 @@ const RegisterScreen: React.FC = () => {
       }
 
       if (authData.user) {
-        console.log('User created in auth.users:', authData.user.id);
-        
         // Usar la función de base de datos para crear el perfil
         const { error: profileError } = await supabase.rpc('handle_new_user_registration', {
           user_id: authData.user.id,
@@ -235,8 +233,6 @@ const RegisterScreen: React.FC = () => {
           return;
         }
 
-        console.log('Profile created successfully via function');
-        
         Alert.alert('Éxito', 'Usuario registrado correctamente', [
           { text: 'OK', onPress: () => router.replace('/(protected)/map' as any) }
         ]);

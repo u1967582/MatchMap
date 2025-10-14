@@ -18,6 +18,7 @@ import AdBanner from '~/components/AdBanner';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
 import { useUserSubscription } from '~/hooks/useUserSubscription';
 import { getPlanByType, formatPrice } from '~/utils/subscription';
+import { setAdFreeCache } from '~/utils/adFreeCache';
 
 interface UserProfile {
   id: string;
@@ -198,6 +199,12 @@ export default function ProfileScreen() {
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
+
+  // Update ad-free cache whenever plan changes
+  useEffect(() => {
+    const isPaid = !!(hasActiveSubscription && (planType?.includes('pro') || planType?.includes('elite')));
+    setAdFreeCache(isPaid);
+  }, [hasActiveSubscription, planType]);
 
   if (loading) {
     return (

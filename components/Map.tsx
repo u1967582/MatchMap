@@ -101,14 +101,6 @@ const Map: React.FC = () => {
 
   // Handle marker press
   const handleMarkerPress = React.useCallback((bar: Bar) => {
-    console.log('📍 Marker pressed for bar:', bar.name);
-    console.log('📍 Setting selected bar and showing card');
-    console.log('📍 Bar data:', {
-      id: bar.id,
-      name: bar.name,
-      address: bar.address,
-      image_url: bar.image_url
-    });
     setSelectedBar(bar);
     setSelectedMarkerId(bar.id);
     setShowBarCard(true);
@@ -130,20 +122,7 @@ const Map: React.FC = () => {
     }
   }, [bars, handleMarkerPress]);
 
-  // Debug effect for state changes
-  React.useEffect(() => {
-    console.log('📍 State changed - selectedBar:', selectedBar?.name, 'showBarCard:', showBarCard);
-  }, [selectedBar, showBarCard]);
-
-  // Debug effect for bars loading
-  React.useEffect(() => {
-    console.log('📍 Bars state updated - count:', bars.length);
-  }, [bars]);
-
-  // Debug effect for selected marker
-  React.useEffect(() => {
-    console.log('📍 Selected marker changed:', selectedMarkerId);
-  }, [selectedMarkerId]);
+  // (debug effects removed)
 
   // Handle close bar card
   const handleCloseBarCard = React.useCallback(() => {
@@ -181,7 +160,6 @@ const Map: React.FC = () => {
   React.useEffect(() => {
     const fetchBars = async () => {
       try {
-        console.log('📍 Fetching bars from Supabase...');
         const { data, error } = await supabase
           .from('bars')
           .select(`
@@ -262,7 +240,6 @@ const Map: React.FC = () => {
             };
           }));
 
-          console.log('✅ Bars fetched successfully:', processedBars.length);
           setBars(processedBars);
         }
       } catch (error) {
@@ -328,9 +305,6 @@ const Map: React.FC = () => {
   const handleLocationSelect = React.useCallback((location: any) => {
     const [longitude, latitude] = location.center;
     
-    console.log('📍 Selected location:', location.place_name);
-    console.log('📍 Coordinates:', latitude, longitude);
-    console.log('📍 Place type:', location.place_type);
     
     // Determine appropriate zoom level based on place type
     let zoomLevel = 16; // Default for specific addresses/POIs
@@ -449,7 +423,6 @@ const Map: React.FC = () => {
 
               const fresh = await Location.getCurrentPositionAsync({});
               const { latitude, longitude } = fresh.coords;
-              console.log('Center location button pressed:', { latitude, longitude });
 
               // Update state similarly to initial load
               setUserLocation(fresh);

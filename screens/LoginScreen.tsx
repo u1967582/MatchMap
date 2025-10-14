@@ -59,7 +59,7 @@ const LoginScreen: React.FC = () => {
 
   // Error handling helper
   const handleOAuthError = useCallback((error: any, provider: string) => {
-    console.error(`${provider} OAuth error:`, error);
+    // keep only essential error alert
     
     if (error?.message?.includes('provider is not enabled') || 
         error?.message?.includes('Unsupported provider')) {
@@ -109,7 +109,6 @@ const LoginScreen: React.FC = () => {
 
       // Navigation will be handled by useAuthStateChange
     } catch (error: any) {
-      console.error('Login error:', error);
       Alert.alert('Error', 'Error inesperado durante el inicio de sesión');
     } finally {
       setLoadingState('email', false);

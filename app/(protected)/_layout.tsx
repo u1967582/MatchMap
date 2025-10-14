@@ -37,7 +37,7 @@ export default function ProtectedLayout() {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [router, isAuthenticated]);
+  }, [router]);
 
   // Show loading while checking authentication
   if (isAuthenticated === null) {

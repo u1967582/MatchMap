@@ -105,14 +105,7 @@ export default function SearchScreen() {
   // Load favorites functionality
   const { toggleFavorite, isFavorite } = useFavorites();
 
-  // Debug logs
-  console.log('Filter data loaded:', {
-    barCategories: barCategories.length,
-    foodTypes: foodTypes.length,
-    barFeatures: barFeatures.length,
-    languages: languages.length,
-    loading: filtersLoading
-  });
+  // Minimal debug only when necessary (removed verbose logs)
 
   // Get user location
   const getUserLocation = useCallback(async () => {
@@ -147,14 +140,7 @@ export default function SearchScreen() {
     setLoading(true);
 
     try {
-      console.log('🔍 Starting bar search with filters:', {
-        searchQuery,
-        selectedBarCategories,
-        selectedFoodTypes,
-        selectedFeatures,
-        selectedLanguages,
-        selectedSort
-      });
+      // Start search (verbose logs removed)
 
       // Paso 1. Si hay filtro por equipo, obtener barIds con eventos de ese equipo
       let barIdsFilter: string[] | null = null;
@@ -192,19 +178,19 @@ export default function SearchScreen() {
       // Aplicar filtro de búsqueda
       if (searchQuery.trim()) {
         barsQuery = barsQuery.ilike('name', `%${searchQuery.trim()}%`);
-        console.log('🔍 Applied search filter:', searchQuery.trim());
+        // filter by name
       }
 
       // Aplicar filtro por equipo (IDs)
       if (barIdsFilter) {
         barsQuery = barsQuery.in('id', barIdsFilter);
-        console.log('🔍 Applied team filter (bar ids):', barIdsFilter.length);
+        // filter by team
       }
 
       // Aplicar filtro de categorías (esto se puede hacer a nivel de DB)
       if (selectedBarCategories.length > 0) {
         barsQuery = barsQuery.in('category_id', selectedBarCategories);
-        console.log('🔍 Applied category filter at DB level:', selectedBarCategories);
+        // filter by categories
       }
 
       const { data: barsData, error } = await barsQuery;
@@ -215,7 +201,7 @@ export default function SearchScreen() {
         return;
       }
 
-      console.log('📊 Initial bars fetched:', barsData?.length || 0);
+      // fetched bars count: (removed)
 
       if (!barsData || barsData.length === 0) {
         setBars([]);
@@ -224,7 +210,7 @@ export default function SearchScreen() {
 
       // Paso 2. Cargar relaciones N:N por separado
       const barIds = barsData.map(bar => bar.id);
-      console.log('🔍 Loading N:N relationships for bar IDs:', barIds);
+      // loading relations for IDs (removed)
 
       // Cargar todos los datos N:N
       const { data: foodTypes } = await supabase
@@ -242,11 +228,7 @@ export default function SearchScreen() {
         .select('*')
         .in('bar_id', barIds);
 
-      console.log('📊 N:N relationships loaded:', {
-        foodTypes: foodTypes?.length || 0,
-        features: features?.length || 0,
-        languages: languages?.length || 0
-      });
+      // relations loaded (removed)
 
       // Paso 3. Crear mapas para todos los tipos de datos
       const foodTypesMap = new Map();
@@ -267,11 +249,7 @@ export default function SearchScreen() {
         languagesMap.get(bar_id).push({ language_id });
       });
 
-      console.log('🗺️ Maps created:', {
-        foodTypesMapSize: foodTypesMap.size,
-        featuresMapSize: featuresMap.size,
-        languagesMapSize: languagesMap.size
-      });
+      // maps created (removed)
 
       // Paso 4. Fusionar la información por bar
       const enrichedBars = barsData.map(bar => {
@@ -282,25 +260,12 @@ export default function SearchScreen() {
           bar_languages: languagesMap.get(bar.id) || [],
         };
 
-        // Log explícito para verificar que los datos se asignan correctamente
-        console.log('✅ Bar enriched:', bar.name, {
-          foods: enrichedBar.bar_food_types,
-          features: enrichedBar.bar_selected_features,
-          languages: enrichedBar.bar_languages
-        });
+        // enriched (log removed)
 
         return enrichedBar;
       });
 
-      console.log('🔍 Enriched bars data:');
-      enrichedBars.forEach(bar => {
-        console.log(`📋 ${bar.name}:`, {
-          category_id: bar.category_id,
-          foodTypes: bar.bar_food_types,
-          features: bar.bar_selected_features,
-          languages: bar.bar_languages
-        });
-      });
+      // enriched bars data (removed)
 
       // Debug: Log complete example bar
       if (enrichedBars.length > 0) {
@@ -337,12 +302,7 @@ export default function SearchScreen() {
             ?.find((img: any) => img.image_order === 1)?.image_url || 
             bar.bar_images?.[0]?.image_url || null;
 
-          console.log(`🖼️ Bar "${bar.name}":`, {
-            totalImages: bar.bar_images?.length || 0,
-            imageOrder1: bar.bar_images?.find((img: any) => img.image_order === 1)?.image_url,
-            fallbackImage: bar.bar_images?.[0]?.image_url,
-            selectedImage: mainImage
-          });
+          // image selection debug removed
 
           return {
             ...bar,
@@ -364,7 +324,7 @@ export default function SearchScreen() {
       // Apply food types filter (client-side)
       if (selectedFoodTypes.length > 0) {
         const beforeCount = filteredBars.length;
-        console.log('🍕 Starting food types filter with:', selectedFoodTypes);
+        // start food types filter
         
         filteredBars = filteredBars.filter(bar => {
           const foodIds = bar.bar_food_types?.map((ft: { food_type_id: number }) => ft.food_type_id) || [];
@@ -372,25 +332,21 @@ export default function SearchScreen() {
           // Check if bar has ALL selected food types (AND logic)
           const matchesFood = selectedFoodTypes.every(selectedId => {
             const hasFoodType = foodIds.includes(selectedId);
-            console.log(`  🍕 Bar "${bar.name}": checking food_type_id ${selectedId} -> ${hasFoodType ? '✅' : '❌'}`);
+            // food type match (removed)
             return hasFoodType;
           });
           
-          console.log(`🧪 Bar "${bar.name}":`, {
-            foodIds,
-            selectedFoodTypes,
-            matchesFood: matchesFood ? '✅' : '❌'
-          });
+          // per bar filter log removed
           
           return matchesFood;
         });
-        console.log('🍕 Applied food types filter (client-side):', selectedFoodTypes, `(${beforeCount} -> ${filteredBars.length} bars)`);
+        // filter result summary removed
       }
 
       // Apply features filter (client-side)
       if (selectedFeatures.length > 0) {
         const beforeCount = filteredBars.length;
-        console.log('✨ Starting features filter with:', selectedFeatures);
+        // features filter start
         
         filteredBars = filteredBars.filter(bar => {
           const featureIds = bar.bar_selected_features?.map((f: { feature_id: number }) => f.feature_id) || [];
@@ -398,25 +354,21 @@ export default function SearchScreen() {
           // Check if bar has ALL selected features (AND logic)
           const matchesFeatures = selectedFeatures.every(selectedId => {
             const hasFeature = featureIds.includes(selectedId);
-            console.log(`  ✨ Bar "${bar.name}": checking feature_id ${selectedId} -> ${hasFeature ? '✅' : '❌'}`);
+            // feature match removed
             return hasFeature;
           });
           
-          console.log(`🧪 Bar "${bar.name}":`, {
-            featureIds,
-            selectedFeatures,
-            matchesFeatures: matchesFeatures ? '✅' : '❌'
-          });
+          // per bar feature log removed
           
           return matchesFeatures;
         });
-        console.log('✨ Applied features filter (client-side):', selectedFeatures, `(${beforeCount} -> ${filteredBars.length} bars)`);
+        // features filter summary removed
       }
 
       // Apply languages filter (client-side)
       if (selectedLanguages.length > 0) {
         const beforeCount = filteredBars.length;
-        console.log('🌍 Starting languages filter with:', selectedLanguages);
+        // languages filter start
         
         filteredBars = filteredBars.filter(bar => {
           const languageIds = bar.bar_languages?.map((l: { language_id: number }) => l.language_id) || [];
@@ -424,19 +376,15 @@ export default function SearchScreen() {
           // Check if bar has ALL selected languages (AND logic)
           const matchesLanguages = selectedLanguages.every(selectedId => {
             const hasLanguage = languageIds.includes(selectedId);
-            console.log(`  🌍 Bar "${bar.name}": checking language_id ${selectedId} -> ${hasLanguage ? '✅' : '❌'}`);
+            // language match removed
             return hasLanguage;
           });
           
-          console.log(`🧪 Bar "${bar.name}":`, {
-            languageIds,
-            selectedLanguages,
-            matchesLanguages: matchesLanguages ? '✅' : '❌'
-          });
+          // per bar language log removed
           
           return matchesLanguages;
         });
-        console.log('🌍 Applied languages filter (client-side):', selectedLanguages, `(${beforeCount} -> ${filteredBars.length} bars)`);
+        // languages filter summary removed
       }
 
       // Apply sorting
@@ -449,16 +397,15 @@ export default function SearchScreen() {
             }
             return 0;
           });
-          console.log('📍 Sorted by proximity');
+          // sorted by proximity
           break;
         case 'rating':
           sortedBars.sort((a, b) => ((b.rating || 0) - (a.rating || 0)));
-          console.log('⭐ Sorted by rating');
+          // sorted by rating
           break;
       }
 
-      console.log('✅ Final bars after filtering and sorting:', sortedBars.length);
-      console.log('📋 Bars found:', sortedBars.map(bar => bar.name));
+      // final bars count (removed)
 
       setBars(sortedBars);
     } catch (error) {
