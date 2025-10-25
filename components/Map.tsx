@@ -40,44 +40,22 @@ const Map: React.FC = () => {
   const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
   const cameraRef = React.useRef<MapboxGL.Camera>(null);
 
-  // Pretty marker component (inlined to keep file self-contained)
-  const BarMarker: React.FC<{ selected: boolean }> = React.useCallback(({ selected }) => {
-    const pulse = React.useRef(new Animated.Value(0)).current;
+  // Marker (default version)
+  const BarMarkerDefault: React.FC = React.useCallback(() => (
+    <View style={styles.markerContainer} pointerEvents="none">
+      <View style={styles.markerBubble} />
+      <View style={styles.markerTail} />
+    </View>
+  ), []);
 
-    React.useEffect(() => {
-      if (selected) {
-        const loop = Animated.loop(
-          Animated.sequence([
-            Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-            Animated.timing(pulse, { toValue: 0, duration: 900, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-          ])
-        );
-        loop.start();
-        return () => loop.stop();
-      }
-    }, [pulse, selected]);
-
-    const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] });
-    const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0] });
-
-    return (
-      <View style={styles.markerContainer} pointerEvents="none">
-        {selected && (
-          <Animated.View
-            style={[
-              styles.markerPulseRing,
-              {
-                transform: [{ scale: ringScale }],
-                opacity: ringOpacity,
-              },
-            ]}
-          />
-        )}
-        <View style={[styles.markerBubble, selected ? styles.markerBubbleSelected : undefined]} />
-        <View style={[styles.markerTail, selected ? styles.markerTailSelected : undefined]} />
-      </View>
-    );
-  }, []);
+  // Marker (active/selected version)
+  const BarMarkerActive: React.FC = React.useCallback(() => (
+    <View style={styles.markerContainer} pointerEvents="none">
+      {/* No pulsing ring to avoid rectangular artifact */}
+      <View style={[styles.markerBubble, styles.markerBubbleSelected]} />
+      <View style={[styles.markerTail, styles.markerTailSelected]} />
+    </View>
+  ), []);
 
   // Create vector collection from bars
   const barsVector = React.useMemo(() => ({
@@ -407,13 +385,13 @@ const Map: React.FC = () => {
         {/* Bar markers using PointAnnotation to avoid ShapeSource cloning issues */}
         {bars.map((bar) => (
           <MapboxGL.PointAnnotation
-            key={`bar-${bar.id}`}
+            key={`bar-${bar.id}-${bar.id === selectedMarkerId ? 'active' : 'default'}`}
             id={`bar-${bar.id}`}
             coordinate={[bar.longitude, bar.latitude]}
             onSelected={() => handleMarkerPress(bar)}
             anchor={{ x: 0.5, y: 1.0 }}
           >
-            <BarMarker selected={bar.id === selectedMarkerId} />
+            {bar.id === selectedMarkerId ? <BarMarkerActive /> : <BarMarkerDefault />}
           </MapboxGL.PointAnnotation>
         ))}
       </MapboxGL.MapView>
@@ -527,22 +505,26 @@ const styles = StyleSheet.create({
   },
   markerPulseRing: {
     position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#38B6FF',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#8FD4FF',
   },
   markerBubble: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#1A2332',
+    backgroundColor: '#0F1724',
     borderWidth: 2,
-    borderColor: '#38B6FF',
+    borderColor: '#2A8FE8',
   },
   markerBubbleSelected: {
-    backgroundColor: '#1976D2',
-    borderColor: '#7FB3FF',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#8FD4FF', // light blue interior
+    borderWidth: 2,
+    borderColor: '#2A8FE8', // darker blue exterior stroke
   },
   markerTail: {
     width: 0,
@@ -552,11 +534,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 8,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#38B6FF',
+    borderTopColor: '#2A8FE8',
     marginTop: -2,
   },
   markerTailSelected: {
-    borderTopColor: '#7FB3FF',
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderTopColor: '#2A8FE8', // darker blue for exterior tail
   },
   centerButton: {
     position: 'absolute',
