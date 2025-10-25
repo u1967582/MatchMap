@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,8 @@ interface BarProfile {
   description?: string;
   address: string;
   city: string;
+  latitude?: number;
+  longitude?: number;
   phone?: string;
   website?: string;
   images: string[];
@@ -87,6 +89,25 @@ export default function BarProfileScreen() {
   const copyAddress = () => {
     if (bar?.address && bar?.city) {
       copyToClipboard(`${bar.address}, ${bar.city}`, 'Dirección');
+    }
+  };
+
+  const openDirections = async () => {
+    try {
+      if (!bar) return;
+      const hasCoords = typeof bar.latitude === 'number' && typeof bar.longitude === 'number';
+      const destination = hasCoords
+        ? `${bar.latitude},${bar.longitude}`
+        : encodeURIComponent(`${bar.address}, ${bar.city}`);
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'No se pudo abrir el navegador de mapas.');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo abrir cómo llegar.');
     }
   };
 
@@ -218,8 +239,9 @@ export default function BarProfileScreen() {
                 <Text style={styles.infoLabel}>Dirección</Text>
                 <Text style={styles.infoText}>{bar?.address}, {bar?.city}</Text>
               </View>
-              <TouchableOpacity style={styles.copyButton} onPress={copyAddress}>
-                <Ionicons name="copy-outline" size={18} color="#007AFF" />
+              <TouchableOpacity style={styles.directionsButton} onPress={openDirections}>
+                <Ionicons name="navigate-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.directionsButtonText}>Cómo llegar</Text>
               </TouchableOpacity>
             </View>
 
@@ -523,6 +545,8 @@ export default function BarProfileScreen() {
           description,
           address,
           city,
+          latitude,
+          longitude,
           phone,
           website,
           bar_images(image_url, image_order),
@@ -633,6 +657,8 @@ export default function BarProfileScreen() {
           description: barData.description,
           address: barData.address,
           city: barData.city,
+          latitude: barData.latitude,
+          longitude: barData.longitude,
           phone: barData.phone,
           website: barData.website,
           images: barData.bar_images
@@ -1709,5 +1735,20 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  directionsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: '#1976D2',
+  },
+  directionsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 }); 

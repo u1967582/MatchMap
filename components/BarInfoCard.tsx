@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
@@ -10,6 +10,8 @@ interface Bar {
   description?: string;
   address: string;
   city: string;
+  latitude?: number;
+  longitude?: number;
   rating?: number | null;
   review_count?: number | null;
   image_url?: string;
@@ -242,6 +244,34 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
               </View>
             </View>
           )}
+          {/* Directions button */}
+          <TouchableOpacity
+            style={styles.navigateButton}
+            activeOpacity={0.85}
+            onPress={async (e) => {
+              e.stopPropagation();
+              try {
+                const hasCoords = typeof bar.latitude === 'number' && typeof bar.longitude === 'number';
+                const destination = hasCoords
+                  ? `${bar.latitude},${bar.longitude}`
+                  : encodeURIComponent(`${bar.address}, ${bar.city}`);
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+                const supported = await Linking.canOpenURL(url);
+                if (supported) {
+                  await Linking.openURL(url);
+                } else if (onNavigate) {
+                  onNavigate(bar.id);
+                } else {
+                  Alert.alert('Error', 'No se pudo abrir el navegador de mapas.');
+                }
+              } catch (err) {
+                Alert.alert('Error', 'No se pudo abrir cómo llegar.');
+              }
+            }}
+          >
+            <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
+            <Text style={styles.navigateButtonText}>Cómo llegar</Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </View>
@@ -334,6 +364,7 @@ const styles = StyleSheet.create({
   },
   barInfo: {
     padding: 16,
+    paddingRight: 140, // room for the top-right button
   },
   barName: {
     color: '#FFFFFF',
@@ -388,9 +419,27 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   categoryText: {
-    color: '#FFFFFF',
+    color: '#DCE6F2',
     fontSize: 12,
     fontWeight: '500',
+  },
+  navigateButton: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    backgroundColor: '#1976D2',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  navigateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });
 
