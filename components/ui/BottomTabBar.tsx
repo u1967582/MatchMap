@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +21,8 @@ const BottomTabBar = () => {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const [containerWidth, setContainerWidth] = useState(0);
+  const H_PADDING = 16; // must match styles.container.paddingHorizontal
   
   // Animation values for each tab
   const tabAnimations = useRef<Record<string, Animated.Value>>({
@@ -57,6 +59,19 @@ const BottomTabBar = () => {
     return pathname === route || pathname.includes(route.replace('/', ''));
   }, [pathname]);
 
+  // Animated indicator position
+  const indicatorX = useRef(new Animated.Value(0)).current;
+
+  const getActiveIndex = useCallback(() => {
+    const index = tabs.findIndex((t) => {
+      if (t.route === '/(protected)/map') {
+        return pathname === '/(protected)/map' || pathname === '/map';
+      }
+      return pathname === t.route || pathname.includes(t.route.replace('/', ''));
+    });
+    return Math.max(0, index);
+  }, [pathname]);
+
   // Animate active indicator when tab changes
   useEffect(() => {
     tabs.forEach(({ route }) => {
@@ -72,7 +87,18 @@ const BottomTabBar = () => {
         }).start();
       }
     });
-  }, [pathname, isActiveTab, tabAnimations]);
+    if (containerWidth > 0) {
+      const contentWidth = Math.max(0, containerWidth - H_PADDING * 2);
+      const tabWidth = contentWidth / tabs.length;
+      const targetX = H_PADDING + getActiveIndex() * tabWidth;
+      Animated.spring(indicatorX, {
+        toValue: targetX,
+        tension: 120,
+        friction: 12,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [pathname, isActiveTab, tabAnimations, containerWidth, getActiveIndex, indicatorX, H_PADDING]);
 
   const renderTab = useCallback(({ icon, label, route }: TabItem) => {
     const isActive = isActiveTab(route);
@@ -95,7 +121,8 @@ const BottomTabBar = () => {
           onPress={() => handleTabPress(route)}
           activeOpacity={0.7}
         >
-          <View style={styles.iconContainer}>
+          <View style={[styles.iconContainer, isActive && styles.iconContainerActive]}
+          >
             <Ionicons name={icon} size={18} color={iconColor} />
           </View>
           <Text style={[styles.tabLabel, { color: textColor }]}>{label}</Text>
@@ -105,10 +132,14 @@ const BottomTabBar = () => {
   }, [handleTabPress, isActiveTab, tabAnimations]);
 
   return (
-    <View style={[
-      styles.container,
-      { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 8) }
-    ]}>
+    <View
+      style={[
+        styles.container,
+        { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 8) }
+      ]}
+      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+    >
+      {/* Hidden for now: active background pill caused visual artifacts on some devices */}
       {tabs.map(renderTab)}
     </View>
   );
@@ -122,10 +153,11 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     backgroundColor: '#0F1724',
-    paddingTop: 4,
+    paddingTop: 6,
     paddingHorizontal: 16,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -135,12 +167,22 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 10,
+    height: 40,
+    backgroundColor: '#162235',
+    borderRadius: 12,
+    zIndex: 0,
+    display: 'none',
+  },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
     position: 'relative',
+    zIndex: 1,
   },
   tabButton: {
     alignItems: 'center',
@@ -160,6 +202,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 32,
     height: 32,
+    borderRadius: 16,
+  },
+  iconContainerActive: {
+    backgroundColor: 'rgba(25, 118, 210, 0.16)',
   },
 
 });
