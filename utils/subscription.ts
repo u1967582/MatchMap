@@ -1,5 +1,6 @@
 // Subscription utility functions for MatchMap
 
+// Simplified subscription features; all users behave as PRO now
 export interface SubscriptionFeatures {
   search_priority: 'normal' | 'highlighted' | 'top';
   profile_visibility: boolean;
@@ -34,26 +35,6 @@ export interface UserSubscription {
 
 // Available subscription plans (debe coincidir con los IDs de Stripe)
 export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
-  free: {
-    id: 'free',
-    name: 'Gratuito',
-    price: 0,
-    currency: 'EUR',
-    interval: 'none',
-    features: {
-      search_priority: 'normal',
-      profile_visibility: true,
-      events_limit: 3,
-      posts_limit: 1,
-      bar_images_limit: 2,
-      allow_reviews: true,
-      images_allowed: false,
-      favorite_competitions: false,
-      analytics: false,
-      home_promotion: false,
-      support: 'standard'
-    }
-  },
   pro_monthly: {
     id: 'price_1RvGlr7hGI6XwPtaE9d03BfI',
     name: 'Pro Bar - Mensual',
@@ -94,45 +75,6 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
       support: 'standard'
     }
   },
-  elite_monthly: {
-    id: 'price_1RvGmN7hGI6XwPtaye2UkCso',
-    name: 'Elite Bar - Mensual',
-    price: 19.99,
-    currency: 'EUR',
-    interval: 'month',
-    features: {
-      search_priority: 'top',
-      profile_visibility: true,
-      events_limit: 'unlimited',
-      posts_limit: 'unlimited',
-      bar_images_limit: 25,
-      allow_reviews: true,
-      images_allowed: true,
-      favorite_competitions: true,
-      analytics: 'advanced',
-      home_promotion: true,
-      support: 'priority'
-    }
-  },
-  elite_yearly: {
-    id: 'price_1RvGmN7hGI6XwPta96F6JX70',
-    name: 'Elite Bar - Anual',
-    price: 149.99,
-    currency: 'EUR',
-    interval: 'year',
-    features: {
-      search_priority: 'top',
-      profile_visibility: true,
-      events_limit: 'unlimited',
-      posts_limit: 'unlimited',
-      bar_images_limit: 25,
-      allow_reviews: true,
-      images_allowed: true,
-      favorite_competitions: true,
-      analytics: 'advanced',
-      home_promotion: true,
-      support: 'priority'
-    }
   }
 };
 
@@ -158,98 +100,57 @@ export function canUploadMorePhotos(
   currentPhotoCount: number,
   subscription?: UserSubscription | null
 ): boolean {
-  if (!subscription || subscription.status !== 'active') {
-    // Free tier: limited to 2 images
-    return currentPhotoCount < 2;
-  }
-
-  const plan = getPlanByType(subscription.plan_type);
-  if (!plan) return false;
-
-  // Check if plan allows images
-  if (!plan.features.images_allowed) {
-    return false;
-  }
-
-  // Use the specific bar_images_limit from the plan
-  return currentPhotoCount < plan.features.bar_images_limit;
+  // Everyone is PRO: use generous limits
+  return currentPhotoCount < 10;
 }
 
 /**
  * Get maximum photos allowed for user's subscription
  */
 export function getMaxPhotosAllowed(subscription?: UserSubscription | null): number {
-  if (!subscription || subscription.status !== 'active') {
-    return 2; // Free tier: 2 images
-  }
-
-  const plan = getPlanByType(subscription.plan_type);
-  if (!plan) return 2;
-
-  // Check if plan allows images
-  if (!plan.features.images_allowed) {
-    return 0;
-  }
-
-  // Return the specific bar_images_limit from the plan
-  return plan.features.bar_images_limit;
+  return 10; // PRO default
 }
 
 /**
  * Check if user has active subscription
  */
 export function hasActiveSubscription(subscription?: UserSubscription | null): boolean {
-  return !!(subscription && subscription.status === 'active');
+  return true; // Treat as active for feature gating
 }
 
 /**
  * Check if user has Pro plan
  */
 export function isProUser(subscription?: UserSubscription | null): boolean {
-  if (!hasActiveSubscription(subscription)) return false;
-  
-  const planType = subscription?.plan_type;
-  return planType === 'pro_monthly' || planType === 'pro_yearly';
+  return true;
 }
 
 /**
  * Check if user has Elite plan
  */
 export function isEliteUser(subscription?: UserSubscription | null): boolean {
-  if (!hasActiveSubscription(subscription)) return false;
-  
-  const planType = subscription?.plan_type;
-  return planType === 'elite_monthly' || planType === 'elite_yearly';
+  return true; // Elite features also available
 }
 
 /**
  * Check if user can access advanced analytics
  */
 export function canAccessAdvancedAnalytics(subscription?: UserSubscription | null): boolean {
-  if (!hasActiveSubscription(subscription)) return false;
-  
-  const plan = getPlanByType(subscription?.plan_type || '');
-  return plan?.features.analytics === 'advanced';
+  return true;
 }
 
 /**
  * Check if user has watermark on photos (now based on images_allowed)
  */
 export function hasWatermark(subscription?: UserSubscription | null): boolean {
-  if (!hasActiveSubscription(subscription)) return true; // Free tier has watermark
-  
-  const plan = getPlanByType(subscription?.plan_type || '');
-  return !plan?.features.images_allowed; // Watermark if images not allowed
+  return false; // Never add watermark
 }
 
 /**
  * Get support level for user's subscription
  */
 export function getSupportLevel(subscription?: UserSubscription | null): 'standard' | 'priority' | 'vip' {
-  if (!hasActiveSubscription(subscription)) return 'standard';
-  
-  const plan = getPlanByType(subscription?.plan_type || '');
-  return plan?.features.support || 'standard';
+  return 'priority';
 }
 
 /**
@@ -270,21 +171,12 @@ export function formatPrice(plan: SubscriptionPlan): string {
  * Calculate yearly savings for annual plans
  */
 export function getYearlySavings(monthlyPlan: SubscriptionPlan, yearlyPlan: SubscriptionPlan): number {
-  const monthlyCost = monthlyPlan.price * 12;
-  const yearlyCost = yearlyPlan.price;
-  
-  return monthlyCost - yearlyCost;
+  return 0;
 }
 
 /**
  * Get recommended plan based on photo count needs
  */
 export function getRecommendedPlan(photoCount: number): SubscriptionPlan {
-  if (photoCount <= 2) {
-    return SUBSCRIPTION_PLANS.free;
-  } else if (photoCount <= 10) {
-    return SUBSCRIPTION_PLANS.pro_monthly;
-  } else {
-    return SUBSCRIPTION_PLANS.elite_monthly;
-  }
+  return SUBSCRIPTION_PLANS.pro_monthly;
 } 

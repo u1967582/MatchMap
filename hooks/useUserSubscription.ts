@@ -1,40 +1,41 @@
 import { useEffect, useState } from 'react';
+// Subscriptions disabled; provide static "pro"-like values
 import { supabase } from '~/utils/supabase';
-import { SUBSCRIPTION_PLANS } from '~/utils/subscription';
-import { waitForStripeRecords, getUserActivePlan, maxPhotosForPlan, validatePhotoLimit } from '~/utils/stripeHelpers';
 
 export function useUserSubscription(userId?: string) {
   const [state, setState] = useState({
     isLoading: true,
-    hasActiveSubscription: false,
-    planType: null as null | keyof typeof SUBSCRIPTION_PLANS,
-    maxPhotosAllowed: 2, // Default para plan gratuito
+    hasActiveSubscription: true,
+    planType: 'pro_monthly' as any,
+    maxPhotosAllowed: 10,
   });
 
   useEffect(() => {
-    if (!userId) return;
-    
+    if (!userId) {
+      setState({ isLoading: false, hasActiveSubscription: true, planType: 'pro_monthly' as any, maxPhotosAllowed: 10 });
+      return;
+    }
+
     let isMounted = true;
     
     (async () => {
       try {
-        // Usar la nueva función helper
-        const plan = await getUserActivePlan();
-        const hasActive = !!plan;
-        const maxPhotos = maxPhotosForPlan(plan);
+        const hasActive = true;
+        const maxPhotos = 10;
+        const plan = 'pro_monthly';
         
         if (isMounted) {
           setState({
             isLoading: false,
             hasActiveSubscription: hasActive,
-            planType: plan,
+            planType: plan as any,
             maxPhotosAllowed: maxPhotos,
           });
         }
       } catch (error) {
         console.error('❌ Error en useUserSubscription:', error);
         if (isMounted) {
-          setState(s => ({ ...s, isLoading: false }));
+          setState({ isLoading: false, hasActiveSubscription: true, planType: 'pro_monthly' as any, maxPhotosAllowed: 10 });
         }
       }
     })();
