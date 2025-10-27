@@ -9,13 +9,7 @@ export default function RegisterBarLayout() {
         animation: 'slide_from_right',
       }}
     >
-      <Stack.Screen 
-        name="step0" 
-        options={{ 
-          title: 'Paso 0 - Suscripción',
-          gestureEnabled: false,
-        }} 
-      />
+      {/* Inicio directo en step1 (planes/pagos eliminados) */}
       <Stack.Screen 
         name="step1" 
         options={{ 

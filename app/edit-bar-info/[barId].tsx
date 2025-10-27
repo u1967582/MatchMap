@@ -16,8 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
-import { getEffectiveCapabilities } from '~/lib/getEffectivePlan';
-import { CAP_BY_TIER, type Tier } from '~/lib/planCapabilities';
+// Subscriptions removed; use fixed limits
 
 interface Bar {
   id: string;
@@ -77,8 +76,7 @@ export default function EditBarInfoScreen() {
   // Images state
   const [barImages, setBarImages] = React.useState<BarImage[]>([]);
   const [menuImages, setMenuImages] = React.useState<BarImage[]>([]);
-  const [userPlan, setUserPlan] = React.useState<Tier>('free');
-  const [planLoading, setPlanLoading] = React.useState(true);
+  const [planLoading] = React.useState(false);
   
   // Categories state
   const [foodTypes, setFoodTypes] = React.useState<BarCategory[]>([]);
@@ -309,33 +307,13 @@ export default function EditBarInfoScreen() {
     fetchBarData();
   }, [barId, router]);
 
-  // Load user's plan to determine image limits
-  React.useEffect(() => {
-    const loadPlan = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setUserPlan('free');
-          return;
-        }
-        const { tier } = await getEffectiveCapabilities(user.id);
-        setUserPlan((tier as Tier) ?? 'free');
-      } catch (e) {
-        setUserPlan('free');
-      } finally {
-        setPlanLoading(false);
-      }
-    };
-    loadPlan();
-  }, []);
-
-  const barImagesLimit = React.useMemo(() => CAP_BY_TIER[userPlan].bar_images_limit, [userPlan]);
-  const menuImagesLimit = React.useMemo(() => (userPlan === 'free' ? 0 : 15), [userPlan]);
+  const barImagesLimit = React.useMemo(() => 10, []);
+  const menuImagesLimit = React.useMemo(() => 15, []);
 
   const handleAddBarImage = async () => {
     try {
       if (barImages.length >= barImagesLimit) {
-        Alert.alert('Límite alcanzado', `Tu plan ${userPlan} permite hasta ${barImagesLimit} imágenes del bar.`);
+        Alert.alert('Límite alcanzado', `Se permiten hasta ${barImagesLimit} imágenes del bar.`);
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -357,12 +335,8 @@ export default function EditBarInfoScreen() {
 
   const handleAddMenuImage = async () => {
     try {
-      if (menuImagesLimit === 0) {
-        Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes del menú.');
-        return;
-      }
       if (menuImages.length >= menuImagesLimit) {
-        Alert.alert('Límite alcanzado', `Tu plan ${userPlan} permite hasta ${menuImagesLimit} imágenes del menú.`);
+        Alert.alert('Límite alcanzado', `Se permiten hasta ${menuImagesLimit} imágenes del menú.`);
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({

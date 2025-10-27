@@ -15,8 +15,6 @@ import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
-import { useUserSubscription } from '~/hooks/useUserSubscription';
-import { getPlanByType, formatPrice } from '~/utils/subscription';
 
 interface UserProfile {
   id: string;
@@ -57,8 +55,7 @@ export default function ProfileScreen() {
   const [planName, setPlanName] = useState<string>('Cargando...');
   const router = useRouter();
   
-  // Hook para obtener la suscripción del usuario
-  const { hasActiveSubscription, planType, maxPhotosAllowed, subscription } = useUserSubscription(user?.id);
+  // All users are PRO; no subscription gating
 
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -117,7 +114,7 @@ export default function ProfileScreen() {
           
           // Fetch plan information for the bar
           const plan = await getBarPlanInfo(profileData.bar_id);
-          setPlanName(plan.name);
+          setPlanName('Pro');
         }
       } else {
         setPlanName('No asignado');
@@ -186,7 +183,7 @@ export default function ProfileScreen() {
   }, [router, userBars]);
 
   const handleAddBar = useCallback(() => {
-    router.push('/register-bar/step0' as any);
+    router.push('/register-bar/step1' as any);
   }, [router]);
 
   const handleViewBarProfile = useCallback((barId: string) => {
@@ -290,214 +287,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Plan Information Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Plan Actual</Text>
-          <View style={styles.planContainer}>
-            {hasActiveSubscription && planType ? (
-              <View>
-                {/* Plan Header */}
-                <View style={styles.planHeader}>
-                  <View style={styles.planIconContainer}>
-                    <Ionicons 
-                      name={planType?.includes('elite') ? "diamond" : "star"} 
-                      size={24} 
-                      color={planType?.includes('elite') ? "#8B5CF6" : "#10B981"} 
-                    />
-                  </View>
-                  <View style={styles.planInfo}>
-                    <Text style={styles.planName}>
-                      {getPlanByType(planType)?.name || 'Plan Activo'}
-                    </Text>
-                    <Text style={styles.planPrice}>
-                      {getPlanByType(planType) ? formatPrice(getPlanByType(planType)!) : 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.planStatus}>
-                    <View style={[
-                      styles.statusBadge, 
-                      { backgroundColor: subscription?.status === 'active' ? '#10B981' : '#F59E0B' }
-                    ]}>
-                      <Text style={styles.statusText}>
-                        {subscription?.status === 'active' ? 'ACTIVO' : 'PRUEBA'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Plan Features */}
-                <View style={styles.planFeatures}>
-                  <View style={styles.featureRow}>
-                    <Ionicons name="search" size={20} color="#10B981" />
-                    <Text style={styles.featureText}>
-                      Prioridad en búsquedas: {getPlanByType(planType)?.features.search_priority === 'top' ? 'Máxima' : 
-                        getPlanByType(planType)?.features.search_priority === 'highlighted' ? 'Destacada' : 'Normal'}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons name="calendar" size={20} color="#10B981" />
-                    <Text style={styles.featureText}>
-                      Eventos: {getPlanByType(planType)?.features.events_limit === 'unlimited' ? 'Ilimitados' : 
-                        `${getPlanByType(planType)?.features.events_limit} máximo`}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons name="document-text" size={20} color="#10B981" />
-                    <Text style={styles.featureText}>
-                      Posts: {getPlanByType(planType)?.features.posts_limit === 'unlimited' ? 'Ilimitados' : 
-                        `${getPlanByType(planType)?.features.posts_limit} máximo`}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons 
-                      name={getPlanByType(planType)?.features.images_allowed ? "images" : "lock-closed"} 
-                      size={20} 
-                      color={getPlanByType(planType)?.features.images_allowed ? "#10B981" : "#EF4444"} 
-                    />
-                    <Text style={styles.featureText}>
-                      {getPlanByType(planType)?.features.images_allowed ? 
-                        `Imágenes: ${getPlanByType(planType)?.features.bar_images_limit} máximo` : 
-                        'Sin imágenes'}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons 
-                      name={getPlanByType(planType)?.features.analytics ? "analytics" : "close-circle"} 
-                      size={20} 
-                      color={getPlanByType(planType)?.features.analytics ? "#10B981" : "#A3B3CC"} 
-                    />
-                    <Text style={styles.featureText}>
-                      Analytics: {getPlanByType(planType)?.features.analytics === 'advanced' ? 'Avanzados' : 
-                        getPlanByType(planType)?.features.analytics === 'basic' ? 'Básicos' : 'No disponibles'}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons 
-                      name={getPlanByType(planType)?.features.home_promotion ? "star" : "close-circle"} 
-                      size={20} 
-                      color={getPlanByType(planType)?.features.home_promotion ? "#10B981" : "#A3B3CC"} 
-                    />
-                    <Text style={styles.featureText}>
-                      Promoción en home: {getPlanByType(planType)?.features.home_promotion ? 'Sí' : 'No'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Subscription Details */}
-                {subscription && (
-                  <View style={styles.subscriptionDetails}>
-                    <View style={styles.detailRow}>
-                      <Ionicons name="calendar" size={16} color="#A3B3CC" />
-                      <Text style={styles.detailLabel}>Inicio:</Text>
-                      <Text style={styles.detailValue}>
-                        {new Date(subscription.start_date).toLocaleDateString('es-ES')}
-                      </Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Ionicons name="refresh" size={16} color="#A3B3CC" />
-                      <Text style={styles.detailLabel}>Renovación:</Text>
-                      <Text style={styles.detailValue}>
-                        {new Date(subscription.end_date).toLocaleDateString('es-ES')}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Usage Warning */}
-                {userBars.length > 0 && planType && (
-                  <View style={styles.usageWarning}>
-                    <Ionicons name="information-circle" size={20} color="#F59E0B" />
-                    <Text style={styles.warningText}>
-                      {!getPlanByType(planType)?.features.images_allowed ? 
-                        'Tu plan no permite imágenes. Actualiza para añadir fotos a tu bar.' :
-                        getPlanByType(planType)?.features.events_limit === 1 || getPlanByType(planType)?.features.posts_limit === 1 ?
-                        'Tu plan tiene límites bajos. Considera actualizar para más flexibilidad.' :
-                        `Tu plan permite hasta ${getPlanByType(planType)?.features.bar_images_limit} imágenes. ¡Aprovecha al máximo!`
-                      }
-                    </Text>
-                  </View>
-                )}
-
-                {/* Plan Actions */}
-                <View style={styles.planActions}>
-                  <TouchableOpacity 
-                    style={styles.upgradeButton} 
-                    onPress={handleViewPlans}
-                  >
-                    <Ionicons name="arrow-up-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.upgradeButtonText}>Cambiar Plan</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <View>
-                {/* Free Plan Display */}
-                <View style={styles.planHeader}>
-                  <View style={styles.planIconContainer}>
-                    <Ionicons name="gift" size={24} color="#A3B3CC" />
-                  </View>
-                  <View style={styles.planInfo}>
-                    <Text style={styles.planName}>Plan Gratuito</Text>
-                    <Text style={styles.planPrice}>0€/mes</Text>
-                  </View>
-                  <View style={styles.planStatus}>
-                    <View style={[styles.statusBadge, { backgroundColor: '#6B7280' }]}>
-                      <Text style={styles.statusText}>GRATUITO</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Free Plan Features */}
-                <View style={styles.planFeatures}>
-                  <View style={styles.featureRow}>
-                    <Ionicons name="search" size={20} color="#A3B3CC" />
-                    <Text style={styles.featureText}>Prioridad en búsquedas: Normal</Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons name="calendar" size={20} color="#A3B3CC" />
-                    <Text style={styles.featureText}>Eventos: 3 máximo</Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons name="document-text" size={20} color="#A3B3CC" />
-                    <Text style={styles.featureText}>Posts: 1 máximo</Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons name="images" size={20} color="#A3B3CC" />
-                    <Text style={styles.featureText}>Imágenes: 2 máximo</Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons name="close-circle" size={20} color="#A3B3CC" />
-                    <Text style={styles.featureText}>Analytics: No disponibles</Text>
-                  </View>
-                  
-                  <View style={styles.featureRow}>
-                    <Ionicons name="close-circle" size={20} color="#A3B3CC" />
-                    <Text style={styles.featureText}>Promoción en home: No</Text>
-                  </View>
-                </View>
-
-                {/* Upgrade CTA */}
-                <View style={styles.planActions}>
-                  <TouchableOpacity 
-                    style={styles.upgradeButton} 
-                    onPress={handleViewPlans}
-                  >
-                    <Ionicons name="rocket" size={20} color="#FFFFFF" />
-                    <Text style={styles.upgradeButtonText}>Mejorar Plan</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
+        {/* Plan section removed: all users are PRO now */}
 
 
 

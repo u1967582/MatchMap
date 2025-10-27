@@ -10,9 +10,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { waitForStripeRecords, getUserActivePlan, maxPhotosForPlan, validatePhotoLimit } from '~/utils/stripeHelpers';
+// Stripe helpers no longer used
 import { useFocusEffect } from '@react-navigation/native';
-import { getEffectiveCapabilities } from '~/lib/getEffectivePlan';
+// Plan capabilities removed; use fixed limits
 
 interface ImageItem {
   id: string;
@@ -24,22 +24,12 @@ interface ImageItem {
 const { width } = Dimensions.get('window');
 const IMAGE_WIDTH = (width - 60) / 2; // 2 columns with padding
 
-// Plan limits for images
-const PLAN_LIMITS = {
-  free: { bar: 2, menu: 0 },
-  pro: { bar: 10, menu: 15 },
-  elite: { bar: 25, menu: 15 }
-};
+// Fixed global limits
+const MAX_BAR_PHOTOS = 10;
+const MAX_MENU_PHOTOS = 15;
 
 // Get color for plan badge
-const getPlanColor = (plan: 'free' | 'pro' | 'elite') => {
-  switch (plan) {
-    case 'free': return '#6B7280';
-    case 'pro': return '#10B981';
-    case 'elite': return '#8B5CF6';
-    default: return '#6B7280';
-  }
-};
+const getPlanColor = () => '#10B981';
 
 const Step4Photos: React.FC = () => {
   const router = useRouter();
@@ -49,35 +39,12 @@ const Step4Photos: React.FC = () => {
   const [barImages, setBarImages] = useState<ImageItem[]>([]);
   const [menuImages, setMenuImages] = useState<ImageItem[]>([]);
   const [barCreated, setBarCreated] = useState(false);
-  const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'elite'>('free');
-  const [planLoading, setPlanLoading] = useState(true);
+  const [planLoading] = useState(false);
 
   // Generate unique ID for images
   const generateId = () => Math.random().toString(36).substring(7);
 
-  // Fetch user's plan and set limits
-  const fetchUserPlan = useCallback(async () => {
-    try {
-      setPlanLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setUserPlan('free');
-        return;
-      }
-      const { tier } = await getEffectiveCapabilities(user.id);
-      setUserPlan((tier as 'free' | 'pro' | 'elite') ?? 'free');
-    } catch (error) {
-      console.warn('Error fetching user plan:', error);
-      setUserPlan('free');
-    } finally {
-      setPlanLoading(false);
-    }
-  }, []);
-
-  // Load user plan on component mount
-  useEffect(() => {
-    fetchUserPlan();
-  }, [fetchUserPlan]);
+  // No plan fetching needed
 
   // Upload single image to Supabase Storage
   const uploadSingleImage = useCallback(async (uri: string, barId: string, type: 'bar' | 'menu', order: number): Promise<string> => {
@@ -236,15 +203,12 @@ const Step4Photos: React.FC = () => {
 
       if (!result.canceled && result.assets) {
         const currentImages = type === 'bar' ? barImages : menuImages;
-        const maxImages = type === 'bar' ? PLAN_LIMITS[userPlan].bar : PLAN_LIMITS[userPlan].menu;
+        const maxImages = type === 'bar' ? MAX_BAR_PHOTOS : MAX_MENU_PHOTOS;
         
         // Check if we can add more images based on user's plan
         const remainingSlots = maxImages - currentImages.length;
         if (remainingSlots <= 0) {
-          Alert.alert(
-            'Límite alcanzado',
-            `Tu plan ${userPlan} permite hasta ${maxImages} imágenes para ${type === 'bar' ? 'fotos del bar' : 'fotos del menú'}.`
-          );
+          Alert.alert('Límite alcanzado', `Permite hasta ${maxImages} imágenes para ${type === 'bar' ? 'fotos del bar' : 'fotos del menú'}.`);
           return;
         }
 
@@ -287,7 +251,7 @@ const Step4Photos: React.FC = () => {
       console.error('Error picking images:', error);
       Alert.alert('Error', 'No se pudieron seleccionar las imágenes');
     }
-  }, [barImages, menuImages, requestPermissions, userPlan]);
+  }, [barImages, menuImages, requestPermissions]);
 
   // Remove image
   const removeImage = useCallback((id: string, type: 'bar' | 'menu') => {
@@ -470,15 +434,14 @@ const Step4Photos: React.FC = () => {
         return;
       }
 
-      // Validate image limits based on user's plan
-      const { tier } = await getEffectiveCapabilities(user.id);
-      const maxBarImages = PLAN_LIMITS[tier as 'free' | 'pro' | 'elite'].bar;
-      const maxMenuImages = PLAN_LIMITS[tier as 'free' | 'pro' | 'elite'].menu;
+      // Validate fixed image limits
+      const maxBarImages = MAX_BAR_PHOTOS;
+      const maxMenuImages = MAX_MENU_PHOTOS;
 
       if (barImages.length > maxBarImages) {
         Alert.alert(
           'Límite de imágenes excedido',
-          `Tu plan (${tier}) permite hasta ${maxBarImages} imágenes del bar. Tienes ${barImages.length} seleccionadas.`
+          `Se permiten hasta ${maxBarImages} imágenes del bar. Tienes ${barImages.length} seleccionadas.`
         );
         setLoading(false);
         return;
@@ -487,7 +450,7 @@ const Step4Photos: React.FC = () => {
       if (menuImages.length > maxMenuImages) {
         Alert.alert(
           'Límite de imágenes excedido',
-          `Tu plan (${tier}) permite hasta ${maxMenuImages} imágenes del menú. Tienes ${menuImages.length} seleccionadas.`
+          `Se permiten hasta ${maxMenuImages} imágenes del menú. Tienes ${menuImages.length} seleccionadas.`
         );
         setLoading(false);
         return;
@@ -635,11 +598,7 @@ const Step4Photos: React.FC = () => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Fotos del Bar</Text>
           <View style={styles.headerSpacer} />
-          {!planLoading && (
-            <View style={[styles.planBadge, { backgroundColor: getPlanColor(userPlan) }]}>
-              <Text style={styles.planBadgeText}>{userPlan.toUpperCase()}</Text>
-            </View>
-          )}
+          {/* Plan badge removed */}
         </View>
 
         <View style={styles.progressContainer}>
@@ -658,20 +617,17 @@ const Step4Photos: React.FC = () => {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Fotos del Bar</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Máximo {PLAN_LIMITS[userPlan].bar} imágenes (16:9) - Mantén presionado para reordenar
-                  {planLoading ? ' - Cargando plan...' : ` - Plan ${userPlan.toUpperCase()}`}
-                </Text>
+                <Text style={styles.sectionSubtitle}>Máximo {MAX_BAR_PHOTOS} imágenes (16:9) - Mantén presionado para reordenar</Text>
               </View>
               
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => pickImages('bar')}
-                disabled={loading || planLoading || barImages.length >= PLAN_LIMITS[userPlan].bar}
+                disabled={loading || barImages.length >= MAX_BAR_PHOTOS}
               >
                 <Ionicons name="camera" size={24} color="#007AFF" />
                 <Text style={styles.addButtonText}>
-                  {barImages.length >= PLAN_LIMITS[userPlan].bar ? 'Máximo alcanzado' : 'Agregar fotos del bar'}
+                  {barImages.length >= MAX_BAR_PHOTOS ? 'Máximo alcanzado' : 'Agregar fotos del bar'}
                 </Text>
               </TouchableOpacity>
 
@@ -688,28 +644,25 @@ const Step4Photos: React.FC = () => {
                 </View>
               )}
               
-              <Text style={styles.counter}>{barImages.length}/{PLAN_LIMITS[userPlan].bar} fotos</Text>
+              <Text style={styles.counter}>{barImages.length}/{MAX_BAR_PHOTOS} fotos</Text>
             </View>
 
             {/* Menu Images Section (hidden for free plan) */}
-            {PLAN_LIMITS[userPlan].menu > 0 && (
+            {MAX_MENU_PHOTOS > 0 && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Fotos del Menú</Text>
-                  <Text style={styles.sectionSubtitle}>
-                    Máximo {PLAN_LIMITS[userPlan].menu} imágenes (3:4) - Mantén presionado para reordenar
-                    {planLoading ? ' - Cargando plan...' : ` - Plan ${userPlan.toUpperCase()}`}
-                  </Text>
+                  <Text style={styles.sectionSubtitle}>Máximo {MAX_MENU_PHOTOS} imágenes (3:4) - Mantén presionado para reordenar</Text>
                 </View>
                 
                 <TouchableOpacity
                   style={styles.addButton}
                   onPress={() => pickImages('menu')}
-                  disabled={loading || planLoading || menuImages.length >= PLAN_LIMITS[userPlan].menu}
+                  disabled={loading || menuImages.length >= MAX_MENU_PHOTOS}
                 >
                   <Ionicons name="restaurant" size={24} color="#007AFF" />
                   <Text style={styles.addButtonText}>
-                    {menuImages.length >= PLAN_LIMITS[userPlan].menu ? 'Máximo alcanzado' : 'Agregar fotos del menú'}
+                    {menuImages.length >= MAX_MENU_PHOTOS ? 'Máximo alcanzado' : 'Agregar fotos del menú'}
                   </Text>
                 </TouchableOpacity>
   
@@ -726,7 +679,7 @@ const Step4Photos: React.FC = () => {
                   </View>
                 )}
                 
-                <Text style={styles.counter}>{menuImages.length}/{PLAN_LIMITS[userPlan].menu} fotos</Text>
+                <Text style={styles.counter}>{menuImages.length}/{MAX_MENU_PHOTOS} fotos</Text>
               </View>
             )}
 

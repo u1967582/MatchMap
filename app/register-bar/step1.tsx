@@ -5,21 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import Step1GeneralInfo from '~/screens/registerBar/Step1GeneralInfo';
 
-// helper
-async function userHasActiveSubscription(userId: string) {
-  const { data } = await supabase
-    .from('subscriptions')
-    .select('id')
-    .eq('user_id', userId)
-    .in('status', ['active','trialing'])
-    .limit(1);
-  return !!data?.length;
-}
+// Plans removed: helper no longer needed
 
 export default function Step1() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [canProceed, setCanProceed] = useState<boolean>(false);
+  const [canProceed, setCanProceed] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -28,12 +19,8 @@ export default function Step1() {
       if (currentUser) {
         setUser(currentUser);
         
-        // guard global del wizard
-        // ✅ Permite avanzar si:
-        //   - hay subs activa, o
-        //   - NO hay subs (modo free)
-        const hasSubscription = await userHasActiveSubscription(currentUser.id);
-        setCanProceed(hasSubscription || true);
+        // All users can proceed directly
+        setCanProceed(true);
         setIsLoading(false);
       } else {
         router.replace('/login');

@@ -7,8 +7,7 @@ import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { useFavorites } from '~/hooks/useFavorites';
 import BarReviewsSection from '~/components/BarReviewsSection';
-import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
-import type { Tier } from '~/lib/planCapabilities';
+// Plans removed: all bars are PRO
 
 interface BarProfile {
   id: string;
@@ -70,8 +69,7 @@ export default function BarProfileScreen() {
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
-  const [planTier, setPlanTier] = useState<Tier>('free');
-  const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(false);
+  const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(true);
   const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
 
   // Functions to copy to clipboard
@@ -188,7 +186,7 @@ export default function BarProfileScreen() {
               </View>
             )}
             
-            {isOwner && (
+                {isOwner && (
               <TouchableOpacity style={styles.editButton} onPress={handleEditInfo}>
                 <Ionicons name="create-outline" size={16} color="#FFFFFF" />
                 <Text style={styles.editButtonText}>Editar información</Text>
@@ -325,7 +323,7 @@ export default function BarProfileScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>📰 Posts</Text>
-              {isOwner && (
+            {isOwner && (
                 <TouchableOpacity style={styles.createPostButton} onPress={handleCreatePost}>
                   <Ionicons name="add" size={16} color="#FFFFFF" />
                   <Text style={styles.createPostButtonText}>Crear Post</Text>
@@ -358,7 +356,7 @@ export default function BarProfileScreen() {
 
       case 'reviews':
         return (
-          <View style={styles.section}>
+              <View style={styles.section}>
             <Text style={styles.sectionTitle}>⭐ Reseñas</Text>
             {publicReviews.length === 0 ? (
               <View style={styles.noPostsContainer}>
@@ -389,20 +387,13 @@ export default function BarProfileScreen() {
                   <Text style={styles.matchButtonText}>Añadir partido manualmente</Text>
                 </TouchableOpacity>
                 
-                {planTier === 'free' ? (
-                  <View style={[styles.matchButtonOutline, { borderColor: '#3A4A5C' }]}> 
-                    <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" />
-                    <Text style={[styles.matchButtonOutlineText, { color: '#8E8E93' }]}>Automatizar retransmisiones</Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.matchButtonOutline}
-                    onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
-                  >
-                    <Ionicons name="settings-outline" size={20} color="#1976D2" />
-                    <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  style={styles.matchButtonOutline}
+                  onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
+                >
+                  <Ionicons name="settings-outline" size={20} color="#1976D2" />
+                  <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ) : null
@@ -539,17 +530,8 @@ export default function BarProfileScreen() {
 
       if (barData) {
         // Check if bar has at least one active subscription (supports multiple rows)
-        const { count, error: subsError } = await supabase
-          .from('subscriptions')
-          .select('id', { count: 'exact', head: true })
-          .eq('bar_id', barData.id)
-          .eq('status', 'active');
-        if (subsError) {
-          console.warn('Error checking bar subscriptions:', subsError);
-          setCanShowMenuButton(false);
-        } else {
-          setCanShowMenuButton(!!count && count > 0);
-        }
+        // All bars can show menu button now
+        setCanShowMenuButton(true);
 
         // Load N:N relationships separately (only IDs first)
         const { data: foodTypes } = await supabase
@@ -1039,16 +1021,7 @@ export default function BarProfileScreen() {
     fetchBarProfile();
   }, [fetchBarProfile]);
 
-  useEffect(() => {
-    const loadTier = async () => {
-      if (!barId) return;
-      try {
-        const { tier } = await getBarTierAndCapabilities(String(barId));
-        setPlanTier(tier);
-      } catch {}
-    };
-    loadTier();
-  }, [barId]);
+  // Tier loading removed
 
   // Check if bar is in favorites when bar loads
   useEffect(() => {
