@@ -394,6 +394,24 @@ export default function BarProfileScreen() {
                   <Ionicons name="settings-outline" size={20} color="#1976D2" />
                   <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
                 </TouchableOpacity>
+
+                {/* Promote visibility button (gold) - same layout as primary button */}
+                <TouchableOpacity
+                  style={[styles.matchButton, styles.promoteButton]}
+                  onPress={() => {
+                    Alert.alert(
+                      'Promociona tu bar',
+                      'Muy pronto podrás aumentar la visibilidad de tu bar desde aquí. Por ahora, contáctanos desde Soporte.',
+                      [
+                        { text: 'Ir a Soporte', onPress: () => router.push('/support' as any) },
+                        { text: 'Cerrar', style: 'cancel' },
+                      ]
+                    );
+                  }}
+                >
+                  <Ionicons name="megaphone-outline" size={20} color="#FFFFFF" />
+                  <Text style={styles.matchButtonText} numberOfLines={1}>Augmenta la visibilidad de tu bar</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ) : null
@@ -1550,6 +1568,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+  promoteButton: {
+    backgroundColor: '#C29B2F',
+    marginTop: 12,
+  },
   matchButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
@@ -1557,8 +1579,8 @@ const styles = StyleSheet.create({
   },
   matchButtonOutlineText: {
     color: '#1976D2',
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
   },
   // Upcoming matches styles
   upcomingMatchesContainer: {
