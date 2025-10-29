@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import SearchBarWithResults from '~/components/SearchBarWithResults';
 import BarInfoCard from '~/components/BarInfoCard';
 import { supabase } from '~/utils/supabase';
+import { useBoostSelection } from '~/context/BoostSelectionContext';
 
 // Use environment variable for Mapbox token
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
@@ -40,8 +41,11 @@ const Map: React.FC = () => {
   const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
   const cameraRef = React.useRef<MapboxGL.Camera>(null);
 
+  // Get boosted bar IDs from context
+  const { selectedBoostBarIds } = useBoostSelection();
+
   // Pretty marker component (inlined to keep file self-contained)
-  const BarMarker: React.FC<{ selected: boolean }> = React.useCallback(({ selected }) => {
+  const BarMarker: React.FC<{ selected: boolean; isBoosted: boolean }> = React.useCallback(({ selected, isBoosted }) => {
     const pulse = React.useRef(new Animated.Value(0)).current;
 
     React.useEffect(() => {
@@ -62,6 +66,11 @@ const Map: React.FC = () => {
 
     return (
       <View style={styles.markerContainer} pointerEvents="none">
+        {/* Boosted halo - always visible for boosted bars */}
+        {isBoosted && (
+          <View style={styles.markerBoostHalo} />
+        )}
+        {/* Selection pulse - only visible when selected */}
         {selected && (
           <Animated.View
             style={[
@@ -73,8 +82,16 @@ const Map: React.FC = () => {
             ]}
           />
         )}
-        <View style={[styles.markerBubble, selected ? styles.markerBubbleSelected : undefined]} />
-        <View style={[styles.markerTail, selected ? styles.markerTailSelected : undefined]} />
+        <View style={[
+          styles.markerBubble,
+          selected && styles.markerBubbleSelected,
+          isBoosted && styles.markerBubbleBoosted
+        ]} />
+        <View style={[
+          styles.markerTail,
+          selected && styles.markerTailSelected,
+          isBoosted && styles.markerTailBoosted
+        ]} />
       </View>
     );
   }, []);
@@ -92,10 +109,11 @@ const Map: React.FC = () => {
         barId: bar.id,
         barName: bar.name,
         barData: bar,
-        isSelected: bar.id === selectedMarkerId
+        isSelected: bar.id === selectedMarkerId,
+        isBoosted: selectedBoostBarIds.includes(bar.id)
       }
     }))
-  }), [bars, selectedMarkerId]);
+  }), [bars, selectedMarkerId, selectedBoostBarIds]);
 
   // Handle marker press
   const handleMarkerPress = React.useCallback((bar: Bar) => {
@@ -399,17 +417,20 @@ const Map: React.FC = () => {
         />
 
         {/* Bar markers using PointAnnotation to avoid ShapeSource cloning issues */}
-        {bars.map((bar) => (
-          <MapboxGL.PointAnnotation
-            key={`bar-${bar.id}`}
-            id={`bar-${bar.id}`}
-            coordinate={[bar.longitude, bar.latitude]}
-            onSelected={() => handleMarkerPress(bar)}
-            anchor={{ x: 0.5, y: 1.0 }}
-          >
-            <BarMarker selected={bar.id === selectedMarkerId} />
-          </MapboxGL.PointAnnotation>
-        ))}
+        {bars.map((bar) => {
+          const isBoosted = selectedBoostBarIds.includes(bar.id);
+          return (
+            <MapboxGL.PointAnnotation
+              key={`bar-${bar.id}`}
+              id={`bar-${bar.id}`}
+              coordinate={[bar.longitude, bar.latitude]}
+              onSelected={() => handleMarkerPress(bar)}
+              anchor={{ x: 0.5, y: 1.0 }}
+            >
+              <BarMarker selected={bar.id === selectedMarkerId} isBoosted={isBoosted} />
+            </MapboxGL.PointAnnotation>
+          );
+        })}
       </MapboxGL.MapView>
 
       <SearchBarWithResults 
@@ -538,6 +559,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#1976D2',
     borderColor: '#7FB3FF',
   },
+  markerBubbleBoosted: {
+    backgroundColor: '#1A2332',
+    borderColor: '#FFD700',
+    borderWidth: 3,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 10,
+  },
+  markerBoostHalo: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 215, 0, 0.4)',
+  },
   markerTail: {
     width: 0,
     height: 0,
@@ -551,6 +591,9 @@ const styles = StyleSheet.create({
   },
   markerTailSelected: {
     borderTopColor: '#7FB3FF',
+  },
+  markerTailBoosted: {
+    borderTopColor: '#FFD700',
   },
   centerButton: {
     position: 'absolute',
