@@ -26,6 +26,30 @@ interface Bar {
   distance_km?: number;
 }
 
+// Default marker (non-selected, non-boosted)
+const BarMarkerDefault: React.FC = React.useCallback(() => (
+  <View style={styles.markerContainer} pointerEvents="none">
+    <View style={styles.markerBubble} />
+    <View style={styles.markerTail} />
+  </View>
+), []);
+
+// Boosted marker (with golden style)
+const BarMarkerBoosted: React.FC = React.useCallback(() => (
+  <View style={styles.markerContainer} pointerEvents="none">
+    <View style={[styles.markerBubble, styles.markerBubbleBoosted]} />
+    <View style={[styles.markerTail, styles.markerTailBoosted]} />
+  </View>
+), []);
+
+// Active/selected marker (highest priority)
+const BarMarkerActive: React.FC = React.useCallback(() => (
+  <View style={styles.markerContainer} pointerEvents="none">
+    <View style={[styles.markerBubble, styles.markerBubbleSelected]} />
+    <View style={[styles.markerTail, styles.markerTailSelected]} />
+  </View>
+), []);
+
 const Map: React.FC = () => {
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
@@ -43,58 +67,6 @@ const Map: React.FC = () => {
 
   // Get boosted bar IDs from context
   const { selectedBoostBarIds } = useBoostSelection();
-
-  // Pretty marker component (inlined to keep file self-contained)
-  const BarMarker: React.FC<{ selected: boolean; isBoosted: boolean }> = React.useCallback(({ selected, isBoosted }) => {
-    const pulse = React.useRef(new Animated.Value(0)).current;
-
-    React.useEffect(() => {
-      if (selected) {
-        const loop = Animated.loop(
-          Animated.sequence([
-            Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-            Animated.timing(pulse, { toValue: 0, duration: 900, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-          ])
-        );
-        loop.start();
-        return () => loop.stop();
-      }
-    }, [pulse, selected]);
-
-    const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] });
-    const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0] });
-
-    return (
-      <View style={styles.markerContainer} pointerEvents="none">
-        {/* Boosted halo - always visible for boosted bars */}
-        {isBoosted && (
-          <View style={styles.markerBoostHalo} />
-        )}
-        {/* Selection pulse - only visible when selected */}
-        {selected && (
-          <Animated.View
-            style={[
-              styles.markerPulseRing,
-              {
-                transform: [{ scale: ringScale }],
-                opacity: ringOpacity,
-              },
-            ]}
-          />
-        )}
-        <View style={[
-          styles.markerBubble,
-          selected && styles.markerBubbleSelected,
-          isBoosted && styles.markerBubbleBoosted
-        ]} />
-        <View style={[
-          styles.markerTail,
-          selected && styles.markerTailSelected,
-          isBoosted && styles.markerTailBoosted
-        ]} />
-      </View>
-    );
-  }, []);
 
   // Create vector collection from bars
   const barsVector = React.useMemo(() => ({
@@ -416,9 +388,20 @@ const Map: React.FC = () => {
           pulsing
         />
 
-        {/* Bar markers using PointAnnotation to avoid ShapeSource cloning issues */}
+        {/* Bar markers using PointAnnotation */}
         {bars.map((bar) => {
+          const isSelected = bar.id === selectedMarkerId;
           const isBoosted = selectedBoostBarIds.includes(bar.id);
+
+          // Priority: Selected > Boosted > Default
+          let MarkerComponent = BarMarkerDefault;
+          if (isBoosted && !isSelected) {
+            MarkerComponent = BarMarkerBoosted;
+          }
+          if (isSelected) {
+            MarkerComponent = BarMarkerActive;
+          }
+
           return (
             <MapboxGL.PointAnnotation
               key={`bar-${bar.id}`}
@@ -427,7 +410,7 @@ const Map: React.FC = () => {
               onSelected={() => handleMarkerPress(bar)}
               anchor={{ x: 0.5, y: 1.0 }}
             >
-              <BarMarker selected={bar.id === selectedMarkerId} isBoosted={isBoosted} />
+              <MarkerComponent />
             </MapboxGL.PointAnnotation>
           );
         })}
@@ -536,47 +519,47 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 6,
   },
-  // Pretty marker styles
   markerContainer: {
     alignItems: 'center',
-  },
-  markerPulseRing: {
-    position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#38B6FF',
   },
   markerBubble: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#1A2332',
-    borderWidth: 2,
-    borderColor: '#38B6FF',
-  },
-  markerBubbleSelected: {
-    backgroundColor: '#1976D2',
-    borderColor: '#7FB3FF',
+    backgroundColor: '#1E3A5F',  // Azul oscuro más visible
+    borderWidth: 3,
+    borderColor: '#4A90E2',  // Azul brillante para mejor contraste
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
   },
   markerBubbleBoosted: {
-    backgroundColor: '#1A2332',
-    borderColor: '#FFD700',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#1A2332',  // Fondo oscuro
     borderWidth: 3,
+    borderColor: '#FFD700',  // Borde dorado para boost
     shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 0 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
-    shadowRadius: 6,
-    elevation: 10,
+    shadowRadius: 5,
+    elevation: 7,
   },
-  markerBoostHalo: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 215, 0, 0.4)',
+  markerBubbleSelected: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF6B35',  // Naranja brillante para selección
+    borderWidth: 3,
+    borderColor: '#FF8C42',  // Naranja más claro para borde
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 8,
   },
   markerTail: {
     width: 0,
@@ -586,14 +569,20 @@ const styles = StyleSheet.create({
     borderTopWidth: 8,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#38B6FF',
+    borderTopColor: '#4A90E2',  // Azul brillante
     marginTop: -2,
   },
-  markerTailSelected: {
-    borderTopColor: '#7FB3FF',
-  },
   markerTailBoosted: {
-    borderTopColor: '#FFD700',
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderTopColor: '#FFD700',  // Dorado para boost
+  },
+  markerTailSelected: {
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderTopColor: '#FF8C42',  // Naranja
   },
   centerButton: {
     position: 'absolute',

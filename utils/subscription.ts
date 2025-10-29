@@ -74,7 +74,6 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
       home_promotion: false,
       support: 'standard'
     }
-  },
   }
 };
 

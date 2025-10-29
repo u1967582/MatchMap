@@ -74,7 +74,7 @@ export default function SearchScreen() {
   const [favoriteStates, setFavoriteStates] = useState<{ [key: string]: boolean }>({});
   
   // Filters state
-  const [selectedSort, setSelectedSort] = useState('proximity');
+  const [selectedSort, setSelectedSort] = useState('proximity'); // Default to "Proximidad"
   const [selectedBarCategories, setSelectedBarCategories] = useState<number[]>([]);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<number[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<number[]>([]);
@@ -105,17 +105,25 @@ export default function SearchScreen() {
     enabled: !!userLocation,
   });
 
-  // Update context when selection changes
+  // Update context when selection changes - with stabilized reference
   useEffect(() => {
-    setSelectedBoostBarIds(selected3Stable);
-  }, [selected3Stable, setSelectedBoostBarIds]);
-
-  // Update center when user location changes
-  useEffect(() => {
-    if (userLocation) {
-      setCenterLatLng({ lat: userLocation.latitude, lng: userLocation.longitude });
+    if (selected3Stable.length > 0 || userLocation) {
+      setSelectedBoostBarIds(selected3Stable);
     }
-  }, [userLocation, setCenterLatLng]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected3Stable.join(','), setSelectedBoostBarIds]); // Use join to create stable dependency
+
+  // Update center when user location changes - debounced
+  useEffect(() => {
+    if (!userLocation) return;
+
+    const timeoutId = setTimeout(() => {
+      setCenterLatLng({ lat: userLocation.latitude, lng: userLocation.longitude });
+    }, 100); // Small delay to batch updates
+
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation?.latitude, userLocation?.longitude, setCenterLatLng]); // Only depend on coordinates
 
   // Debug logs
   console.log('Filter data loaded:', {
@@ -451,25 +459,53 @@ export default function SearchScreen() {
         console.log('🌍 Applied languages filter (client-side):', selectedLanguages, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Apply sorting
+      // Fetch active boost bars directly for immediate sorting
+      let boostBarIds: string[] = [];
+      try {
+        const now = new Date().toISOString();
+        const { data: boostData } = await supabase
+          .from('bar_boosts')
+          .select('bar_id, end_at')
+          .eq('status', 'active')
+          .gt('end_at', now);
+
+        if (boostData && boostData.length > 0) {
+          // Get unique bar IDs that have active boosts
+          boostBarIds = [...new Set(boostData.map(b => b.bar_id))];
+          console.log('🚀 Found active boost bars:', boostBarIds.length);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching boost bars:', error);
+      }
+
+      // Apply sorting with BOOST PRIORITY
       let sortedBars = [...filteredBars];
-      switch (selectedSort) {
-        case 'proximity':
-          sortedBars.sort((a, b) => {
+
+      // Primary sort: Boosted bars always come first
+      sortedBars.sort((a, b) => {
+        const aIsBoosted = boostBarIds.includes(a.id);
+        const bIsBoosted = boostBarIds.includes(b.id);
+
+        // If one is boosted and the other isn't, boosted comes first
+        if (aIsBoosted && !bIsBoosted) return -1;
+        if (!aIsBoosted && bIsBoosted) return 1;
+
+        // Both boosted or both not boosted: apply secondary sort
+        switch (selectedSort) {
+          case 'proximity':
             if (a.distance_km && b.distance_km) {
               return a.distance_km - b.distance_km;
             }
             return 0;
-          });
-          console.log('📍 Sorted by proximity');
-          break;
-        case 'rating':
-          sortedBars.sort((a, b) => ((b.rating || 0) - (a.rating || 0)));
-          console.log('⭐ Sorted by rating');
-          break;
-      }
+          case 'rating':
+            return (b.rating || 0) - (a.rating || 0);
+          default:
+            return 0;
+        }
+      });
 
       console.log('✅ Final bars after filtering and sorting:', sortedBars.length);
+      console.log('🚀 Boosted bars on top:', boostBarIds.length);
       console.log('📋 Bars found:', sortedBars.map(bar => bar.name));
 
       setBars(sortedBars);
@@ -480,6 +516,16 @@ export default function SearchScreen() {
       setLoading(false);
     }
   }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, getUserLocation, selectedTeamId]);
+
+  // Update highlighting when boost selection changes (for visual sync with map)
+  // Note: Initial sorting is now handled inside searchBars()
+  useEffect(() => {
+    if (bars.length === 0 || selected3Stable.length === 0) return;
+
+    // Just trigger a re-render to update golden borders
+    // The bars are already sorted correctly from searchBars()
+    console.log('✨ Boost selection updated for visual sync:', selected3Stable.length);
+  }, [selected3Stable, bars.length]);
 
   // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -635,16 +681,24 @@ export default function SearchScreen() {
             }}
             style={styles.barImage}
           />
-          
+
+          {/* Top Sticker for Boosted Bars */}
+          {isBoosted && (
+            <View style={styles.topSticker}>
+              <Ionicons name="flash" size={14} color="#FFD700" />
+              <Text style={styles.topStickerText}>DESTACADO</Text>
+            </View>
+          )}
+
           {/* Favorites Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.favoritesButton, favoriteStates[item.id] && styles.favoritesButtonActive]}
             onPress={handleFavoriteToggle}
           >
-            <Ionicons 
-              name={favoriteStates[item.id] ? "heart" : "heart-outline"} 
-              size={20} 
-              color="#FFFFFF" 
+            <Ionicons
+              name={favoriteStates[item.id] ? "heart" : "heart-outline"}
+              size={20}
+              color="#FFFFFF"
             />
           </TouchableOpacity>
         </View>
@@ -1184,6 +1238,32 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  topSticker: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(26, 35, 50, 0.95)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 2,
+  },
+  topStickerText: {
+    color: '#FFD700',
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   favoritesButton: {
     position: 'absolute',
