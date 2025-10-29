@@ -3,6 +3,7 @@ import { StatusBar, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { requireOptionalNativeModule } from 'expo-modules-core';
+import { BoostSelectionProvider } from '~/context/BoostSelectionContext';
 
 export default function Layout() {
   useEffect(() => {
@@ -23,15 +24,17 @@ export default function Layout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
-      <Stack 
-        screenOptions={{
-          headerShown: false,
-          presentation: 'card',
-          animation: 'slide_from_right',
-          contentStyle: { backgroundColor: '#1C2A3A' }
-        }}
-      />
+      <BoostSelectionProvider>
+        <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            presentation: 'card',
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: '#1C2A3A' }
+          }}
+        />
+      </BoostSelectionProvider>
     </SafeAreaProvider>
   );
 }

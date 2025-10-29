@@ -3,10 +3,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
+import Gradient from '~/components/ui/Gradient';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { useFavorites } from '~/hooks/useFavorites';
 import BarReviewsSection from '~/components/BarReviewsSection';
+import BoostCountdown from '~/components/boost/BoostCountdown';
+import { useBarBoost } from '~/hooks/useBoostBars';
 // Plans removed: all bars are PRO
 
 interface BarProfile {
@@ -71,6 +74,9 @@ export default function BarProfileScreen() {
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(true);
   const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
+
+  // Get boost status for countdown
+  const { boost, isLoading: boostLoading } = useBarBoost(barId);
 
   // Functions to copy to clipboard
   const copyToClipboard = async (text: string, label: string) => {
@@ -395,23 +401,27 @@ export default function BarProfileScreen() {
                   <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
                 </TouchableOpacity>
 
-                {/* Promote visibility button (gold) - same layout as primary button */}
+                {/* Promote visibility button (gradient) */}
                 <TouchableOpacity
-                  style={[styles.matchButton, styles.promoteButton]}
-                  onPress={() => {
-                    Alert.alert(
-                      'Promociona tu bar',
-                      'Muy pronto podrás aumentar la visibilidad de tu bar desde aquí. Por ahora, contáctanos desde Soporte.',
-                      [
-                        { text: 'Ir a Soporte', onPress: () => router.push('/support' as any) },
-                        { text: 'Cerrar', style: 'cancel' },
-                      ]
-                    );
-                  }}
+                  activeOpacity={0.9}
+                  onPress={() => router.push(`/boost?barId=${barId}` as any)}
+                  style={styles.promoteButtonWrapper}
                 >
-                  <Ionicons name="megaphone-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.matchButtonText} numberOfLines={1}>Augmenta la visibilidad de tu bar</Text>
+                  <Gradient
+                    colors={["#3B82F6", "#10B981"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.matchButton, styles.promoteButtonGradient]}
+                  >
+                    <Ionicons name="megaphone-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.matchButtonText} numberOfLines={1}>Augmenta la visibilidad de tu bar</Text>
+                  </Gradient>
                 </TouchableOpacity>
+
+                {/* Boost Countdown - shown when boost is active */}
+                {boost?.isActive && boost?.endAt && (
+                  <BoostCountdown endAt={boost.endAt} style={{ marginTop: 12 }} />
+                )}
               </View>
             </View>
           ) : null
@@ -1571,6 +1581,13 @@ const styles = StyleSheet.create({
   promoteButton: {
     backgroundColor: '#C29B2F',
     marginTop: 12,
+  },
+  promoteButtonWrapper: {
+    marginTop: 12,
+    borderRadius: 10,
+  },
+  promoteButtonGradient: {
+    borderRadius: 10,
   },
   matchButtonText: {
     color: '#FFFFFF',

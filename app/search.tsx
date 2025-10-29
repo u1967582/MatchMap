@@ -26,6 +26,8 @@ import { useFilterData } from '~/hooks/useFilterData';
 import { useFavorites } from '~/hooks/useFavorites';
 import { searchTeams, type TeamSearchResult } from '~/services/teams';
 import { fetchBarIdsByTeam } from '~/services/bars';
+import { useBoostBars } from '~/hooks/useBoostBars';
+import { useBoostSelection } from '~/context/BoostSelectionContext';
 
 interface Bar {
   id: string;
@@ -93,6 +95,27 @@ export default function SearchScreen() {
 
   // Load favorites functionality
   const { toggleFavorite, isFavorite } = useFavorites();
+
+  // Boost selection context
+  const { setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
+
+  // Get boost bars based on current user location
+  const { selected3Stable } = useBoostBars({
+    centerLatLng: userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null,
+    enabled: !!userLocation,
+  });
+
+  // Update context when selection changes
+  useEffect(() => {
+    setSelectedBoostBarIds(selected3Stable);
+  }, [selected3Stable, setSelectedBoostBarIds]);
+
+  // Update center when user location changes
+  useEffect(() => {
+    if (userLocation) {
+      setCenterLatLng({ lat: userLocation.latitude, lng: userLocation.longitude });
+    }
+  }, [userLocation, setCenterLatLng]);
 
   // Debug logs
   console.log('Filter data loaded:', {
@@ -581,7 +604,7 @@ export default function SearchScreen() {
   // Render bar card
   const renderBarCard = useCallback(({ item }: { item: Bar }) => {
     console.log("Rendering bar card for:", item.name);
-  
+
     const handleFavoriteToggle = async (e: any) => {
       e.stopPropagation(); // Prevent triggering the card press
       const success = await toggleFavorite(item.id);
@@ -593,10 +616,16 @@ export default function SearchScreen() {
         console.log(favoriteStates[item.id] ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', item.name);
       }
     };
-  
+
+    // Check if this bar is boosted
+    const isBoosted = selected3Stable.includes(item.id);
+
     return (
-      <TouchableOpacity 
-        style={styles.barCard}
+      <TouchableOpacity
+        style={[
+          styles.barCard,
+          isBoosted && styles.barCardBoosted
+        ]}
         onPress={() => handleBarPress(item.id)}
       >
         <View style={styles.imageContainer}>
@@ -653,8 +682,8 @@ export default function SearchScreen() {
         </View>
       </TouchableOpacity>
     );
-    
-  }, [handleBarPress, toggleFavorite, favoriteStates]);
+
+  }, [handleBarPress, toggleFavorite, favoriteStates, selected3Stable]);
 
   // Load initial data
   useEffect(() => {
@@ -1136,6 +1165,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
     overflow: 'hidden',
+  },
+  barCardBoosted: {
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   imageContainer: {
     position: 'relative',
