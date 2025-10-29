@@ -397,25 +397,18 @@ export default function BarProfileScreen() {
                   style={styles.matchButtonOutline}
                   onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
                 >
-                  <Ionicons name="settings-outline" size={20} color="#1976D2" />
+                  <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
                   <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
                 </TouchableOpacity>
 
-                {/* Promote visibility button (gradient) */}
+                {/* Promote visibility button (boost style) */}
                 <TouchableOpacity
-                  activeOpacity={0.9}
+                  activeOpacity={0.8}
                   onPress={() => router.push(`/boost?barId=${barId}` as any)}
-                  style={styles.promoteButtonWrapper}
+                  style={styles.promoteButton}
                 >
-                  <Gradient
-                    colors={["#3B82F6", "#10B981"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[styles.matchButton, styles.promoteButtonGradient]}
-                  >
-                    <Ionicons name="megaphone-outline" size={20} color="#FFFFFF" />
-                    <Text style={styles.matchButtonText} numberOfLines={1}>Augmenta la visibilidad de tu bar</Text>
-                  </Gradient>
+                  <Ionicons name="flash" size={20} color="#FFD700" />
+                  <Text style={styles.promoteButtonText}>Aumenta la visibilidad de tu bar</Text>
                 </TouchableOpacity>
 
                 {/* Boost Countdown - shown when boost is active */}
@@ -1562,9 +1555,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   matchButtonOutline: {
-    backgroundColor: 'rgba(25, 118, 210, 0.12)',
-    borderWidth: 1,
-    borderColor: '#1976D2',
+    backgroundColor: '#1976D2',  // Fondo sólido azul en lugar de transparente
+    borderWidth: 0,  // Sin borde
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1572,22 +1564,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 10,
     gap: 10,
-    shadowColor: '#1976D2',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   promoteButton: {
-    backgroundColor: '#C29B2F',
-    marginTop: 12,
-  },
-  promoteButtonWrapper: {
-    marginTop: 12,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',  // Mismo fondo que countdown
     borderRadius: 10,
-  },
-  promoteButtonGradient: {
-    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',  // Mismo borde que countdown
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
   matchButtonText: {
     color: '#FFFFFF',
@@ -1595,9 +1589,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   matchButtonOutlineText: {
-    color: '#1976D2',
+    color: '#FFFFFF',  // Blanco para contraste con fondo azul
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  promoteButtonText: {
+    color: '#FFD700',  // Dorado como el countdown
+    fontSize: 15,
+    fontWeight: '600',
   },
   // Upcoming matches styles
   upcomingMatchesContainer: {

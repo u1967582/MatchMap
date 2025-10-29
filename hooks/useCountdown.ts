@@ -18,7 +18,7 @@ export function useCountdown(endAt: string | Date | null | undefined): Countdown
   const [countdown, setCountdown] = useState<CountdownTime>(() =>
     calculateCountdown(endAt)
   );
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   useEffect(() => {
     if (!endAt) {

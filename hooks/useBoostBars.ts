@@ -75,14 +75,17 @@ export function useBoostBars({
 
         // Transform data
         const bars: BoostBar[] = (data || [])
-          .filter((item) => item.bars)
-          .map((item) => ({
-            id: item.bars.id,
-            name: item.bars.name,
-            lat: item.bars.latitude,
-            lng: item.bars.longitude,
-            boost_end_at: item.end_at,
-          }));
+          .filter((item) => item.bars && !Array.isArray(item.bars))
+          .map((item) => {
+            const bar = item.bars as unknown as { id: string; name: string; latitude: number; longitude: number };
+            return {
+              id: bar.id,
+              name: bar.name,
+              lat: bar.latitude,
+              lng: bar.longitude,
+              boost_end_at: item.end_at,
+            };
+          });
 
         setBoostBars(bars);
       } catch (err) {
