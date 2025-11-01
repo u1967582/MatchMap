@@ -6,9 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import SearchBarWithResults from '~/components/SearchBarWithResults';
 import BarInfoCard from '~/components/BarInfoCard';
 import BarMapMarker from '~/components/BarMapMarker';
+import FilterModal from '~/components/ui/FilterModal';
 import { supabase } from '~/utils/supabase';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
 import { useBoostBars } from '~/hooks/useBoostBars';
+import { useFilterData } from '~/hooks/useFilterData';
 
 // Use environment variable for Mapbox token
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
@@ -26,6 +28,10 @@ interface Bar {
   rating?: number;
   review_count?: number;
   distance_km?: number;
+  category_id?: number;
+  bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
+  bar_selected_features?: { feature_id: number; feature: { name: string } }[];
+  bar_languages?: { language_id: number; language: { name: string } }[];
 }
 
 
@@ -43,6 +49,16 @@ const Map: React.FC = () => {
   const [cameraZoom, setCameraZoom] = React.useState(15);
   const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
   const cameraRef = React.useRef<MapboxGL.Camera>(null);
+  
+  // Filter states
+  const [filterModalVisible, setFilterModalVisible] = React.useState(false);
+  const [selectedBarCategories, setSelectedBarCategories] = React.useState<number[]>([]);
+  const [selectedFoodTypes, setSelectedFoodTypes] = React.useState<number[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = React.useState<number[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = React.useState<number[]>([]);
+  
+  // Load filter data
+  const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
 
   // Get boost context and functions
   const { selectedBoostBarIds, setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
@@ -129,6 +145,51 @@ const Map: React.FC = () => {
     setShowBarCard(false);
     setSelectedBar(null);
     setSelectedMarkerId(null);
+  }, []);
+
+  // Apply filters to bars
+  const filteredBars = React.useMemo(() => {
+    let filtered = [...bars];
+
+    // Apply category filter
+    if (selectedBarCategories.length > 0) {
+      filtered = filtered.filter(bar =>
+        bar.category_id && selectedBarCategories.includes(bar.category_id)
+      );
+    }
+
+    // Apply food types filter (must have ALL selected food types)
+    if (selectedFoodTypes.length > 0) {
+      filtered = filtered.filter(bar => {
+        const foodIds = bar.bar_food_types?.map(ft => ft.food_type_id) || [];
+        return selectedFoodTypes.every(selectedId => foodIds.includes(selectedId));
+      });
+    }
+
+    // Apply features filter (must have ALL selected features)
+    if (selectedFeatures.length > 0) {
+      filtered = filtered.filter(bar => {
+        const featureIds = bar.bar_selected_features?.map(f => f.feature_id) || [];
+        return selectedFeatures.every(selectedId => featureIds.includes(selectedId));
+      });
+    }
+
+    // Apply languages filter (must have ALL selected languages)
+    if (selectedLanguages.length > 0) {
+      filtered = filtered.filter(bar => {
+        const languageIds = bar.bar_languages?.map(l => l.language_id) || [];
+        return selectedLanguages.every(selectedId => languageIds.includes(selectedId));
+      });
+    }
+
+    console.log('🎯 FILTERS: Applied filters, showing', filtered.length, 'of', bars.length, 'bars');
+    return filtered;
+  }, [bars, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages]);
+
+  // Handle apply filters
+  const handleApplyFilters = React.useCallback(() => {
+    console.log('🎉 Applying filters...');
+    setFilterModalVisible(false);
   }, []);
 
   // Handle navigate to bar
@@ -380,7 +441,7 @@ const Map: React.FC = () => {
         />
 
         {/* Bar markers using PointAnnotation */}
-        {bars.map((bar) => {
+        {filteredBars.map((bar) => {
           const isSelected = bar.id === selectedMarkerId;
           const isBoosted = selectedBoostBarIds.includes(bar.id);
 
@@ -394,7 +455,7 @@ const Map: React.FC = () => {
           }
 
           // Log marker type for debugging (only first 3 bars to avoid spam)
-          if (bars.indexOf(bar) < 3) {
+          if (filteredBars.indexOf(bar) < 3) {
             console.log(`🎨 MARKER[${bar.name}]: type=${markerType}, boosted=${isBoosted}, selected=${isSelected}`);
           }
 
@@ -423,13 +484,32 @@ const Map: React.FC = () => {
         })}
       </MapboxGL.MapView>
 
-      <SearchBarWithResults 
-        value={searchText} 
-        onChangeText={handleSearchChange}
-        searchResults={searchResults}
-        isSearching={isSearching}
-        onLocationSelect={handleLocationSelect}
-      />
+      {/* Search bar with adjusted right margin for filter button */}
+      <View style={styles.searchWrapper} pointerEvents="box-none">
+        <SearchBarWithResults 
+          value={searchText} 
+          onChangeText={handleSearchChange}
+          searchResults={searchResults}
+          isSearching={isSearching}
+          onLocationSelect={handleLocationSelect}
+        />
+      </View>
+      
+      {/* Filter button */}
+      <TouchableOpacity
+        style={[
+          styles.filterButton,
+          (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+           selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
+        ]}
+        onPress={() => setFilterModalVisible(true)}
+      >
+        <Ionicons name="filter" size={20} color="#FFFFFF" />
+        {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+          selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+          <View style={styles.filterDot} />
+        )}
+      </TouchableOpacity>
 
       {/* Center on user location button */}
       {userLocation && (
@@ -488,6 +568,26 @@ const Map: React.FC = () => {
         onClose={handleCloseBarCard}
         onNavigate={handleNavigateToBar}
       />
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        barCategories={barCategories}
+        foodTypes={foodTypes}
+        barFeatures={barFeatures}
+        languages={languages}
+        selectedBarCategories={selectedBarCategories}
+        selectedFoodTypes={selectedFoodTypes}
+        selectedFeatures={selectedFeatures}
+        selectedLanguages={selectedLanguages}
+        onBarCategoriesChange={setSelectedBarCategories}
+        onFoodTypesChange={setSelectedFoodTypes}
+        onFeaturesChange={setSelectedFeatures}
+        onLanguagesChange={setSelectedLanguages}
+        onApplyFilters={handleApplyFilters}
+        loading={filtersLoading}
+      />
     </View>
   );
 };
@@ -525,6 +625,46 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 6,
+  },
+  searchWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 70, // Space for filter button (50px button + 20px margin)
+    bottom: 0,
+    zIndex: 999,
+  },
+  filterButton: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    backgroundColor: '#3A4A5C',
+    borderRadius: 12,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  filterButtonActive: {
+    backgroundColor: '#1976D2',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
   },
   centerButton: {
     position: 'absolute',
