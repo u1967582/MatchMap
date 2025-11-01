@@ -247,11 +247,11 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 70, // Position above BottomTabBar (reduced height)
+    bottom: 100, // Position well above BottomTabBar with safe spacing
     left: 0,
     right: 0,
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 10,
     zIndex: 1000,
   },
   overlay: {

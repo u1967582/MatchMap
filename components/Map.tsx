@@ -5,8 +5,10 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import SearchBarWithResults from '~/components/SearchBarWithResults';
 import BarInfoCard from '~/components/BarInfoCard';
+import BarMapMarker from '~/components/BarMapMarker';
 import { supabase } from '~/utils/supabase';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
+import { useBoostBars } from '~/hooks/useBoostBars';
 
 // Use environment variable for Mapbox token
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
@@ -26,29 +28,6 @@ interface Bar {
   distance_km?: number;
 }
 
-// Default marker (non-selected, non-boosted)
-const BarMarkerDefault: React.FC = React.useCallback(() => (
-  <View style={styles.markerContainer} pointerEvents="none">
-    <View style={styles.markerBubble} />
-    <View style={styles.markerTail} />
-  </View>
-), []);
-
-// Boosted marker (with golden style)
-const BarMarkerBoosted: React.FC = React.useCallback(() => (
-  <View style={styles.markerContainer} pointerEvents="none">
-    <View style={[styles.markerBubble, styles.markerBubbleBoosted]} />
-    <View style={[styles.markerTail, styles.markerTailBoosted]} />
-  </View>
-), []);
-
-// Active/selected marker (highest priority)
-const BarMarkerActive: React.FC = React.useCallback(() => (
-  <View style={styles.markerContainer} pointerEvents="none">
-    <View style={[styles.markerBubble, styles.markerBubbleSelected]} />
-    <View style={[styles.markerTail, styles.markerTailSelected]} />
-  </View>
-), []);
 
 const Map: React.FC = () => {
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
@@ -65,27 +44,37 @@ const Map: React.FC = () => {
   const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
   const cameraRef = React.useRef<MapboxGL.Camera>(null);
 
-  // Get boosted bar IDs from context
-  const { selectedBoostBarIds } = useBoostSelection();
+  // Get boost context and functions
+  const { selectedBoostBarIds, setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
 
-  // Create vector collection from bars
-  const barsVector = React.useMemo(() => ({
-    type: 'FeatureCollection',
-    features: bars.map((bar) => ({
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [bar.longitude, bar.latitude]
-      },
-      properties: {
-        barId: bar.id,
-        barName: bar.name,
-        barData: bar,
-        isSelected: bar.id === selectedMarkerId,
-        isBoosted: selectedBoostBarIds.includes(bar.id)
-      }
-    }))
-  }), [bars, selectedMarkerId, selectedBoostBarIds]);
+  // Fetch active boost bars using the hook
+  const { boostBars, isLoading: isLoadingBoost, error: boostError } = useBoostBars({
+    centerLatLng: userLocation ? { 
+      lat: userLocation.coords.latitude, 
+      lng: userLocation.coords.longitude 
+    } : null,
+    enabled: !!userLocation,
+  });
+
+  // Update context when boost bars are loaded
+  React.useEffect(() => {
+    if (boostBars.length > 0) {
+      const boostIds = boostBars.map(bar => bar.id);
+      console.log('🟡 BOOST: Loaded boost bars:', boostIds.length, 'bars with boost');
+      console.log('🟡 BOOST: Bar IDs with boost:', boostIds);
+      setSelectedBoostBarIds(boostIds);
+    }
+  }, [boostBars, setSelectedBoostBarIds]);
+
+  // Update center when user location changes
+  React.useEffect(() => {
+    if (userLocation) {
+      setCenterLatLng({
+        lat: userLocation.coords.latitude,
+        lng: userLocation.coords.longitude,
+      });
+    }
+  }, [userLocation, setCenterLatLng]);
 
   // Handle marker press
   const handleMarkerPress = React.useCallback((bar: Bar) => {
@@ -102,36 +91,38 @@ const Map: React.FC = () => {
     setShowBarCard(true);
   }, []);
 
-  // Handle shape source press
-  const handleShapeSourcePress = React.useCallback((e: any) => {
-    if (e.features && e.features.length > 0) {
-      const { properties } = e.features[0];
-      const selectedBarId = properties?.barId;
-      
-      if (selectedBarId) {
-        const selectedBar = bars.find((b) => b.id === selectedBarId);
-        if (selectedBar) {
-          console.log('📍 Shape source pressed for bar:', selectedBar.name);
-          handleMarkerPress(selectedBar);
-        }
-      }
-    }
-  }, [bars, handleMarkerPress]);
-
   // Debug effect for state changes
   React.useEffect(() => {
-    console.log('📍 State changed - selectedBar:', selectedBar?.name, 'showBarCard:', showBarCard);
-  }, [selectedBar, showBarCard]);
+    console.log('═══════════════════════════════════════');
+    console.log('📍 STATE: Selected bar:', selectedBar?.name || 'NONE');
+    console.log('📍 STATE: Show card:', showBarCard);
+    console.log('📍 STATE: Selected marker ID:', selectedMarkerId || 'NONE');
+    console.log('═══════════════════════════════════════');
+  }, [selectedBar, showBarCard, selectedMarkerId]);
 
   // Debug effect for bars loading
   React.useEffect(() => {
-    console.log('📍 Bars state updated - count:', bars.length);
+    console.log('📊 BARS: Total bars loaded:', bars.length);
+    if (bars.length > 0) {
+      console.log('📊 BARS: Sample bar:', {
+        name: bars[0].name,
+        id: bars[0].id,
+        coords: [bars[0].longitude, bars[0].latitude]
+      });
+    }
   }, [bars]);
 
-  // Debug effect for selected marker
+  // Debug effect for boost bars
   React.useEffect(() => {
-    console.log('📍 Selected marker changed:', selectedMarkerId);
-  }, [selectedMarkerId]);
+    console.log('═══════════════════════════════════════');
+    console.log('🟡 BOOST STATE: Total boost IDs:', selectedBoostBarIds.length);
+    console.log('🟡 BOOST STATE: IDs:', selectedBoostBarIds);
+    console.log('🟡 BOOST STATE: Loading:', isLoadingBoost);
+    if (boostError) {
+      console.error('🟡 BOOST ERROR:', boostError);
+    }
+    console.log('═══════════════════════════════════════');
+  }, [selectedBoostBarIds, isLoadingBoost, boostError]);
 
   // Handle close bar card
   const handleCloseBarCard = React.useCallback(() => {
@@ -393,24 +384,40 @@ const Map: React.FC = () => {
           const isSelected = bar.id === selectedMarkerId;
           const isBoosted = selectedBoostBarIds.includes(bar.id);
 
-          // Priority: Selected > Boosted > Default
-          let MarkerComponent = BarMarkerDefault;
+          // Determine marker type: Selected > Boosted > Default
+          let markerType: 'default' | 'boosted' | 'selected' = 'default';
           if (isBoosted && !isSelected) {
-            MarkerComponent = BarMarkerBoosted;
+            markerType = 'boosted';
           }
           if (isSelected) {
-            MarkerComponent = BarMarkerActive;
+            markerType = 'selected';
+          }
+
+          // Log marker type for debugging (only first 3 bars to avoid spam)
+          if (bars.indexOf(bar) < 3) {
+            console.log(`🎨 MARKER[${bar.name}]: type=${markerType}, boosted=${isBoosted}, selected=${isSelected}`);
           }
 
           return (
             <MapboxGL.PointAnnotation
-              key={`bar-${bar.id}`}
-              id={`bar-${bar.id}`}
+              key={`bar-${bar.id}-${markerType}`}
+              id={`bar-annotation-${bar.id}`}
               coordinate={[bar.longitude, bar.latitude]}
-              onSelected={() => handleMarkerPress(bar)}
+              onSelected={() => {
+                console.log('🔴 MARKER TOUCHED (onSelected):', bar.name);
+                handleMarkerPress(bar);
+              }}
               anchor={{ x: 0.5, y: 1.0 }}
             >
-              <MarkerComponent />
+              <BarMapMarker 
+                key={`marker-${markerType}-${bar.id}`}
+                type={markerType} 
+                animated={isBoosted && !isSelected}
+                onPress={() => {
+                  console.log('🟢 MARKER TOUCHED (custom onPress):', bar.name);
+                  handleMarkerPress(bar);
+                }}
+              />
             </MapboxGL.PointAnnotation>
           );
         })}
@@ -518,71 +525,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 6,
-  },
-  markerContainer: {
-    alignItems: 'center',
-  },
-  markerBubble: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#1E3A5F',  // Azul oscuro más visible
-    borderWidth: 3,
-    borderColor: '#4A90E2',  // Azul brillante para mejor contraste
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  markerBubbleBoosted: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#1A2332',  // Fondo oscuro
-    borderWidth: 3,
-    borderColor: '#FFD700',  // Borde dorado para boost
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.6,
-    shadowRadius: 5,
-    elevation: 7,
-  },
-  markerBubbleSelected: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FF6B35',  // Naranja brillante para selección
-    borderWidth: 3,
-    borderColor: '#FF8C42',  // Naranja más claro para borde
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 8,
-  },
-  markerTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#4A90E2',  // Azul brillante
-    marginTop: -2,
-  },
-  markerTailBoosted: {
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
-    borderTopColor: '#FFD700',  // Dorado para boost
-  },
-  markerTailSelected: {
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
-    borderTopColor: '#FF8C42',  // Naranja
   },
   centerButton: {
     position: 'absolute',
