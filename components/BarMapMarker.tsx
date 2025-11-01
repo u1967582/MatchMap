@@ -114,9 +114,9 @@ const styles = StyleSheet.create({
     width: 24,                    // Más pequeño (era 32)
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#4A90E2',   // Azul moderno y limpio
+    backgroundColor: '#1E3A5F',   // Azul oscuro
     borderWidth: 2,               // Borde definido pero no excesivo
-    borderColor: '#FFFFFF',       // Borde blanco para contraste limpio
+    borderColor: '#4A90E2',       // Borde azul claro
     justifyContent: 'center',
     alignItems: 'center',
     // Sombra sutil y elegante
@@ -127,16 +127,16 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   markerBubbleBoosted: {
-    backgroundColor: '#F5A623',   // Dorado elegante
-    borderColor: '#FFFFFF',
+    backgroundColor: '#FFD700',   // Dorado como el icono flash
+    borderColor: '#FFF4CC',       // Borde dorado muy claro
     // Sombra ligeramente más visible para destacar
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 6,
   },
   markerBubbleSelected: {
-    backgroundColor: '#FF6B6B',   // Rojo coral elegante
-    borderColor: '#FFFFFF',
+    backgroundColor: '#4A90E2',   // Azul claro (invertido del default)
+    borderColor: '#1E3A5F',       // Azul oscuro (invertido del default)
     borderWidth: 2.5,             // Borde ligeramente más grueso para énfasis
     shadowOpacity: 0.35,
     shadowRadius: 4,
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     opacity: 1,
     // Añade un toque de brillo sutil
-    shadowColor: '#F5A623',
+    shadowColor: '#FFD700',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 2,
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 7,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#FFFFFF',    // Blanco para continuidad con el borde
+    borderTopColor: '#4A90E2',    // Azul claro para continuidad con el borde
     marginTop: -2,
     // Sombra sutil para definir el contorno
     shadowColor: '#000',
@@ -183,10 +183,10 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
   },
   markerTailBoosted: {
-    borderTopColor: '#FFFFFF',
+    borderTopColor: '#FFF4CC',    // Dorado claro
   },
   markerTailSelected: {
-    borderTopColor: '#FFFFFF',
+    borderTopColor: '#1E3A5F',    // Azul oscuro (invertido)
   },
 });
 
