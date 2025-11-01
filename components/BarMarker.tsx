@@ -1,3 +1,16 @@
+/**
+ * @deprecated This component is deprecated and has been replaced by BarMapMarker
+ * 
+ * Please use BarMapMarker instead which provides:
+ * - Three distinct marker states (default, boosted, selected)
+ * - Better visual design with custom styling
+ * - Smooth animations for boosted markers
+ * - Better integration with the boost system
+ * 
+ * @see /components/BarMapMarker.tsx
+ * @see /docs/MAP_MARKERS_IMPLEMENTATION.md
+ */
+
 import * as React from 'react';
 import { Image, StyleSheet } from 'react-native';
 
@@ -16,6 +29,8 @@ const BarMarker: React.FC<BarMarkerProps> = ({
   rating,
   barId
 }) => {
+  console.warn('BarMarker is deprecated. Please use BarMapMarker instead.');
+  
   return (
     <Image
       source={require('~/assets/marker.png')}

@@ -1,6 +1,14 @@
 # 📍 Implementación: Componente BarMarker
 
-## 🎯 **Objetivo**
+> ⚠️ **NOTA:** Este documento describe el componente original `BarMarker` que ha sido **reemplazado por `BarMapMarker`**.
+> 
+> Para ver la documentación actualizada del sistema de marcadores actual, consulta:
+> - [MAP_MARKERS_IMPLEMENTATION.md](./MAP_MARKERS_IMPLEMENTATION.md)
+> - Componente: `/components/BarMapMarker.tsx`
+
+---
+
+## 🎯 **Objetivo Original**
 
 Crear un componente reutilizable `BarMarker` que use un marcador personalizado para mostrar los bares en el mapa.
 
