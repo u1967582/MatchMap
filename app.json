@@ -5,6 +5,8 @@
     "version": "1.0.0",
     "scheme": "matchmap",
     "jsEngine": "hermes",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -61,9 +63,7 @@
       "typedRoutes": true,
       "tsconfigPaths": true
     },
-    "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -76,7 +76,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tuorg.matchmap",
       "infoPlist": {
-        "UIViewControllerBasedStatusBarAppearance": false
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "LSApplicationQueriesSchemes": [
+          "googlegmail",
+          "googlemail"
+        ]
       }
     },
     "android": {
@@ -91,6 +95,19 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "matchmap",
+              "host": "*"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "extra": {

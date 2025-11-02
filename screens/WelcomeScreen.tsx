@@ -1,23 +1,25 @@
 import { View, StyleSheet, Text, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BackgroundImage from '~/components/ui/BackgroundImage';
 import CustomButton from '~/components/ui/CustomButton';
 import { useState } from 'react';
 
-const WelcomeScreen: React.FC = () => {
-  const router = useRouter();
+interface WelcomeScreenProps {
+  onLoginPress: () => void;
+  onRegisterPress: () => void;
+  onGooglePress: () => void;
+  loadingGoogle: boolean;
+}
+
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
+  onLoginPress,
+  onRegisterPress,
+  onGooglePress,
+  loadingGoogle,
+}) => {
   const { width } = Dimensions.get('window');
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  const handleLoginPress = () => {
-    router.push('/(auth)/login');
-  };
-
-  const handleSignUpPress = () => {
-    router.push('/(auth)/register');
-  };
 
   const slides = [
     {
@@ -82,8 +84,33 @@ const WelcomeScreen: React.FC = () => {
 
           {/* Sticky bottom buttons */}
           <View style={styles.footer}>
-            <CustomButton text="Iniciar sesión" onPress={handleLoginPress} variant="primary" />
-            <CustomButton text="Registrarse" onPress={handleSignUpPress} variant="secondary" />
+            <CustomButton 
+              text="Iniciar sesión" 
+              onPress={onLoginPress} 
+              variant="primary"
+              disabled={loadingGoogle}
+            />
+            <CustomButton 
+              text="Registrarse" 
+              onPress={onRegisterPress} 
+              variant="secondary"
+              disabled={loadingGoogle}
+            />
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>o</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <CustomButton 
+              text="Continuar con Google" 
+              onPress={onGooglePress} 
+              variant="social"
+              loading={loadingGoogle}
+              disabled={loadingGoogle}
+            />
           </View>
         </SafeAreaView>
       </View>
@@ -153,6 +180,21 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     gap: 12,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#3A4A5A',
+  },
+  dividerText: {
+    color: '#8E8E93',
+    paddingHorizontal: 16,
+    fontSize: 14,
   },
 });
 
