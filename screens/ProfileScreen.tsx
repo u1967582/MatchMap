@@ -142,7 +142,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await supabase.auth.signOut();
-              router.replace('/login');
+              router.replace('/');
             } catch (error) {
               console.error('Error signing out:', error);
               Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
