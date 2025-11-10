@@ -1,5 +1,5 @@
-import { Stack } from 'expo-router';
-import { StatusBar, Platform } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import { StatusBar, Platform, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { requireOptionalNativeModule } from 'expo-modules-core';
@@ -7,6 +7,8 @@ import { BoostSelectionProvider } from '~/context/BoostSelectionContext';
 import { supabase } from '~/utils/supabase';
 
 export default function Layout() {
+  const router = useRouter();
+
   useEffect(() => {
     // Configure Android navigation bar
     if (Platform.OS === 'android') {
@@ -25,6 +27,99 @@ export default function Layout() {
 
     // Initialize session on app start
     initializeSession();
+
+    // 🔥 NUEVO: Manejar deep links de autenticación de Supabase
+    const handleDeepLink = async (event: { url: string }) => {
+      console.log('🔗 Deep link recibido:', event.url);
+      
+      let access_token: string | null = null;
+      let refresh_token: string | null = null;
+      let isResetPassword = false;
+
+      try {
+        // Los tokens pueden venir en el hash fragment (#) o en query params (?)
+        const url = new URL(event.url);
+        
+        // Intentar extraer del hash fragment primero (formato: #access_token=...&refresh_token=...)
+        let authType: string | null = null;
+        
+        if (event.url.includes('#')) {
+          const hashFragment = event.url.split('#')[1];
+          if (hashFragment) {
+            const params = new URLSearchParams(hashFragment);
+            access_token = params.get('access_token');
+            refresh_token = params.get('refresh_token');
+            authType = params.get('type'); // 'recovery' para reset password
+            console.log('🔍 Tokens encontrados en hash fragment');
+          }
+        }
+
+        // Si no están en el hash, intentar en query params
+        if (!access_token || !refresh_token) {
+          access_token = url.searchParams.get('access_token');
+          refresh_token = url.searchParams.get('refresh_token');
+          authType = url.searchParams.get('type');
+          if (access_token || refresh_token) {
+            console.log('🔍 Tokens encontrados en query params');
+          }
+        }
+        
+        // Verificar si es un link de reset password (type=recovery)
+        isResetPassword = authType === 'recovery' || 
+                         event.url.includes('/auth/reset-password') || 
+                         event.url.includes('reset-password');
+        
+        console.log('🔍 Tipo de deep link:', isResetPassword ? 'Reset Password (recovery)' : 'Otro');
+        console.log('🔍 Auth type:', authType);
+        
+        console.log('📋 Tokens en URL:', {
+          hasAccessToken: !!access_token,
+          hasRefreshToken: !!refresh_token,
+        });
+
+        if (access_token && refresh_token) {
+          console.log('🔐 Estableciendo sesión desde deep link...');
+          
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+
+          if (error) {
+            console.error('❌ Error estableciendo sesión:', error);
+          } else {
+            console.log('✅ Sesión establecida exitosamente desde deep link');
+            console.log('   Usuario:', data.user?.email);
+            
+            // 🚀 NAVEGACIÓN: Si es reset password, navegar a la pantalla correspondiente
+            if (isResetPassword) {
+              console.log('🧭 Navegando a pantalla de reset password...');
+              // Pequeño delay para asegurar que la sesión esté lista
+              setTimeout(() => {
+                router.push('/auth/reset-password');
+              }, 500);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('❌ Error procesando deep link:', err);
+      }
+    };
+
+    // Escuchar deep links entrantes
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // Verificar si la app se abrió con un deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('🚀 App abierta con URL inicial:', url);
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   const initializeSession = async () => {
