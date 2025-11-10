@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { makeRedirectUri } from 'expo-auth-session';
+import Constants from 'expo-constants';
 import { supabase } from './supabase';
 import * as Crypto from 'expo-crypto';
 
@@ -484,6 +485,104 @@ export async function debugUserInfo() {
     console.log('========================');
   } catch (error) {
     console.error('❌ Error en debugUserInfo:', error);
+  }
+}
+
+// ============================================
+// PASSWORD RECOVERY
+// ============================================
+
+/**
+ * Envía email de recuperación de contraseña
+ */
+export async function sendPasswordResetEmail(
+  email: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    console.log('📧 Enviando email de recuperación a:', email);
+
+    // Generar URL de redirect correcta según el entorno
+    let redirectUrl: string;
+    
+    if (__DEV__) {
+      // En desarrollo, intentar obtener la IP/host del servidor de Expo
+      try {
+        const hostUri = Constants.expoConfig?.hostUri;
+        console.log('🔍 Constants.expoConfig?.hostUri:', hostUri);
+        
+        if (hostUri) {
+          redirectUrl = `exp://${hostUri}/--/auth/reset-password`;
+          console.log('✅ URL construida desde hostUri');
+        } else {
+          // Fallback: usar localhost (funcionará en simulador)
+          redirectUrl = 'exp://localhost:8081/--/auth/reset-password';
+          console.log('⚠️ Usando localhost como fallback');
+        }
+      } catch (err) {
+        console.error('❌ Error obteniendo hostUri:', err);
+        redirectUrl = 'exp://localhost:8081/--/auth/reset-password';
+      }
+      
+      console.log('🔧 URL de desarrollo generada');
+    } else {
+      // En producción, usar scheme personalizado
+      redirectUrl = 'matchmap://auth/reset-password';
+      console.log('🔧 URL de producción generada');
+    }
+
+    console.log('🔗 Password Reset Redirect URL:', redirectUrl);
+    console.log('🌍 Environment:', __DEV__ ? 'Development' : 'Production');
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+
+    if (error) {
+      console.error('❌ Error enviando email:', error);
+      console.error('   Error code:', error.status);
+      console.error('   Error details:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('✅ Email de recuperación enviado exitosamente');
+    console.log('📬 Revisa tu inbox (y spam) en:', email);
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ Exception al enviar email:', error);
+    console.error('   Stack:', error.stack);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Actualiza la contraseña del usuario
+ */
+export async function updatePassword(
+  newPassword: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    console.log('🔐 Actualizando contraseña...');
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      console.error('❌ Error actualizando contraseña:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('✅ Contraseña actualizada exitosamente');
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ Exception:', error);
+    return { success: false, error: error.message };
   }
 }
 

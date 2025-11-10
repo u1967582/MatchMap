@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import InputField from '~/components/ui/InputField';
 import CustomButton from '~/components/ui/CustomButton';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 interface LoginModalProps {
   visible: boolean;
@@ -25,6 +26,7 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgotPasswordModalVisible, setForgotPasswordModalVisible] = useState(false);
 
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
@@ -63,10 +65,13 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      'Recuperar contraseña',
-      'Próximamente podrás restablecer tu contraseña desde aquí.'
-    );
+    // Cerrar el modal de login primero
+    onClose();
+    
+    // Esperar a que termine la animación de cierre
+    setTimeout(() => {
+      setForgotPasswordModalVisible(true);
+    }, 300);
   };
 
   const handleClose = () => {
@@ -78,6 +83,7 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
   };
 
   return (
+    <>
     <Modal
       visible={visible}
       animationType="slide"
@@ -145,6 +151,13 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
+
+    {/* Modal de recuperación de contraseña */}
+    <ForgotPasswordModal
+      visible={forgotPasswordModalVisible}
+      onClose={() => setForgotPasswordModalVisible(false)}
+    />
+  </>
   );
 }
 
