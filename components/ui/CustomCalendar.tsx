@@ -167,45 +167,46 @@ export default function CustomCalendar({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#1C2A3A',
-    borderRadius: 12,
-    padding: 20,
-    marginHorizontal: 20,
-    marginVertical: 16,
+    borderRadius: 0,
+    padding: 16,
+    marginHorizontal: 0,
+    marginVertical: 0,
+    paddingBottom: 12,
   },
 
   calendarContainer: {
     backgroundColor: '#1A2332',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
   },
   navigationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   navButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#2A3A4A',
     justifyContent: 'center',
     alignItems: 'center',
   },
   monthYearText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   daysHeader: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   dayHeaderText: {
     flex: 1,
     textAlign: 'center',
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
   },
   calendarGrid: {
@@ -214,10 +215,10 @@ const styles = StyleSheet.create({
   },
   dayButton: {
     width: (width - 120) / 7,
-    height: 40,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 2,
+    marginVertical: 1,
   },
   selectedDay: {
     backgroundColor: '#1D4ED8',
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
   },
   dayText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
   },
   selectedDayText: {

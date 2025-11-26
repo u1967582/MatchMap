@@ -362,17 +362,10 @@ export default function BarProfileScreen() {
 
       case 'reviews':
         return (
-              <View style={styles.section}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>⭐ Reseñas</Text>
-            {publicReviews.length === 0 ? (
-              <View style={styles.noPostsContainer}>
-                <Ionicons name="chatbubble-outline" size={48} color="#A3B3CC" />
-                <Text style={styles.noPostsText}>Este bar aún no tiene reseñas.</Text>
-                <Text style={styles.noPostsSubtext}>Sé el primero en compartir tu experiencia.</Text>
-              </View>
-            ) : (
-              <BarReviewsSection barId={barId} showHeader title="Reseñas" />
-            )}
+            {/* Siempre mostrar BarReviewsSection - maneja el caso sin reseñas internamente */}
+            <BarReviewsSection barId={barId} showHeader title="Reseñas" />
           </View>
         );
 
