@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, Pressable, ScrollView, LayoutAnimation, UIManager, Platform, Linking, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, ScrollView, LayoutAnimation, UIManager, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-// NOTE: We will dynamically import expo-mail-composer inside the handler
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -11,38 +10,27 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 type Faq = { q: string; a: string };
 const FAQS: Faq[] = [
-  { q: '¿Cómo recupero mi contraseña?', a: 'Ve a “Iniciar sesión” → “Olvidé mi contraseña”. Te enviaremos un email con un enlace. Si el botón del email no abre la app, revisa que el enlace diga matchmap://reset.' },
-  { q: '¿Cómo encuentro bares con partidos de mi equipo?', a: 'En Buscar bares, usa el filtro “Equipo” y elige tu equipo. Verás bares con eventos futuros de ese equipo.' },
-  { q: '¿Cómo activo las auto-emisiones en mi bar?', a: 'En Automatización, selecciona competiciones completas o equipos concretos. Al subir nuevos partidos se crearán eventos automáticamente.' },
-  { q: '¿Cómo edito mis preferencias de notificaciones?', a: 'Ajustes → Notificaciones. Puedes activar o desactivar avisos de nuevos eventos y cambios de horario.' },
-  { q: '¿Cómo reporto un problema con una reseña?', a: 'Abre la reseña, pulsa “Reportar” y describe el problema. Nuestro equipo revisará el contenido.' },
+  { 
+    q: '¿Qué es MatchMap y para qué sirve?', 
+    a: 'MatchMap ayuda a los aficionados a encontrar bares que emiten partidos de fútbol cerca de ellos, y permite a los bares ganar visibilidad los días de partido con un perfil sencillo y actualizable.' 
+  },
+  { 
+    q: '¿Cómo encuentro un bar que emita mi partido?', 
+    a: 'Usa el buscador por equipo/competición/fecha o abre el mapa y aplica filtros (proximidad, tipo de local, comida, etc.). Verás los bares disponibles y podrás entrar en su perfil para confirmar horario y detalles del evento.' 
+  },
+  { 
+    q: 'Soy dueño/a de un bar, ¿cómo puedo aparecer en la app?', 
+    a: 'Completa el pre-registro y crea tu perfil con dirección, fotos y horarios. Después podrás publicar los partidos que emites y actualizar tu información cuando quieras.' 
+  },
+  { 
+    q: '¿La app es gratuita?', 
+    a: 'Para usuarios, sí: buscar, guardar favoritos y dejar reseñas es gratis. Para bares, hay un perfil básico gratuito y opciones de promoción opcionales para destacar en el mapa los días de partido.' 
+  },
+  { 
+    q: '¿Qué pasa con mi privacidad y la ubicación?', 
+    a: 'Solo usamos tu ubicación para mostrarte bares cercanos. Puedes desactivarla cuando quieras; la app sigue funcionando con búsqueda manual. No compartimos tus datos personales con terceros sin tu consentimiento.' 
+  },
 ];
-
-async function openSupportEmail() {
-  const subject = 'Soporte MatchMap';
-  const body = 'Describe tu problema aquí...\n\nVersión de la app: \nDispositivo: ';
-  const email = 'support@matchmapapp.com';
-
-  try {
-    // Use require to avoid Metro dynamic import issues
-    // Handle both default and namespace exports
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('expo-mail-composer');
-    const MailComposer = (mod && mod.default) ? mod.default : mod;
-    if (MailComposer && typeof MailComposer.isAvailableAsync === 'function') {
-      const isAvailable = await MailComposer.isAvailableAsync();
-      if (isAvailable && typeof MailComposer.composeAsync === 'function') {
-        await MailComposer.composeAsync({ recipients: [email], subject, body });
-        return;
-      }
-    }
-  } catch (e) {
-    console.warn('MailComposer not available, using mailto fallback', e);
-  }
-
-  const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  await Linking.openURL(url);
-}
 
 export default function SupportScreen() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -51,15 +39,6 @@ export default function SupportScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOpenIndex(prev => (prev === i ? null : i));
   };
-
-  const footer = useMemo(() => (
-    <Pressable onPress={openSupportEmail} style={styles.footerButton} android_ripple={{ color: '#1C3A66' }}>
-      <View style={styles.footerButtonContent}>
-        <Ionicons name="mail-outline" size={20} color="#FFFFFF" />
-        <Text style={styles.footerButtonText}>Contactar con soporte</Text>
-      </View>
-    </Pressable>
-  ), []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top','bottom']}>
@@ -70,20 +49,20 @@ export default function SupportScreen() {
         <Pressable onPress={() => router.back()} style={styles.headerBack} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={styles.headerTitle}>Ayuda y soporte</Text>
+        <Text style={styles.headerTitle}>Preguntas Frecuentes</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.lead}>
-          Resuelve dudas frecuentes o escríbenos a <Text style={styles.leadStrong}>support@matchmapapp.com</Text>.
+          Encuentra respuestas a las preguntas más comunes sobre MatchMap.
         </Text>
 
         {FAQS.map((item, i) => (
           <View key={i} style={styles.card}>
-            <Pressable onPress={() => toggle(i)} style={styles.cardHeader} android_ripple={{ color: '#1f2937' }}>
+            <Pressable onPress={() => toggle(i)} style={styles.cardHeader} android_ripple={{ color: '#0D1A2B' }}>
               <Text style={styles.cardTitle}>{item.q}</Text>
-              <Ionicons name={openIndex === i ? 'chevron-up' : 'chevron-down'} size={20} color="#A3B3CC" />
+              <Ionicons name={openIndex === i ? 'chevron-up' : 'chevron-down'} size={22} color="#007AFF" />
             </Pressable>
             {openIndex === i && (
               <View style={styles.cardBody}>
@@ -93,11 +72,6 @@ export default function SupportScreen() {
           </View>
         ))}
       </ScrollView>
-
-      {/* Sticky footer */}
-      <View style={styles.footer}>
-        {footer}
-      </View>
     </SafeAreaView>
   );
 }
@@ -114,7 +88,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A3A4A',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   headerBack: {
     padding: 4,
@@ -129,27 +103,26 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 24,
-    paddingTop: 16,
+    paddingBottom: 32,
+    paddingTop: 20,
   },
   lead: {
-    color: '#A3B3CC',
-    marginBottom: 16,
-  },
-  leadStrong: {
-    fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#8E8E93',
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 24,
   },
   card: {
-    marginBottom: 10,
-    borderRadius: 12,
-    backgroundColor: '#1A2332',
+    marginBottom: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: '#2A3A4A',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
   },
   cardHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -160,40 +133,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 12,
     fontSize: 16,
+    lineHeight: 22,
   },
   cardBody: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+    paddingTop: 4,
   },
   cardText: {
     color: '#A3B3CC',
-    lineHeight: 20,
-    fontSize: 14,
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 0,
-    paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#2A3A4A',
-  },
-  footerButton: {
-    backgroundColor: '#1976D2',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  footerButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  footerButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
+    lineHeight: 22,
+    fontSize: 15,
   },
 });
 

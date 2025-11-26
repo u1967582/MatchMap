@@ -7,10 +7,12 @@ import SearchBarWithResults from '~/components/SearchBarWithResults';
 import BarInfoCard from '~/components/BarInfoCard';
 import BarMapMarker from '~/components/BarMapMarker';
 import FilterModal from '~/components/ui/FilterModal';
+import MatchPickerModal, { type Match } from '~/components/ui/MatchPickerModal';
 import { supabase } from '~/utils/supabase';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
 import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
+import { fetchBarIdsByMatch } from '~/services/bars';
 
 // Use environment variable for Mapbox token
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
@@ -56,6 +58,10 @@ const Map: React.FC = () => {
   const [selectedFoodTypes, setSelectedFoodTypes] = React.useState<number[]>([]);
   const [selectedFeatures, setSelectedFeatures] = React.useState<number[]>([]);
   const [selectedLanguages, setSelectedLanguages] = React.useState<number[]>([]);
+  
+  // Match filter states
+  const [selectedMatch, setSelectedMatch] = React.useState<Match | null>(null);
+  const [matchPickerOpen, setMatchPickerOpen] = React.useState(false);
   
   // Load filter data
   const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
@@ -222,7 +228,27 @@ const Map: React.FC = () => {
     const fetchBars = async () => {
       try {
         console.log('📍 Fetching bars from Supabase...');
-        const { data, error } = await supabase
+        
+        // Step 1: If match filter is active, get bar IDs that have events for that match
+        let barIdsFilter: string[] | null = null;
+        if (selectedMatch) {
+          console.log('⚽ Filtering by match:', selectedMatch.home_team?.name, 'vs', selectedMatch.away_team?.name);
+          try {
+            barIdsFilter = await fetchBarIdsByMatch(selectedMatch.id);
+          } catch (e) {
+            console.error('❌ Error fetching barIds by match:', e);
+            barIdsFilter = [];
+          }
+          if (!barIdsFilter || barIdsFilter.length === 0) {
+            console.log('⚽ No bars found with events for this match');
+            setBars([]);
+            return;
+          }
+          console.log('⚽ Found', barIdsFilter.length, 'bars broadcasting this match');
+        }
+
+        // Step 2: Build query
+        let barsQuery = supabase
           .from('bars')
           .select(`
             id,
@@ -241,6 +267,13 @@ const Map: React.FC = () => {
           `)
           .eq('is_active', true)
           .eq('bar_images.image_order', 1);
+
+        // Apply match filter if active
+        if (barIdsFilter) {
+          barsQuery = barsQuery.in('id', barIdsFilter);
+        }
+
+        const { data, error } = await barsQuery;
 
         if (error) {
           console.error('❌ Error fetching bars:', error);
@@ -311,7 +344,7 @@ const Map: React.FC = () => {
     };
 
     fetchBars();
-  }, []);
+  }, [selectedMatch]);
 
   // Search for locations using Mapbox Geocoding API
   const searchLocations = React.useCallback(async (query: string) => {
@@ -363,6 +396,7 @@ const Map: React.FC = () => {
 
     return () => clearTimeout(timeoutId);
   }, [searchText, searchLocked, searchLocations]);
+
 
   // Handle location selection
   const handleLocationSelect = React.useCallback((location: any) => {
@@ -495,21 +529,38 @@ const Map: React.FC = () => {
         />
       </View>
       
-      {/* Filter button */}
-      <TouchableOpacity
-        style={[
-          styles.filterButton,
-          (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-           selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
-        ]}
-        onPress={() => setFilterModalVisible(true)}
-      >
-        <Ionicons name="filter" size={20} color="#FFFFFF" />
-        {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-          selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
-          <View style={styles.filterDot} />
-        )}
-      </TouchableOpacity>
+      {/* Filter buttons row */}
+      <View style={styles.filterButtonsRow}>
+        {/* Match filter button */}
+        <TouchableOpacity
+          style={[
+            styles.filterRowButton,
+            selectedMatch && styles.filterButtonActive
+          ]}
+          onPress={() => setMatchPickerOpen(true)}
+        >
+          <Text style={styles.teamButtonEmoji}>⚽</Text>
+          {selectedMatch && (
+            <View style={styles.filterDot} />
+          )}
+        </TouchableOpacity>
+
+        {/* Filter button */}
+        <TouchableOpacity
+          style={[
+            styles.filterRowButton,
+            (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+             selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
+          ]}
+          onPress={() => setFilterModalVisible(true)}
+        >
+          <Ionicons name="filter" size={20} color="#FFFFFF" />
+          {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+            selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+            <View style={styles.filterDot} />
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* Center on user location button */}
       {userLocation && (
@@ -588,6 +639,14 @@ const Map: React.FC = () => {
         onApplyFilters={handleApplyFilters}
         loading={filtersLoading}
       />
+
+      {/* Match Picker Modal */}
+      <MatchPickerModal
+        visible={matchPickerOpen}
+        onClose={() => setMatchPickerOpen(false)}
+        onSelectMatch={(match) => setSelectedMatch(match)}
+        selectedMatchId={selectedMatch?.id}
+      />
     </View>
   );
 };
@@ -630,14 +689,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 70, // Space for filter button (50px button + 20px margin)
+    right: 130, // Space for filter buttons row (2 buttons + gaps)
     bottom: 0,
     zIndex: 999,
   },
-  filterButton: {
+  filterButtonsRow: {
     position: 'absolute',
     top: 60,
     right: 20,
+    flexDirection: 'row',
+    gap: 10,
+    zIndex: 1000,
+  },
+  filterRowButton: {
     backgroundColor: '#3A4A5C',
     borderRadius: 12,
     width: 50,
@@ -652,7 +716,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-    zIndex: 1000,
   },
   filterButtonActive: {
     backgroundColor: '#1976D2',
@@ -684,6 +747,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 6,
+  },
+  teamButtonEmoji: {
+    fontSize: 22,
   },
 });
 

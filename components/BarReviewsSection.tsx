@@ -242,7 +242,10 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
 
   return (
     <View style={styles.container}>
+      {/* Siempre mostrar el header, incluso cuando no hay reseñas (mostrará 0.0) */}
       {showHeader && header}
+      
+      {/* Mensaje cuando no hay reseñas */}
       {!hasReviews && (
         <View style={styles.emptyContainer}>
           <Ionicons name="chatbubble-outline" size={48} color="#94A3B8" />
@@ -251,6 +254,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         </View>
       )}
 
+      {/* Botón para escribir reseña - SIEMPRE visible */}
       <TouchableOpacity
         style={styles.ctaButton}
         onPress={() => router.push(`/write-review/${barId}` as any)}
@@ -260,6 +264,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         <Text style={styles.ctaText}>Escribir una reseña</Text>
       </TouchableOpacity>
 
+      {/* Lista de reseñas - solo cuando hay reseñas */}
       {hasReviews && (
         <FlatList
           data={reviews}

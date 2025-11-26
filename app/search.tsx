@@ -11,8 +11,6 @@ import {
   Alert,
   Dimensions,
   Platform,
-  Modal,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,10 +20,10 @@ import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import Dropdown from '~/components/ui/Dropdown';
 import FilterModal from '~/components/ui/FilterModal';
+import MatchPickerModal, { type Match } from '~/components/ui/MatchPickerModal';
 import { useFilterData } from '~/hooks/useFilterData';
 import { useFavorites } from '~/hooks/useFavorites';
-import { searchTeams, type TeamSearchResult } from '~/services/teams';
-import { fetchBarIdsByTeam } from '~/services/bars';
+import { fetchBarIdsByMatch } from '~/services/bars';
 import { useBoostBars } from '~/hooks/useBoostBars';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
 
@@ -81,14 +79,9 @@ export default function SearchScreen() {
   const [selectedLanguages, setSelectedLanguages] = useState<number[]>([]);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
-  // Team filter state
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [selectedTeamName, setSelectedTeamName] = useState<string | null>(null);
-  const [teamPickerOpen, setTeamPickerOpen] = useState(false);
-  const [teamSearchQuery, setTeamSearchQuery] = useState('');
-  const [teamResults, setTeamResults] = useState<TeamSearchResult[]>([]);
-  const [teamLoading, setTeamLoading] = useState(false);
-  const [tempSelectedTeam, setTempSelectedTeam] = useState<TeamSearchResult | null>(null);
+  // Match filter state
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [matchPickerOpen, setMatchPickerOpen] = useState(false);
 
   // Load filter data
   const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
@@ -176,13 +169,13 @@ export default function SearchScreen() {
         selectedSort
       });
 
-      // Paso 1. Si hay filtro por equipo, obtener barIds con eventos de ese equipo
+      // Paso 1. Si hay filtro por partido, obtener barIds con eventos de ese partido
       let barIdsFilter: string[] | null = null;
-      if (selectedTeamId) {
+      if (selectedMatch) {
         try {
-          barIdsFilter = await fetchBarIdsByTeam(selectedTeamId, true);
+          barIdsFilter = await fetchBarIdsByMatch(selectedMatch.id);
         } catch (e) {
-          console.error('❌ Error fetching barIds by team:', e);
+          console.error('❌ Error fetching barIds by match:', e);
           barIdsFilter = [];
         }
         if (!barIdsFilter || barIdsFilter.length === 0) {
@@ -215,10 +208,10 @@ export default function SearchScreen() {
         console.log('🔍 Applied search filter:', searchQuery.trim());
       }
 
-      // Aplicar filtro por equipo (IDs)
+      // Aplicar filtro por partido (IDs)
       if (barIdsFilter) {
         barsQuery = barsQuery.in('id', barIdsFilter);
-        console.log('🔍 Applied team filter (bar ids):', barIdsFilter.length);
+        console.log('🔍 Applied match filter (bar ids):', barIdsFilter.length);
       }
 
       // Aplicar filtro de categorías (esto se puede hacer a nivel de DB)
@@ -515,7 +508,7 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, getUserLocation, selectedTeamId]);
+  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, getUserLocation, selectedMatch]);
 
   // Update highlighting when boost selection changes (for visual sync with map)
   // Note: Initial sorting is now handled inside searchBars()
@@ -751,31 +744,8 @@ export default function SearchScreen() {
       console.log('🔄 Filters changed, triggering search...');
       searchBars();
     }
-  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, selectedTeamId, userLocation, searchBars]);
+  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, selectedMatch, userLocation, searchBars]);
 
-  // Team search effect (debounced by simple length check)
-  useEffect(() => {
-    let active = true;
-    const run = async () => {
-      try {
-        setTeamLoading(true);
-        if (teamSearchQuery.trim().length < 2) {
-          setTeamResults([]);
-          return;
-        }
-        const results = await searchTeams(teamSearchQuery.trim());
-        if (active) setTeamResults(results);
-      } catch (e) {
-        console.error('❌ Error searching teams:', e);
-      } finally {
-        if (active) setTeamLoading(false);
-      }
-    };
-    run();
-    return () => {
-      active = false;
-    };
-  }, [teamSearchQuery]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -834,30 +804,25 @@ export default function SearchScreen() {
             />
           </View>
 
-          {/* Equipo */}
+          {/* Partido */}
           <View style={styles.filterColumn}>
-            <Text style={styles.filterLabel}>Equipo</Text>
+            <Text style={styles.filterLabel}>Partido</Text>
             <TouchableOpacity
-              style={[styles.filterButton, selectedTeamId && styles.filterButtonActive]}
-              onPress={() => {
-                setTempSelectedTeam(null);
-                setTeamSearchQuery('');
-                setTeamPickerOpen(true);
-              }}
+              style={[styles.filterButton, selectedMatch && styles.filterButtonActive]}
+              onPress={() => setMatchPickerOpen(true)}
             >
               <Text style={[styles.iconEmoji]}>⚽</Text>
               <Text style={[
                 styles.filterButtonText,
-                selectedTeamId && styles.filterButtonTextActive
+                selectedMatch && styles.filterButtonTextActive
               ]}>
-                {selectedTeamName ? selectedTeamName : 'Equipo'}
+                {selectedMatch 
+                  ? `${selectedMatch.home_team?.name || 'Local'} vs ${selectedMatch.away_team?.name || 'Visitante'}`
+                  : 'Partido'}
               </Text>
-              {selectedTeamId && (
+              {selectedMatch && (
                 <TouchableOpacity
-                  onPress={() => {
-                    setSelectedTeamId(null);
-                    setSelectedTeamName(null);
-                  }}
+                  onPress={() => setSelectedMatch(null)}
                   style={{ position: 'absolute', right: 10, padding: 6 }}
                 >
                   <Ionicons name="close" size={18} color="#FFFFFF" />
@@ -889,8 +854,8 @@ export default function SearchScreen() {
             <Ionicons name="search" size={64} color="#A3B3CC" />
             <Text style={styles.emptyTitle}>No se encontraron bares</Text>
             <Text style={styles.emptySubtitle}>
-              {selectedTeamId
-                ? 'No hay bares con eventos de este equipo'
+              {selectedMatch
+                ? 'No hay bares transmitiendo este partido'
                 : searchQuery 
                 ? `No hay bares que coincidan con "${searchQuery}"`
                 : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0)
@@ -922,15 +887,12 @@ export default function SearchScreen() {
                 <Text style={styles.clearFiltersButtonText}>Limpiar búsqueda</Text>
               </TouchableOpacity>
             )}
-            {selectedTeamId && (
+            {selectedMatch && (
               <TouchableOpacity 
                 style={styles.clearFiltersButton}
-                onPress={() => {
-                  setSelectedTeamId(null);
-                  setSelectedTeamName(null);
-                }}
+                onPress={() => setSelectedMatch(null)}
               >
-                <Text style={styles.clearFiltersButtonText}>Quitar equipo</Text>
+                <Text style={styles.clearFiltersButtonText}>Quitar partido</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -959,96 +921,13 @@ export default function SearchScreen() {
         loading={filtersLoading}
       />
 
-      {/* Team Picker Modal */}
-      <Modal
-        visible={teamPickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setTeamPickerOpen(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Seleccionar equipo</Text>
-            <View style={styles.modalSearchBar}>
-              <Ionicons name="search" size={20} color="#A3B3CC" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Buscar equipo..."
-                placeholderTextColor="#8E8E93"
-                value={teamSearchQuery}
-                onChangeText={setTeamSearchQuery}
-                returnKeyType="search"
-              />
-              {teamSearchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setTeamSearchQuery('')}>
-                  <Ionicons name="close-circle" size={20} color="#A3B3CC" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {teamLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator color="#FFFFFF" />
-              </View>
-            ) : (
-              <FlatList
-                data={teamResults}
-                keyExtractor={(item) => item.id}
-                style={{ maxHeight: 420 }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.teamRow, tempSelectedTeam?.id === item.id && styles.teamRowSelected]}
-                    onPress={() => setTempSelectedTeam(item)}
-                  >
-                    <Image source={{ uri: item.logo_url || undefined }} style={styles.teamLogo} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.teamName}>{item.name}</Text>
-                      {item.short_name ? (
-                        <Text style={styles.teamShortName}>{item.short_name}</Text>
-                      ) : null}
-                    </View>
-                    {tempSelectedTeam?.id === item.id && (
-                      <Ionicons name="checkmark-circle" size={22} color="#10B981" />
-                    )}
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={() => (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptySubtitle}>
-                      {teamSearchQuery.trim().length < 2 ? 'Empieza a escribir para buscar equipos' : 'No se encontraron equipos'}
-                    </Text>
-                  </View>
-                )}
-              />
-            )}
-
-            <View style={styles.modalButtonsRow}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => {
-                  setTempSelectedTeam(null);
-                  setSelectedTeamId(null);
-                  setSelectedTeamName(null);
-                  setTeamPickerOpen(false);
-                }}
-              >
-                <Text style={styles.modalButtonText}>Quitar selección</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary]}
-                onPress={() => {
-                  setSelectedTeamId(tempSelectedTeam ? tempSelectedTeam.id : null);
-                  setSelectedTeamName(tempSelectedTeam ? tempSelectedTeam.name : null);
-                  setTeamPickerOpen(false);
-                }}
-                disabled={teamLoading}
-              >
-                <Text style={styles.modalButtonText}>Aplicar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Match Picker Modal */}
+      <MatchPickerModal
+        visible={matchPickerOpen}
+        onClose={() => setMatchPickerOpen(false)}
+        onSelectMatch={(match) => setSelectedMatch(match)}
+        selectedMatchId={selectedMatch?.id}
+      />
     </SafeAreaView>
   );
 }
@@ -1332,87 +1211,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   clearFiltersButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    width: '100%',
-    backgroundColor: '#1C2A3A',
-    borderRadius: 12,
-    padding: 20,
-  },
-  modalTitle: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  modalSearchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2A3A4A',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    marginBottom: 14,
-  },
-  teamRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A2332',
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-  teamRowSelected: {
-    borderWidth: 2,
-    borderColor: '#10B981',
-  },
-  teamLogo: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 14,
-    backgroundColor: '#2A3A4A',
-    borderWidth: 2,
-    borderColor: '#3B4B5B',
-  },
-  teamName: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  teamShortName: {
-    color: '#A3B3CC',
-    fontSize: 13,
-  },
-  modalButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalButtonPrimary: {
-    backgroundColor: '#1976D2',
-  },
-  modalButtonSecondary: {
-    backgroundColor: '#2A3A4A',
-  },
-  modalButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
