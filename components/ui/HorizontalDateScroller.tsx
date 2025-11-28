@@ -69,7 +69,7 @@ export default function HorizontalDateScroller({
     const selectedIndex = dates.findIndex(date => isSelected(date));
     if (selectedIndex !== -1 && scrollViewRef.current) {
       // Scroll to center the selected date
-      const offset = Math.max(0, (selectedIndex * 75) - (width / 2) + 37.5);
+      const offset = Math.max(0, (selectedIndex * 80) - (width / 2) + 40);
       setTimeout(() => {
         scrollViewRef.current?.scrollTo({ x: offset, animated: true });
       }, 100);
@@ -126,12 +126,6 @@ export default function HorizontalDateScroller({
               ]}>
                 {formatMonth(date)}
               </Text>
-
-              {today && (
-                <View style={styles.todayIndicator}>
-                  <Text style={styles.todayText}>HOY</Text>
-                </View>
-              )}
             </TouchableOpacity>
           );
         })}
@@ -142,78 +136,64 @@ export default function HorizontalDateScroller({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 8,
+    marginVertical: 12,
   },
   scrollContent: {
-    paddingHorizontal: 4,
-    gap: 10,
+    paddingHorizontal: 8,
+    gap: 12,
   },
   dateItem: {
-    width: 65,
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    borderRadius: 12,
-    backgroundColor: '#1E3A5F',
+    width: 68,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 0,
   },
   dateItemSelected: {
     backgroundColor: '#1976D2',
-    borderColor: '#1976D2',
-    transform: [{ scale: 1.05 }],
+    borderWidth: 0,
   },
   dayOfWeek: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-    color: '#8E9AAF',
-    marginBottom: 4,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginBottom: 6,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   dayOfWeekSelected: {
-    color: '#FFFFFF',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   dayOfWeekToday: {
-    color: '#4CAF50',
+    color: '#F59E0B',
   },
   dayNumber: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   dayNumberSelected: {
     color: '#FFFFFF',
   },
   dayNumberToday: {
-    color: '#4CAF50',
+    color: '#F59E0B',
   },
   month: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500',
-    color: '#8E9AAF',
+    color: 'rgba(255, 255, 255, 0.5)',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   monthSelected: {
-    color: '#FFFFFF',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   monthToday: {
-    color: '#4CAF50',
-  },
-  todayIndicator: {
-    position: 'absolute',
-    top: 2,
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  todayText: {
-    fontSize: 7,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+    color: '#F59E0B',
   },
 });
 

@@ -15,10 +15,34 @@ const PLANS: Array<{
   price: number; // euros
   productId: string;
   durationLabel: string;
+  amortizationText: string;
+  isPopular?: boolean;
 }> = [
-  { key: '7d', title: '7 días', price: 9, productId: 'prod_TJUB61j3RAbErD', durationLabel: '7 días' },
-  { key: '1m', title: '1 mes', price: 24, productId: 'prod_TJUCGsS0s0E8Ot', durationLabel: '1 mes' },
-  { key: '1y', title: '1 año', price: 89, productId: 'prod_TJUCkXwWUBpGwD', durationLabel: '1 año' },
+  { 
+    key: '7d', 
+    title: 'Boost Semanal', 
+    price: 19.99, 
+    productId: 'prod_TJUB61j3RAbErD', 
+    durationLabel: '7 días',
+    amortizationText: 'Se amortiza con solo 2 clientes nuevos' 
+  },
+  { 
+    key: '1m', 
+    title: 'Boost Mensual', 
+    price: 59.99, 
+    productId: 'prod_TJUCGsS0s0E8Ot', 
+    durationLabel: '1 mes',
+    amortizationText: 'Se amortiza con solo 5 clientes nuevos',
+    isPopular: true
+  },
+  { 
+    key: '1y', 
+    title: 'Boost de Temporada', 
+    price: 399.99, 
+    productId: 'prod_TJUCkXwWUBpGwD', 
+    durationLabel: '1 año',
+    amortizationText: 'La opción de más valor (~44€/mes)'
+  },
 ];
 
 const BoostScreen: React.FC = () => {
@@ -53,11 +77,17 @@ const BoostScreen: React.FC = () => {
     <SafeAreaView style={styles.container} edges={['top','bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>        
+        <View style={styles.headerTop}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.title}>Aumenta la visibilidad de tu bar</Text>
-        <Text style={styles.subtitle}>Elige un boost para destacar tu bar en la app</Text>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.title}>Impulsa tu bar</Text>
+            <Text style={styles.subtitle}>
+              Invierte en visibilidad y recupera tu inversión rápidamente
+            </Text>
+          </View>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -69,16 +99,51 @@ const BoostScreen: React.FC = () => {
             price={`${p.price} €`}
             productId={p.productId}
             durationLabel={p.durationLabel}
+            amortizationText={p.amortizationText}
+            isPopular={p.isPopular}
             discountBadge={p.key === '7d' ? undefined : discounts[p.key as '1m'|'1y']}
             onPay={() => onPay(p.key)}
             footer={loadingKey === p.key ? <ActivityIndicator color="#FFFFFF" /> : undefined}
           />
         ))}
         <View style={styles.benefits}>
-          <Text style={styles.benefitTitle}>Beneficios del boost</Text>
-          <View style={styles.benefitItem}><Ionicons name="arrow-up-circle" size={18} color="#10B981" /><Text style={styles.benefitText}>Más visibilidad en listas</Text></View>
-          <View style={styles.benefitItem}><Ionicons name="star" size={18} color="#10B981" /><Text style={styles.benefitText}>Etiqueta destacado</Text></View>
-          <View style={styles.benefitItem}><Ionicons name="trending-up" size={18} color="#10B981" /><Text style={styles.benefitText}>Prioridad en resultados</Text></View>
+          <Text style={styles.benefitTitle}>✨ Beneficios del Boost</Text>
+          <Text style={styles.benefitSubtitle}>
+            Aumenta la visibilidad de tu bar y atrae más clientes
+          </Text>
+          <View style={styles.benefitItem}>
+            <View style={styles.benefitIconContainer}>
+              <Ionicons name="arrow-up-circle" size={20} color="#10B981" />
+            </View>
+            <View style={styles.benefitTextContainer}>
+              <Text style={styles.benefitText}>Mayor visibilidad en listas</Text>
+              <Text style={styles.benefitDescription}>
+                Tu bar aparece primero en búsquedas y filtros
+              </Text>
+            </View>
+          </View>
+          <View style={styles.benefitItem}>
+            <View style={styles.benefitIconContainer}>
+              <Ionicons name="star" size={20} color="#F59E0B" />
+            </View>
+            <View style={styles.benefitTextContainer}>
+              <Text style={styles.benefitText}>Etiqueta destacado</Text>
+              <Text style={styles.benefitDescription}>
+                Badge especial que llama la atención
+              </Text>
+            </View>
+          </View>
+          <View style={styles.benefitItem}>
+            <View style={styles.benefitIconContainer}>
+              <Ionicons name="trending-up" size={20} color="#60A5FA" />
+            </View>
+            <View style={styles.benefitTextContainer}>
+              <Text style={styles.benefitText}>Prioridad en resultados</Text>
+              <Text style={styles.benefitDescription}>
+                Aparece antes que la competencia
+              </Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -93,51 +158,84 @@ const styles = StyleSheet.create({
     backgroundColor: '#1C2A3A'
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 8
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   backButton: {
     padding: 4,
-    marginBottom: 4
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   title: {
     color: '#FFFFFF',
     fontSize: 22,
     fontWeight: '700',
-    marginBottom: 6
+    marginBottom: 4,
   },
   subtitle: {
-    color: '#A3B3CC',
-    fontSize: 14
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 13,
+    lineHeight: 18,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 16
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16
   },
   benefits: {
     marginTop: 8,
     padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#1A2332',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
-    borderColor: '#2A3A4A'
+    borderColor: 'rgba(255, 255, 255, 0.1)'
   },
   benefitTitle: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 4
+  },
+  benefitSubtitle: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 13,
+    marginBottom: 14,
+    lineHeight: 18,
   },
   benefitItem: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 12,
+  },
+  benefitIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8
+    justifyContent: 'center',
+  },
+  benefitTextContainer: {
+    flex: 1,
+    gap: 2,
   },
   benefitText: {
-    color: '#E5E7EB',
-    fontSize: 14
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  benefitDescription: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 12,
+    lineHeight: 16,
   }
 });
 

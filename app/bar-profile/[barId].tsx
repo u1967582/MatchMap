@@ -362,10 +362,10 @@ export default function BarProfileScreen() {
 
       case 'reviews':
         return (
-          <View style={styles.section}>
+              <View style={styles.section}>
             <Text style={styles.sectionTitle}>⭐ Reseñas</Text>
             {/* Siempre mostrar BarReviewsSection - maneja el caso sin reseñas internamente */}
-            <BarReviewsSection barId={barId} showHeader title="Reseñas" />
+              <BarReviewsSection barId={barId} showHeader title="Reseñas" />
           </View>
         );
 
