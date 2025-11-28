@@ -544,22 +544,22 @@ const Map: React.FC = () => {
             <View style={styles.filterDot} />
           )}
         </TouchableOpacity>
-
-        {/* Filter button */}
-        <TouchableOpacity
-          style={[
+      
+      {/* Filter button */}
+      <TouchableOpacity
+        style={[
             styles.filterRowButton,
-            (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-             selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
-          ]}
-          onPress={() => setFilterModalVisible(true)}
-        >
-          <Ionicons name="filter" size={20} color="#FFFFFF" />
-          {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-            selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
-            <View style={styles.filterDot} />
-          )}
-        </TouchableOpacity>
+          (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+           selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
+        ]}
+        onPress={() => setFilterModalVisible(true)}
+      >
+        <Ionicons name="filter" size={20} color="#FFFFFF" />
+        {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+          selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+          <View style={styles.filterDot} />
+        )}
+      </TouchableOpacity>
       </View>
 
       {/* Center on user location button */}

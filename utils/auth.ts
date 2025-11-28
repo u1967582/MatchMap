@@ -262,7 +262,7 @@ export async function signInWithGoogle(): Promise<{
       
       // Si no están en el hash, intentar en query params (formato: ?access_token=...&refresh_token=...)
       if (!accessToken || !refreshToken) {
-        const url = new URL(result.url);
+      const url = new URL(result.url);
         accessToken = url.searchParams.get('access_token');
         refreshToken = url.searchParams.get('refresh_token');
       }

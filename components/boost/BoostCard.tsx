@@ -8,31 +8,68 @@ export interface BoostCardProps {
   price: string;
   productId: string;
   durationLabel: string;
+  amortizationText: string;
+  isPopular?: boolean;
   discountBadge?: string;
   onPay: () => void;
   iconName?: keyof typeof Ionicons.glyphMap;
   footer?: React.ReactNode;
 }
 
-const BoostCard: React.FC<BoostCardProps> = ({ title, price, discountBadge, durationLabel, onPay, iconName = 'megaphone', footer }) => {
+const BoostCard: React.FC<BoostCardProps> = ({ 
+  title, 
+  price, 
+  discountBadge, 
+  durationLabel, 
+  amortizationText,
+  isPopular,
+  onPay, 
+  iconName = 'megaphone', 
+  footer 
+}) => {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, isPopular && styles.cardPopular]}>
+      {isPopular && (
+        <View style={styles.popularBadge}>
+          <Ionicons name="star" size={14} color="#FFFFFF" />
+          <Text style={styles.popularText}>Más Popular</Text>
+        </View>
+      )}
+      
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
-          <Ionicons name={iconName} size={20} color="#60A5FA" />
+          <Ionicons name={iconName} size={20} color={isPopular ? "#F59E0B" : "#60A5FA"} />
           <Text style={styles.title}>{title}</Text>
         </View>
-        {discountBadge ? (
+        {discountBadge && !isPopular ? (
           <View style={styles.badge}><Text style={styles.badgeText}>{discountBadge}</Text></View>
         ) : null}
       </View>
 
-      <Text style={styles.price}>{price}</Text>
+      <Text style={[styles.price, isPopular && styles.pricePopular]}>{price}</Text>
       <Text style={styles.duration}>{durationLabel}</Text>
 
+      {/* Amortization info */}
+      <View style={styles.amortizationBox}>
+        <Ionicons name="trending-up-outline" size={16} color="#10B981" />
+        <Text style={styles.amortizationText}>{amortizationText}</Text>
+      </View>
+
+      <View style={styles.valueInfo}>
+        <Ionicons name="information-circle-outline" size={13} color="#60A5FA" />
+        <Text style={styles.valueText}>
+          Cada nuevo cliente te genera ~13€ de beneficio medio
+        </Text>
+      </View>
+
       <TouchableOpacity activeOpacity={0.9} onPress={onPay} style={styles.ctaWrapper}>
-        <Gradient colors={["#3B82F6", "#10B981"]} start={{x:0,y:0}} end={{x:1,y:1}} style={styles.cta}>
-          <Ionicons name="card-outline" size={18} color="#FFFFFF" />
+        <Gradient 
+          colors={isPopular ? ["#F59E0B", "#EF4444"] : ["#3B82F6", "#10B981"]} 
+          start={{x:0,y:0}} 
+          end={{x:1,y:1}} 
+          style={styles.cta}
+        >
+          <Ionicons name="card-outline" size={17} color="#FFFFFF" />
           <Text style={styles.ctaText}>Pagar con Stripe</Text>
         </Gradient>
       </TouchableOpacity>
@@ -48,15 +85,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A2332',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#2A3A4A'
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#2A3A4A',
+    position: 'relative'
+  },
+  cardPopular: {
+    borderColor: '#F59E0B',
+    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 16,
+    backgroundColor: '#F59E0B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  popularText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12
+    marginBottom: 10
   },
   titleRow: {
     flexDirection: 'row',
@@ -65,8 +136,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600'
+    fontSize: 17,
+    fontWeight: '700'
   },
   badge: {
     backgroundColor: '#10B981',
@@ -81,15 +152,52 @@ const styles = StyleSheet.create({
   },
   price: {
     color: '#60A5FA',
-    fontSize: 28,
-    fontWeight: '800'
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  pricePopular: {
+    color: '#F59E0B',
   },
   duration: {
     color: '#A3B3CC',
+    fontSize: 13,
     marginBottom: 12
   },
+  amortizationBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    marginBottom: 8,
+  },
+  amortizationText: {
+    color: '#10B981',
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  valueInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginBottom: 6,
+  },
+  valueText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 11,
+    flex: 1,
+    fontStyle: 'italic',
+  },
   ctaWrapper: {
-    marginTop: 8
+    marginTop: 6
   },
   cta: {
     height: 48,

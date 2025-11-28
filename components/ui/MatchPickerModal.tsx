@@ -328,7 +328,7 @@ export default function MatchPickerModal({
               />
             ) : (
               <View style={styles.emptyContainer}>
-                <Ionicons name="football-outline" size={80} color="#8E8E93" />
+                <Ionicons name="football-outline" size={80} color="rgba(255, 255, 255, 0.2)" />
                 <Text style={styles.emptyText}>
                   No hay partidos programados para esta fecha
                 </Text>
@@ -371,8 +371,8 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     flex: 1,
-    backgroundColor: '#1C2A3A',
-    borderRadius: 20,
+    backgroundColor: '#1A2332',
+    borderRadius: 24,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -398,24 +398,23 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   competitionsContainer: {
-    marginBottom: 12,
-    marginTop: 8,
+    marginBottom: 16,
+    marginTop: 4,
   },
   competitionChip: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 16,
+    borderRadius: 20,
     marginRight: 10,
-    backgroundColor: '#1E3A5F',
-    borderWidth: 1,
-    borderColor: '#28415F',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 0,
   },
   competitionChipSelected: {
     backgroundColor: '#1976D2',
-    borderColor: '#1976D2',
+    borderWidth: 0,
   },
   competitionChipText: {
-    color: '#A3B3CC',
+    color: 'rgba(255, 255, 255, 0.6)',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -440,16 +439,16 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   matchCard: {
-    backgroundColor: '#15263A',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 18,
     marginBottom: 12,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   matchCardSelected: {
     borderColor: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
   },
   matchHeader: {
     marginBottom: 12,
@@ -480,7 +479,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   vsText: {
-    color: '#A3B3CC',
+    color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -494,7 +493,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   competitionName: {
-    color: '#A3B3CC',
+    color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 13,
   },
   selectedBadge: {
@@ -509,7 +508,7 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    color: '#8E8E93',
+    color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 17,
     textAlign: 'center',
     marginTop: 16,
@@ -524,15 +523,15 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: 'center',
   },
   modalButtonPrimary: {
     backgroundColor: '#1976D2',
   },
   modalButtonSecondary: {
-    backgroundColor: '#2A3A4A',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   modalButtonText: {
     color: '#FFFFFF',
