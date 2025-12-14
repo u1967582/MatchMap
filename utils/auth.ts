@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { makeRedirectUri } from 'expo-auth-session';
@@ -62,6 +62,14 @@ export const useAuthStateChange = (onUserSignedIn?: (user: any) => Promise<void>
           console.log('   Provider:', session.user.app_metadata.provider);
           console.log('   User ID:', session.user.id);
 
+          // ✅ IMPORTANTE: Verificar si hay un bar pre-registrado CUANDO TIENE SESIÓN
+          try {
+            await checkAndPromotePreRegisteredBar(session.user.id, session.user.email || '');
+          } catch (error) {
+            console.error('❌ Error verificando bar pre-registrado:', error);
+            // No bloquear el login si falla
+          }
+
           // Callback personalizado si se proporciona
           if (onUserSignedIn && session.user) {
             try {
@@ -120,6 +128,304 @@ export const getCurrentUser = async () => {
   } catch (error) {
     console.error('❌ Error inesperado al obtener usuario:', error);
     return null;
+  }
+};
+
+/**
+ * Verifica si existe un bar pre-registrado para el usuario y lo promote
+ * Esta función se debe llamar DESPUÉS de que el usuario ha iniciado sesión
+ * @param userId ID del usuario autenticado
+ * @param userEmail Email del usuario autenticado
+ */
+export const checkAndPromotePreRegisteredBar = async (userId: string, userEmail: string) => {
+  try {
+    // Normalize email to lowercase for consistent matching
+    const normalizedEmail = userEmail.toLowerCase().trim();
+    
+    console.log(`\n========================================`);
+    console.log(`🔍 BUSCANDO BAR PRE-REGISTRADO`);
+    console.log(`========================================`);
+    console.log(`📧 Email original: ${userEmail}`);
+    console.log(`📧 Email normalizado: ${normalizedEmail}`);
+    console.log(`👤 User ID: ${userId}`);
+
+    // STEP 1: Debug - Show the last 5 rows in the table to compare
+    console.log(`\n🔍 DEBUG: Últimas 5 filas en auto_pre_register_bars:`);
+    const { data: debugRows, error: debugError } = await supabase
+      .from('auto_pre_register_bars')
+      .select('id, email, status, converted_bar_id, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5);
+    
+    if (debugError) {
+      console.error('❌ Error fetching debug rows:', debugError);
+    } else {
+      console.table(debugRows);
+      debugRows?.forEach((row, index) => {
+        console.log(`\n   Row ${index + 1}:`);
+        console.log(`   - Email: "${row.email}" (length: ${row.email?.length})`);
+        console.log(`   - Email matches: ${row.email === normalizedEmail}`);
+        console.log(`   - Status: "${row.status}"`);
+        console.log(`   - Converted: ${row.converted_bar_id}`);
+        console.log(`   - Created: ${row.created_at}`);
+      });
+    }
+
+    // STEP 2: Try simple query first (only email filter)
+    console.log(`\n🔎 QUERY 1: Búsqueda simple (solo email):`);
+    const { data: simpleQuery, error: simpleError } = await supabase
+      .from('auto_pre_register_bars')
+      .select('id, email, name, status, converted_bar_id, created_at')
+      .eq('email', normalizedEmail);
+
+    console.log(`   Resultados:`, {
+      found: simpleQuery?.length || 0,
+      data: simpleQuery,
+      error: simpleError,
+    });
+
+    // STEP 3: Try with converted_bar_id filter
+    console.log(`\n🔎 QUERY 2: Búsqueda con email + converted_bar_id IS NULL:`);
+    const { data: withConvertedFilter, error: convertedError } = await supabase
+      .from('auto_pre_register_bars')
+      .select('id, email, name, status, converted_bar_id, created_at')
+      .eq('email', normalizedEmail)
+      .is('converted_bar_id', null);
+
+    console.log(`   Resultados:`, {
+      found: withConvertedFilter?.length || 0,
+      data: withConvertedFilter,
+      error: convertedError,
+    });
+
+    // STEP 4: Full query with all filters
+    console.log(`\n🔎 QUERY 3: Búsqueda completa (email + status + converted_bar_id):`);
+    const { data: preRegBars, error: queryError } = await supabase
+      .from('auto_pre_register_bars')
+      .select('id, email, name, status, converted_bar_id, created_at')
+      .eq('email', normalizedEmail)
+      .eq('status', 'pre_registered')
+      .is('converted_bar_id', null)
+      .limit(1);
+
+    console.log(`   Resultados:`, {
+      found: preRegBars?.length || 0,
+      data: preRegBars,
+      error: queryError,
+    });
+
+    if (queryError) {
+      console.error('❌ Error querying pre-registered bars:', queryError);
+      console.log(`========================================\n`);
+      return;
+    }
+
+    // Use the simplest query that found results
+    let foundBar = null;
+    if (preRegBars && preRegBars.length > 0) {
+      foundBar = preRegBars[0];
+      console.log(`✅ Encontrado con query completa`);
+    } else if (withConvertedFilter && withConvertedFilter.length > 0) {
+      foundBar = withConvertedFilter[0];
+      console.log(`✅ Encontrado sin filtro de status`);
+    } else if (simpleQuery && simpleQuery.length > 0) {
+      foundBar = simpleQuery[0];
+      console.log(`✅ Encontrado solo con email`);
+    }
+
+    if (!foundBar) {
+      console.log('\n❌ NO SE ENCONTRÓ BAR PRE-REGISTRADO CON NINGUNA QUERY');
+      console.log(`   Posibles razones:`);
+      console.log(`   - Email "${normalizedEmail}" no existe en la tabla`);
+      console.log(`   - Revisa los emails en el DEBUG arriba`);
+      console.log(`========================================\n`);
+      return;
+    }
+
+    const preBarId = foundBar.id;
+    console.log(`\n✅ BAR PRE-REGISTRADO ENCONTRADO!`);
+    console.log(`   ID: ${preBarId}`);
+    console.log(`   Nombre: ${foundBar.name}`);
+    console.log(`   Email: ${foundBar.email}`);
+    console.log(`   Status: ${foundBar.status}`);
+    console.log(`   Converted Bar ID: ${foundBar.converted_bar_id}`);
+    console.log(`   Creado: ${foundBar.created_at}`);
+
+    // ========================================
+    // VERIFICACIÓN: ¿Ya fue convertido?
+    // ========================================
+    if (foundBar.converted_bar_id) {
+      console.log(`\n🔍 BAR TIENE converted_bar_id: ${foundBar.converted_bar_id}`);
+      console.log(`   Verificando si las imágenes ya fueron migradas...`);
+
+      // Verificar si las imágenes ya están en bar_images/bar_menus
+      const { data: existingImages, error: imagesError } = await supabase
+        .from('bar_images')
+        .select('id')
+        .eq('bar_id', foundBar.converted_bar_id)
+        .limit(1);
+
+      const { data: existingMenus, error: menusError } = await supabase
+        .from('bar_menus')
+        .select('id')
+        .eq('bar_id', foundBar.converted_bar_id)
+        .limit(1);
+
+      const hasImages = (existingImages && existingImages.length > 0) || 
+                       (existingMenus && existingMenus.length > 0);
+
+      console.log(`   - Imágenes en bar_images: ${existingImages?.length || 0}`);
+      console.log(`   - Imágenes en bar_menus: ${existingMenus?.length || 0}`);
+
+      if (hasImages) {
+        // Todo está completo: bar creado e imágenes migradas
+        console.log(`\n✅ BAR COMPLETAMENTE CONVERTIDO`);
+        console.log(`   - Bar creado: ${foundBar.converted_bar_id}`);
+        console.log(`   - Imágenes migradas: Sí`);
+        console.log(`   Acción: Solo enlazar usuario...`);
+
+        // Solo actualizar users.bar_id si aún no lo tiene
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ bar_id: foundBar.converted_bar_id })
+          .eq('id', userId);
+
+        if (updateError) {
+          console.error(`❌ Error actualizando user bar_id:`, updateError);
+        } else {
+          console.log(`✅ Usuario enlazado al bar ${foundBar.converted_bar_id}`);
+        }
+
+        console.log(`========================================\n`);
+        
+        Alert.alert(
+          'Bar Vinculado',
+          `Tu bar "${foundBar.name}" ya está activo. Has sido vinculado correctamente.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      } else {
+        // Bar creado pero imágenes NO migradas → llamar Edge para completar
+        console.log(`\n⚠️ BAR PARCIALMENTE CONVERTIDO`);
+        console.log(`   - Bar creado: ${foundBar.converted_bar_id}`);
+        console.log(`   - Imágenes migradas: NO`);
+        console.log(`   Acción: Llamar Edge Function para completar migración de imágenes...`);
+        // Continuar con el flujo normal de Edge Function
+      }
+    }
+
+    // ========================================
+    // VERIFICACIÓN: ¿Estado válido para promoción completa?
+    // ========================================
+    // Solo verificar status si NO tiene converted_bar_id
+    // Si tiene converted_bar_id pero sin imágenes, permitir continuar
+    if (!foundBar.converted_bar_id && foundBar.status !== 'pre_registered') {
+      console.log(`\n⚠️ BAR NO ESTÁ EN ESTADO PRE_REGISTERED`);
+      console.log(`   Status actual: ${foundBar.status}`);
+      console.log(`   NO se llamará a la Edge Function`);
+      console.log(`========================================\n`);
+      return;
+    }
+
+    if (foundBar.converted_bar_id) {
+      console.log(`\n✅ COMPLETANDO MIGRACIÓN DE IMÁGENES`);
+      console.log(`   - Bar ID existente: ${foundBar.converted_bar_id}`);
+      console.log(`   - Imágenes pendientes: Sí`);
+      console.log(`   Procediendo a llamar Edge Function para migrar imágenes...`);
+    } else {
+      console.log(`\n✅ CONDICIONES VÁLIDAS PARA PROMOCIÓN COMPLETA`);
+      console.log(`   - converted_bar_id es NULL`);
+      console.log(`   - status es "pre_registered"`);
+      console.log(`   Procediendo a llamar Edge Function...`);
+    }
+
+    // Get current session for auth token
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.error('❌ No session available for Edge Function call');
+      console.log(`========================================\n`);
+      return;
+    }
+
+    // Call Edge Function to promote the bar
+    const supabaseUrl = supabase.supabaseUrl;
+    const functionUrl = `${supabaseUrl}/functions/v1/promote_pre_registered_bar_with_images`;
+
+    console.log(`\n🚀 LLAMANDO A EDGE FUNCTION`);
+    console.log(`   URL: ${functionUrl}`);
+    console.log(`   Payload:`, {
+      preBarId: preBarId,
+      ownerId: userId,
+    });
+
+    const requestBody = {
+      preBarId: preBarId,
+      ownerId: userId,
+    };
+
+    console.log(`📤 Enviando petición...`);
+
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionData.session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    console.log(`📥 Respuesta recibida - Status: ${response.status} ${response.statusText}`);
+
+    let result;
+    try {
+      result = await response.json();
+      console.log(`📦 Response body:`, result);
+    } catch (parseError) {
+      console.error('❌ Error parsing response JSON:', parseError);
+      const text = await response.text();
+      console.log('📄 Raw response:', text);
+      console.log(`========================================\n`);
+      return;
+    }
+
+    if (!response.ok || !result.success) {
+      console.error('❌ ERROR EN EDGE FUNCTION');
+      console.error('   Status:', response.status);
+      console.error('   Error:', result.error);
+      console.error('   Details:', result.details || result);
+      console.log(`========================================\n`);
+      
+      Alert.alert(
+        'Aviso',
+        'Se encontró un bar pre-registrado para tu email, pero hubo un error al reclamarlo. Contacta con soporte.'
+      );
+      return;
+    }
+
+    console.log(`✅ BAR PROMOVIDO EXITOSAMENTE!`);
+    console.log(`   Bar ID: ${result.barId}`);
+    console.log(`   Imágenes del bar: ${result.barImagesCount || 0}`);
+    console.log(`   Imágenes del menú: ${result.menuImagesCount || 0}`);
+
+    const totalImages = (result.barImagesCount || 0) + (result.menuImagesCount || 0);
+
+    console.log(`\n🎉 PROCESO COMPLETADO`);
+    console.log(`   Total imágenes migradas: ${totalImages}`);
+    console.log(`========================================\n`);
+
+    // Show success message
+    Alert.alert(
+      '¡Bar Reclamado!',
+      `Tu bar ha sido activado exitosamente${totalImages > 0 ? ` con ${totalImages} imágenes` : ''}. Ya puedes gestionar tu establecimiento.`,
+      [{ text: 'OK' }]
+    );
+
+  } catch (error: any) {
+    console.error('\n❌ EXCEPCIÓN EN checkAndPromotePreRegisteredBar');
+    console.error('   Error:', error);
+    console.error('   Stack:', error.stack);
+    console.log(`========================================\n`);
+    // Don't block login if promotion fails
   }
 };
 

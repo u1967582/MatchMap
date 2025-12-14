@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import Step1GeneralInfo from '~/screens/registerBar/Step1GeneralInfo';
@@ -9,9 +9,13 @@ import Step1GeneralInfo from '~/screens/registerBar/Step1GeneralInfo';
 
 export default function Step1() {
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
   const [user, setUser] = useState<any>(null);
   const [canProceed, setCanProceed] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Check if this is auto pre-register mode (super user cold registration)
+  const isAutoPreRegister = mode === 'auto_pre_register';
 
   useEffect(() => {
     const getUser = async () => {
@@ -43,7 +47,7 @@ export default function Step1() {
 
   // Si puede proceder, mostrar el formulario
   if (canProceed) {
-    return <Step1GeneralInfo />;
+    return <Step1GeneralInfo isAutoPreRegister={isAutoPreRegister} />;
   }
 
   // Fallback (no debería llegar aquí)

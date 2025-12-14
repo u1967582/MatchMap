@@ -13,6 +13,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Stripe helpers no longer used
 import { useFocusEffect } from '@react-navigation/native';
 // Plan capabilities removed; use fixed limits
+import { createAutoPreRegisterBar } from '~/services/bars';
 
 interface ImageItem {
   id: string;
@@ -162,6 +163,84 @@ const Step4Photos: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error en uploadSingleImage:', error);
+      throw error;
+    }
+  }, []);
+
+  // Upload single image for auto_pre_register_bars (cold registration)
+  const uploadAutoPreRegisterImage = useCallback(async (
+    uri: string,
+    autoPreBarId: string,
+    type: 'bar' | 'menu',
+    order: number
+  ): Promise<{ filePath: string; publicUrl: string }> => {
+    try {
+      console.log(`\n=== SUBIENDO IMAGEN PRE-REGISTRO ===`);
+      console.log(`❄️ Tipo: ${type.toUpperCase()}`);
+      console.log(`❄️ Auto Pre Bar ID: ${autoPreBarId}`);
+      console.log(`❄️ Orden: ${order}`);
+
+      // Verificar que el archivo existe
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists || fileInfo.size === 0) {
+        throw new Error('El archivo no existe o está vacío');
+      }
+
+      // Create file path: <autoPreBarId>/<type>/file.jpg (bar or menu folder)
+      const timestamp = Date.now();
+      const fileName = `image_${type}_${order}.png`;
+      const filePath = `${autoPreBarId}/${type}/${fileName}`;
+
+      console.log(`📁 Estructura completa del path:`);
+      console.log(`   - autoPreBarId: ${autoPreBarId}`);
+      console.log(`   - type (carpeta): ${type}`);
+      console.log(`   - fileName: ${fileName}`);
+      console.log(`   - filePath FINAL: ${filePath}`);
+
+      // Read and upload file (same method as uploadSingleImage)
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      if (!base64 || base64.length === 0) {
+        throw new Error('Base64 string vacío');
+      }
+
+      // Convert base64 to ArrayBuffer
+      const binaryString = atob(base64);
+      const arrayBuffer = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        arrayBuffer[i] = binaryString.charCodeAt(i);
+      }
+
+      // Upload to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('bar-images')
+        .upload(filePath, arrayBuffer.buffer, {
+          contentType: 'image/jpeg',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('bar-images')
+        .getPublicUrl(filePath);
+
+      const publicUrl = urlData.publicUrl;
+
+      console.log(`✅ Imagen de ${type.toUpperCase()} subida exitosamente`);
+      console.log(`   - Storage path: ${filePath}`);
+      console.log(`   - Public URL: ${publicUrl}`);
+      console.log(`=== FIN SUBIDA ===\n`);
+      
+      return { filePath, publicUrl };
+
+    } catch (error) {
+      console.error('❌ Error en uploadAutoPreRegisterImage:', error);
       throw error;
     }
   }, []);
@@ -426,6 +505,7 @@ const Step4Photos: React.FC = () => {
     
     try {
       const formData = getFormData();
+      const isAutoPreRegister = formData.isAutoPreRegister || false;
       
       // Get current user for plan validation
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -478,8 +558,143 @@ const Step4Photos: React.FC = () => {
 
       console.log('🏗️ Creando bar...');
 
-      // Create bar
-      const { data: barData, error: barError } = await supabase
+      let barData: any;
+
+      // Check if this is auto pre-register mode (super user cold registration)
+      if (isAutoPreRegister) {
+        console.log('🔥 Modo registro en frío - guardando en auto_pre_register_bars');
+        
+        // For auto pre-register, save to auto_pre_register_bars table
+        barData = await createAutoPreRegisterBar({
+          name: formData.name,
+          description: formData.description || null,
+          email: formData.email,
+          phone: formData.phone,
+          website: formData.website || null,
+          address: formData.address || null,
+          city: formData.city || null,
+          postal_code: formData.postalCode || null,
+          door_number: formData.doorNumber || null,
+          latitude: formData.latitude || null,
+          longitude: formData.longitude || null,
+          category_id: formData.categoryId ? parseInt(formData.categoryId) : null,
+          notes: formData.notes || null,
+        });
+
+        console.log('✅ Bar pre-registrado:', barData.id);
+        
+        // Upload images for auto pre-register
+        let uploadSuccess = true;
+        let imageCount = 0;
+
+        if (barImages.length > 0 || menuImages.length > 0) {
+          console.log(`📷 Subiendo ${barImages.length + menuImages.length} imágenes para pre-registro...`);
+
+          try {
+            // Upload bar images
+            console.log(`📸 Subiendo ${barImages.length} imágenes del BAR para auto-registro`);
+            for (const image of barImages) {
+              try {
+                console.log(`📸 [BAR IMAGE] Procesando imagen ${image.order} de ${barImages.length}`);
+                const { filePath, publicUrl } = await uploadAutoPreRegisterImage(
+                  image.uri,
+                  barData.id,
+                  'bar',
+                  image.order
+                );
+
+                console.log(`📁 [BAR IMAGE] Path generado: ${filePath}`);
+
+                // Insert into auto_pre_register_bar_images
+                const insertPayload = {
+                  auto_pre_bar_id: barData.id,
+                  file_path: filePath,
+                  image_order: image.order,
+                  description: 'bar',
+                };
+                console.log(`💾 [BAR IMAGE] Insertando en auto_pre_register_bar_images:`, insertPayload);
+
+                const { error: insertError } = await supabase
+                  .from('auto_pre_register_bar_images')
+                  .insert(insertPayload);
+
+                if (insertError) {
+                  console.error('❌ Error inserting auto_pre_register_bar_images:', insertError);
+                } else {
+                  imageCount++;
+                  console.log(`✅ [BAR IMAGE] Imagen ${image.order} guardada en auto_pre_register_bar_images`);
+                }
+              } catch (imageError) {
+                console.error('❌ Error uploading pre-register BAR image:', imageError);
+                uploadSuccess = false;
+              }
+            }
+
+            // Upload menu images to auto_pre_register_bar_menus
+            console.log(`🍽️ Subiendo ${menuImages.length} imágenes del MENÚ para auto-registro`);
+            for (const image of menuImages) {
+              try {
+                console.log(`🍽️ [MENU IMAGE] Procesando imagen ${image.order} de ${menuImages.length}`);
+                const { filePath, publicUrl } = await uploadAutoPreRegisterImage(
+                  image.uri,
+                  barData.id,
+                  'menu',
+                  image.order
+                );
+
+                console.log(`📁 [MENU IMAGE] Path generado: ${filePath}`);
+
+                // Insert into auto_pre_register_bar_menus (separate table for menu images)
+                const insertPayload = {
+                  auto_pre_bar_id: barData.id,
+                  file_path: filePath,
+                  image_order: image.order,
+                };
+                console.log(`💾 [MENU IMAGE] Insertando en auto_pre_register_bar_menus:`, insertPayload);
+
+                const { error: insertError } = await supabase
+                  .from('auto_pre_register_bar_menus')
+                  .insert(insertPayload);
+
+                if (insertError) {
+                  console.error('❌ [MENU IMAGE] Error inserting auto_pre_register_bar_menus:', insertError);
+                } else {
+                  imageCount++;
+                  console.log(`✅ [MENU IMAGE] Imagen ${image.order} guardada en auto_pre_register_bar_menus`);
+                }
+              } catch (imageError) {
+                console.error('❌ Error uploading pre-register MENU image:', imageError);
+                uploadSuccess = false;
+              }
+            }
+
+            console.log(`✅ Total de ${imageCount} imágenes subidas para pre-registro`);
+          } catch (error) {
+            console.error('❌ Error general subiendo imágenes pre-registro:', error);
+            uploadSuccess = false;
+          }
+        }
+        
+        // Show success message and redirect
+        Alert.alert(
+          'Bar Registrado en Frío',
+          `El bar ha sido pre-registrado exitosamente${imageCount > 0 ? ` con ${imageCount} imágenes` : ''}. Cuando el propietario se registre con el email proporcionado, podrá reclamar el perfil.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                resetForm();
+                router.replace('/(protected)/profile' as any);
+              }
+            }
+          ]
+        );
+        
+        return; // Exit early for auto pre-register
+        
+      } else {
+        // Normal registration flow
+        const { data: insertedBarData, error: barError } = await supabase
         .from('bars')
         .insert({
           name: formData.name,
@@ -501,12 +716,14 @@ const Step4Photos: React.FC = () => {
         throw new Error(barError.message);
       }
 
+        barData = insertedBarData;
       console.log('✅ Bar creado:', barData.id);
 
       // Insert relationships
       await insertRelationships(barData.id, formData);
+      }
 
-      // Upload images with order
+      // Upload images with order (only for normal registration)
       let uploadSuccess = true;
       let uploadErrors: string[] = [];
 
@@ -564,7 +781,7 @@ const Step4Photos: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [getFormData, insertRelationships, uploadImages, barImages, menuImages, resetForm, router]);
+  }, [getFormData, insertRelationships, uploadImages, uploadAutoPreRegisterImage, barImages, menuImages, resetForm, router]);
 
   const handleBack = useCallback(() => {
     // Si el bar ya fue creado, mostrar alerta en lugar de navegar hacia atrás
