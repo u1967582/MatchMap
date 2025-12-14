@@ -94,7 +94,8 @@ const Step2ExtraInfo: React.FC = () => {
   }, [fetchLanguages, fetchFoodTypes, fetchFeatures]);
 
   const handleNext = () => {
-    router.push('/register-bar/step3' as any);
+    const query = useBarRegisterStore.getState().isAutoPreRegister ? '?mode=auto_pre_register' : '';
+    router.push(`/register-bar/step3${query}` as any);
   };
 
   const handleBack = () => {

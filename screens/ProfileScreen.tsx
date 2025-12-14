@@ -22,6 +22,7 @@ interface UserProfile {
   full_name?: string;
   username?: string;
   profile_image_url?: string;
+  is_super_user?: boolean;
 }
 
 interface UserBar {
@@ -70,7 +71,7 @@ export default function ProfileScreen() {
       // Try to get additional profile data from users table
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select('full_name, username, profile_image_url, bar_id')
+        .select('full_name, username, profile_image_url, bar_id, is_super_user')
         .eq('id', authUser.id)
         .single();
 
@@ -84,6 +85,7 @@ export default function ProfileScreen() {
         full_name: profileData?.full_name,
         username: profileData?.username,
         profile_image_url: profileData?.profile_image_url,
+        is_super_user: profileData?.is_super_user || false,
       });
 
       // Fetch user's bars using the bar_id from users table
@@ -186,6 +188,10 @@ export default function ProfileScreen() {
     router.push('/register-bar/step1' as any);
   }, [router]);
 
+  const handleColdRegisterBar = useCallback(() => {
+    router.push('/register-bar/step1?mode=auto_pre_register' as any);
+  }, [router]);
+
   const handleViewBarProfile = useCallback((barId: string) => {
     router.push(`/bar-profile/${barId}` as any);
   }, [router]);
@@ -285,6 +291,24 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Super User - Cold Registration Section */}
+        {user?.is_super_user && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Super Usuario</Text>
+            <TouchableOpacity 
+              style={styles.coldRegisterButton} 
+              onPress={handleColdRegisterBar}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="business-outline" size={22} color="#FFFFFF" />
+              <Text style={styles.coldRegisterButtonText}>Registrar Bar en Frío</Text>
+              <Text style={styles.coldRegisterSubtext}>
+                Pre-registra un bar para que su propietario lo reclame después
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Plan Information Section */}
         {/* Plan section removed: all users are PRO now */}
@@ -630,5 +654,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '500',
+  },
+  coldRegisterButton: {
+    backgroundColor: '#1976D2',
+    borderRadius: 12,
+    borderWidth: 0,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  coldRegisterButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  coldRegisterSubtext: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18,
   },
 }); 

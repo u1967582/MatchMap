@@ -145,7 +145,8 @@ const Step3Location: React.FC = () => {
 
   const handleNext = () => {
     if (validateForm()) {
-      router.push('/register-bar/step4' as any);
+      const query = useBarRegisterStore.getState().isAutoPreRegister ? '?mode=auto_pre_register' : '';
+      router.push(`/register-bar/step4${query}` as any);
     }
   };
 

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
+import { checkAndPromotePreRegisteredBar } from '~/utils/auth';
 import InputField from '~/components/ui/InputField';
 import CustomButton from '~/components/ui/CustomButton';
 import ForgotPasswordModal from './ForgotPasswordModal';
@@ -39,7 +40,7 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       });
@@ -47,6 +48,20 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
       if (error) {
         Alert.alert('Error de inicio de sesión', error.message);
         return;
+      }
+
+      console.log('✅ Login exitoso:', data.user?.email);
+
+      // ✅ IMPORTANTE: Verificar si hay un bar pre-registrado
+      // Esto se ejecuta DESPUÉS de que el usuario tiene sesión activa
+      if (data.user) {
+        try {
+          console.log('🔍 Verificando bar pre-registrado después del login...');
+          await checkAndPromotePreRegisteredBar(data.user.id, data.user.email || '');
+        } catch (preRegError) {
+          console.error('❌ Error verificando bar pre-registrado:', preRegError);
+          // No bloquear el login si falla
+        }
       }
 
       // Limpiar formulario

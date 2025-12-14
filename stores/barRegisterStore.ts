@@ -13,6 +13,8 @@ interface BarRegisterState {
   phone: string;
   website: string;
   categoryId: string | null;
+  email: string; // Email for auto_pre_register mode
+  notes: string; // Notes for super user
   
   // Step 2: Extra Info
   languageIds: string[];
@@ -31,6 +33,9 @@ interface BarRegisterState {
   barPhotos: string[];
   menuPhotos: string[];
   
+  // Registration mode
+  isAutoPreRegister: boolean;
+  
   // Categories data
   categories: BarCategory[];
   
@@ -47,6 +52,8 @@ const initialState = {
   phone: '',
   website: '',
   categoryId: null,
+  email: '',
+  notes: '',
   languageIds: [],
   foodTypeIds: [],
   featureIds: [],
@@ -58,6 +65,7 @@ const initialState = {
   doorNumber: null,
   barPhotos: [],
   menuPhotos: [],
+  isAutoPreRegister: false,
   categories: [],
 };
 
