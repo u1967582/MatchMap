@@ -9,13 +9,22 @@ import RadioGroup from '~/components/Form/RadioGroup';
 import PrimaryButton from '~/components/ui/PrimaryButton';
 import { useCategories } from '~/hooks/useCategories';
 
-const Step1GeneralInfo: React.FC = () => {
+interface Step1GeneralInfoProps {
+  isAutoPreRegister?: boolean;
+}
+
+const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister = false }) => {
   const router = useRouter();
-  const { name, description, phone, website, categoryId, setField } = useBarRegisterStore();
+  const { name, description, phone, website, categoryId, email, notes, setField } = useBarRegisterStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Use custom hook for categories
   const { categories, loading, error, usingFallback, refetch } = useCategories();
+
+  // Set the mode in the store when component mounts
+  useEffect(() => {
+    setField('isAutoPreRegister', isAutoPreRegister);
+  }, [isAutoPreRegister, setField]);
 
   // Show alert only if using fallback categories due to error
   useEffect(() => {
@@ -39,6 +48,15 @@ const Step1GeneralInfo: React.FC = () => {
       newErrors.phone = 'El teléfono es requerido';
     }
 
+    // Email is required for auto pre-register mode
+    if (isAutoPreRegister) {
+      if (!email.trim()) {
+        newErrors.email = 'El email del propietario es requerido';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        newErrors.email = 'El email no es válido';
+      }
+    }
+
     if (!categoryId) {
       newErrors.categoryId = 'Selecciona una categoría';
     }
@@ -49,7 +67,8 @@ const Step1GeneralInfo: React.FC = () => {
 
   const handleNext = () => {
     if (validateForm()) {
-      router.push('/register-bar/step2' as any);
+      const query = isAutoPreRegister ? '?mode=auto_pre_register' : '';
+      router.push(`/register-bar/step2${query}` as any);
     }
   };
 
@@ -121,6 +140,29 @@ const Step1GeneralInfo: React.FC = () => {
               required
               error={errors.phone}
             />
+
+            {isAutoPreRegister && (
+              <>
+                <TextInputField
+                  label="Email del Propietario"
+                  value={email}
+                  onChangeText={(text) => setField('email', text)}
+                  placeholder="propietario@ejemplo.com"
+                  keyboardType="email-address"
+                  required
+                  error={errors.email}
+                />
+                
+                <TextInputField
+                  label="Notas (opcional)"
+                  value={notes}
+                  onChangeText={(text) => setField('notes', text)}
+                  placeholder="Notas internas sobre el bar o el contacto..."
+                  multiline
+                  numberOfLines={3}
+                />
+              </>
+            )}
 
             <TextInputField
               label="Sitio Web"

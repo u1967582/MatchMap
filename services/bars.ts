@@ -34,4 +34,81 @@ export async function fetchBarIdsByMatch(matchId: string): Promise<string[]> {
   }
 }
 
+/**
+ * Create a pre-registered bar (cold registration by super user)
+ * This inserts into auto_pre_register_bars table instead of bars table
+ */
+export async function createAutoPreRegisterBar(payload: {
+  name: string;
+  description?: string | null;
+  email: string;
+  phone?: string | null;
+  website?: string | null;
+  address?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
+  door_number?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  category_id?: number | null;
+  notes?: string | null;
+}) {
+  try {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // Normalize email to lowercase for consistent matching
+    const normalizedPayload = {
+      ...payload,
+      email: payload.email.toLowerCase().trim(),
+    };
+
+    console.log(`\n========================================`);
+    console.log(`💾 GUARDANDO BAR PRE-REGISTRADO`);
+    console.log(`========================================`);
+    console.log(`📧 Email original: "${payload.email}"`);
+    console.log(`📧 Email normalizado: "${normalizedPayload.email}"`);
+    console.log(`   - Length: ${normalizedPayload.email.length}`);
+    console.log(`   - Has spaces: ${normalizedPayload.email.includes(' ')}`);
+    console.log(`🏢 Nombre del bar: ${normalizedPayload.name}`);
+    console.log(`👤 Created by user: ${user.id}`);
+
+    const insertPayload = {
+      ...normalizedPayload,
+      created_by_user_id: user.id,
+      status: 'pre_registered',
+    };
+
+    console.log(`\n📦 Payload completo para INSERT:`);
+    console.log(JSON.stringify(insertPayload, null, 2));
+
+    // Insert into auto_pre_register_bars
+    const { data, error } = await supabase
+      .from('auto_pre_register_bars')
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('\n❌ Error creating auto pre-register bar:', error);
+      console.log(`========================================\n`);
+      throw error;
+    }
+
+    console.log(`\n✅ BAR PRE-REGISTRADO EXITOSAMENTE!`);
+    console.log(`   ID: ${data.id}`);
+    console.log(`   Email guardado: "${data.email}"`);
+    console.log(`   Status: ${data.status}`);
+    console.log(`========================================\n`);
+    
+    return data;
+  } catch (error) {
+    console.error('❌ Error in createAutoPreRegisterBar:', error);
+    throw error;
+  }
+}
+
 
