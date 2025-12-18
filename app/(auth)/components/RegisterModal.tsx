@@ -43,6 +43,9 @@ export default function RegisterModal({
     formData.password.length >= 6 &&
     formData.password === formData.confirmPassword;
 
+  // ⚠️ La función checkAndPromotePreRegisteredBar ahora está en utils/auth.ts
+  // y se ejecuta automáticamente cuando el usuario inicia sesión (evento SIGNED_IN)
+
   const handleRegister = async () => {
     // Validaciones detalladas
     if (formData.email.trim().length === 0) {
@@ -97,6 +100,13 @@ export default function RegisterModal({
 
       // El trigger de Supabase creará automáticamente el usuario en public.users
       console.log('✅ Usuario registrado:', data.user?.email);
+      console.log('ℹ️ El usuario debe confirmar su email antes de iniciar sesión');
+      console.log('ℹ️ La verificación de bar pre-registrado se ejecutará al hacer login');
+
+      // ⚠️ NO verificar el bar pre-registrado aquí
+      // Se verifica cuando el usuario inicia sesión (evento SIGNED_IN)
+      // Razón: En este momento el usuario NO tiene sesión activa (necesita confirmar email)
+      // y las policies requieren un usuario autenticado
 
       // Limpiar formulario
       setFormData({
