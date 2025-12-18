@@ -301,7 +301,7 @@ export default function ProfileScreen() {
               onPress={handleColdRegisterBar}
               activeOpacity={0.8}
             >
-              <Ionicons name="business-outline" size={22} color="#FFFFFF" />
+              <Ionicons name="business-outline" size={24} color="#1976D2" />
               <Text style={styles.coldRegisterButtonText}>Registrar Bar en Frío</Text>
               <Text style={styles.coldRegisterSubtext}>
                 Pre-registra un bar para que su propietario lo reclame después
@@ -656,12 +656,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   coldRegisterButton: {
-    backgroundColor: '#1976D2',
+    backgroundColor: '#2A3A4A',
     borderRadius: 12,
-    borderWidth: 0,
+    borderWidth: 2,
+    borderColor: '#1976D2',
     padding: 16,
     alignItems: 'center',
     gap: 8,
+    shadowColor: '#1976D2',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   coldRegisterButtonText: {
     color: '#FFFFFF',
@@ -670,7 +676,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   coldRegisterSubtext: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#E5E7EB',
     fontSize: 13,
     textAlign: 'center',
     marginTop: 4,
