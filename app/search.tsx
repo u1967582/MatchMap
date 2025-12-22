@@ -751,14 +751,12 @@ export default function SearchScreen() {
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
   
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Buscar Bares</Text>
-      </View>
+      {/* Removed header for minimalist design */}
   
       <View style={styles.searchContainer}>
         <View style={styles.searchRow}>
           <View style={[styles.searchBar, { flex: 1 }]}>
-            <Ionicons name="search" size={20} color="#A3B3CC" style={styles.searchIcon} />
+            <Ionicons name="search" size={18} color="#A3B3CC" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Buscar nombre de bar..."
@@ -770,7 +768,7 @@ export default function SearchScreen() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color="#A3B3CC" />
+                <Ionicons name="close-circle" size={18} color="#A3B3CC" />
               </TouchableOpacity>
             )}
           </View>
@@ -948,30 +946,31 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   searchContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#2A3A4A',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   filterIconButton: {
     backgroundColor: '#243243',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     position: 'relative',
   },
   filterIconButtonActive: {
@@ -987,42 +986,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
   },
   searchIcon: {
-    marginRight: 12,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
   },
   filtersContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   filtersRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    gap: 12,
+    gap: 10,
   },
   filterColumn: {
     flex: 1,
   },
   filterLabel: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#A3B3CC',
+    fontSize: 13,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#243243',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 16,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
     position: 'relative',
-    minHeight: 44,
+    minHeight: 38,
     justifyContent: 'center',
   },
   filterButtonActive: {
@@ -1030,15 +1029,15 @@ const styles = StyleSheet.create({
   },
   filterButtonText: {
     color: '#A3B3CC',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   filterButtonTextActive: {
     color: '#FFFFFF',
   },
   iconEmoji: {
-    fontSize: 16,
-    marginRight: 6,
+    fontSize: 15,
+    marginRight: 4,
   },
   filterBadge: {
     position: 'absolute',
@@ -1059,7 +1058,7 @@ const styles = StyleSheet.create({
   },
   resultsContainer: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   
   loadingContainer: {
@@ -1096,7 +1095,7 @@ const styles = StyleSheet.create({
   barCard: {
     backgroundColor: '#1A2332',
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 12,
     overflow: 'hidden',
   },
   barCardBoosted: {
@@ -1111,7 +1110,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: 200,
+    height: 180,
   },
   barImage: {
     width: '100%',

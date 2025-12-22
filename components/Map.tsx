@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -260,13 +260,12 @@ const Map: React.FC = () => {
             rating,
             review_count,
             category_id,
-            bar_images!inner(
+            bar_images(
               image_url,
               image_order
             )
           `)
-          .eq('is_active', true)
-          .eq('bar_images.image_order', 1);
+          .eq('is_active', true);
 
         // Apply match filter if active
         if (barIdsFilter) {
@@ -314,9 +313,14 @@ const Map: React.FC = () => {
               .select('feature_id, bar_features(name)')
               .eq('bar_id', bar.id);
 
+            // Find image with image_order = 1, fallback to first image or null
+            const mainImage = bar.bar_images
+              ?.find((img: any) => img.image_order === 1)?.image_url || 
+              bar.bar_images?.[0]?.image_url || null;
+
             return {
               ...bar,
-              image_url: bar.bar_images?.[0]?.image_url || null,
+              image_url: mainImage,
               category,
               bar_food_types: foodTypes?.map((item: any) => ({
                 food_type_id: item.food_type_id,
@@ -695,7 +699,7 @@ const styles = StyleSheet.create({
   },
   filterButtonsRow: {
     position: 'absolute',
-    top: 60,
+    top: Platform.OS === 'ios' ? 60 : 40, // Match SearchBar positioning
     right: 20,
     flexDirection: 'row',
     gap: 10,
