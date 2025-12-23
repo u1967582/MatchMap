@@ -163,8 +163,8 @@ export default function ProfileScreen() {
     router.push('/edit-profile' as any);
   }, [router]);
 
-  const handleNotifications = useCallback(() => {
-    router.push('/notifications' as any);
+  const handleContactSupport = useCallback(() => {
+    router.push('/contact-support' as any);
   }, [router]);
 
   const handlePrivacy = useCallback(() => {
@@ -307,6 +307,18 @@ export default function ProfileScreen() {
                 Pre-registra un bar para que su propietario lo reclame después
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.coldRegisterButton, styles.supportTicketsButton]} 
+              onPress={() => router.push('/support-admin' as any)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="chatbubbles-outline" size={24} color="#10B981" />
+              <Text style={styles.coldRegisterButtonText}>Gestionar Tickets de Soporte</Text>
+              <Text style={styles.coldRegisterSubtext}>
+                Ver y responder tickets de usuarios
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -321,7 +333,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsContainer}>
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
             <SettingsRow title="Preguntas Frequentes" onPress={handlePrivacy} />
-            <SettingsRow title="Contactar con Soporte" onPress={handleNotifications} />
+            <SettingsRow title="Soporte y Tickets" onPress={handleContactSupport} />
             <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast />
           </View>
         </View>
@@ -681,5 +693,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 18,
+  },
+  supportTicketsButton: {
+    borderColor: '#10B981',
+    marginTop: 12,
   },
 }); 
