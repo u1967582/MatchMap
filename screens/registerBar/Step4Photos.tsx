@@ -749,31 +749,11 @@ const Step4Photos: React.FC = () => {
         }
       }
 
-      // 5) Finalizar wizard - resetear completamente la navegación
-      console.log('✅ Bar creado exitosamente, reseteando navegación...');
-      
-      // Opción 1: Usar router.replace (más simple)
-      router.replace(`/bar-profile/${barData.id}`);
-      
-      // Opción 2: Resetear completamente el stack de navegación (más robusto)
-      // router.push({
-      //   pathname: `/bar-profile/${barData.id}`,
-      //   params: { reset: true }
-      // });
+      // 5) Finalizar wizard: bar queda en verificación (pending) y aún no aparece públicamente
+      console.log('✅ Bar creado. Estado: pendiente de verificación');
 
-      // Opcional: Mostrar mensaje de éxito
-      Alert.alert(
-        '¡Éxito!',
-        'Tu bar ha sido registrado correctamente.',
-        [
-          {
-            text: 'Continuar',
-            onPress: () => {
-              // El router.replace ya se ejecutó, esto es solo para cerrar el Alert
-            }
-          }
-        ]
-      );
+      // Mostrar pantalla de "enviado para verificación" (mejor UX que un alert)
+      router.replace(`/register-bar/submitted?barId=${barData.id}` as any);
 
     } catch (error: any) {
       console.error('Error submitting form:', error);
