@@ -74,6 +74,8 @@ export default function BarProfileScreen() {
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(true);
   const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
+  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [verificationNotes, setVerificationNotes] = useState<string | null>(null);
 
   // Get boost status for countdown
   const { boost, isLoading: boostLoading } = useBarBoost(barId);
@@ -130,6 +132,59 @@ export default function BarProfileScreen() {
             </TouchableOpacity>
             <View style={styles.headerContent}>
               <Text style={styles.barName}>{bar?.name}</Text>
+              {isOwner && verificationStatus ? (
+                <View
+                  style={[
+                    styles.verificationPill,
+                    verificationStatus === 'approved'
+                      ? styles.verificationPillApproved
+                      : verificationStatus === 'rejected'
+                        ? styles.verificationPillRejected
+                        : styles.verificationPillPending,
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      verificationStatus === 'approved'
+                        ? 'checkmark-circle-outline'
+                        : verificationStatus === 'rejected'
+                          ? 'close-circle-outline'
+                          : 'time-outline'
+                    }
+                    size={14}
+                    color={
+                      verificationStatus === 'approved'
+                        ? '#10B981'
+                        : verificationStatus === 'rejected'
+                          ? '#EF4444'
+                          : '#FFD700'
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.verificationPillText,
+                      verificationStatus === 'approved'
+                        ? styles.verificationPillTextApproved
+                        : verificationStatus === 'rejected'
+                          ? styles.verificationPillTextRejected
+                          : styles.verificationPillTextPending,
+                    ]}
+                  >
+                    {verificationStatus === 'approved'
+                      ? 'Verificado'
+                      : verificationStatus === 'rejected'
+                        ? 'Rechazado'
+                        : 'Pendiente de verificación'}
+                  </Text>
+                </View>
+              ) : null}
+
+              {isOwner && verificationStatus === 'rejected' && verificationNotes ? (
+                <View style={styles.verificationNotesBox}>
+                  <Ionicons name="information-circle-outline" size={14} color="#A3B3CC" />
+                  <Text style={styles.verificationNotesText}>{verificationNotes}</Text>
+                </View>
+              ) : null}
             </View>
             <View style={styles.headerSpacer} />
           </View>
@@ -531,7 +586,9 @@ export default function BarProfileScreen() {
           phone,
           website,
           bar_images(image_url, image_order),
-          category_id
+          category_id,
+          verification_status,
+          verification_notes
         `)
         .eq('id', barId)
         .single();
@@ -543,6 +600,8 @@ export default function BarProfileScreen() {
       }
 
       if (barData) {
+        setVerificationStatus((barData as any).verification_status || null);
+        setVerificationNotes((barData as any).verification_notes || null);
         // Check if bar has at least one active subscription (supports multiple rows)
         // All bars can show menu button now
         setCanShowMenuButton(true);
@@ -1165,6 +1224,61 @@ const styles = StyleSheet.create({
   headerContent: {
     flex: 1,
     alignItems: 'center',
+  },
+  verificationPill: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  verificationPillPending: {
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderColor: 'rgba(255, 215, 0, 0.25)',
+  },
+  verificationPillApproved: {
+    backgroundColor: 'rgba(16, 185, 129, 0.10)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+  },
+  verificationPillRejected: {
+    backgroundColor: 'rgba(239, 68, 68, 0.10)',
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
+  verificationPillText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  verificationPillTextPending: {
+    color: '#FFD700',
+  },
+  verificationPillTextApproved: {
+    color: '#10B981',
+  },
+  verificationPillTextRejected: {
+    color: '#EF4444',
+  },
+  verificationNotesBox: {
+    marginTop: 10,
+    maxWidth: '95%',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  verificationNotesText: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 12,
+    lineHeight: 16,
+    flex: 1,
+    textAlign: 'left',
   },
   headerSpacer: {
     width: 32, // Same width as back button to center the title
