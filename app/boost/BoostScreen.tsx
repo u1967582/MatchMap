@@ -124,7 +124,7 @@ const BoostScreen: React.FC = () => {
           </View>
           <View style={styles.benefitItem}>
             <View style={styles.benefitIconContainer}>
-              <Ionicons name="star" size={20} color="#F59E0B" />
+              <Ionicons name="star" size={20} color="#FFD700" />
             </View>
             <View style={styles.benefitTextContainer}>
               <Text style={styles.benefitText}>Etiqueta destacado</Text>
