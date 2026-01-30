@@ -33,7 +33,7 @@ interface Bar {
   category_id?: number;
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
-  bar_languages?: { language_id: number; language: { name: string } }[];
+  bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
 }
 
 
@@ -57,14 +57,14 @@ const Map: React.FC = () => {
   const [selectedBarCategories, setSelectedBarCategories] = React.useState<number[]>([]);
   const [selectedFoodTypes, setSelectedFoodTypes] = React.useState<number[]>([]);
   const [selectedFeatures, setSelectedFeatures] = React.useState<number[]>([]);
-  const [selectedLanguages, setSelectedLanguages] = React.useState<number[]>([]);
+  const [selectedTvFeatures, setSelectedTvFeatures] = React.useState<number[]>([]);
   
   // Match filter states
   const [selectedMatch, setSelectedMatch] = React.useState<Match | null>(null);
   const [matchPickerOpen, setMatchPickerOpen] = React.useState(false);
   
   // Load filter data
-  const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
+  const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
 
   // Get boost context and functions
   const { selectedBoostBarIds, setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
@@ -180,17 +180,17 @@ const Map: React.FC = () => {
       });
     }
 
-    // Apply languages filter (must have ALL selected languages)
-    if (selectedLanguages.length > 0) {
+    // Apply TV features filter (must have ALL selected TV features)
+    if (selectedTvFeatures.length > 0) {
       filtered = filtered.filter(bar => {
-        const languageIds = bar.bar_languages?.map(l => l.language_id) || [];
-        return selectedLanguages.every(selectedId => languageIds.includes(selectedId));
+        const tvFeatureIds = bar.bar_selected_tv_features?.map(tf => tf.tv_feature_id) || [];
+        return selectedTvFeatures.every(selectedId => tvFeatureIds.includes(selectedId));
       });
     }
 
     console.log('🎯 FILTERS: Applied filters, showing', filtered.length, 'of', bars.length, 'bars');
     return filtered;
-  }, [bars, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages]);
+  }, [bars, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures]);
 
   // Handle apply filters
   const handleApplyFilters = React.useCallback(() => {
@@ -301,10 +301,10 @@ const Map: React.FC = () => {
               .select('food_type_id, food_types(name)')
               .eq('bar_id', bar.id);
 
-            // Load languages
-            const { data: languages } = await supabase
-              .from('bar_languages')
-              .select('language_id, languages(name)')
+            // Load TV features
+            const { data: tvFeatures } = await supabase
+              .from('bar_selected_tv_features')
+              .select('tv_feature_id, bar_tv_features(name)')
               .eq('bar_id', bar.id);
 
             // Load features
@@ -326,9 +326,9 @@ const Map: React.FC = () => {
                 food_type_id: item.food_type_id,
                 food_type: { name: item.food_types?.name || 'Unknown' }
               })) || [],
-              bar_languages: languages?.map((item: any) => ({
-                language_id: item.language_id,
-                language: { name: item.languages?.name || 'Unknown' }
+              bar_selected_tv_features: tvFeatures?.map((item: any) => ({
+                tv_feature_id: item.tv_feature_id,
+                tv_feature: { name: item.bar_tv_features?.name || 'Unknown' }
               })) || [],
               bar_selected_features: features?.map((item: any) => ({
                 feature_id: item.feature_id,
@@ -554,13 +554,13 @@ const Map: React.FC = () => {
         style={[
             styles.filterRowButton,
           (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-           selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
+           selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterButtonActive
         ]}
         onPress={() => setFilterModalVisible(true)}
       >
         <Ionicons name="filter" size={20} color="#FFFFFF" />
         {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-          selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+          selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
           <View style={styles.filterDot} />
         )}
       </TouchableOpacity>
@@ -612,7 +612,7 @@ const Map: React.FC = () => {
             }
           }}
         >
-          <Ionicons name="locate" size={24} color="#FFFFFF" />
+          <Ionicons name="locate" size={28} color="#007AFF" />
         </TouchableOpacity>
       )}
       
@@ -631,15 +631,15 @@ const Map: React.FC = () => {
         barCategories={barCategories}
         foodTypes={foodTypes}
         barFeatures={barFeatures}
-        languages={languages}
+        tvFeatures={tvFeatures}
         selectedBarCategories={selectedBarCategories}
         selectedFoodTypes={selectedFoodTypes}
         selectedFeatures={selectedFeatures}
-        selectedLanguages={selectedLanguages}
+        selectedTvFeatures={selectedTvFeatures}
         onBarCategoriesChange={setSelectedBarCategories}
         onFoodTypesChange={setSelectedFoodTypes}
         onFeaturesChange={setSelectedFeatures}
-        onLanguagesChange={setSelectedLanguages}
+        onTvFeaturesChange={setSelectedTvFeatures}
         onApplyFilters={handleApplyFilters}
         loading={filtersLoading}
       />
@@ -735,22 +735,24 @@ const styles = StyleSheet.create({
   },
   centerButton: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 120,
     right: 20,
-    backgroundColor: '#3A4A5C',
-    borderRadius: 25,
-    width: 50,
-    height: 50,
+    backgroundColor: '#1C2A3A',
+    borderRadius: 28,
+    width: 56,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#374151',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   teamButtonEmoji: {
     fontSize: 22,

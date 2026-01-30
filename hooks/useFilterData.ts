@@ -42,17 +42,18 @@ const getFeatureEmoji = (name: string): string => {
   return featureMap[name] || '✨';
 };
 
-const getLanguageEmoji = (name: string): string => {
-  const languageMap: { [key: string]: string } = {
-    'Alemán': '🇩🇪',
-    'Catalán': '🏴󠁥󠁳󠁣󠁴󠁿',
-    'Español': '🇪🇸',
-    'Francés': '🇫🇷',
-    'Inglés': '🇬🇧',
-    'Italiano': '🇮🇹',
-    'Portugués': '🇵🇹',
+const getTVFeatureEmoji = (name: string): string => {
+  const tvFeatureMap: { [key: string]: string } = {
+    'Pantallas Gigantes': '📺',
+    'Múltiples Pantallas': '🖥️',
+    'Buena Calidad de Imagen': '✨',
+    'Sonido Envolvente': '🔊',
+    'Audio Alto': '🔉',
+    'TV 4K': '4️⃣',
+    'Proyector de Gran Formato': '📽️',
+    'Transmisión en Vivo Garantizada': '📡',
   };
-  return languageMap[name] || '🌍';
+  return tvFeatureMap[name] || '📺';
 };
 
 interface FilterItem {
@@ -65,7 +66,7 @@ interface FilterData {
   barCategories: FilterItem[];
   foodTypes: FilterItem[];
   barFeatures: FilterItem[];
-  languages: FilterItem[];
+  tvFeatures: FilterItem[];
   loading: boolean;
   error: string | null;
 }
@@ -98,20 +99,22 @@ const FALLBACK_FEATURES = [
   { id: 6, name: 'Acceso para personas con movilidad reducida', emoji: '♿' },
 ];
 
-const FALLBACK_LANGUAGES = [
-  { id: 1, name: 'Español', emoji: '🇪🇸' },
-  { id: 2, name: 'Inglés', emoji: '🇬🇧' },
-  { id: 3, name: 'Alemán', emoji: '🇩🇪' },
-  { id: 4, name: 'Francés', emoji: '🇫🇷' },
-  { id: 5, name: 'Catalán', emoji: '🏴󠁥󠁳󠁣󠁴󠁿' },
-  { id: 6, name: 'Italiano', emoji: '🇮🇹' },
+const FALLBACK_TV_FEATURES = [
+  { id: 1, name: 'Pantallas Gigantes', emoji: '📺' },
+  { id: 2, name: 'Múltiples Pantallas', emoji: '🖥️' },
+  { id: 3, name: 'Buena Calidad de Imagen', emoji: '✨' },
+  { id: 4, name: 'Sonido Envolvente', emoji: '🔊' },
+  { id: 5, name: 'Audio Alto', emoji: '🔉' },
+  { id: 6, name: 'TV 4K', emoji: '4️⃣' },
+  { id: 7, name: 'Proyector de Gran Formato', emoji: '📽️' },
+  { id: 8, name: 'Transmisión en Vivo Garantizada', emoji: '📡' },
 ];
 
 export function useFilterData(): FilterData {
   const [barCategories, setBarCategories] = useState<FilterItem[]>(FALLBACK_CATEGORIES);
   const [foodTypes, setFoodTypes] = useState<FilterItem[]>(FALLBACK_FOOD_TYPES);
   const [barFeatures, setBarFeatures] = useState<FilterItem[]>(FALLBACK_FEATURES);
-  const [languages, setLanguages] = useState<FilterItem[]>(FALLBACK_LANGUAGES);
+  const [tvFeatures, setTvFeatures] = useState<FilterItem[]>(FALLBACK_TV_FEATURES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,27 +153,27 @@ export function useFilterData(): FilterData {
         console.log('✨ Features data:', featuresData);
         console.log('❌ Features error:', featuresError);
 
-        // Load languages
-        const { data: languagesData, error: languagesError } = await supabase
-          .from('languages')
+        // Load TV features
+        const { data: tvFeaturesData, error: tvFeaturesError } = await supabase
+          .from('bar_tv_features')
           .select('id, name')
           .order('name');
 
-        console.log('🌍 Languages data:', languagesData);
-        console.log('❌ Languages error:', languagesError);
+        console.log('📺 TV Features data:', tvFeaturesData);
+        console.log('❌ TV Features error:', tvFeaturesError);
 
         // Use fallback data if any table doesn't exist or has errors
-        const useFallback = categoriesError || foodError || featuresError || languagesError ||
-                           !categoriesData || !foodData || !featuresData || !languagesData ||
+        const useFallback = categoriesError || foodError || featuresError || tvFeaturesError ||
+                           !categoriesData || !foodData || !featuresData || !tvFeaturesData ||
                            categoriesData.length === 0 || foodData.length === 0 || 
-                           featuresData.length === 0 || languagesData.length === 0;
+                           featuresData.length === 0 || tvFeaturesData.length === 0;
 
         if (useFallback) {
           console.log('⚠️ Using fallback data due to errors or empty tables');
           setBarCategories(FALLBACK_CATEGORIES);
           setFoodTypes(FALLBACK_FOOD_TYPES);
           setBarFeatures(FALLBACK_FEATURES);
-          setLanguages(FALLBACK_LANGUAGES);
+          setTvFeatures(FALLBACK_TV_FEATURES);
         } else {
           console.log('✅ Using data from Supabase');
           // Add emojis to categories
@@ -191,16 +194,16 @@ export function useFilterData(): FilterData {
             emoji: getFeatureEmoji(feature.name)
           }));
 
-          // Add emojis to languages
-          const languagesWithEmojis = languagesData.map(language => ({
-            ...language,
-            emoji: getLanguageEmoji(language.name)
+          // Add emojis to TV features
+          const tvFeaturesWithEmojis = tvFeaturesData.map(tvFeature => ({
+            ...tvFeature,
+            emoji: getTVFeatureEmoji(tvFeature.name)
           }));
 
           setBarCategories(categoriesWithEmojis);
           setFoodTypes(foodTypesWithEmojis);
           setBarFeatures(featuresWithEmojis);
-          setLanguages(languagesWithEmojis);
+          setTvFeatures(tvFeaturesWithEmojis);
         }
 
       } catch (err) {
@@ -211,7 +214,7 @@ export function useFilterData(): FilterData {
         setBarCategories(FALLBACK_CATEGORIES);
         setFoodTypes(FALLBACK_FOOD_TYPES);
         setBarFeatures(FALLBACK_FEATURES);
-        setLanguages(FALLBACK_LANGUAGES);
+        setTvFeatures(FALLBACK_TV_FEATURES);
       } finally {
         setLoading(false);
         console.log('✅ Filter data loading completed');
@@ -225,7 +228,7 @@ export function useFilterData(): FilterData {
     barCategories,
     foodTypes,
     barFeatures,
-    languages,
+    tvFeatures,
     loading,
     error,
   };

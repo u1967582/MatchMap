@@ -17,7 +17,7 @@ interface BarRegisterState {
   notes: string; // Notes for super user
   
   // Step 2: Extra Info
-  languageIds: string[];
+  tvFeatureIds: string[];
   foodTypeIds: string[];
   featureIds: string[];
   
@@ -54,7 +54,7 @@ const initialState = {
   categoryId: null,
   email: '',
   notes: '',
-  languageIds: [],
+  tvFeatureIds: [],
   foodTypeIds: [],
   featureIds: [],
   address: '',

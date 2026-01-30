@@ -17,7 +17,7 @@ interface Bar {
   distance_km?: number;
   category?: { id: number; name: string };
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
-  bar_languages?: { language_id: number; language: { name: string } }[];
+  bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
   next_match?: {
     date: string;
