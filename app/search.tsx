@@ -42,7 +42,7 @@ interface Bar {
   distance_km?: number | null;
   bar_food_types?: { food_type_id: number }[];
   bar_selected_features?: { feature_id: number }[];
-  bar_languages?: { language_id: number }[];
+  bar_selected_tv_features?: { tv_feature_id: number }[];
   next_match?: {
     date: string;
     time: string;
@@ -76,7 +76,7 @@ export default function SearchScreen() {
   const [selectedBarCategories, setSelectedBarCategories] = useState<number[]>([]);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<number[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<number[]>([]);
-  const [selectedLanguages, setSelectedLanguages] = useState<number[]>([]);
+  const [selectedTvFeatures, setSelectedTvFeatures] = useState<number[]>([]);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   // Match filter state
@@ -84,7 +84,7 @@ export default function SearchScreen() {
   const [matchPickerOpen, setMatchPickerOpen] = useState(false);
 
   // Load filter data
-  const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
+  const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
 
   // Load favorites functionality
   const { toggleFavorite, isFavorite } = useFavorites();
@@ -123,7 +123,7 @@ export default function SearchScreen() {
     barCategories: barCategories.length,
     foodTypes: foodTypes.length,
     barFeatures: barFeatures.length,
-    languages: languages.length,
+    tvFeatures: tvFeatures.length,
     loading: filtersLoading
   });
 
@@ -165,7 +165,7 @@ export default function SearchScreen() {
         selectedBarCategories,
         selectedFoodTypes,
         selectedFeatures,
-        selectedLanguages,
+        selectedTvFeatures,
         selectedSort
       });
 
@@ -250,15 +250,15 @@ export default function SearchScreen() {
         .select('*')
         .in('bar_id', barIds);
 
-      const { data: languages } = await supabase
-        .from('bar_languages')
+      const { data: tvFeatures } = await supabase
+        .from('bar_selected_tv_features')
         .select('*')
         .in('bar_id', barIds);
 
       console.log('📊 N:N relationships loaded:', {
         foodTypes: foodTypes?.length || 0,
         features: features?.length || 0,
-        languages: languages?.length || 0
+        tvFeatures: tvFeatures?.length || 0
       });
 
       // Paso 3. Crear mapas para todos los tipos de datos
@@ -274,16 +274,16 @@ export default function SearchScreen() {
         featuresMap.get(bar_id).push({ feature_id });
       });
 
-      const languagesMap = new Map();
-      languages?.forEach(({ bar_id, language_id }) => {
-        if (!languagesMap.has(bar_id)) languagesMap.set(bar_id, []);
-        languagesMap.get(bar_id).push({ language_id });
+      const tvFeaturesMap = new Map();
+      tvFeatures?.forEach(({ bar_id, tv_feature_id }) => {
+        if (!tvFeaturesMap.has(bar_id)) tvFeaturesMap.set(bar_id, []);
+        tvFeaturesMap.get(bar_id).push({ tv_feature_id });
       });
 
       console.log('🗺️ Maps created:', {
         foodTypesMapSize: foodTypesMap.size,
         featuresMapSize: featuresMap.size,
-        languagesMapSize: languagesMap.size
+        tvFeaturesMapSize: tvFeaturesMap.size
       });
 
       // Paso 4. Fusionar la información por bar
@@ -292,14 +292,14 @@ export default function SearchScreen() {
           ...bar,
           bar_food_types: foodTypesMap.get(bar.id) || [],
           bar_selected_features: featuresMap.get(bar.id) || [],
-          bar_languages: languagesMap.get(bar.id) || [],
+          bar_selected_tv_features: tvFeaturesMap.get(bar.id) || [],
         };
 
         // Log explícito para verificar que los datos se asignan correctamente
         console.log('✅ Bar enriched:', bar.name, {
           foods: enrichedBar.bar_food_types,
           features: enrichedBar.bar_selected_features,
-          languages: enrichedBar.bar_languages
+          tvFeatures: enrichedBar.bar_selected_tv_features
         });
 
         return enrichedBar;
@@ -311,7 +311,7 @@ export default function SearchScreen() {
           category_id: bar.category_id,
           foodTypes: bar.bar_food_types,
           features: bar.bar_selected_features,
-          languages: bar.bar_languages
+          tvFeatures: bar.bar_selected_tv_features
         });
       });
 
@@ -426,30 +426,30 @@ export default function SearchScreen() {
         console.log('✨ Applied features filter (client-side):', selectedFeatures, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Apply languages filter (client-side)
-      if (selectedLanguages.length > 0) {
+      // Apply TV features filter (client-side)
+      if (selectedTvFeatures.length > 0) {
         const beforeCount = filteredBars.length;
-        console.log('🌍 Starting languages filter with:', selectedLanguages);
+        console.log('📺 Starting TV features filter with:', selectedTvFeatures);
         
         filteredBars = filteredBars.filter(bar => {
-          const languageIds = bar.bar_languages?.map((l: { language_id: number }) => l.language_id) || [];
+          const tvFeatureIds = bar.bar_selected_tv_features?.map((tf: { tv_feature_id: number }) => tf.tv_feature_id) || [];
           
-          // Check if bar has ALL selected languages (AND logic)
-          const matchesLanguages = selectedLanguages.every(selectedId => {
-            const hasLanguage = languageIds.includes(selectedId);
-            console.log(`  🌍 Bar "${bar.name}": checking language_id ${selectedId} -> ${hasLanguage ? '✅' : '❌'}`);
-            return hasLanguage;
+          // Check if bar has ALL selected TV features (AND logic)
+          const matchesTvFeatures = selectedTvFeatures.every(selectedId => {
+            const hasTvFeature = tvFeatureIds.includes(selectedId);
+            console.log(`  📺 Bar "${bar.name}": checking tv_feature_id ${selectedId} -> ${hasTvFeature ? '✅' : '❌'}`);
+            return hasTvFeature;
           });
           
           console.log(`🧪 Bar "${bar.name}":`, {
-            languageIds,
-            selectedLanguages,
-            matchesLanguages: matchesLanguages ? '✅' : '❌'
+            tvFeatureIds,
+            selectedTvFeatures,
+            matchesTvFeatures: matchesTvFeatures ? '✅' : '❌'
           });
           
-          return matchesLanguages;
+          return matchesTvFeatures;
         });
-        console.log('🌍 Applied languages filter (client-side):', selectedLanguages, `(${beforeCount} -> ${filteredBars.length} bars)`);
+        console.log('📺 Applied TV features filter (client-side):', selectedTvFeatures, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
       // Fetch active boost bars directly for immediate sorting
@@ -508,7 +508,7 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, userLocation, getUserLocation, selectedMatch]);
+  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch]);
 
   // Update highlighting when boost selection changes (for visual sync with map)
   // Note: Initial sorting is now handled inside searchBars()
@@ -551,7 +551,7 @@ export default function SearchScreen() {
     setSelectedBarCategories([]);
     setSelectedFoodTypes([]);
     setSelectedFeatures([]);
-    setSelectedLanguages([]);
+    setSelectedTvFeatures([]);
     setSearchQuery('');
     // The search will be triggered automatically by the useEffect
   }, []);
@@ -744,7 +744,7 @@ export default function SearchScreen() {
       console.log('🔄 Filters changed, triggering search...');
       searchBars();
     }
-  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages, selectedMatch, userLocation, searchBars]);
+  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, selectedMatch, userLocation, searchBars]);
 
 
   return (
@@ -775,12 +775,12 @@ export default function SearchScreen() {
           <TouchableOpacity
             style={[
               styles.filterIconButton,
-              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterIconButtonActive
+              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterIconButtonActive
             ]}
             onPress={() => setFilterModalVisible(true)}
           >
             <Ionicons name="filter" size={18} color="#A3B3CC" />
-            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
               <View style={styles.filterDot} />
             )}
           </TouchableOpacity>
@@ -856,7 +856,7 @@ export default function SearchScreen() {
                 ? 'No hay bares transmitiendo este partido'
                 : searchQuery 
                 ? `No hay bares que coincidan con "${searchQuery}"`
-                : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0)
+                : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0)
                   ? `No hay bares que cumplan con los filtros seleccionados${
                       selectedBarCategories.length > 0 ? ` (${selectedBarCategories.length} categorías)` : ''
                     }${
@@ -864,12 +864,12 @@ export default function SearchScreen() {
                     }${
                       selectedFeatures.length > 0 ? ` (${selectedFeatures.length} características)` : ''
                     }${
-                      selectedLanguages.length > 0 ? ` (${selectedLanguages.length} idiomas)` : ''
+                      selectedTvFeatures.length > 0 ? ` (${selectedTvFeatures.length} características de TV)` : ''
                     }`
                   : 'No hay bares disponibles en tu área'
               }
             </Text>
-            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
+            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
               <TouchableOpacity 
                 style={styles.clearFiltersButton}
                 onPress={handleClearAllFilters}
@@ -906,15 +906,15 @@ export default function SearchScreen() {
         barCategories={barCategories}
         foodTypes={foodTypes}
         barFeatures={barFeatures}
-        languages={languages}
+        tvFeatures={tvFeatures}
         selectedBarCategories={selectedBarCategories}
         selectedFoodTypes={selectedFoodTypes}
         selectedFeatures={selectedFeatures}
-        selectedLanguages={selectedLanguages}
+        selectedTvFeatures={selectedTvFeatures}
         onBarCategoriesChange={setSelectedBarCategories}
         onFoodTypesChange={setSelectedFoodTypes}
         onFeaturesChange={setSelectedFeatures}
-        onLanguagesChange={setSelectedLanguages}
+        onTvFeaturesChange={setSelectedTvFeatures}
         onApplyFilters={handleApplyFilters}
         loading={filtersLoading}
       />

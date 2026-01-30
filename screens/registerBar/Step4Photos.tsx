@@ -402,10 +402,10 @@ const Step4Photos: React.FC = () => {
   const insertRelationships = useCallback(async (barId: string, formData: any) => {
     const relationships = [
       {
-        table: 'bar_languages',
-        data: formData.languageIds?.map((id: string) => ({
+        table: 'bar_selected_tv_features',
+        data: formData.tvFeatureIds?.map((id: string) => ({
           bar_id: barId,
-          language_id: parseInt(id)
+          tv_feature_id: parseInt(id)
         })) || [],
       },
       {

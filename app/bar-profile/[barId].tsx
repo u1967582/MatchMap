@@ -23,7 +23,7 @@ interface BarProfile {
   images: string[];
   category?: { id: number; name: string };
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
-  bar_languages?: { language_id: number; language: { name: string } }[];
+  bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
 }
 
@@ -312,13 +312,13 @@ export default function BarProfileScreen() {
 
       case 'tags':
         return (
-          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_languages?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
+          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_selected_tv_features?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
             <View style={styles.tagsSection}>
               <FlatList
                 data={[
                   ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
                   ...(bar?.bar_food_types?.map((item) => ({ type: 'food', data: item, id: `food-${item.food_type_id}` })) || []),
-                  ...(bar?.bar_languages?.map((item) => ({ type: 'language', data: item, id: `language-${item.language_id}` })) || []),
+                  ...(bar?.bar_selected_tv_features?.map((item) => ({ type: 'tv_feature', data: item, id: `tv-${item.tv_feature_id}` })) || []),
                   ...(bar?.bar_selected_features?.map((item) => ({ type: 'feature', data: item, id: `feature-${item.feature_id}` })) || [])
                 ]}
                 renderItem={({ item }) => {
@@ -337,10 +337,10 @@ export default function BarProfileScreen() {
                       icon = '🍽️';
                       text = (item.data as { food_type: { name: string } }).food_type.name;
                       break;
-                    case 'language':
+                    case 'tv_feature':
                       backgroundColor = '#4CAF50';
-                      icon = '🗣️';
-                      text = (item.data as { language: { name: string } }).language.name;
+                      icon = '📺';
+                      text = (item.data as { tv_feature: { name: string } }).tv_feature.name;
                       break;
                     case 'feature':
                       backgroundColor = '#9C27B0';
@@ -612,9 +612,9 @@ export default function BarProfileScreen() {
           .select('food_type_id')
           .eq('bar_id', barId);
 
-        const { data: languages } = await supabase
-          .from('bar_languages')
-          .select('language_id')
+        const { data: tvFeatures } = await supabase
+          .from('bar_selected_tv_features')
+          .select('tv_feature_id')
           .eq('bar_id', barId);
 
         const { data: features } = await supabase
@@ -624,10 +624,10 @@ export default function BarProfileScreen() {
 
         console.log('🔍 Bar profile N:N data loaded:', {
           foodTypes: foodTypes?.length || 0,
-          languages: languages?.length || 0,
+          tvFeatures: tvFeatures?.length || 0,
           features: features?.length || 0,
           foodTypeIds: foodTypes?.map(item => item.food_type_id) || [],
-          languageIds: languages?.map(item => item.language_id) || [],
+          tvFeatureIds: tvFeatures?.map(item => item.tv_feature_id) || [],
           featureIds: features?.map(item => item.feature_id) || []
         });
 
@@ -649,12 +649,12 @@ export default function BarProfileScreen() {
           .select('id, name')
           .in('id', foodTypeIds);
 
-        // Load language names
-        const languageIds = languages?.map(item => item.language_id) || [];
-        const { data: languageNames } = await supabase
-          .from('languages')
+        // Load TV feature names
+        const tvFeatureIds = tvFeatures?.map(item => item.tv_feature_id) || [];
+        const { data: tvFeatureNames } = await supabase
+          .from('bar_tv_features')
           .select('id, name')
-          .in('id', languageIds);
+          .in('id', tvFeatureIds);
 
         // Load feature names
         const featureIds = features?.map(item => item.feature_id) || [];
@@ -667,18 +667,18 @@ export default function BarProfileScreen() {
         const foodTypeMap = new Map();
         foodTypeNames?.forEach(item => foodTypeMap.set(item.id, item.name));
 
-        const languageMap = new Map();
-        languageNames?.forEach(item => languageMap.set(item.id, item.name));
+        const tvFeatureMap = new Map();
+        tvFeatureNames?.forEach(item => tvFeatureMap.set(item.id, item.name));
 
         const featureMap = new Map();
         featureNames?.forEach(item => featureMap.set(item.id, item.name));
 
         console.log('🔍 Bar profile names loaded:', {
           foodTypeNames: foodTypeNames?.length || 0,
-          languageNames: languageNames?.length || 0,
+          tvFeatureNames: tvFeatureNames?.length || 0,
           featureNames: featureNames?.length || 0,
           foodTypeMap: Object.fromEntries(foodTypeMap),
-          languageMap: Object.fromEntries(languageMap),
+          tvFeatureMap: Object.fromEntries(tvFeatureMap),
           featureMap: Object.fromEntries(featureMap)
         });
 
@@ -698,9 +698,9 @@ export default function BarProfileScreen() {
             food_type_id: item.food_type_id,
             food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
           })) || [],
-          bar_languages: languages?.map(item => ({
-            language_id: item.language_id,
-            language: { name: languageMap.get(item.language_id) || 'Unknown' }
+          bar_selected_tv_features: tvFeatures?.map(item => ({
+            tv_feature_id: item.tv_feature_id,
+            tv_feature: { name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown' }
           })) || [],
           bar_selected_features: features?.map(item => ({
             feature_id: item.feature_id,
@@ -715,9 +715,9 @@ export default function BarProfileScreen() {
             food_type_id: item.food_type_id,
             food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
           })) || [],
-          languages: languages?.map(item => ({
-            language_id: item.language_id,
-            language: { name: languageMap.get(item.language_id) || 'Unknown' }
+          tvFeatures: tvFeatures?.map(item => ({
+            tv_feature_id: item.tv_feature_id,
+            tv_feature: { name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown' }
           })) || [],
           features: features?.map(item => ({
             feature_id: item.feature_id,

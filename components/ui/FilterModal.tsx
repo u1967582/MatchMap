@@ -25,15 +25,15 @@ interface FilterModalProps {
   barCategories: FilterItem[];
   foodTypes: FilterItem[];
   barFeatures: FilterItem[];
-  languages: FilterItem[];
+  tvFeatures: FilterItem[];
   selectedBarCategories: number[];
   selectedFoodTypes: number[];
   selectedFeatures: number[];
-  selectedLanguages: number[];
+  selectedTvFeatures: number[];
   onBarCategoriesChange: (categories: number[]) => void;
   onFoodTypesChange: (foodTypes: number[]) => void;
   onFeaturesChange: (features: number[]) => void;
-  onLanguagesChange: (languages: number[]) => void;
+  onTvFeaturesChange: (tvFeatures: number[]) => void;
   loading?: boolean;
   onApplyFilters?: () => void;
 }
@@ -46,15 +46,15 @@ export default function FilterModal({
   barCategories,
   foodTypes,
   barFeatures,
-  languages,
+  tvFeatures,
   selectedBarCategories,
   selectedFoodTypes,
   selectedFeatures,
-  selectedLanguages,
+  selectedTvFeatures,
   onBarCategoriesChange,
   onFoodTypesChange,
   onFeaturesChange,
-  onLanguagesChange,
+  onTvFeaturesChange,
   onApplyFilters,
   loading = false,
 }: FilterModalProps) {
@@ -63,7 +63,7 @@ export default function FilterModal({
     barCategoriesLength: barCategories?.length || 0,
     foodTypesLength: foodTypes?.length || 0,
     barFeaturesLength: barFeatures?.length || 0,
-    languagesLength: languages?.length || 0,
+    tvFeaturesLength: tvFeatures?.length || 0,
     loading
   });
 
@@ -88,23 +88,23 @@ export default function FilterModal({
     onFeaturesChange(newFeatures);
   };
 
-  const toggleLanguage = (languageId: number) => {
-    const newLanguages = selectedLanguages.includes(languageId)
-      ? selectedLanguages.filter(id => id !== languageId)
-      : [...selectedLanguages, languageId];
-    onLanguagesChange(newLanguages);
+  const toggleTvFeature = (tvFeatureId: number) => {
+    const newTvFeatures = selectedTvFeatures.includes(tvFeatureId)
+      ? selectedTvFeatures.filter(id => id !== tvFeatureId)
+      : [...selectedTvFeatures, tvFeatureId];
+    onTvFeaturesChange(newTvFeatures);
   };
 
   const clearAllFilters = () => {
     onBarCategoriesChange([]);
     onFoodTypesChange([]);
     onFeaturesChange([]);
-    onLanguagesChange([]);
+    onTvFeaturesChange([]);
   };
 
   const getActiveFiltersCount = () => {
     return selectedBarCategories.length + selectedFoodTypes.length + 
-           selectedFeatures.length + selectedLanguages.length;
+           selectedFeatures.length + selectedTvFeatures.length;
   };
 
   console.log('🔍 FilterModal - About to render, visible:', visible);
@@ -178,9 +178,9 @@ export default function FilterModal({
           <Text style={styles.title}>🎯 Filtros disponibles</Text>
 
           {renderSection('Tipo de bar', barCategories, selectedBarCategories, toggleCategory)}
+          {renderSection('Características de TV', tvFeatures, selectedTvFeatures, toggleTvFeature)}
           {renderSection('Tipo de comida', foodTypes, selectedFoodTypes, toggleFoodType)}
           {renderSection('Características', barFeatures, selectedFeatures, toggleFeature)}
-          {renderSection('Idiomas', languages, selectedLanguages, toggleLanguage)}
         </ScrollView>
 
         {/* Botón fijo al fondo */}
