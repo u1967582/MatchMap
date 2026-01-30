@@ -142,8 +142,8 @@ serve(async (req) => {
       const { data: rpcData, error: rpcErr } = await supabase.rpc(
         "promote_pre_registered_bar",
         {
-          p_pre_bar_id: preBarId,
-          p_owner_id: ownerId,
+        p_pre_bar_id: preBarId,
+        p_owner_id: ownerId,
         }
       );
 
@@ -153,7 +153,7 @@ serve(async (req) => {
           JSON.stringify({ error: rpcErr.message }), 
           { status: 400 }
         );
-      }
+    }
 
       console.log("[RPC] Response data:", rpcData);
 
@@ -211,26 +211,26 @@ serve(async (req) => {
           continue;
         }
 
-        const newPath = `${barId}/bar/${fileName}`;
+      const newPath = `${barId}/bar/${fileName}`;
 
         console.log(`[BAR IMAGE] Moving: ${oldPath} → ${newPath}`);
 
         // Mover archivo en storage
         const { error: moveErr } = await supabase.storage
-          .from(bucket)
-          .move(oldPath, newPath);
+        .from(bucket)
+        .move(oldPath, newPath);
 
         if (moveErr) {
           console.error(`[BAR IMAGE] Move error:`, moveErr);
-          continue;
-        }
+        continue;
+      }
 
         // Insertar en bar_images con URL pública COMPLETA
         const publicUrl = getPublicUrl(newPath);
         const { error: insertErr } = await supabase
-          .from("bar_images")
-          .insert({
-            bar_id: barId,
+        .from("bar_images")
+        .insert({
+          bar_id: barId,
             image_url: publicUrl,  // ✅ URL PÚBLICA COMPLETA
             image_order: img.image_order,
             description: img.description ?? null,
@@ -299,7 +299,7 @@ serve(async (req) => {
           .insert({
             bar_id: barId,
             image_url: publicUrl,  // ✅ URL PÚBLICA COMPLETA
-            image_order: img.image_order,
+          image_order: img.image_order,
           });
 
         if (insertErr) {

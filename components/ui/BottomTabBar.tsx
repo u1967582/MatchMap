@@ -76,8 +76,8 @@ const BottomTabBar = () => {
 
   const renderTab = useCallback(({ icon, label, route }: TabItem) => {
     const isActive = isActiveTab(route);
-    const iconColor = isActive ? '#FFFFFF' : '#A3B3CC';
-    const textColor = isActive ? '#FFFFFF' : '#A3B3CC';
+    const iconColor = isActive ? '#1976D2' : 'rgba(163,179,204,0.85)';
+    const textColor = isActive ? '#1976D2' : 'rgba(163,179,204,0.85)';
     const animation = tabAnimations[route];
     
     return (
@@ -121,19 +121,21 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    backgroundColor: '#0F1724',
+    backgroundColor: '#1A2332',
     paddingTop: 4,
     paddingHorizontal: 16,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: -2,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 10,
   },
   tab: {
     flex: 1,
