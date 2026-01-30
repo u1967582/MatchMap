@@ -751,7 +751,7 @@ const Step4Photos: React.FC = () => {
 
       // 5) Finalizar wizard: bar queda en verificación (pending) y aún no aparece públicamente
       console.log('✅ Bar creado. Estado: pendiente de verificación');
-
+      
       // Mostrar pantalla de "enviado para verificación" (mejor UX que un alert)
       router.replace(`/register-bar/submitted?barId=${barData.id}` as any);
 

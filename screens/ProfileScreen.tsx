@@ -157,11 +157,11 @@ export default function ProfileScreen() {
       }
 
       setUserBars(barsToShow);
-
+          
       // Plan info (si hay bar)
       if (barsToShow.length > 0) {
         await getBarPlanInfo(barsToShow[0].id);
-        setPlanName('Pro');
+          setPlanName('Pro');
       } else {
         setPlanName('No asignado');
       }
