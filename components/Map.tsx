@@ -20,6 +20,43 @@ const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.e
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
+// Helper function to get icon based on maneuver instruction
+const getManeuverIcon = (instruction: string): keyof typeof Ionicons.glyphMap => {
+  const lowerInstruction = instruction.toLowerCase();
+  
+  if (lowerInstruction.includes('derecha') || lowerInstruction.includes('right') || lowerInstruction.includes('gira a la derecha')) {
+    return 'arrow-forward';
+  }
+  if (lowerInstruction.includes('izquierda') || lowerInstruction.includes('left') || lowerInstruction.includes('gira a la izquierda')) {
+    return 'arrow-back';
+  }
+  if (lowerInstruction.includes('recto') || lowerInstruction.includes('straight') || lowerInstruction.includes('continúa') || lowerInstruction.includes('sigue')) {
+    return 'arrow-up';
+  }
+  if (lowerInstruction.includes('rotonda') || lowerInstruction.includes('roundabout')) {
+    return 'sync';
+  }
+  if (lowerInstruction.includes('salida') || lowerInstruction.includes('exit')) {
+    return 'exit-outline';
+  }
+  if (lowerInstruction.includes('llegada') || lowerInstruction.includes('destino') || lowerInstruction.includes('arrive') || lowerInstruction.includes('has llegado')) {
+    return 'flag';
+  }
+  if (lowerInstruction.includes('gira') || lowerInstruction.includes('turn')) {
+    return 'return-down-forward';
+  }
+  
+  return 'navigate';
+};
+
+// Helper function to format distance
+const formatDistance = (meters: number): string => {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  return `${(meters / 1000).toFixed(1)} km`;
+};
+
 interface Bar {
   id: string;
   name: string;
@@ -66,6 +103,8 @@ const Map: React.FC = () => {
   
   // Navigation states
   const [isNavigating, setIsNavigating] = React.useState(false);
+  const [navigationStarted, setNavigationStarted] = React.useState(false); // New: started full navigation mode
+  const [currentStepIndex, setCurrentStepIndex] = React.useState(0); // Track which step we're on
   const [navigationDestination, setNavigationDestination] = React.useState<{
     latitude: number;
     longitude: number;
@@ -285,7 +324,9 @@ const Map: React.FC = () => {
   // Handle cancel navigation
   const handleCancelNavigation = React.useCallback(() => {
     setIsNavigating(false);
+    setNavigationStarted(false);
     setNavigationDestination(null);
+    setCurrentStepIndex(0);
     clearRoute();
     
     // Return camera to user location
@@ -300,6 +341,25 @@ const Map: React.FC = () => {
       }
     }
   }, [userLocation, clearRoute]);
+
+  // Handle start navigation button
+  const handleBeginNavigation = React.useCallback(() => {
+    console.log('🎬 Beginning full navigation mode');
+    setNavigationStarted(true);
+    
+    // Zoom to follow user location with navigation view
+    if (userLocation && cameraRef.current) {
+      const cam: any = cameraRef.current as any;
+      if (cam?.setCamera) {
+        cam.setCamera({
+          centerCoordinate: [userLocation.coords.longitude, userLocation.coords.latitude],
+          zoomLevel: 17,
+          pitch: 45, // Tilt the camera for navigation view
+          animationDuration: 1000,
+        } as any);
+      }
+    }
+  }, [userLocation]);
 
   // Handle change travel mode
   const handleChangeTravelMode = React.useCallback(async () => {
@@ -775,76 +835,129 @@ const Map: React.FC = () => {
         </TouchableOpacity>
       )}
 
+      {/* Turn-by-Turn Navigation Instructions - Top (Only when navigation started) */}
+      {navigationStarted && routeData && routeData.steps.length > 0 && currentStepIndex < routeData.steps.length && (
+        <View style={styles.navigationInstructionPanel}>
+          <View style={styles.instructionIconContainer}>
+            <Ionicons 
+              name={getManeuverIcon(routeData.steps[currentStepIndex].instruction)} 
+              size={32} 
+              color="#FFFFFF" 
+            />
+          </View>
+          <View style={styles.instructionTextContainer}>
+            <Text style={styles.instructionText} numberOfLines={2}>
+              {routeData.steps[currentStepIndex].instruction}
+            </Text>
+            {routeData.steps[currentStepIndex].distance > 0 && (
+              <Text style={styles.instructionDistance}>
+                en {formatDistance(routeData.steps[currentStepIndex].distance)}
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+
       {/* Navigation Panel - Bottom Unified */}
       {isNavigating && routeData && navigationDestination && (
         <View style={styles.navigationBottomPanel}>
-          {/* Header with title and close */}
-          <View style={styles.navigationPanelHeader}>
-            <Text style={styles.navigationTitle}>{navigationDestination.name}</Text>
-            <TouchableOpacity 
-              style={styles.cancelNavigationButton}
-              onPress={handleCancelNavigation}
-            >
-              <Ionicons name="close" size={20} color="#EF4444" />
-            </TouchableOpacity>
-          </View>
-          
-          {/* Stats and Mode selector in one row */}
-          <View style={styles.navigationMainRow}>
-            {/* Stats */}
-            <View style={styles.navigationStatsCompact}>
-              <View style={styles.navigationStat}>
-                <Ionicons name="time-outline" size={16} color="#10B981" />
-                <Text style={styles.navigationStatText}>
-                  {Math.round(routeData.duration)} min
-                </Text>
+          {!navigationStarted ? (
+            /* Preview Mode - Before starting navigation */
+            <>
+              {/* Header with title and close */}
+              <View style={styles.navigationPanelHeader}>
+                <Text style={styles.navigationTitle}>{navigationDestination.name}</Text>
+                <TouchableOpacity 
+                  style={styles.cancelNavigationButton}
+                  onPress={handleCancelNavigation}
+                >
+                  <Ionicons name="close" size={20} color="#EF4444" />
+                </TouchableOpacity>
               </View>
-              <View style={styles.navigationStat}>
-                <Ionicons name="navigate-outline" size={16} color="#007AFF" />
-                <Text style={styles.navigationStatText}>
-                  {routeData.distance.toFixed(1)} km
-                </Text>
+              
+              {/* Stats and Mode selector in balanced row */}
+              <View style={styles.navigationContentRow}>
+                {/* Stats on the left */}
+                <View style={styles.navigationStatsLeft}>
+                  <View style={styles.navigationStat}>
+                    <Ionicons name="time-outline" size={16} color="#10B981" />
+                    <Text style={styles.navigationStatText}>
+                      {Math.round(routeData.duration)} min
+                    </Text>
+                  </View>
+                  <View style={styles.navigationStat}>
+                    <Ionicons name="navigate-outline" size={16} color="#007AFF" />
+                    <Text style={styles.navigationStatText}>
+                      {routeData.distance.toFixed(1)} km
+                    </Text>
+                  </View>
+                </View>
+                
+                {/* Travel Mode Selector on the right - Compact */}
+                <View style={styles.travelModeCompact}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.segmentButtonCompact,
+                      travelMode === 'walking' && styles.segmentButtonActive
+                    ]}
+                    onPress={() => travelMode !== 'walking' && handleChangeTravelMode()}
+                    disabled={directionsLoading}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons 
+                      name="walk" 
+                      size={18} 
+                      color={travelMode === 'walking' ? '#FFFFFF' : '#7C8A9D'} 
+                    />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[
+                      styles.segmentButtonCompact,
+                      travelMode === 'driving' && styles.segmentButtonActive
+                    ]}
+                    onPress={() => travelMode !== 'driving' && handleChangeTravelMode()}
+                    disabled={directionsLoading}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons 
+                      name="car" 
+                      size={18} 
+                      color={travelMode === 'driving' ? '#FFFFFF' : '#7C8A9D'} 
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-            
-            {/* Travel Mode Selector - Modern Segmented Control */}
-            <View style={styles.travelModeSegmentedControl}>
+              
+              {/* Start Navigation Button */}
               <TouchableOpacity 
-                style={[
-                  styles.segmentButton,
-                  travelMode === 'walking' && styles.segmentButtonActive
-                ]}
-                onPress={() => travelMode !== 'walking' && handleChangeTravelMode()}
-                disabled={directionsLoading}
-                activeOpacity={0.7}
+                style={styles.startNavigationButton}
+                onPress={handleBeginNavigation}
               >
-                <Ionicons 
-                  name="walk" 
-                  size={16} 
-                  color={travelMode === 'walking' ? '#FFFFFF' : '#7C8A9D'} 
-                />
+                <Ionicons name="play" size={20} color="#FFFFFF" />
+                <Text style={styles.startNavigationButtonText}>Iniciar</Text>
               </TouchableOpacity>
               
+              {directionsLoading && (
+                <Text style={styles.navigationLoading}>Calculando ruta...</Text>
+              )}
+            </>
+          ) : (
+            /* Active Navigation Mode */
+            <View style={styles.activeNavigationPanel}>
               <TouchableOpacity 
-                style={[
-                  styles.segmentButton,
-                  travelMode === 'driving' && styles.segmentButtonActive
-                ]}
-                onPress={() => travelMode !== 'driving' && handleChangeTravelMode()}
-                disabled={directionsLoading}
-                activeOpacity={0.7}
+                style={styles.endNavigationButton}
+                onPress={handleCancelNavigation}
               >
-                <Ionicons 
-                  name="car" 
-                  size={16} 
-                  color={travelMode === 'driving' ? '#FFFFFF' : '#7C8A9D'} 
-                />
+                <Ionicons name="close-circle" size={20} color="#EF4444" />
+                <Text style={styles.endNavigationButtonText}>Finalizar</Text>
               </TouchableOpacity>
+              
+              <View style={styles.activeNavStats}>
+                <Text style={styles.activeNavTime}>{Math.round(routeData.duration)} min</Text>
+                <Text style={styles.activeNavDistance}>{routeData.distance.toFixed(1)} km</Text>
+              </View>
             </View>
-          </View>
-          
-          {directionsLoading && (
-            <Text style={styles.navigationLoading}>Calculando ruta...</Text>
           )}
         </View>
       )}
@@ -991,6 +1104,50 @@ const styles = StyleSheet.create({
   teamButtonEmoji: {
     fontSize: 22,
   },
+  navigationInstructionPanel: {
+    position: 'absolute',
+    top: 130,
+    left: 16,
+    right: 16,
+    backgroundColor: '#1C2A3A',
+    borderRadius: 16,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  instructionIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0, 122, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+    borderWidth: 2,
+    borderColor: 'rgba(0, 122, 255, 0.4)',
+  },
+  instructionTextContainer: {
+    flex: 1,
+  },
+  instructionText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 5,
+    lineHeight: 22,
+  },
+  instructionDistance: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
   navigationBottomPanel: {
     position: 'absolute',
     bottom: 110,
@@ -1028,15 +1185,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 8,
   },
-  navigationMainRow: {
+  navigationContentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
+    marginBottom: 12,
   },
-  navigationStatsCompact: {
+  navigationStatsLeft: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 20,
   },
   navigationStat: {
     flexDirection: 'row',
@@ -1048,16 +1205,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  travelModeSegmentedControl: {
+  travelModeCompact: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderRadius: 8,
     padding: 2,
     gap: 2,
   },
-  segmentButton: {
-    width: 32,
-    height: 32,
+  segmentButtonCompact: {
+    width: 38,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 6,
@@ -1076,6 +1233,61 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
     textAlign: 'center',
+  },
+  startNavigationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    marginTop: 12,
+    gap: 8,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  startNavigationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  activeNavigationPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  endNavigationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  endNavigationButtonText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  activeNavStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  activeNavTime: {
+    color: '#10B981',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  activeNavDistance: {
+    color: '#007AFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 
