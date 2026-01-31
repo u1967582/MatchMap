@@ -10,6 +10,8 @@ interface Bar {
   description?: string;
   address: string;
   city: string;
+  latitude: number;
+  longitude: number;
   rating?: number | null;
   review_count?: number | null;
   image_url?: string;
@@ -30,13 +32,15 @@ interface BarInfoCardProps {
   visible: boolean;
   onClose: () => void;
   onNavigate?: (barId: string) => void;
+  onStartNavigation?: (destination: { latitude: number; longitude: number; name: string }) => void;
 }
 
 const BarInfoCard: React.FC<BarInfoCardProps> = ({ 
   bar, 
   visible, 
   onClose,
-  onNavigate 
+  onNavigate,
+  onStartNavigation 
 }) => {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = React.useState(false);
@@ -141,6 +145,22 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
     }
   };
 
+  const handleStartNavigation = () => {
+    if (!bar.latitude || !bar.longitude) {
+      Alert.alert('Error', 'No hay coordenadas disponibles para este bar');
+      return;
+    }
+    
+    if (onStartNavigation) {
+      onStartNavigation({
+        latitude: bar.latitude,
+        longitude: bar.longitude,
+        name: bar.name
+      });
+      onClose(); // Close the card when starting navigation
+    }
+  };
+
 
 
   return (
@@ -225,15 +245,22 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
 
           {/* Address */}
           {bar.address && bar.city && (
-            <Text style={styles.barAddress}>{bar.address}, {bar.city}</Text>
-          )}
-
-          {/* Category */}
-          {bar.category && (
-            <View style={styles.categoryContainer}>
-              <View style={styles.categoryChip}>
-                <Text style={styles.categoryText}>{bar.category.name}</Text>
-              </View>
+            <View>
+              <Text style={styles.barAddress}>{bar.address}, {bar.city}</Text>
+              
+              {/* Navigate Button */}
+              {onStartNavigation && (
+                <TouchableOpacity 
+                  style={styles.navigateButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleStartNavigation();
+                  }}
+                >
+                  <Ionicons name="navigate" size={18} color="#FFFFFF" />
+                  <Text style={styles.navigateButtonText}>Cómo llegar</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -371,6 +398,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '500',
+  },
+  navigateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  navigateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 
