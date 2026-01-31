@@ -66,6 +66,7 @@ export const useMapboxDirections = () => {
       const url = `https://api.mapbox.com/directions/v5/mapbox/${mode}/${coordinatesParam}?` +
         `geometries=geojson&` +
         `steps=true&` +
+        `language=es&` +
         `access_token=${MAPBOX_ACCESS_TOKEN}`;
       
       setTravelMode(mode);
