@@ -12,6 +12,7 @@ import { supabase } from '~/utils/supabase';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
 import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
+import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
 
 // Use environment variable for Mapbox token
@@ -63,8 +64,19 @@ const Map: React.FC = () => {
   const [selectedMatch, setSelectedMatch] = React.useState<Match | null>(null);
   const [matchPickerOpen, setMatchPickerOpen] = React.useState(false);
   
+  // Navigation states
+  const [isNavigating, setIsNavigating] = React.useState(false);
+  const [navigationDestination, setNavigationDestination] = React.useState<{
+    latitude: number;
+    longitude: number;
+    name: string;
+  } | null>(null);
+  
   // Load filter data
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
+
+  // MapBox Directions hook
+  const { loading: directionsLoading, error: directionsError, routeData, travelMode, getDirections, clearRoute } = useMapboxDirections();
 
   // Get boost context and functions
   const { selectedBoostBarIds, setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
@@ -204,6 +216,111 @@ const Map: React.FC = () => {
     // TODO: Implement navigation functionality
     // This could open Google Maps or Apple Maps with directions
   }, []);
+
+  // Handle start navigation
+  const handleStartNavigation = React.useCallback(async (destination: {
+    latitude: number;
+    longitude: number;
+    name: string;
+  }) => {
+    console.log('🚶 Starting navigation to:', destination.name);
+    
+    if (!userLocation) {
+      Alert.alert('Error', 'No se pudo obtener tu ubicación actual');
+      return;
+    }
+
+    setNavigationDestination(destination);
+    setIsNavigating(true);
+    setShowBarCard(false);
+
+    // Fetch route from MapBox (walking by default)
+    const route = await getDirections(
+      {
+        latitude: userLocation.coords.latitude,
+        longitude: userLocation.coords.longitude
+      },
+      {
+        latitude: destination.latitude,
+        longitude: destination.longitude
+      },
+      'walking'
+    );
+
+    if (route) {
+      // Adjust camera to show the full route
+      const allCoords = [
+        [userLocation.coords.longitude, userLocation.coords.latitude],
+        ...route.coordinates
+      ];
+      
+      // Calculate bounds
+      const lngs = allCoords.map(c => c[0]);
+      const lats = allCoords.map(c => c[1]);
+      const minLng = Math.min(...lngs);
+      const maxLng = Math.max(...lngs);
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+
+      // Calculate appropriate padding based on route distance (reduced for closer view)
+      const lngDiff = maxLng - minLng;
+      const latDiff = maxLat - minLat;
+      const padding = Math.max(lngDiff, latDiff) * 0.15; // 15% padding for closer view
+      
+      const bounds = {
+        ne: [maxLng + padding, maxLat + padding],
+        sw: [minLng - padding, minLat - padding]
+      };
+
+      const cam: any = cameraRef.current as any;
+      if (cam?.fitBounds) {
+        // Edge padding: left, top, right, bottom - adjusted for closer view
+        cam.fitBounds(bounds.ne, bounds.sw, [40, 120, 40, 180], 1000);
+      }
+    } else if (directionsError) {
+      Alert.alert('Error', 'No se pudo calcular la ruta');
+    }
+  }, [userLocation, getDirections, directionsError]);
+
+  // Handle cancel navigation
+  const handleCancelNavigation = React.useCallback(() => {
+    setIsNavigating(false);
+    setNavigationDestination(null);
+    clearRoute();
+    
+    // Return camera to user location
+    if (userLocation && cameraRef.current) {
+      const cam: any = cameraRef.current as any;
+      if (cam?.setCamera) {
+        cam.setCamera({
+          centerCoordinate: [userLocation.coords.longitude, userLocation.coords.latitude],
+          zoomLevel: 15,
+          animationDuration: 1000,
+        } as any);
+      }
+    }
+  }, [userLocation, clearRoute]);
+
+  // Handle change travel mode
+  const handleChangeTravelMode = React.useCallback(async () => {
+    if (!userLocation || !navigationDestination) return;
+    
+    const newMode = travelMode === 'walking' ? 'driving' : 'walking';
+    console.log(`🔄 Changing travel mode to: ${newMode}`);
+    
+    // Recalculate route with new mode (no zoom change)
+    await getDirections(
+      {
+        latitude: userLocation.coords.latitude,
+        longitude: userLocation.coords.longitude
+      },
+      {
+        latitude: navigationDestination.latitude,
+        longitude: navigationDestination.longitude
+      },
+      newMode
+    );
+  }, [userLocation, navigationDestination, travelMode, getDirections]);
 
   React.useEffect(() => {
     const requestLocationPermission = async () => {
@@ -482,19 +599,26 @@ const Map: React.FC = () => {
         {filteredBars.map((bar) => {
           const isSelected = bar.id === selectedMarkerId;
           const isBoosted = selectedBoostBarIds.includes(bar.id);
+          const isDestination = isNavigating && navigationDestination && 
+            bar.latitude === navigationDestination.latitude && 
+            bar.longitude === navigationDestination.longitude;
 
-          // Determine marker type: Selected > Boosted > Default
-          let markerType: 'default' | 'boosted' | 'selected' = 'default';
-          if (isBoosted && !isSelected) {
+          // Determine marker type with priority: Destination > Boosted > Selected > Default
+          let markerType: 'default' | 'boosted' | 'selected' | 'destination' = 'default';
+          
+          if (isSelected && !isBoosted && !isDestination) {
+            markerType = 'selected';
+          }
+          if (isBoosted && !isDestination) {
             markerType = 'boosted';
           }
-          if (isSelected) {
-            markerType = 'selected';
+          if (isDestination) {
+            markerType = 'destination';
           }
 
           // Log marker type for debugging (only first 3 bars to avoid spam)
           if (filteredBars.indexOf(bar) < 3) {
-            console.log(`🎨 MARKER[${bar.name}]: type=${markerType}, boosted=${isBoosted}, selected=${isSelected}`);
+            console.log(`🎨 MARKER[${bar.name}]: type=${markerType}, boosted=${isBoosted}, selected=${isSelected}, destination=${isDestination}`);
           }
 
           return (
@@ -511,7 +635,7 @@ const Map: React.FC = () => {
               <BarMapMarker 
                 key={`marker-${markerType}-${bar.id}`}
                 type={markerType} 
-                animated={isBoosted && !isSelected}
+                animated={(isBoosted || isDestination) && !isSelected}
                 onPress={() => {
                   console.log('🟢 MARKER TOUCHED (custom onPress):', bar.name);
                   handleMarkerPress(bar);
@@ -520,6 +644,41 @@ const Map: React.FC = () => {
             </MapboxGL.PointAnnotation>
           );
         })}
+
+        {/* Navigation Route Line */}
+        {isNavigating && routeData && (
+          <MapboxGL.ShapeSource
+            id="routeSource"
+            shape={{
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: routeData.coordinates
+              }
+            }}
+          >
+            <MapboxGL.LineLayer
+              id="routeLine"
+              style={{
+                lineColor: '#007AFF',
+                lineWidth: 5,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+            <MapboxGL.LineLayer
+              id="routeOutline"
+              style={{
+                lineColor: '#FFFFFF',
+                lineWidth: 7,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+              belowLayerID="routeLine"
+            />
+          </MapboxGL.ShapeSource>
+        )}
       </MapboxGL.MapView>
 
       {/* Search bar with adjusted right margin for filter button */}
@@ -615,6 +774,80 @@ const Map: React.FC = () => {
           <Ionicons name="locate" size={28} color="#007AFF" />
         </TouchableOpacity>
       )}
+
+      {/* Navigation Panel - Bottom Unified */}
+      {isNavigating && routeData && navigationDestination && (
+        <View style={styles.navigationBottomPanel}>
+          {/* Header with title and close */}
+          <View style={styles.navigationPanelHeader}>
+            <Text style={styles.navigationTitle}>{navigationDestination.name}</Text>
+            <TouchableOpacity 
+              style={styles.cancelNavigationButton}
+              onPress={handleCancelNavigation}
+            >
+              <Ionicons name="close" size={20} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Stats and Mode selector in one row */}
+          <View style={styles.navigationMainRow}>
+            {/* Stats */}
+            <View style={styles.navigationStatsCompact}>
+              <View style={styles.navigationStat}>
+                <Ionicons name="time-outline" size={16} color="#10B981" />
+                <Text style={styles.navigationStatText}>
+                  {Math.round(routeData.duration)} min
+                </Text>
+              </View>
+              <View style={styles.navigationStat}>
+                <Ionicons name="navigate-outline" size={16} color="#007AFF" />
+                <Text style={styles.navigationStatText}>
+                  {routeData.distance.toFixed(1)} km
+                </Text>
+              </View>
+            </View>
+            
+            {/* Travel Mode Selector - Modern Segmented Control */}
+            <View style={styles.travelModeSegmentedControl}>
+              <TouchableOpacity 
+                style={[
+                  styles.segmentButton,
+                  travelMode === 'walking' && styles.segmentButtonActive
+                ]}
+                onPress={() => travelMode !== 'walking' && handleChangeTravelMode()}
+                disabled={directionsLoading}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="walk" 
+                  size={16} 
+                  color={travelMode === 'walking' ? '#FFFFFF' : '#7C8A9D'} 
+                />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.segmentButton,
+                  travelMode === 'driving' && styles.segmentButtonActive
+                ]}
+                onPress={() => travelMode !== 'driving' && handleChangeTravelMode()}
+                disabled={directionsLoading}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="car" 
+                  size={16} 
+                  color={travelMode === 'driving' ? '#FFFFFF' : '#7C8A9D'} 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {directionsLoading && (
+            <Text style={styles.navigationLoading}>Calculando ruta...</Text>
+          )}
+        </View>
+      )}
       
       {/* Bar Info Card */}
       <BarInfoCard
@@ -622,6 +855,7 @@ const Map: React.FC = () => {
         visible={showBarCard}
         onClose={handleCloseBarCard}
         onNavigate={handleNavigateToBar}
+        onStartNavigation={handleStartNavigation}
       />
 
       {/* Filter Modal */}
@@ -756,6 +990,92 @@ const styles = StyleSheet.create({
   },
   teamButtonEmoji: {
     fontSize: 22,
+  },
+  navigationBottomPanel: {
+    position: 'absolute',
+    bottom: 110,
+    left: 16,
+    right: 16,
+    backgroundColor: '#1C2A3A',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  navigationPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  navigationTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+  },
+  cancelNavigationButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  navigationMainRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  navigationStatsCompact: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  navigationStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  navigationStatText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  travelModeSegmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+    borderRadius: 8,
+    padding: 2,
+    gap: 2,
+  },
+  segmentButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 6,
+    backgroundColor: 'transparent',
+  },
+  segmentButtonActive: {
+    backgroundColor: '#007AFF',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  navigationLoading: {
+    color: '#10B981',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
 
