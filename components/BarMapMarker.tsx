@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { View, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-export type MarkerType = 'default' | 'boosted' | 'selected';
+export type MarkerType = 'default' | 'boosted' | 'selected' | 'destination';
 
 interface BarMapMarkerProps {
   type: MarkerType;
@@ -9,34 +10,46 @@ interface BarMapMarkerProps {
   onPress?: () => void;
 }
 
+// Configuración de colores por tipo (en orden de prioridad)
+const MARKER_COLORS = {
+  destination: '#EF4444',  // Rojo (máxima prioridad)
+  boosted: '#FFD700',      // Dorado
+  selected: '#60A5FA',     // Azul claro
+  default: '#007AFF',      // Azul (mínima prioridad)
+};
+
+const MARKER_SIZES = {
+  destination: 36,
+  boosted: 36,
+  selected: 36,
+  default: 32,
+};
+
 /**
- * BarMapMarker Component - Versión mejorada
+ * BarMapMarker Component - Versión unificada simple
  * 
- * Marcadores de mapa más elegantes y pequeños:
- * - default: Marcador azul para bares regulares
- * - boosted: Marcador dorado con animación sutil para bares promocionados
- * - selected: Marcador naranja para el bar seleccionado
+ * Todos los marcadores usan el mismo icono de ubicación con diferentes colores:
+ * - destination: Rojo (#EF4444) - Destino de navegación
+ * - boosted: Dorado (#FFD700) - Bar promocionado
+ * - selected: Azul claro (#60A5FA) - Bar con card visible
+ * - default: Azul (#007AFF) - Bar predeterminado
  */
 const BarMapMarker: React.FC<BarMapMarkerProps> = ({ type, animated = false, onPress }) => {
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
+  // Animación de pulso para marcadores boosted y destination
   React.useEffect(() => {
-    console.log(`🎨 BarMapMarker rendered: type=${type}, animated=${animated}`);
-  }, [type, animated]);
-
-  // Animación de pulso sutil para marcadores boosted
-  React.useEffect(() => {
-    if (type === 'boosted' && animated) {
+    if ((type === 'boosted' || type === 'destination') && animated) {
       const pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.12,
-            duration: 1200,
+            toValue: 1.15,
+            duration: 1000,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 1200,
+            duration: 1000,
             useNativeDriver: true,
           }),
         ])
@@ -46,37 +59,16 @@ const BarMapMarker: React.FC<BarMapMarkerProps> = ({ type, animated = false, onP
     }
   }, [type, animated, pulseAnim]);
 
-  // Estilos según el tipo de marcador
-  const bubbleStyle = [
-    styles.markerBubble,
-    type === 'boosted' && styles.markerBubbleBoosted,
-    type === 'selected' && styles.markerBubbleSelected,
-  ];
+  const color = MARKER_COLORS[type];
+  const size = MARKER_SIZES[type];
 
-  const tailStyle = [
-    styles.markerTail,
-    type === 'boosted' && styles.markerTailBoosted,
-    type === 'selected' && styles.markerTailSelected,
-  ];
-
-  const containerStyle = type === 'boosted' && animated
+  const containerStyle = (type === 'boosted' || type === 'destination') && animated
     ? { transform: [{ scale: pulseAnim }] }
     : {};
 
   const MarkerContent = () => (
     <Animated.View style={[styles.markerContainer, containerStyle]}>
-      {/* Burbuja principal del marcador */}
-      <View style={bubbleStyle}>
-        {/* Punto interior para mejor definición */}
-        <View style={[
-          styles.innerDot,
-          type === 'boosted' && styles.innerDotBoosted,
-          type === 'selected' && styles.innerDotSelected,
-        ]} />
-      </View>
-      
-      {/* Punta del marcador (triángulo hacia abajo) */}
-      <View style={tailStyle} />
+      <Ionicons name="location" size={size} color={color} />
     </Animated.View>
   );
 
@@ -107,86 +99,6 @@ const styles = StyleSheet.create({
   markerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-
-  // ========== BURBUJA PRINCIPAL - Diseño minimalista y elegante ==========
-  markerBubble: {
-    width: 24,                    // Más pequeño (era 32)
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#1E3A5F',   // Azul oscuro
-    borderWidth: 2,               // Borde definido pero no excesivo
-    borderColor: '#4A90E2',       // Borde azul claro
-    justifyContent: 'center',
-    alignItems: 'center',
-    // Sombra sutil y elegante
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  markerBubbleBoosted: {
-    backgroundColor: '#FFD700',   // Dorado como el icono flash
-    borderColor: '#FFF4CC',       // Borde dorado muy claro
-    // Sombra ligeramente más visible para destacar
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  markerBubbleSelected: {
-    backgroundColor: '#4A90E2',   // Azul claro (invertido del default)
-    borderColor: '#1E3A5F',       // Azul oscuro (invertido del default)
-    borderWidth: 2.5,             // Borde ligeramente más grueso para énfasis
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 7,
-  },
-
-  // ========== PUNTO INTERIOR - Minimalista y definido ==========
-  innerDot: {
-    width: 8,                     // Más pequeño y proporcionado
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.9,
-  },
-  innerDotBoosted: {
-    backgroundColor: '#FFFFFF',
-    opacity: 1,
-    // Añade un toque de brillo sutil
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 2,
-  },
-  innerDotSelected: {
-    backgroundColor: '#FFFFFF',
-    opacity: 1,
-  },
-
-  // ========== PUNTA DEL MARCADOR - Proporcionada y definida ==========
-  markerTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 5,           // Más pequeño y proporcionado
-    borderRightWidth: 5,
-    borderTopWidth: 7,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#4A90E2',    // Azul claro para continuidad con el borde
-    marginTop: -2,
-    // Sombra sutil para definir el contorno
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1,
-  },
-  markerTailBoosted: {
-    borderTopColor: '#FFF4CC',    // Dorado claro
-  },
-  markerTailSelected: {
-    borderTopColor: '#1E3A5F',    // Azul oscuro (invertido)
   },
 });
 

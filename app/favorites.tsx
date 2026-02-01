@@ -231,6 +231,20 @@ export default function FavoritesScreen() {
       );
     }
 
+    const handleViewOnMap = (e: any) => {
+      e.stopPropagation();
+      // Navigate to map with bar pre-selected
+      router.push({
+        pathname: '/(protected)/map',
+        params: {
+          selectedBarId: item.id,
+          selectedBarLat: item.latitude,
+          selectedBarLng: item.longitude,
+          selectedBarName: item.name,
+        },
+      });
+    };
+
     return (
       <View style={styles.barCard}>
         <TouchableOpacity 
@@ -284,10 +298,19 @@ export default function FavoritesScreen() {
               <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
             </TouchableOpacity>
           </View>
+          
+          {/* View on Map Button */}
+          <TouchableOpacity 
+            style={styles.viewOnMapButton}
+            onPress={handleViewOnMap}
+          >
+            <Ionicons name="map-outline" size={16} color="#007AFF" />
+            <Text style={styles.viewOnMapText}>Ver en el Mapa</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
-  }, [handleBarPress, handleRemoveFromFavorites, userLocation, calculateDistance]);
+  }, [handleBarPress, handleRemoveFromFavorites, userLocation, calculateDistance, router]);
 
   if (loading) {
     return (
@@ -598,5 +621,23 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'rgba(255, 107, 107, 0.1)',
     borderRadius: 8,
+  },
+  viewOnMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+    marginTop: 12,
+  },
+  viewOnMapText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 

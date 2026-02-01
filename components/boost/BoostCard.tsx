@@ -38,7 +38,7 @@ const BoostCard: React.FC<BoostCardProps> = ({
       
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
-          <Ionicons name={iconName} size={20} color={isPopular ? "#F59E0B" : "#60A5FA"} />
+          <Ionicons name={iconName} size={20} color={isPopular ? "#FFD700" : "#60A5FA"} />
           <Text style={styles.title}>{title}</Text>
         </View>
         {discountBadge && !isPopular ? (
@@ -64,13 +64,13 @@ const BoostCard: React.FC<BoostCardProps> = ({
 
       <TouchableOpacity activeOpacity={0.9} onPress={onPay} style={styles.ctaWrapper}>
         <Gradient 
-          colors={isPopular ? ["#F59E0B", "#EF4444"] : ["#3B82F6", "#10B981"]} 
+          colors={isPopular ? ["#FFD700", "#FFA500"] : ["#3B82F6", "#10B981"]} 
           start={{x:0,y:0}} 
           end={{x:1,y:1}} 
           style={styles.cta}
         >
           <Ionicons name="card-outline" size={17} color="#FFFFFF" />
-          <Text style={styles.ctaText}>Pagar con Stripe</Text>
+          <Text style={styles.ctaText}>Pagar con Tarjeta</Text>
         </Gradient>
       </TouchableOpacity>
       {footer ? <View style={{ marginTop: 10, alignItems: 'center' }}>{footer}</View> : null}
@@ -91,9 +91,9 @@ const styles = StyleSheet.create({
     position: 'relative'
   },
   cardPopular: {
-    borderColor: '#F59E0B',
-    backgroundColor: 'rgba(245, 158, 11, 0.05)',
-    shadowColor: '#F59E0B',
+    borderColor: '#FFD700',
+    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    shadowColor: '#FFD700',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
@@ -103,14 +103,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: 16,
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#FFD700',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 16,
-    shadowColor: '#F59E0B',
+    shadowColor: '#FFD700',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   pricePopular: {
-    color: '#F59E0B',
+    color: '#FFD700',
   },
   duration: {
     color: '#A3B3CC',

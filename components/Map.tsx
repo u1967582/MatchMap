@@ -1,9 +1,9 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import SearchBarWithResults from '~/components/SearchBarWithResults';
+import SearchBarWithResults, { SearchBarRef } from '~/components/SearchBarWithResults';
 import BarInfoCard from '~/components/BarInfoCard';
 import BarMapMarker from '~/components/BarMapMarker';
 import FilterModal from '~/components/ui/FilterModal';
@@ -12,12 +12,50 @@ import { supabase } from '~/utils/supabase';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
 import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
+import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
 
 // Use environment variable for Mapbox token
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
+
+// Helper function to get icon based on maneuver instruction
+const getManeuverIcon = (instruction: string): keyof typeof Ionicons.glyphMap => {
+  const lowerInstruction = instruction.toLowerCase();
+  
+  if (lowerInstruction.includes('derecha') || lowerInstruction.includes('right') || lowerInstruction.includes('gira a la derecha')) {
+    return 'arrow-forward';
+  }
+  if (lowerInstruction.includes('izquierda') || lowerInstruction.includes('left') || lowerInstruction.includes('gira a la izquierda')) {
+    return 'arrow-back';
+  }
+  if (lowerInstruction.includes('recto') || lowerInstruction.includes('straight') || lowerInstruction.includes('continúa') || lowerInstruction.includes('sigue')) {
+    return 'arrow-up';
+  }
+  if (lowerInstruction.includes('rotonda') || lowerInstruction.includes('roundabout')) {
+    return 'sync';
+  }
+  if (lowerInstruction.includes('salida') || lowerInstruction.includes('exit')) {
+    return 'exit-outline';
+  }
+  if (lowerInstruction.includes('llegada') || lowerInstruction.includes('destino') || lowerInstruction.includes('arrive') || lowerInstruction.includes('has llegado')) {
+    return 'flag';
+  }
+  if (lowerInstruction.includes('gira') || lowerInstruction.includes('turn')) {
+    return 'return-down-forward';
+  }
+  
+  return 'navigate';
+};
+
+// Helper function to format distance
+const formatDistance = (meters: number): string => {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  return `${(meters / 1000).toFixed(1)} km`;
+};
 
 interface Bar {
   id: string;
@@ -33,11 +71,16 @@ interface Bar {
   category_id?: number;
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
-  bar_languages?: { language_id: number; language: { name: string } }[];
+  bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
 }
 
+interface MapProps {
+  initialSelectedBarId?: string;
+  initialSelectedBarCoords?: { latitude: number; longitude: number };
+  initialSelectedBarName?: string;
+}
 
-const Map: React.FC = () => {
+const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoords, initialSelectedBarName }) => {
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
   const [bars, setBars] = React.useState<Bar[]>([]);
@@ -51,20 +94,34 @@ const Map: React.FC = () => {
   const [cameraZoom, setCameraZoom] = React.useState(15);
   const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
   const cameraRef = React.useRef<MapboxGL.Camera>(null);
+  const searchBarRef = React.useRef<SearchBarRef>(null);
   
   // Filter states
   const [filterModalVisible, setFilterModalVisible] = React.useState(false);
   const [selectedBarCategories, setSelectedBarCategories] = React.useState<number[]>([]);
   const [selectedFoodTypes, setSelectedFoodTypes] = React.useState<number[]>([]);
   const [selectedFeatures, setSelectedFeatures] = React.useState<number[]>([]);
-  const [selectedLanguages, setSelectedLanguages] = React.useState<number[]>([]);
+  const [selectedTvFeatures, setSelectedTvFeatures] = React.useState<number[]>([]);
   
   // Match filter states
   const [selectedMatch, setSelectedMatch] = React.useState<Match | null>(null);
   const [matchPickerOpen, setMatchPickerOpen] = React.useState(false);
   
+  // Navigation states
+  const [isNavigating, setIsNavigating] = React.useState(false);
+  const [navigationStarted, setNavigationStarted] = React.useState(false); // New: started full navigation mode
+  const [currentStepIndex, setCurrentStepIndex] = React.useState(0); // Track which step we're on
+  const [navigationDestination, setNavigationDestination] = React.useState<{
+    latitude: number;
+    longitude: number;
+    name: string;
+  } | null>(null);
+  
   // Load filter data
-  const { barCategories, foodTypes, barFeatures, languages, loading: filtersLoading } = useFilterData();
+  const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
+
+  // MapBox Directions hook
+  const { loading: directionsLoading, error: directionsError, routeData, travelMode, getDirections, clearRoute } = useMapboxDirections();
 
   // Get boost context and functions
   const { selectedBoostBarIds, setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
@@ -180,17 +237,17 @@ const Map: React.FC = () => {
       });
     }
 
-    // Apply languages filter (must have ALL selected languages)
-    if (selectedLanguages.length > 0) {
+    // Apply TV features filter (must have ALL selected TV features)
+    if (selectedTvFeatures.length > 0) {
       filtered = filtered.filter(bar => {
-        const languageIds = bar.bar_languages?.map(l => l.language_id) || [];
-        return selectedLanguages.every(selectedId => languageIds.includes(selectedId));
+        const tvFeatureIds = bar.bar_selected_tv_features?.map(tf => tf.tv_feature_id) || [];
+        return selectedTvFeatures.every(selectedId => tvFeatureIds.includes(selectedId));
       });
     }
 
     console.log('🎯 FILTERS: Applied filters, showing', filtered.length, 'of', bars.length, 'bars');
     return filtered;
-  }, [bars, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedLanguages]);
+  }, [bars, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures]);
 
   // Handle apply filters
   const handleApplyFilters = React.useCallback(() => {
@@ -204,6 +261,132 @@ const Map: React.FC = () => {
     // TODO: Implement navigation functionality
     // This could open Google Maps or Apple Maps with directions
   }, []);
+
+  // Handle start navigation
+  const handleStartNavigation = React.useCallback(async (destination: {
+    latitude: number;
+    longitude: number;
+    name: string;
+  }) => {
+    console.log('🚶 Starting navigation to:', destination.name);
+    
+    if (!userLocation) {
+      Alert.alert('Error', 'No se pudo obtener tu ubicación actual');
+      return;
+    }
+
+    setNavigationDestination(destination);
+    setIsNavigating(true);
+    setShowBarCard(false);
+
+    // Fetch route from MapBox (walking by default)
+    const route = await getDirections(
+      {
+        latitude: userLocation.coords.latitude,
+        longitude: userLocation.coords.longitude
+      },
+      {
+        latitude: destination.latitude,
+        longitude: destination.longitude
+      },
+      'walking'
+    );
+
+    if (route) {
+      // Adjust camera to show the full route
+      const allCoords = [
+        [userLocation.coords.longitude, userLocation.coords.latitude],
+        ...route.coordinates
+      ];
+      
+      // Calculate bounds
+      const lngs = allCoords.map(c => c[0]);
+      const lats = allCoords.map(c => c[1]);
+      const minLng = Math.min(...lngs);
+      const maxLng = Math.max(...lngs);
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+
+      // Calculate appropriate padding based on route distance (reduced for closer view)
+      const lngDiff = maxLng - minLng;
+      const latDiff = maxLat - minLat;
+      const padding = Math.max(lngDiff, latDiff) * 0.15; // 15% padding for closer view
+      
+      const bounds = {
+        ne: [maxLng + padding, maxLat + padding],
+        sw: [minLng - padding, minLat - padding]
+      };
+
+      const cam: any = cameraRef.current as any;
+      if (cam?.fitBounds) {
+        // Edge padding: left, top, right, bottom - adjusted for closer view
+        cam.fitBounds(bounds.ne, bounds.sw, [40, 120, 40, 180], 1000);
+      }
+    } else if (directionsError) {
+      Alert.alert('Error', 'No se pudo calcular la ruta');
+    }
+  }, [userLocation, getDirections, directionsError]);
+
+  // Handle cancel navigation
+  const handleCancelNavigation = React.useCallback(() => {
+    setIsNavigating(false);
+    setNavigationStarted(false);
+    setNavigationDestination(null);
+    setCurrentStepIndex(0);
+    clearRoute();
+    
+    // Return camera to user location
+    if (userLocation && cameraRef.current) {
+      const cam: any = cameraRef.current as any;
+      if (cam?.setCamera) {
+        cam.setCamera({
+          centerCoordinate: [userLocation.coords.longitude, userLocation.coords.latitude],
+          zoomLevel: 15,
+          animationDuration: 1000,
+        } as any);
+      }
+    }
+  }, [userLocation, clearRoute]);
+
+  // Handle start navigation button
+  const handleBeginNavigation = React.useCallback(() => {
+    console.log('🎬 Beginning full navigation mode');
+    setNavigationStarted(true);
+    
+    // Zoom to follow user location with navigation view
+    if (userLocation && cameraRef.current) {
+      const cam: any = cameraRef.current as any;
+      if (cam?.setCamera) {
+        cam.setCamera({
+          centerCoordinate: [userLocation.coords.longitude, userLocation.coords.latitude],
+          zoomLevel: 17,
+          pitch: 45, // Tilt the camera for navigation view
+          animationDuration: 1000,
+        } as any);
+      }
+    }
+  }, [userLocation]);
+
+  // Handle change travel mode
+  const handleChangeTravelMode = React.useCallback(async () => {
+    if (!userLocation || !navigationDestination) return;
+    
+    const newMode = travelMode === 'walking' ? 'driving' : 'walking';
+    console.log(`🔄 Changing travel mode to: ${newMode}`);
+    
+    // Recalculate route with new mode (no zoom change)
+    await getDirections(
+      {
+        latitude: userLocation.coords.latitude,
+        longitude: userLocation.coords.longitude
+      },
+      {
+        latitude: navigationDestination.latitude,
+        longitude: navigationDestination.longitude
+      },
+      newMode
+    );
+  }, [userLocation, navigationDestination, travelMode, getDirections]);
 
   React.useEffect(() => {
     const requestLocationPermission = async () => {
@@ -223,6 +406,61 @@ const Map: React.FC = () => {
 
     requestLocationPermission();
   }, []);
+
+  // Handle initial bar selection from navigation params
+  React.useEffect(() => {
+    if (initialSelectedBarId && bars.length > 0) {
+      console.log('🎯 Opening bar from search:', initialSelectedBarId);
+      
+      // Find the bar in the loaded bars
+      const bar = bars.find(b => b.id === initialSelectedBarId);
+      
+      if (bar) {
+        // Select the bar and show card
+        setSelectedBar(bar);
+        setSelectedMarkerId(bar.id);
+        setShowBarCard(true);
+        
+        // Center camera on the bar
+        if (cameraRef.current) {
+          const cam: any = cameraRef.current as any;
+          if (cam?.setCamera) {
+            cam.setCamera({
+              centerCoordinate: [bar.longitude, bar.latitude],
+              zoomLevel: 16,
+              animationDuration: 1000,
+            } as any);
+          }
+        }
+      } else if (initialSelectedBarCoords && initialSelectedBarName) {
+        // Bar not in current list but we have coords, create a temporary bar object
+        const tempBar: Bar = {
+          id: initialSelectedBarId,
+          name: initialSelectedBarName,
+          latitude: initialSelectedBarCoords.latitude,
+          longitude: initialSelectedBarCoords.longitude,
+          address: '',
+          city: '',
+        };
+        
+        setSelectedBar(tempBar);
+        setSelectedMarkerId(initialSelectedBarId);
+        setShowBarCard(true);
+        
+        // Center camera on the coordinates
+        if (cameraRef.current) {
+          const cam: any = cameraRef.current as any;
+          if (cam?.setCamera) {
+            cam.setCamera({
+              centerCoordinate: [initialSelectedBarCoords.longitude, initialSelectedBarCoords.latitude],
+              zoomLevel: 16,
+              animationDuration: 1000,
+            } as any);
+          }
+        }
+      }
+    }
+  }, [initialSelectedBarId, bars, initialSelectedBarCoords, initialSelectedBarName]);
 
   React.useEffect(() => {
     const fetchBars = async () => {
@@ -260,13 +498,12 @@ const Map: React.FC = () => {
             rating,
             review_count,
             category_id,
-            bar_images!inner(
+            bar_images(
               image_url,
               image_order
             )
           `)
-          .eq('is_active', true)
-          .eq('bar_images.image_order', 1);
+          .eq('is_active', true);
 
         // Apply match filter if active
         if (barIdsFilter) {
@@ -302,10 +539,10 @@ const Map: React.FC = () => {
               .select('food_type_id, food_types(name)')
               .eq('bar_id', bar.id);
 
-            // Load languages
-            const { data: languages } = await supabase
-              .from('bar_languages')
-              .select('language_id, languages(name)')
+            // Load TV features
+            const { data: tvFeatures } = await supabase
+              .from('bar_selected_tv_features')
+              .select('tv_feature_id, bar_tv_features(name)')
               .eq('bar_id', bar.id);
 
             // Load features
@@ -314,17 +551,22 @@ const Map: React.FC = () => {
               .select('feature_id, bar_features(name)')
               .eq('bar_id', bar.id);
 
+            // Find image with image_order = 1, fallback to first image or null
+            const mainImage = bar.bar_images
+              ?.find((img: any) => img.image_order === 1)?.image_url || 
+              bar.bar_images?.[0]?.image_url || null;
+
             return {
               ...bar,
-              image_url: bar.bar_images?.[0]?.image_url || null,
+              image_url: mainImage,
               category,
               bar_food_types: foodTypes?.map((item: any) => ({
                 food_type_id: item.food_type_id,
                 food_type: { name: item.food_types?.name || 'Unknown' }
               })) || [],
-              bar_languages: languages?.map((item: any) => ({
-                language_id: item.language_id,
-                language: { name: item.languages?.name || 'Unknown' }
+              bar_selected_tv_features: tvFeatures?.map((item: any) => ({
+                tv_feature_id: item.tv_feature_id,
+                tv_feature: { name: item.bar_tv_features?.name || 'Unknown' }
               })) || [],
               bar_selected_features: features?.map((item: any) => ({
                 feature_id: item.feature_id,
@@ -478,19 +720,26 @@ const Map: React.FC = () => {
         {filteredBars.map((bar) => {
           const isSelected = bar.id === selectedMarkerId;
           const isBoosted = selectedBoostBarIds.includes(bar.id);
+          const isDestination = isNavigating && navigationDestination && 
+            bar.latitude === navigationDestination.latitude && 
+            bar.longitude === navigationDestination.longitude;
 
-          // Determine marker type: Selected > Boosted > Default
-          let markerType: 'default' | 'boosted' | 'selected' = 'default';
-          if (isBoosted && !isSelected) {
+          // Determine marker type with priority: Destination > Boosted > Selected > Default
+          let markerType: 'default' | 'boosted' | 'selected' | 'destination' = 'default';
+          
+          if (isSelected && !isBoosted && !isDestination) {
+            markerType = 'selected';
+          }
+          if (isBoosted && !isDestination) {
             markerType = 'boosted';
           }
-          if (isSelected) {
-            markerType = 'selected';
+          if (isDestination) {
+            markerType = 'destination';
           }
 
           // Log marker type for debugging (only first 3 bars to avoid spam)
           if (filteredBars.indexOf(bar) < 3) {
-            console.log(`🎨 MARKER[${bar.name}]: type=${markerType}, boosted=${isBoosted}, selected=${isSelected}`);
+            console.log(`🎨 MARKER[${bar.name}]: type=${markerType}, boosted=${isBoosted}, selected=${isSelected}, destination=${isDestination}`);
           }
 
           return (
@@ -507,7 +756,7 @@ const Map: React.FC = () => {
               <BarMapMarker 
                 key={`marker-${markerType}-${bar.id}`}
                 type={markerType} 
-                animated={isBoosted && !isSelected}
+                animated={(isBoosted || isDestination) && !isSelected}
                 onPress={() => {
                   console.log('🟢 MARKER TOUCHED (custom onPress):', bar.name);
                   handleMarkerPress(bar);
@@ -516,50 +765,123 @@ const Map: React.FC = () => {
             </MapboxGL.PointAnnotation>
           );
         })}
+
+        {/* Navigation Route Line */}
+        {isNavigating && routeData && (
+          <MapboxGL.ShapeSource
+            id="routeSource"
+            shape={{
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: routeData.coordinates
+              }
+            }}
+          >
+            <MapboxGL.LineLayer
+              id="routeLine"
+              style={{
+                lineColor: '#007AFF',
+                lineWidth: 5,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+            <MapboxGL.LineLayer
+              id="routeOutline"
+              style={{
+                lineColor: '#FFFFFF',
+                lineWidth: 7,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+              belowLayerID="routeLine"
+            />
+          </MapboxGL.ShapeSource>
+        )}
       </MapboxGL.MapView>
 
       {/* Search bar with adjusted right margin for filter button */}
+      {/* Top controls row - Search, Match Filter, and Bar Filter */}
+      <View style={styles.topControlsRow}>
+        {/* Search button */}
+        <TouchableOpacity
+          style={styles.searchButton}
+          onPress={() => searchBarRef.current?.expand()}
+        >
+          <Ionicons name="search" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {/* Match filter button */}
+        <TouchableOpacity
+          style={[
+            styles.matchFilterButton,
+            selectedMatch && styles.matchFilterButtonActive
+          ]}
+          onPress={() => setMatchPickerOpen(true)}
+        >
+          <View style={styles.matchButtonContent}>
+            <Text style={styles.matchButtonEmoji}>⚽</Text>
+            <Text style={[
+              styles.matchButtonText,
+              selectedMatch && styles.matchButtonTextActive,
+              selectedMatch && { flex: 1, textAlign: 'left' }
+            ]}>
+              {selectedMatch 
+                ? `${selectedMatch.home_team?.name || 'Local'} - ${selectedMatch.away_team?.name || 'Visitante'}`
+                : 'Busca tu partido'}
+            </Text>
+          </View>
+          {selectedMatch && (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                setSelectedMatch(null);
+              }}
+              style={styles.matchCloseButton}
+            >
+              <Ionicons name="close" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      
+        {/* Bar filter button - Now with text */}
+        <TouchableOpacity
+          style={[
+            styles.barFilterButton,
+            (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+             selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterButtonActive
+          ]}
+          onPress={() => setFilterModalVisible(true)}
+        >
+          <View style={styles.matchButtonContent}>
+            <Ionicons name="options-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={[
+              styles.matchButtonText,
+              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+               selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.matchButtonTextActive
+            ]}>
+              Filtros de bar
+            </Text>
+          </View>
+          {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+            selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
+            <View style={styles.filterDot} />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Search bar - Opens below the controls */}
       <View style={styles.searchWrapper} pointerEvents="box-none">
         <SearchBarWithResults 
+          ref={searchBarRef}
           value={searchText} 
           onChangeText={handleSearchChange}
           searchResults={searchResults}
           isSearching={isSearching}
           onLocationSelect={handleLocationSelect}
         />
-      </View>
-      
-      {/* Filter buttons row */}
-      <View style={styles.filterButtonsRow}>
-        {/* Match filter button */}
-        <TouchableOpacity
-          style={[
-            styles.filterRowButton,
-            selectedMatch && styles.filterButtonActive
-          ]}
-          onPress={() => setMatchPickerOpen(true)}
-        >
-          <Text style={styles.teamButtonEmoji}>⚽</Text>
-          {selectedMatch && (
-            <View style={styles.filterDot} />
-          )}
-        </TouchableOpacity>
-      
-      {/* Filter button */}
-      <TouchableOpacity
-        style={[
-            styles.filterRowButton,
-          (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-           selectedFeatures.length > 0 || selectedLanguages.length > 0) && styles.filterButtonActive
-        ]}
-        onPress={() => setFilterModalVisible(true)}
-      >
-        <Ionicons name="filter" size={20} color="#FFFFFF" />
-        {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-          selectedFeatures.length > 0 || selectedLanguages.length > 0) && (
-          <View style={styles.filterDot} />
-        )}
-      </TouchableOpacity>
       </View>
 
       {/* Center on user location button */}
@@ -608,8 +930,135 @@ const Map: React.FC = () => {
             }
           }}
         >
-          <Ionicons name="locate" size={24} color="#FFFFFF" />
+          <Ionicons name="locate" size={28} color="#007AFF" />
         </TouchableOpacity>
+      )}
+
+      {/* Turn-by-Turn Navigation Instructions - Top (Only when navigation started) */}
+      {navigationStarted && routeData && routeData.steps.length > 0 && currentStepIndex < routeData.steps.length && (
+        <View style={styles.navigationInstructionPanel}>
+          <View style={styles.instructionIconContainer}>
+            <Ionicons 
+              name={getManeuverIcon(routeData.steps[currentStepIndex].instruction)} 
+              size={32} 
+              color="#FFFFFF" 
+            />
+          </View>
+          <View style={styles.instructionTextContainer}>
+            <Text style={styles.instructionText} numberOfLines={2}>
+              {routeData.steps[currentStepIndex].instruction}
+            </Text>
+            {routeData.steps[currentStepIndex].distance > 0 && (
+              <Text style={styles.instructionDistance}>
+                en {formatDistance(routeData.steps[currentStepIndex].distance)}
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Navigation Panel - Bottom Unified */}
+      {isNavigating && routeData && navigationDestination && (
+        <View style={styles.navigationBottomPanel}>
+          {!navigationStarted ? (
+            /* Preview Mode - Before starting navigation */
+            <>
+              {/* Header with title and close */}
+              <View style={styles.navigationPanelHeader}>
+                <Text style={styles.navigationTitle}>{navigationDestination.name}</Text>
+                <TouchableOpacity 
+                  style={styles.cancelNavigationButton}
+                  onPress={handleCancelNavigation}
+                >
+                  <Ionicons name="close" size={20} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Stats and Mode selector in balanced row */}
+              <View style={styles.navigationContentRow}>
+                {/* Stats on the left */}
+                <View style={styles.navigationStatsLeft}>
+                  <View style={styles.navigationStat}>
+                    <Ionicons name="time-outline" size={16} color="#10B981" />
+                    <Text style={styles.navigationStatText}>
+                      {Math.round(routeData.duration)} min
+                    </Text>
+                  </View>
+                  <View style={styles.navigationStat}>
+                    <Ionicons name="navigate-outline" size={16} color="#007AFF" />
+                    <Text style={styles.navigationStatText}>
+                      {routeData.distance.toFixed(1)} km
+                    </Text>
+                  </View>
+                </View>
+                
+                {/* Travel Mode Selector on the right - Compact */}
+                <View style={styles.travelModeCompact}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.segmentButtonCompact,
+                      travelMode === 'walking' && styles.segmentButtonActive
+                    ]}
+                    onPress={() => travelMode !== 'walking' && handleChangeTravelMode()}
+                    disabled={directionsLoading}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons 
+                      name="walk" 
+                      size={18} 
+                      color={travelMode === 'walking' ? '#FFFFFF' : '#7C8A9D'} 
+                    />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[
+                      styles.segmentButtonCompact,
+                      travelMode === 'driving' && styles.segmentButtonActive
+                    ]}
+                    onPress={() => travelMode !== 'driving' && handleChangeTravelMode()}
+                    disabled={directionsLoading}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons 
+                      name="car" 
+                      size={18} 
+                      color={travelMode === 'driving' ? '#FFFFFF' : '#7C8A9D'} 
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Start Navigation Button */}
+              <TouchableOpacity 
+                style={styles.startNavigationButton}
+                onPress={handleBeginNavigation}
+              >
+                <Ionicons name="play" size={20} color="#FFFFFF" />
+                <Text style={styles.startNavigationButtonText}>Iniciar</Text>
+              </TouchableOpacity>
+              
+              {directionsLoading && (
+                <Text style={styles.navigationLoading}>Calculando ruta...</Text>
+              )}
+            </>
+          ) : (
+            /* Active Navigation Mode */
+            <View style={styles.activeNavigationPanel}>
+              <TouchableOpacity 
+                style={styles.endNavigationButton}
+                onPress={handleCancelNavigation}
+              >
+                <Ionicons name="close-circle" size={20} color="#EF4444" />
+                <Text style={styles.endNavigationButtonText}>Finalizar</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.activeNavStats}>
+                <Text style={styles.activeNavTime}>{Math.round(routeData.duration)} min</Text>
+                <Text style={styles.activeNavDistance}>{routeData.distance.toFixed(1)} km</Text>
+              </View>
+            </View>
+          )}
+        </View>
       )}
       
       {/* Bar Info Card */}
@@ -618,6 +1067,7 @@ const Map: React.FC = () => {
         visible={showBarCard}
         onClose={handleCloseBarCard}
         onNavigate={handleNavigateToBar}
+        onStartNavigation={handleStartNavigation}
       />
 
       {/* Filter Modal */}
@@ -627,15 +1077,15 @@ const Map: React.FC = () => {
         barCategories={barCategories}
         foodTypes={foodTypes}
         barFeatures={barFeatures}
-        languages={languages}
+        tvFeatures={tvFeatures}
         selectedBarCategories={selectedBarCategories}
         selectedFoodTypes={selectedFoodTypes}
         selectedFeatures={selectedFeatures}
-        selectedLanguages={selectedLanguages}
+        selectedTvFeatures={selectedTvFeatures}
         onBarCategoriesChange={setSelectedBarCategories}
         onFoodTypesChange={setSelectedFoodTypes}
         onFeaturesChange={setSelectedFeatures}
-        onLanguagesChange={setSelectedLanguages}
+        onTvFeaturesChange={setSelectedTvFeatures}
         onApplyFilters={handleApplyFilters}
         loading={filtersLoading}
       />
@@ -687,22 +1137,22 @@ const styles = StyleSheet.create({
   },
   searchWrapper: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 130, // Space for filter buttons row (2 buttons + gaps)
-    bottom: 0,
+    top: Platform.OS === 'ios' ? 140 : 120, // Below the top controls
+    left: 20,
+    right: 20,
     zIndex: 999,
   },
-  filterButtonsRow: {
+  topControlsRow: {
     position: 'absolute',
-    top: 60,
+    top: Platform.OS === 'ios' ? 80 : 60,
+    left: 20,
     right: 20,
     flexDirection: 'row',
     gap: 10,
     zIndex: 1000,
   },
-  filterRowButton: {
-    backgroundColor: '#3A4A5C',
+  searchButton: {
+    backgroundColor: '#243243',
     borderRadius: 12,
     width: 50,
     height: 50,
@@ -711,11 +1161,74 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  matchFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#243243',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 50,
+    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  matchFilterButtonActive: {
+    backgroundColor: '#1976D2',
+  },
+  barFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#243243',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 50,
+    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    position: 'relative',
+  },
+  matchButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  matchButtonEmoji: {
+    fontSize: 16,
+  },
+  matchButtonText: {
+    color: '#A3B3CC',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  matchButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  matchCloseButton: {
+    marginLeft: 8,
+    padding: 4,
   },
   filterButtonActive: {
     backgroundColor: '#1976D2',
@@ -731,25 +1244,212 @@ const styles = StyleSheet.create({
   },
   centerButton: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 120,
     right: 20,
-    backgroundColor: '#3A4A5C',
-    borderRadius: 25,
-    width: 50,
-    height: 50,
+    backgroundColor: '#1C2A3A',
+    borderRadius: 28,
+    width: 56,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#374151',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   teamButtonEmoji: {
     fontSize: 22,
+  },
+  navigationInstructionPanel: {
+    position: 'absolute',
+    top: 130,
+    left: 16,
+    right: 16,
+    backgroundColor: '#1C2A3A',
+    borderRadius: 16,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  instructionIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0, 122, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+    borderWidth: 2,
+    borderColor: 'rgba(0, 122, 255, 0.4)',
+  },
+  instructionTextContainer: {
+    flex: 1,
+  },
+  instructionText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 5,
+    lineHeight: 22,
+  },
+  instructionDistance: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  navigationBottomPanel: {
+    position: 'absolute',
+    bottom: 110,
+    left: 16,
+    right: 16,
+    backgroundColor: '#1C2A3A',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  navigationPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  navigationTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+  },
+  cancelNavigationButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  navigationContentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  navigationStatsLeft: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  navigationStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  navigationStatText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  travelModeCompact: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    borderRadius: 8,
+    padding: 2,
+    gap: 2,
+  },
+  segmentButtonCompact: {
+    width: 38,
+    height: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 6,
+    backgroundColor: 'transparent',
+  },
+  segmentButtonActive: {
+    backgroundColor: '#007AFF',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  navigationLoading: {
+    color: '#10B981',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  startNavigationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    marginTop: 12,
+    gap: 8,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  startNavigationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  activeNavigationPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  endNavigationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  endNavigationButtonText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  activeNavStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  activeNavTime: {
+    color: '#10B981',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  activeNavDistance: {
+    color: '#007AFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 

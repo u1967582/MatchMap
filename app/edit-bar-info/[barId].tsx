@@ -44,7 +44,7 @@ interface BarImage {
 interface BarCategory {
   id: string;
   bar_id: string;
-  category_type: 'food_type' | 'language' | 'feature';
+  category_type: 'food_type' | 'tv_feature' | 'feature';
   category_id: number;
   category_name: string;
 }
@@ -80,12 +80,12 @@ export default function EditBarInfoScreen() {
   
   // Categories state
   const [foodTypes, setFoodTypes] = React.useState<BarCategory[]>([]);
-  const [languages, setLanguages] = React.useState<BarCategory[]>([]);
+  const [tvFeatures, setTvFeatures] = React.useState<BarCategory[]>([]);
   const [features, setFeatures] = React.useState<BarCategory[]>([]);
   
   // Available categories for selection
   const [availableFoodTypes, setAvailableFoodTypes] = React.useState<Category[]>([]);
-  const [availableLanguages, setAvailableLanguages] = React.useState<Category[]>([]);
+  const [availableTvFeatures, setAvailableTvFeatures] = React.useState<Category[]>([]);
   const [availableFeatures, setAvailableFeatures] = React.useState<Category[]>([]);
 
   // Fetch bar data and categories
@@ -167,9 +167,9 @@ export default function EditBarInfoScreen() {
           .select('bar_id, food_type_id')
           .eq('bar_id', barId);
 
-        const { data: languages } = await supabase
-          .from('bar_languages')
-          .select('bar_id, language_id')
+        const { data: tvFeatures } = await supabase
+          .from('bar_selected_tv_features')
+          .select('bar_id, tv_feature_id')
           .eq('bar_id', barId);
 
         const { data: features } = await supabase
@@ -179,10 +179,10 @@ export default function EditBarInfoScreen() {
 
         console.log('🔍 Edit bar N:N data loaded:', {
           foodTypes: foodTypes?.length || 0,
-          languages: languages?.length || 0,
+          tvFeatures: tvFeatures?.length || 0,
           features: features?.length || 0,
           foodTypeIds: foodTypes?.map(item => item.food_type_id) || [],
-          languageIds: languages?.map(item => item.language_id) || [],
+          tvFeatureIds: tvFeatures?.map(item => item.tv_feature_id) || [],
           featureIds: features?.map(item => item.feature_id) || []
         });
 
@@ -193,12 +193,12 @@ export default function EditBarInfoScreen() {
           .select('id, name')
           .in('id', foodTypeIds);
 
-        // Load language names
-        const languageIds = languages?.map(item => item.language_id) || [];
-        const { data: languageNames } = await supabase
-          .from('languages')
+        // Load TV feature names
+        const tvFeatureIds = tvFeatures?.map(item => item.tv_feature_id) || [];
+        const { data: tvFeatureNames } = await supabase
+          .from('bar_tv_features')
           .select('id, name')
-          .in('id', languageIds);
+          .in('id', tvFeatureIds);
 
         // Load feature names
         const featureIds = features?.map(item => item.feature_id) || [];
@@ -211,18 +211,18 @@ export default function EditBarInfoScreen() {
         const foodTypeMap = new Map();
         foodTypeNames?.forEach(item => foodTypeMap.set(item.id, item.name));
 
-        const languageMap = new Map();
-        languageNames?.forEach(item => languageMap.set(item.id, item.name));
+        const tvFeatureMap = new Map();
+        tvFeatureNames?.forEach(item => tvFeatureMap.set(item.id, item.name));
 
         const featureMap = new Map();
         featureNames?.forEach(item => featureMap.set(item.id, item.name));
 
         console.log('🔍 Edit bar names loaded:', {
           foodTypeNames: foodTypeNames?.length || 0,
-          languageNames: languageNames?.length || 0,
+          tvFeatureNames: tvFeatureNames?.length || 0,
           featureNames: featureNames?.length || 0,
           foodTypeMap: Object.fromEntries(foodTypeMap),
-          languageMap: Object.fromEntries(languageMap),
+          tvFeatureMap: Object.fromEntries(tvFeatureMap),
           featureMap: Object.fromEntries(featureMap)
         });
 
@@ -237,16 +237,16 @@ export default function EditBarInfoScreen() {
         setFoodTypes(foodTypesData);
         console.log('🍕 Food types loaded:', foodTypesData.length);
 
-        // Set languages
-        const languagesData: BarCategory[] = languages?.map(item => ({
-          id: `${item.bar_id}-language-${item.language_id}`,
+        // Set TV features
+        const tvFeaturesData: BarCategory[] = tvFeatures?.map(item => ({
+          id: `${item.bar_id}-tvfeature-${item.tv_feature_id}`,
           bar_id: barId,
-          category_type: 'language',
-          category_id: item.language_id,
-          category_name: languageMap.get(item.language_id) || 'Unknown',
+          category_type: 'tv_feature',
+          category_id: item.tv_feature_id,
+          category_name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown',
         })) || [];
-        setLanguages(languagesData);
-        console.log('🌍 Languages loaded:', languagesData.length);
+        setTvFeatures(tvFeaturesData);
+        console.log('📺 TV Features loaded:', tvFeaturesData.length);
 
         // Set features
         const featuresData: BarCategory[] = features?.map(item => ({
@@ -269,14 +269,14 @@ export default function EditBarInfoScreen() {
           setCategories(categoriesData);
         }
 
-        // Fetch available food types, languages, and features
+        // Fetch available food types, TV features, and features
         const { data: availableFoodTypesData, error: foodTypesError } = await supabase
           .from('food_types')
           .select('*')
           .order('name');
 
-        const { data: availableLanguagesData, error: languagesError } = await supabase
-          .from('languages')
+        const { data: availableTvFeaturesData, error: tvFeaturesError } = await supabase
+          .from('bar_tv_features')
           .select('*')
           .order('name');
 
@@ -288,8 +288,8 @@ export default function EditBarInfoScreen() {
         if (!foodTypesError && availableFoodTypesData) {
           setAvailableFoodTypes(availableFoodTypesData);
         }
-        if (!languagesError && availableLanguagesData) {
-          setAvailableLanguages(availableLanguagesData);
+        if (!tvFeaturesError && availableTvFeaturesData) {
+          setAvailableTvFeatures(availableTvFeaturesData);
         }
         if (!featuresError && availableFeaturesData) {
           setAvailableFeatures(availableFeaturesData);
@@ -495,7 +495,7 @@ export default function EditBarInfoScreen() {
     }
   };
 
-  const handleAddCategory = async (categoryType: 'food_type' | 'language' | 'feature', categoryId: number, categoryName: string) => {
+  const handleAddCategory = async (categoryType: 'food_type' | 'tv_feature' | 'feature', categoryId: number, categoryName: string) => {
     try {
       let tableName: string;
       let columnName: string;
@@ -505,9 +505,9 @@ export default function EditBarInfoScreen() {
           tableName = 'bar_food_types';
           columnName = 'food_type_id';
           break;
-        case 'language':
-          tableName = 'bar_languages';
-          columnName = 'language_id';
+        case 'tv_feature':
+          tableName = 'bar_selected_tv_features';
+          columnName = 'tv_feature_id';
           break;
         case 'feature':
           tableName = 'bar_selected_features';
@@ -532,7 +532,7 @@ export default function EditBarInfoScreen() {
 
       // Update local state
       const newBarCategory: BarCategory = {
-        id: `${barId}-${categoryType === 'food_type' ? 'food' : categoryType === 'language' ? 'language' : 'feature'}-${categoryId}`,
+        id: `${barId}-${categoryType === 'food_type' ? 'food' : categoryType === 'tv_feature' ? 'tvfeature' : 'feature'}-${categoryId}`,
         bar_id: barId,
         category_type: categoryType,
         category_id: categoryId,
@@ -542,22 +542,22 @@ export default function EditBarInfoScreen() {
       if (categoryType === 'food_type') {
         setFoodTypes(prev => [...prev, newBarCategory]);
         console.log('🍕 Food type added:', categoryName);
-      } else if (categoryType === 'language') {
-        setLanguages(prev => [...prev, newBarCategory]);
-        console.log('🌍 Language added:', categoryName);
+      } else if (categoryType === 'tv_feature') {
+        setTvFeatures(prev => [...prev, newBarCategory]);
+        console.log('📺 TV Feature added:', categoryName);
       } else {
         setFeatures(prev => [...prev, newBarCategory]);
         console.log('⭐ Feature added:', categoryName);
       }
 
-      Alert.alert('Éxito', `${categoryType === 'food_type' ? 'Tipo de comida' : categoryType === 'language' ? 'Idioma' : 'Característica'} añadido correctamente`);
+      Alert.alert('Éxito', `${categoryType === 'food_type' ? 'Tipo de comida' : categoryType === 'tv_feature' ? 'Característica de TV' : 'Característica'} añadido correctamente`);
     } catch (error) {
       console.error('Error in handleAddCategory:', error);
       Alert.alert('Error', 'Ocurrió un error al añadir la categoría');
     }
   };
 
-  const handleRemoveCategory = async (categoryId: string, categoryType: 'food_type' | 'language' | 'feature') => {
+  const handleRemoveCategory = async (categoryId: string, categoryType: 'food_type' | 'tv_feature' | 'feature') => {
     Alert.alert(
       'Eliminar Categoría',
       '¿Estás seguro de que quieres eliminar esta categoría?',
@@ -576,9 +576,9 @@ export default function EditBarInfoScreen() {
                   tableName = 'bar_food_types';
                   columnName = 'food_type_id';
                   break;
-                case 'language':
-                  tableName = 'bar_languages';
-                  columnName = 'language_id';
+                case 'tv_feature':
+                  tableName = 'bar_selected_tv_features';
+                  columnName = 'tv_feature_id';
                   break;
                 case 'feature':
                   tableName = 'bar_selected_features';
@@ -607,15 +607,15 @@ export default function EditBarInfoScreen() {
               if (categoryType === 'food_type') {
                 setFoodTypes(prev => prev.filter(cat => cat.id !== categoryId));
                 console.log('🍕 Food type removed');
-              } else if (categoryType === 'language') {
-                setLanguages(prev => prev.filter(cat => cat.id !== categoryId));
-                console.log('🌍 Language removed');
+              } else if (categoryType === 'tv_feature') {
+                setTvFeatures(prev => prev.filter(cat => cat.id !== categoryId));
+                console.log('📺 TV Feature removed');
               } else {
                 setFeatures(prev => prev.filter(cat => cat.id !== categoryId));
                 console.log('⭐ Feature removed');
               }
 
-              Alert.alert('Éxito', `${categoryType === 'food_type' ? 'Tipo de comida' : categoryType === 'language' ? 'Idioma' : 'Característica'} eliminado correctamente`);
+              Alert.alert('Éxito', `${categoryType === 'food_type' ? 'Tipo de comida' : categoryType === 'tv_feature' ? 'Característica de TV' : 'Característica'} eliminado correctamente`);
             } catch (error) {
               console.error('Error in handleRemoveCategory:', error);
               Alert.alert('Error', 'Ocurrió un error al eliminar la categoría');
@@ -807,40 +807,40 @@ export default function EditBarInfoScreen() {
           </View>
         </View>
 
-        {/* Languages Section */}
+        {/* TV Features Section */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Idiomas</Text>
+          <Text style={styles.inputLabel}>Características de TV</Text>
           <View style={styles.categoriesContainer}>
-            {languages.length > 0 ? (
-              languages.map((language) => (
-                <View key={language.id} style={styles.categoryChip}>
-                  <Text style={styles.categoryChipText}>{language.category_name}</Text>
+            {tvFeatures.length > 0 ? (
+              tvFeatures.map((tvFeature) => (
+                <View key={tvFeature.id} style={styles.categoryChip}>
+                  <Text style={styles.categoryChipText}>{tvFeature.category_name}</Text>
                   <TouchableOpacity
                     style={styles.removeCategoryButton}
-                    onPress={() => handleRemoveCategory(language.id, 'language')}
+                    onPress={() => handleRemoveCategory(tvFeature.id, 'tv_feature')}
                   >
                     <Ionicons name="close" size={16} color="#FF6B6B" />
                   </TouchableOpacity>
                 </View>
               ))
             ) : (
-              <Text style={styles.noCategoriesText}>No hay idiomas seleccionados</Text>
+              <Text style={styles.noCategoriesText}>No hay características de TV seleccionadas</Text>
             )}
             <TouchableOpacity style={styles.addCategoryButton} onPress={() => {
-              const availableOptions = availableLanguages.filter(
-                lang => !languages.some(existing => existing.category_id === lang.id)
+              const availableOptions = availableTvFeatures.filter(
+                tvf => !tvFeatures.some(existing => existing.category_id === tvf.id)
               );
               if (availableOptions.length > 0) {
                 Alert.alert(
-                  'Añadir Idioma',
-                  'Selecciona un idioma:',
+                  'Añadir Característica de TV',
+                  'Selecciona una característica:',
                   availableOptions.map(option => ({
                     text: option.name,
-                    onPress: () => handleAddCategory('language', option.id, option.name),
+                    onPress: () => handleAddCategory('tv_feature', option.id, option.name),
                   }))
                 );
               } else {
-                Alert.alert('Info', 'Ya tienes todos los idiomas disponibles');
+                Alert.alert('Info', 'Ya tienes todas las características de TV disponibles');
               }
             }}>
               <Ionicons name="add" size={20} color="#A3B3CC" />

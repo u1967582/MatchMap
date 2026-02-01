@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,7 @@ interface BarProfile {
   images: string[];
   category?: { id: number; name: string };
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
-  bar_languages?: { language_id: number; language: { name: string } }[];
+  bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
 }
 
@@ -74,9 +74,102 @@ export default function BarProfileScreen() {
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(true);
   const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
+  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [verificationNotes, setVerificationNotes] = useState<string | null>(null);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any }>({ title: '', content: null });
 
   // Get boost status for countdown
   const { boost, isLoading: boostLoading } = useBarBoost(barId);
+
+  // Functions to show info modals
+  const showManualMatchInfo = () => {
+    setInfoModalContent({
+      title: 'Añadir Partido Manualmente',
+      content: (
+        <View>
+          <Text style={styles.infoModalText}>
+            Esta opción te permite seleccionar y añadir partidos específicos que quieras retransmitir en tu bar.
+          </Text>
+          <Text style={[styles.infoModalText, { marginTop: 12 }]}>
+            Ideal para cuando tienes eventos especiales o partidos concretos que sabes que tus clientes quieren ver.
+          </Text>
+        </View>
+      ),
+    });
+    setInfoModalVisible(true);
+  };
+
+  const showAutoMatchInfo = () => {
+    setInfoModalContent({
+      title: 'Automatizar Retransmisiones',
+      content: (
+        <View>
+          <Text style={styles.infoModalText}>
+            Configura tus equipos y competiciones favoritas para que automáticamente se añadan todos sus partidos a tu calendario de retransmisiones.
+          </Text>
+          <Text style={[styles.infoModalText, { marginTop: 12 }]}>
+            ¡Ahorra tiempo! Una vez configurado, no tendrás que añadir partidos manualmente.
+          </Text>
+        </View>
+      ),
+    });
+    setInfoModalVisible(true);
+  };
+
+  const showBoostInfo = () => {
+    setInfoModalContent({
+      title: '✨ Beneficios del Boost',
+      content: (
+        <View>
+          <Text style={styles.boostMainText}>
+            Aumenta la visibilidad de tu bar y atrae más clientes
+          </Text>
+
+          {/* Beneficios */}
+          <View style={styles.benefitItem}>
+            <View style={styles.benefitIcon}>
+              <Text style={styles.benefitEmoji}>⬆️</Text>
+            </View>
+            <View style={styles.benefitContent}>
+              <Text style={styles.benefitTitle}>Mayor visibilidad en listas</Text>
+              <Text style={styles.benefitDescription}>Tu bar aparece primero en búsquedas y filtros</Text>
+            </View>
+          </View>
+
+          <View style={styles.benefitItem}>
+            <View style={styles.benefitIcon}>
+              <Text style={styles.benefitEmoji}>⭐</Text>
+            </View>
+            <View style={styles.benefitContent}>
+              <Text style={styles.benefitTitle}>Etiqueta destacado</Text>
+              <Text style={styles.benefitDescription}>Badge especial que llama la atención</Text>
+            </View>
+          </View>
+
+          <View style={styles.benefitItem}>
+            <View style={styles.benefitIcon}>
+              <Text style={styles.benefitEmoji}>📈</Text>
+            </View>
+            <View style={styles.benefitContent}>
+              <Text style={styles.benefitTitle}>Prioridad en resultados</Text>
+              <Text style={styles.benefitDescription}>Aparece antes que la competencia</Text>
+            </View>
+          </View>
+
+          {/* Call to action */}
+          <View style={styles.ctaContainer}>
+            <Text style={styles.ctaTitle}>💰 ¡Llena tu bar!</Text>
+            <Text style={styles.ctaSubtitle}>Cada cliente genera ~13€ de beneficio medio</Text>
+            <Text style={styles.ctaDescription}>
+              Una inversión pequeña puede traerte muchos más clientes y aumentar significativamente tus ingresos
+            </Text>
+          </View>
+        </View>
+      ),
+    });
+    setInfoModalVisible(true);
+  };
 
   // Functions to copy to clipboard
   const copyToClipboard = async (text: string, label: string) => {
@@ -130,6 +223,59 @@ export default function BarProfileScreen() {
             </TouchableOpacity>
             <View style={styles.headerContent}>
               <Text style={styles.barName}>{bar?.name}</Text>
+              {isOwner && verificationStatus ? (
+                <View
+                  style={[
+                    styles.verificationPill,
+                    verificationStatus === 'approved'
+                      ? styles.verificationPillApproved
+                      : verificationStatus === 'rejected'
+                        ? styles.verificationPillRejected
+                        : styles.verificationPillPending,
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      verificationStatus === 'approved'
+                        ? 'checkmark-circle-outline'
+                        : verificationStatus === 'rejected'
+                          ? 'close-circle-outline'
+                          : 'time-outline'
+                    }
+                    size={14}
+                    color={
+                      verificationStatus === 'approved'
+                        ? '#10B981'
+                        : verificationStatus === 'rejected'
+                          ? '#EF4444'
+                          : '#FFD700'
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.verificationPillText,
+                      verificationStatus === 'approved'
+                        ? styles.verificationPillTextApproved
+                        : verificationStatus === 'rejected'
+                          ? styles.verificationPillTextRejected
+                          : styles.verificationPillTextPending,
+                    ]}
+                  >
+                    {verificationStatus === 'approved'
+                      ? 'Verificado'
+                      : verificationStatus === 'rejected'
+                        ? 'Rechazado'
+                        : 'Pendiente de verificación'}
+                  </Text>
+                </View>
+              ) : null}
+
+              {isOwner && verificationStatus === 'rejected' && verificationNotes ? (
+                <View style={styles.verificationNotesBox}>
+                  <Ionicons name="information-circle-outline" size={14} color="#A3B3CC" />
+                  <Text style={styles.verificationNotesText}>{verificationNotes}</Text>
+                </View>
+              ) : null}
             </View>
             <View style={styles.headerSpacer} />
           </View>
@@ -257,13 +403,13 @@ export default function BarProfileScreen() {
 
       case 'tags':
         return (
-          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_languages?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
+          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_selected_tv_features?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
             <View style={styles.tagsSection}>
               <FlatList
                 data={[
                   ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
                   ...(bar?.bar_food_types?.map((item) => ({ type: 'food', data: item, id: `food-${item.food_type_id}` })) || []),
-                  ...(bar?.bar_languages?.map((item) => ({ type: 'language', data: item, id: `language-${item.language_id}` })) || []),
+                  ...(bar?.bar_selected_tv_features?.map((item) => ({ type: 'tv_feature', data: item, id: `tv-${item.tv_feature_id}` })) || []),
                   ...(bar?.bar_selected_features?.map((item) => ({ type: 'feature', data: item, id: `feature-${item.feature_id}` })) || [])
                 ]}
                 renderItem={({ item }) => {
@@ -282,10 +428,10 @@ export default function BarProfileScreen() {
                       icon = '🍽️';
                       text = (item.data as { food_type: { name: string } }).food_type.name;
                       break;
-                    case 'language':
+                    case 'tv_feature':
                       backgroundColor = '#4CAF50';
-                      icon = '🗣️';
-                      text = (item.data as { language: { name: string } }).language.name;
+                      icon = '📺';
+                      text = (item.data as { tv_feature: { name: string } }).tv_feature.name;
                       break;
                     case 'feature':
                       backgroundColor = '#9C27B0';
@@ -378,31 +524,55 @@ export default function BarProfileScreen() {
               </View>
               
               <View style={styles.matchesContainer}>
-                <TouchableOpacity
-                  style={styles.matchButton}
-                  onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
-                >
-                  <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.matchButtonText}>Añadir partido manualmente</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonWrapper}>
+                  <TouchableOpacity
+                    style={styles.matchButton}
+                    onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.matchButtonText}>Añadir partido manualmente</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButtonIntegrated}
+                    onPress={showManualMatchInfo}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color="#A3B3CC" />
+                  </TouchableOpacity>
+                </View>
                 
-                <TouchableOpacity
-                  style={styles.matchButtonOutline}
-                  onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
-                >
-                  <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonWrapper}>
+                  <TouchableOpacity
+                    style={styles.matchButtonOutline}
+                    onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
+                  >
+                    <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButtonIntegrated}
+                    onPress={showAutoMatchInfo}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color="#A3B3CC" />
+                  </TouchableOpacity>
+                </View>
 
                 {/* Promote visibility button (boost style) */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => router.push(`/boost?barId=${barId}` as any)}
-                  style={styles.promoteButton}
-                >
-                  <Ionicons name="flash" size={20} color="#FFD700" />
-                  <Text style={styles.promoteButtonText}>Aumenta la visibilidad de tu bar</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonWrapper}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => router.push(`/boost?barId=${barId}` as any)}
+                    style={styles.promoteButton}
+                  >
+                    <Ionicons name="flash" size={20} color="#FFD700" />
+                    <Text style={styles.promoteButtonText}>Aumenta la visibilidad de tu bar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButtonIntegratedBoost}
+                    onPress={showBoostInfo}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color="#FFD700" />
+                  </TouchableOpacity>
+                </View>
 
                 {/* Boost Countdown - shown when boost is active */}
                 {boost?.isActive && boost?.endAt && (
@@ -531,7 +701,9 @@ export default function BarProfileScreen() {
           phone,
           website,
           bar_images(image_url, image_order),
-          category_id
+          category_id,
+          verification_status,
+          verification_notes
         `)
         .eq('id', barId)
         .single();
@@ -543,6 +715,8 @@ export default function BarProfileScreen() {
       }
 
       if (barData) {
+        setVerificationStatus((barData as any).verification_status || null);
+        setVerificationNotes((barData as any).verification_notes || null);
         // Check if bar has at least one active subscription (supports multiple rows)
         // All bars can show menu button now
         setCanShowMenuButton(true);
@@ -553,9 +727,9 @@ export default function BarProfileScreen() {
           .select('food_type_id')
           .eq('bar_id', barId);
 
-        const { data: languages } = await supabase
-          .from('bar_languages')
-          .select('language_id')
+        const { data: tvFeatures } = await supabase
+          .from('bar_selected_tv_features')
+          .select('tv_feature_id')
           .eq('bar_id', barId);
 
         const { data: features } = await supabase
@@ -565,10 +739,10 @@ export default function BarProfileScreen() {
 
         console.log('🔍 Bar profile N:N data loaded:', {
           foodTypes: foodTypes?.length || 0,
-          languages: languages?.length || 0,
+          tvFeatures: tvFeatures?.length || 0,
           features: features?.length || 0,
           foodTypeIds: foodTypes?.map(item => item.food_type_id) || [],
-          languageIds: languages?.map(item => item.language_id) || [],
+          tvFeatureIds: tvFeatures?.map(item => item.tv_feature_id) || [],
           featureIds: features?.map(item => item.feature_id) || []
         });
 
@@ -590,12 +764,12 @@ export default function BarProfileScreen() {
           .select('id, name')
           .in('id', foodTypeIds);
 
-        // Load language names
-        const languageIds = languages?.map(item => item.language_id) || [];
-        const { data: languageNames } = await supabase
-          .from('languages')
+        // Load TV feature names
+        const tvFeatureIds = tvFeatures?.map(item => item.tv_feature_id) || [];
+        const { data: tvFeatureNames } = await supabase
+          .from('bar_tv_features')
           .select('id, name')
-          .in('id', languageIds);
+          .in('id', tvFeatureIds);
 
         // Load feature names
         const featureIds = features?.map(item => item.feature_id) || [];
@@ -608,18 +782,18 @@ export default function BarProfileScreen() {
         const foodTypeMap = new Map();
         foodTypeNames?.forEach(item => foodTypeMap.set(item.id, item.name));
 
-        const languageMap = new Map();
-        languageNames?.forEach(item => languageMap.set(item.id, item.name));
+        const tvFeatureMap = new Map();
+        tvFeatureNames?.forEach(item => tvFeatureMap.set(item.id, item.name));
 
         const featureMap = new Map();
         featureNames?.forEach(item => featureMap.set(item.id, item.name));
 
         console.log('🔍 Bar profile names loaded:', {
           foodTypeNames: foodTypeNames?.length || 0,
-          languageNames: languageNames?.length || 0,
+          tvFeatureNames: tvFeatureNames?.length || 0,
           featureNames: featureNames?.length || 0,
           foodTypeMap: Object.fromEntries(foodTypeMap),
-          languageMap: Object.fromEntries(languageMap),
+          tvFeatureMap: Object.fromEntries(tvFeatureMap),
           featureMap: Object.fromEntries(featureMap)
         });
 
@@ -639,9 +813,9 @@ export default function BarProfileScreen() {
             food_type_id: item.food_type_id,
             food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
           })) || [],
-          bar_languages: languages?.map(item => ({
-            language_id: item.language_id,
-            language: { name: languageMap.get(item.language_id) || 'Unknown' }
+          bar_selected_tv_features: tvFeatures?.map(item => ({
+            tv_feature_id: item.tv_feature_id,
+            tv_feature: { name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown' }
           })) || [],
           bar_selected_features: features?.map(item => ({
             feature_id: item.feature_id,
@@ -656,9 +830,9 @@ export default function BarProfileScreen() {
             food_type_id: item.food_type_id,
             food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
           })) || [],
-          languages: languages?.map(item => ({
-            language_id: item.language_id,
-            language: { name: languageMap.get(item.language_id) || 'Unknown' }
+          tvFeatures: tvFeatures?.map(item => ({
+            tv_feature_id: item.tv_feature_id,
+            tv_feature: { name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown' }
           })) || [],
           features: features?.map(item => ({
             feature_id: item.feature_id,
@@ -1130,6 +1304,52 @@ export default function BarProfileScreen() {
         contentContainerStyle={styles.scrollViewContent}
       />
 
+      {/* Info Modal */}
+      <Modal
+        visible={infoModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setInfoModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setInfoModalVisible(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.modalScrollContent}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{infoModalContent.title}</Text>
+                <TouchableOpacity 
+                  onPress={() => setInfoModalVisible(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons name="close" size={24} color="#A3B3CC" />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.modalBody}>
+                {infoModalContent.content}
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalOkButton}
+                onPress={() => setInfoModalVisible(false)}
+              >
+                <Text style={styles.modalOkButtonText}>Entendido</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       <BottomTabBar />
     </SafeAreaView>
   );
@@ -1165,6 +1385,61 @@ const styles = StyleSheet.create({
   headerContent: {
     flex: 1,
     alignItems: 'center',
+  },
+  verificationPill: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  verificationPillPending: {
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderColor: 'rgba(255, 215, 0, 0.25)',
+  },
+  verificationPillApproved: {
+    backgroundColor: 'rgba(16, 185, 129, 0.10)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+  },
+  verificationPillRejected: {
+    backgroundColor: 'rgba(239, 68, 68, 0.10)',
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
+  verificationPillText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  verificationPillTextPending: {
+    color: '#FFD700',
+  },
+  verificationPillTextApproved: {
+    color: '#10B981',
+  },
+  verificationPillTextRejected: {
+    color: '#EF4444',
+  },
+  verificationNotesBox: {
+    marginTop: 10,
+    maxWidth: '95%',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  verificationNotesText: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 12,
+    lineHeight: 16,
+    flex: 1,
+    textAlign: 'left',
   },
   headerSpacer: {
     width: 32, // Same width as back button to center the title
@@ -1529,48 +1804,39 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   matchButton: {
+    flex: 1,
     backgroundColor: '#1976D2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginBottom: 10,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   matchButtonOutline: {
-    backgroundColor: '#1976D2',  // Fondo sólido azul en lugar de transparente
-    borderWidth: 0,  // Sin borde
+    flex: 1,
+    backgroundColor: '#1976D2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   promoteButton: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',  // Mismo fondo que countdown
-    borderRadius: 10,
+    flex: 1,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.3)',  // Mismo borde que countdown
+    borderRightWidth: 0,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginTop: 12,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1713,5 +1979,180 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  buttonWrapper: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  buttonWithInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  infoButton: {
+    padding: 4,
+    borderRadius: 20,
+    backgroundColor: 'rgba(163, 179, 204, 0.1)',
+  },
+  infoButtonIntegrated: {
+    backgroundColor: '#1565C0',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  infoButtonIntegratedBoost: {
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalScrollContent: {
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    flex: 1,
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalBody: {
+    marginBottom: 24,
+  },
+  infoModalText: {
+    color: '#E5E7EB',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  boostMainText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  benefitIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  benefitEmoji: {
+    fontSize: 24,
+  },
+  benefitContent: {
+    flex: 1,
+  },
+  benefitTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  benefitDescription: {
+    color: '#A3B3CC',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  ctaContainer: {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    padding: 16,
+    marginTop: 8,
+  },
+  ctaTitle: {
+    color: '#FFD700',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  ctaSubtitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  ctaDescription: {
+    color: '#E5E7EB',
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  modalOkButton: {
+    backgroundColor: '#1976D2',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalOkButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

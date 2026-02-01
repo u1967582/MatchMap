@@ -55,19 +55,19 @@ export const useBarRegistration = () => {
         return { success: false };
       }
 
-      // Insert bar languages
-      if (formData.languageIds.length > 0) {
-        const languageInserts = formData.languageIds.map((languageId: string) => ({
+      // Insert bar TV features
+      if (formData.tvFeatureIds && formData.tvFeatureIds.length > 0) {
+        const tvFeatureInserts = formData.tvFeatureIds.map((tvFeatureId: string) => ({
           bar_id: barData.id,
-          language_id: languageId,
+          tv_feature_id: tvFeatureId,
         }));
 
-        const { error: languageError } = await supabase
-          .from('bar_languages')
-          .insert(languageInserts);
+        const { error: tvFeatureError } = await supabase
+          .from('bar_selected_tv_features')
+          .insert(tvFeatureInserts);
 
-        if (languageError) {
-          console.error('Error inserting bar languages:', languageError);
+        if (tvFeatureError) {
+          console.error('Error inserting bar TV features:', tvFeatureError);
         }
       }
 
