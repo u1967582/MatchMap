@@ -74,8 +74,13 @@ interface Bar {
   bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
 }
 
+interface MapProps {
+  initialSelectedBarId?: string;
+  initialSelectedBarCoords?: { latitude: number; longitude: number };
+  initialSelectedBarName?: string;
+}
 
-const Map: React.FC = () => {
+const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoords, initialSelectedBarName }) => {
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
   const [bars, setBars] = React.useState<Bar[]>([]);
@@ -400,6 +405,61 @@ const Map: React.FC = () => {
 
     requestLocationPermission();
   }, []);
+
+  // Handle initial bar selection from navigation params
+  React.useEffect(() => {
+    if (initialSelectedBarId && bars.length > 0) {
+      console.log('🎯 Opening bar from search:', initialSelectedBarId);
+      
+      // Find the bar in the loaded bars
+      const bar = bars.find(b => b.id === initialSelectedBarId);
+      
+      if (bar) {
+        // Select the bar and show card
+        setSelectedBar(bar);
+        setSelectedMarkerId(bar.id);
+        setShowBarCard(true);
+        
+        // Center camera on the bar
+        if (cameraRef.current) {
+          const cam: any = cameraRef.current as any;
+          if (cam?.setCamera) {
+            cam.setCamera({
+              centerCoordinate: [bar.longitude, bar.latitude],
+              zoomLevel: 16,
+              animationDuration: 1000,
+            } as any);
+          }
+        }
+      } else if (initialSelectedBarCoords && initialSelectedBarName) {
+        // Bar not in current list but we have coords, create a temporary bar object
+        const tempBar: Bar = {
+          id: initialSelectedBarId,
+          name: initialSelectedBarName,
+          latitude: initialSelectedBarCoords.latitude,
+          longitude: initialSelectedBarCoords.longitude,
+          address: '',
+          city: '',
+        };
+        
+        setSelectedBar(tempBar);
+        setSelectedMarkerId(initialSelectedBarId);
+        setShowBarCard(true);
+        
+        // Center camera on the coordinates
+        if (cameraRef.current) {
+          const cam: any = cameraRef.current as any;
+          if (cam?.setCamera) {
+            cam.setCamera({
+              centerCoordinate: [initialSelectedBarCoords.longitude, initialSelectedBarCoords.latitude],
+              zoomLevel: 16,
+              animationDuration: 1000,
+            } as any);
+          }
+        }
+      }
+    }
+  }, [initialSelectedBarId, bars, initialSelectedBarCoords, initialSelectedBarName]);
 
   React.useEffect(() => {
     const fetchBars = async () => {

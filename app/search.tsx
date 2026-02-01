@@ -659,6 +659,20 @@ export default function SearchScreen() {
     // Check if this bar is boosted
     const isBoosted = selected3Stable.includes(item.id);
 
+    const handleViewOnMap = (e: any) => {
+      e.stopPropagation(); // Prevent triggering the card press
+      // Navigate to map with bar pre-selected
+      router.push({
+        pathname: '/(protected)/map',
+        params: {
+          selectedBarId: item.id,
+          selectedBarLat: item.latitude,
+          selectedBarLng: item.longitude,
+          selectedBarName: item.name,
+        },
+      });
+    };
+
     return (
       <TouchableOpacity
         style={[
@@ -726,6 +740,15 @@ export default function SearchScreen() {
           {item.address && item.city && (
             <Text style={styles.barAddress}>{item.address}, {item.city}</Text>
           )}
+          
+          {/* View on Map Button */}
+          <TouchableOpacity 
+            style={styles.viewOnMapButton}
+            onPress={handleViewOnMap}
+          >
+            <Ionicons name="map-outline" size={16} color="#007AFF" />
+            <Text style={styles.viewOnMapText}>Ver en el Mapa</Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -1201,6 +1224,25 @@ const styles = StyleSheet.create({
   barAddress: {
     color: '#A3B3CC',
     fontSize: 14,
+    marginBottom: 8,
+  },
+  viewOnMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+    marginTop: 4,
+  },
+  viewOnMapText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   clearFiltersButton: {
     marginTop: 20,
