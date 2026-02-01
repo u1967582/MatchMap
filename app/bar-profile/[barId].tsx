@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,9 +76,100 @@ export default function BarProfileScreen() {
   const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
   const [verificationNotes, setVerificationNotes] = useState<string | null>(null);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any }>({ title: '', content: null });
 
   // Get boost status for countdown
   const { boost, isLoading: boostLoading } = useBarBoost(barId);
+
+  // Functions to show info modals
+  const showManualMatchInfo = () => {
+    setInfoModalContent({
+      title: 'Añadir Partido Manualmente',
+      content: (
+        <View>
+          <Text style={styles.infoModalText}>
+            Esta opción te permite seleccionar y añadir partidos específicos que quieras retransmitir en tu bar.
+          </Text>
+          <Text style={[styles.infoModalText, { marginTop: 12 }]}>
+            Ideal para cuando tienes eventos especiales o partidos concretos que sabes que tus clientes quieren ver.
+          </Text>
+        </View>
+      ),
+    });
+    setInfoModalVisible(true);
+  };
+
+  const showAutoMatchInfo = () => {
+    setInfoModalContent({
+      title: 'Automatizar Retransmisiones',
+      content: (
+        <View>
+          <Text style={styles.infoModalText}>
+            Configura tus equipos y competiciones favoritas para que automáticamente se añadan todos sus partidos a tu calendario de retransmisiones.
+          </Text>
+          <Text style={[styles.infoModalText, { marginTop: 12 }]}>
+            ¡Ahorra tiempo! Una vez configurado, no tendrás que añadir partidos manualmente.
+          </Text>
+        </View>
+      ),
+    });
+    setInfoModalVisible(true);
+  };
+
+  const showBoostInfo = () => {
+    setInfoModalContent({
+      title: '✨ Beneficios del Boost',
+      content: (
+        <View>
+          <Text style={styles.boostMainText}>
+            Aumenta la visibilidad de tu bar y atrae más clientes
+          </Text>
+
+          {/* Beneficios */}
+          <View style={styles.benefitItem}>
+            <View style={styles.benefitIcon}>
+              <Text style={styles.benefitEmoji}>⬆️</Text>
+            </View>
+            <View style={styles.benefitContent}>
+              <Text style={styles.benefitTitle}>Mayor visibilidad en listas</Text>
+              <Text style={styles.benefitDescription}>Tu bar aparece primero en búsquedas y filtros</Text>
+            </View>
+          </View>
+
+          <View style={styles.benefitItem}>
+            <View style={styles.benefitIcon}>
+              <Text style={styles.benefitEmoji}>⭐</Text>
+            </View>
+            <View style={styles.benefitContent}>
+              <Text style={styles.benefitTitle}>Etiqueta destacado</Text>
+              <Text style={styles.benefitDescription}>Badge especial que llama la atención</Text>
+            </View>
+          </View>
+
+          <View style={styles.benefitItem}>
+            <View style={styles.benefitIcon}>
+              <Text style={styles.benefitEmoji}>📈</Text>
+            </View>
+            <View style={styles.benefitContent}>
+              <Text style={styles.benefitTitle}>Prioridad en resultados</Text>
+              <Text style={styles.benefitDescription}>Aparece antes que la competencia</Text>
+            </View>
+          </View>
+
+          {/* Call to action */}
+          <View style={styles.ctaContainer}>
+            <Text style={styles.ctaTitle}>💰 ¡Llena tu bar!</Text>
+            <Text style={styles.ctaSubtitle}>Cada cliente genera ~13€ de beneficio medio</Text>
+            <Text style={styles.ctaDescription}>
+              Una inversión pequeña puede traerte muchos más clientes y aumentar significativamente tus ingresos
+            </Text>
+          </View>
+        </View>
+      ),
+    });
+    setInfoModalVisible(true);
+  };
 
   // Functions to copy to clipboard
   const copyToClipboard = async (text: string, label: string) => {
@@ -433,31 +524,55 @@ export default function BarProfileScreen() {
               </View>
               
               <View style={styles.matchesContainer}>
-                <TouchableOpacity
-                  style={styles.matchButton}
-                  onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
-                >
-                  <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.matchButtonText}>Añadir partido manualmente</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonWrapper}>
+                  <TouchableOpacity
+                    style={styles.matchButton}
+                    onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.matchButtonText}>Añadir partido manualmente</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButtonIntegrated}
+                    onPress={showManualMatchInfo}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color="#A3B3CC" />
+                  </TouchableOpacity>
+                </View>
                 
-                <TouchableOpacity
-                  style={styles.matchButtonOutline}
-                  onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
-                >
-                  <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonWrapper}>
+                  <TouchableOpacity
+                    style={styles.matchButtonOutline}
+                    onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
+                  >
+                    <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButtonIntegrated}
+                    onPress={showAutoMatchInfo}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color="#A3B3CC" />
+                  </TouchableOpacity>
+                </View>
 
                 {/* Promote visibility button (boost style) */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => router.push(`/boost?barId=${barId}` as any)}
-                  style={styles.promoteButton}
-                >
-                  <Ionicons name="flash" size={20} color="#FFD700" />
-                  <Text style={styles.promoteButtonText}>Aumenta la visibilidad de tu bar</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonWrapper}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => router.push(`/boost?barId=${barId}` as any)}
+                    style={styles.promoteButton}
+                  >
+                    <Ionicons name="flash" size={20} color="#FFD700" />
+                    <Text style={styles.promoteButtonText}>Aumenta la visibilidad de tu bar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButtonIntegratedBoost}
+                    onPress={showBoostInfo}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color="#FFD700" />
+                  </TouchableOpacity>
+                </View>
 
                 {/* Boost Countdown - shown when boost is active */}
                 {boost?.isActive && boost?.endAt && (
@@ -1189,6 +1304,52 @@ export default function BarProfileScreen() {
         contentContainerStyle={styles.scrollViewContent}
       />
 
+      {/* Info Modal */}
+      <Modal
+        visible={infoModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setInfoModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setInfoModalVisible(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.modalScrollContent}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{infoModalContent.title}</Text>
+                <TouchableOpacity 
+                  onPress={() => setInfoModalVisible(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Ionicons name="close" size={24} color="#A3B3CC" />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.modalBody}>
+                {infoModalContent.content}
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalOkButton}
+                onPress={() => setInfoModalVisible(false)}
+              >
+                <Text style={styles.modalOkButtonText}>Entendido</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       <BottomTabBar />
     </SafeAreaView>
   );
@@ -1643,48 +1804,39 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   matchButton: {
+    flex: 1,
     backgroundColor: '#1976D2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginBottom: 10,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   matchButtonOutline: {
-    backgroundColor: '#1976D2',  // Fondo sólido azul en lugar de transparente
-    borderWidth: 0,  // Sin borde
+    flex: 1,
+    backgroundColor: '#1976D2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   promoteButton: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',  // Mismo fondo que countdown
-    borderRadius: 10,
+    flex: 1,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.3)',  // Mismo borde que countdown
+    borderRightWidth: 0,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginTop: 12,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1827,5 +1979,180 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  buttonWrapper: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  buttonWithInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  infoButton: {
+    padding: 4,
+    borderRadius: 20,
+    backgroundColor: 'rgba(163, 179, 204, 0.1)',
+  },
+  infoButtonIntegrated: {
+    backgroundColor: '#1565C0',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  infoButtonIntegratedBoost: {
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1A2332',
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalScrollContent: {
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    flex: 1,
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalBody: {
+    marginBottom: 24,
+  },
+  infoModalText: {
+    color: '#E5E7EB',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  boostMainText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  benefitIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  benefitEmoji: {
+    fontSize: 24,
+  },
+  benefitContent: {
+    flex: 1,
+  },
+  benefitTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  benefitDescription: {
+    color: '#A3B3CC',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  ctaContainer: {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    padding: 16,
+    marginTop: 8,
+  },
+  ctaTitle: {
+    color: '#FFD700',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  ctaSubtitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  ctaDescription: {
+    color: '#E5E7EB',
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  modalOkButton: {
+    backgroundColor: '#1976D2',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalOkButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
