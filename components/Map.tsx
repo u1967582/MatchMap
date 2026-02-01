@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Plat
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import SearchBarWithResults from '~/components/SearchBarWithResults';
+import SearchBarWithResults, { SearchBarRef } from '~/components/SearchBarWithResults';
 import BarInfoCard from '~/components/BarInfoCard';
 import BarMapMarker from '~/components/BarMapMarker';
 import FilterModal from '~/components/ui/FilterModal';
@@ -94,6 +94,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   const [cameraZoom, setCameraZoom] = React.useState(15);
   const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
   const cameraRef = React.useRef<MapboxGL.Camera>(null);
+  const searchBarRef = React.useRef<SearchBarRef>(null);
   
   // Filter states
   const [filterModalVisible, setFilterModalVisible] = React.useState(false);
@@ -802,47 +803,85 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
       </MapboxGL.MapView>
 
       {/* Search bar with adjusted right margin for filter button */}
+      {/* Top controls row - Search, Match Filter, and Bar Filter */}
+      <View style={styles.topControlsRow}>
+        {/* Search button */}
+        <TouchableOpacity
+          style={styles.searchButton}
+          onPress={() => searchBarRef.current?.expand()}
+        >
+          <Ionicons name="search" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {/* Match filter button */}
+        <TouchableOpacity
+          style={[
+            styles.matchFilterButton,
+            selectedMatch && styles.matchFilterButtonActive
+          ]}
+          onPress={() => setMatchPickerOpen(true)}
+        >
+          <View style={styles.matchButtonContent}>
+            <Text style={styles.matchButtonEmoji}>⚽</Text>
+            <Text style={[
+              styles.matchButtonText,
+              selectedMatch && styles.matchButtonTextActive,
+              selectedMatch && { flex: 1, textAlign: 'left' }
+            ]}>
+              {selectedMatch 
+                ? `${selectedMatch.home_team?.name || 'Local'} - ${selectedMatch.away_team?.name || 'Visitante'}`
+                : 'Busca tu partido'}
+            </Text>
+          </View>
+          {selectedMatch && (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                setSelectedMatch(null);
+              }}
+              style={styles.matchCloseButton}
+            >
+              <Ionicons name="close" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      
+        {/* Bar filter button - Now with text */}
+        <TouchableOpacity
+          style={[
+            styles.barFilterButton,
+            (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+             selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterButtonActive
+          ]}
+          onPress={() => setFilterModalVisible(true)}
+        >
+          <View style={styles.matchButtonContent}>
+            <Ionicons name="options-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={[
+              styles.matchButtonText,
+              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+               selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.matchButtonTextActive
+            ]}>
+              Filtros de bar
+            </Text>
+          </View>
+          {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+            selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
+            <View style={styles.filterDot} />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Search bar - Opens below the controls */}
       <View style={styles.searchWrapper} pointerEvents="box-none">
         <SearchBarWithResults 
+          ref={searchBarRef}
           value={searchText} 
           onChangeText={handleSearchChange}
           searchResults={searchResults}
           isSearching={isSearching}
           onLocationSelect={handleLocationSelect}
         />
-      </View>
-      
-      {/* Filter buttons row */}
-      <View style={styles.filterButtonsRow}>
-        {/* Match filter button */}
-        <TouchableOpacity
-          style={[
-            styles.filterRowButton,
-            selectedMatch && styles.filterButtonActive
-          ]}
-          onPress={() => setMatchPickerOpen(true)}
-        >
-          <Text style={styles.teamButtonEmoji}>⚽</Text>
-          {selectedMatch && (
-            <View style={styles.filterDot} />
-          )}
-        </TouchableOpacity>
-      
-      {/* Filter button */}
-      <TouchableOpacity
-        style={[
-            styles.filterRowButton,
-          (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-           selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterButtonActive
-        ]}
-        onPress={() => setFilterModalVisible(true)}
-      >
-        <Ionicons name="filter" size={20} color="#FFFFFF" />
-        {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-          selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
-          <View style={styles.filterDot} />
-        )}
-      </TouchableOpacity>
       </View>
 
       {/* Center on user location button */}
@@ -1098,22 +1137,22 @@ const styles = StyleSheet.create({
   },
   searchWrapper: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 130, // Space for filter buttons row (2 buttons + gaps)
-    bottom: 0,
+    top: Platform.OS === 'ios' ? 140 : 120, // Below the top controls
+    left: 20,
+    right: 20,
     zIndex: 999,
   },
-  filterButtonsRow: {
+  topControlsRow: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40, // Match SearchBar positioning
+    top: Platform.OS === 'ios' ? 80 : 60,
+    left: 20,
     right: 20,
     flexDirection: 'row',
     gap: 10,
     zIndex: 1000,
   },
-  filterRowButton: {
-    backgroundColor: '#3A4A5C',
+  searchButton: {
+    backgroundColor: '#243243',
     borderRadius: 12,
     width: 50,
     height: 50,
@@ -1122,11 +1161,74 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  matchFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#243243',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 50,
+    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  matchFilterButtonActive: {
+    backgroundColor: '#1976D2',
+  },
+  barFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#243243',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 50,
+    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    position: 'relative',
+  },
+  matchButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  matchButtonEmoji: {
+    fontSize: 16,
+  },
+  matchButtonText: {
+    color: '#A3B3CC',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  matchButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  matchCloseButton: {
+    marginLeft: 8,
+    padding: 4,
   },
   filterButtonActive: {
     backgroundColor: '#1976D2',

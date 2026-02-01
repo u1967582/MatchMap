@@ -1,6 +1,6 @@
 // components/SearchBarWithResults.tsx
-import { View, TextInput, StyleSheet, Platform, FlatList, TouchableOpacity, Text } from 'react-native';
-import { useCallback } from 'react';
+import { View, TextInput, StyleSheet, Platform, FlatList, TouchableOpacity, Text, Animated } from 'react-native';
+import { useCallback, useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
 
@@ -20,6 +20,11 @@ interface SearchResult {
   };
 }
 
+export interface SearchBarRef {
+  expand: () => void;
+  collapse: () => void;
+}
+
 interface SearchBarWithResultsProps {
   value: string;
   onChangeText: (text: string) => void;
@@ -28,17 +33,64 @@ interface SearchBarWithResultsProps {
   searchResults: SearchResult[];
   isSearching: boolean;
   onLocationSelect: (location: SearchResult) => void;
+  onExpandChange?: (isExpanded: boolean) => void;
 }
 
-const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({ 
+const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>(({ 
   value, 
   onChangeText, 
   placeholder = 'Buscar ciudad, lugar...', 
   editable = true,
   searchResults,
   isSearching,
-  onLocationSelect
-}) => {
+  onLocationSelect,
+  onExpandChange
+}, ref) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const widthAnim = useRef(new Animated.Value(0)).current;
+  
+  const handleCollapse = useCallback(() => {
+    setIsExpanded(false);
+    onExpandChange?.(false);
+    onChangeText('');
+    inputRef.current?.blur();
+    Animated.spring(widthAnim, {
+      toValue: 0,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 7,
+    }).start();
+  }, [onChangeText, widthAnim, onExpandChange]);
+  
+  // Auto-colapsar desactivado - se controla manualmente desde el componente padre
+  // useEffect(() => {
+  //   if (value.length === 0 && isExpanded && searchResults.length === 0) {
+  //     const timer = setTimeout(() => {
+  //       handleCollapse();
+  //     }, 200);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [value, searchResults.length, isExpanded, handleCollapse]);
+  
+  const handleExpand = useCallback(() => {
+    setIsExpanded(true);
+    onExpandChange?.(true);
+    Animated.spring(widthAnim, {
+      toValue: 1,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 7,
+    }).start(() => {
+      inputRef.current?.focus();
+    });
+  }, [widthAnim, onExpandChange]);
+
+  // Expose expand/collapse methods to parent
+  useImperativeHandle(ref, () => ({
+    expand: handleExpand,
+    collapse: handleCollapse
+  }), [handleExpand, handleCollapse]);
   
   const handleTextChange = useCallback((text: string) => {
     onChangeText(text);
@@ -46,7 +98,13 @@ const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({
 
   const handleClear = useCallback(() => {
     onChangeText('');
+    inputRef.current?.focus();
   }, [onChangeText]);
+
+  const handleLocationSelect = useCallback((location: SearchResult) => {
+    onLocationSelect(location);
+    handleCollapse();
+  }, [onLocationSelect, handleCollapse]);
 
   const renderSearchResult = useCallback(({ item }: { item: SearchResult }) => {
     // Determinar el icono según el tipo de lugar
@@ -86,7 +144,7 @@ const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({
     return (
       <TouchableOpacity
         style={styles.resultItem}
-        onPress={() => onLocationSelect(item)}
+        onPress={() => handleLocationSelect(item)}
       >
         <Ionicons name={iconName as any} size={16} color="#A3B3CC" style={styles.resultIcon} />
         <View style={styles.resultTextContainer}>
@@ -99,11 +157,27 @@ const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({
         </View>
       </TouchableOpacity>
     );
-  }, [onLocationSelect]);
+  }, [handleLocationSelect]);
+
+  // Interpolación de ancho
+  const animatedWidth = widthAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 350], // De 0px (oculto) a 350px (barra completa)
+  });
+
+  const animatedOpacity = widthAnim.interpolate({
+    inputRange: [0, 0.1, 1],
+    outputRange: [0, 1, 1], // Fade in rápido
+  });
+
+  // No mostrar nada si está colapsado
+  if (!isExpanded) {
+    return null;
+  }
 
   return (
     <View style={styles.searchContainer}>
-      <View style={styles.inputContainer}>
+      <Animated.View style={[styles.inputContainer, { width: animatedWidth, opacity: animatedOpacity }]}>
         <Ionicons 
           name="search" 
           size={20} 
@@ -111,6 +185,7 @@ const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({
           style={styles.searchIcon} 
         />
         <TextInput
+          ref={inputRef}
           style={styles.searchInput}
           placeholder={placeholder}
           placeholderTextColor="#8E8E93"
@@ -122,16 +197,24 @@ const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({
           returnKeyType="search"
           clearButtonMode="never"
         />
-        {value.length > 0 && (
-          <Ionicons 
-            name="close-circle" 
-            size={20} 
-            color="#8E8E93" 
-            style={styles.clearIcon}
-            onPress={handleClear}
-          />
+        {value.length > 0 ? (
+          <TouchableOpacity onPress={handleClear} style={styles.iconButton}>
+            <Ionicons 
+              name="close-circle" 
+              size={20} 
+              color="#8E8E93" 
+            />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={handleCollapse} style={styles.iconButton}>
+            <Ionicons 
+              name="close" 
+              size={20} 
+              color="#8E8E93" 
+            />
+          </TouchableOpacity>
         )}
-      </View>
+      </Animated.View>
 
       {/* Search Results */}
       {(searchResults.length > 0 || isSearching) && value.length > 0 && (
@@ -154,23 +237,23 @@ const SearchBarWithResults: React.FC<SearchBarWithResultsProps> = ({
       )}
     </View>
   );
-};
+});
+
+SearchBarWithResults.displayName = 'SearchBarWithResults';
+
+export default memo(SearchBarWithResults);
 
 const styles = StyleSheet.create({
   searchContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
-    left: 20,
-    right: 20,
-    zIndex: 1000,
+    width: '100%',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#3A4A5C',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    borderRadius: 25,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     minHeight: 50,
     shadowColor: '#000',
     shadowOffset: {
@@ -181,6 +264,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  collapsedButton: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   searchIcon: {
     marginRight: 12,
   },
@@ -190,7 +279,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     paddingVertical: 0,
   },
-  clearIcon: {
+  iconButton: {
     marginLeft: 8,
     padding: 4,
   },
@@ -199,6 +288,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 8,
     maxHeight: 300,
+    width: 350, // Match the expanded search bar width
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
