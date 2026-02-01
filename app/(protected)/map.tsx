@@ -1,4 +1,4 @@
-import { Stack, useFocusEffect } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { View, StyleSheet, StatusBar, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect } from 'react';
@@ -7,6 +7,14 @@ import BottomTabBar from '~/components/ui/BottomTabBar';
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams();
+  
+  // Extract bar selection params
+  const selectedBarId = params.selectedBarId as string | undefined;
+  const selectedBarLat = params.selectedBarLat ? parseFloat(params.selectedBarLat as string) : undefined;
+  const selectedBarLng = params.selectedBarLng ? parseFloat(params.selectedBarLng as string) : undefined;
+  const selectedBarName = params.selectedBarName as string | undefined;
+  
   // Set status bar style when component mounts
   useEffect(() => {
     StatusBar.setBarStyle('light-content', true);
@@ -24,7 +32,14 @@ export default function MapScreen() {
           animation: 'none',
         }} 
       />
-      <Map />
+      <Map 
+        initialSelectedBarId={selectedBarId}
+        initialSelectedBarCoords={selectedBarLat && selectedBarLng ? {
+          latitude: selectedBarLat,
+          longitude: selectedBarLng
+        } : undefined}
+        initialSelectedBarName={selectedBarName}
+      />
       <BottomTabBar />
     </View>
   );

@@ -30,6 +30,8 @@ interface UserBar {
   name: string;
   description?: string;
   image_url?: string;
+  verification_status?: 'pending' | 'approved' | 'rejected' | null;
+  verification_notes?: string | null;
 }
 
 interface SettingsRowProps {
@@ -88,36 +90,78 @@ export default function ProfileScreen() {
         is_super_user: profileData?.is_super_user || false,
       });
 
-      // Fetch user's bars using the bar_id from users table
+      // Fetch user's bars:
+      // 1) Prefer users.bar_id (legacy linkage)
+      // 2) Fallback to bars.owner_id = auth.uid() (more reliable)
+      let barsToShow: UserBar[] = [];
+
+      const formatBar = (barData: any): UserBar => ({
+        id: barData.id,
+        name: barData.name,
+        description: barData.description,
+        verification_status: barData.verification_status ?? null,
+        verification_notes: barData.verification_notes ?? null,
+        image_url:
+          barData.bar_images && barData.bar_images.length > 0
+            ? barData.bar_images
+                .sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))[0]
+                ?.image_url
+            : undefined,
+      });
+
       if (profileData?.bar_id) {
         const { data: barData, error: barError } = await supabase
           .from('bars')
-          .select(`
+          .select(
+            `
             id,
             name,
             description,
+            verification_status,
+            verification_notes,
             bar_images(image_url, image_order)
-          `)
+          `,
+          )
           .eq('id', profileData.bar_id)
           .single();
 
         if (barError) {
-          console.error('Error fetching user bar:', barError);
+          console.error('Error fetching user bar by users.bar_id:', barError);
         } else if (barData) {
-          const formattedBar = {
-            id: barData.id,
-            name: barData.name,
-            description: barData.description,
-            image_url: barData.bar_images && barData.bar_images.length > 0 
-              ? barData.bar_images.sort((a, b) => (a.image_order || 0) - (b.image_order || 0))[0]?.image_url
-              : undefined,
-          };
-          setUserBars([formattedBar]);
-          
-          // Fetch plan information for the bar
-          const plan = await getBarPlanInfo(profileData.bar_id);
-          setPlanName('Pro');
+          barsToShow = [formatBar(barData)];
         }
+      }
+
+      if (barsToShow.length === 0) {
+        const { data: ownedBars, error: ownedErr } = await supabase
+          .from('bars')
+          .select(
+            `
+            id,
+            name,
+            description,
+            verification_status,
+            verification_notes,
+            bar_images(image_url, image_order)
+          `,
+          )
+          .eq('owner_id', authUser.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (ownedErr) {
+          console.error('Error fetching user bars by owner_id:', ownedErr);
+        } else if (ownedBars && ownedBars.length > 0) {
+          barsToShow = ownedBars.map(formatBar);
+        }
+      }
+
+      setUserBars(barsToShow);
+          
+      // Plan info (si hay bar)
+      if (barsToShow.length > 0) {
+        await getBarPlanInfo(barsToShow[0].id);
+          setPlanName('Pro');
       } else {
         setPlanName('No asignado');
       }
@@ -163,8 +207,8 @@ export default function ProfileScreen() {
     router.push('/edit-profile' as any);
   }, [router]);
 
-  const handleNotifications = useCallback(() => {
-    router.push('/notifications' as any);
+  const handleContactSupport = useCallback(() => {
+    router.push('/contact-support' as any);
   }, [router]);
 
   const handlePrivacy = useCallback(() => {
@@ -275,7 +319,79 @@ export default function ProfileScreen() {
                     )}
                   </View>
                   <View style={styles.barInfo}>
-                    <Text style={styles.barName}>{bar.name}</Text>
+                    <View style={styles.barHeaderRow}>
+                      <Text style={styles.barName} numberOfLines={1}>
+                        {bar.name}
+                      </Text>
+
+                      {/* Verification status */}
+                      {bar.verification_status ? (
+                        <View
+                          style={[
+                            styles.verificationPill,
+                            bar.verification_status === 'approved'
+                              ? styles.verificationPillApproved
+                              : bar.verification_status === 'rejected'
+                                ? styles.verificationPillRejected
+                                : styles.verificationPillPending,
+                          ]}
+                        >
+                          <Ionicons
+                            name={
+                              bar.verification_status === 'approved'
+                                ? 'checkmark-circle-outline'
+                                : bar.verification_status === 'rejected'
+                                  ? 'close-circle-outline'
+                                  : 'time-outline'
+                            }
+                            size={13}
+                            color={
+                              bar.verification_status === 'approved'
+                                ? '#10B981'
+                                : bar.verification_status === 'rejected'
+                                  ? '#EF4444'
+                                  : '#FFD700'
+                            }
+                          />
+                          <Text
+                            style={[
+                              styles.verificationPillText,
+                              bar.verification_status === 'approved'
+                                ? styles.verificationPillTextApproved
+                                : bar.verification_status === 'rejected'
+                                  ? styles.verificationPillTextRejected
+                                  : styles.verificationPillTextPending,
+                            ]}
+                          >
+                            {bar.verification_status === 'approved'
+                              ? 'Verificado'
+                              : bar.verification_status === 'rejected'
+                                ? 'Rechazado'
+                                : 'Pendiente'}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {bar.verification_status === 'pending' ? (
+                      <Text style={styles.verificationHint}>
+                        Tu bar aparecerá en el mapa cuando lo aprobemos.
+                      </Text>
+                    ) : null}
+
+                    {bar.verification_status === 'rejected' ? (
+                      <Text style={styles.verificationHint}>
+                        Revisa el motivo y actualiza la información.
+                      </Text>
+                    ) : null}
+
+                    {bar.verification_status === 'rejected' && bar.verification_notes ? (
+                      <View style={styles.verificationNotesBox}>
+                        <Ionicons name="information-circle-outline" size={14} color="#A3B3CC" />
+                        <Text style={styles.verificationNotesText}>{bar.verification_notes}</Text>
+                      </View>
+                    ) : null}
+
                     <View style={styles.viewProfileButton}>
                       <Text style={styles.viewProfileButtonText}>Ver Perfil del Bar</Text>
                       <Ionicons name="chevron-forward" size={16} color="#1976D2" />
@@ -307,6 +423,30 @@ export default function ProfileScreen() {
                 Pre-registra un bar para que su propietario lo reclame después
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.coldRegisterButton, styles.verifyBarsButton]} 
+              onPress={() => router.push('/bar-verification-admin' as any)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="shield-checkmark-outline" size={24} color="#10B981" />
+              <Text style={styles.coldRegisterButtonText}>Verificar Bares</Text>
+              <Text style={styles.coldRegisterSubtext}>
+                Aprobar o rechazar bares pendientes de verificación
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.coldRegisterButton, styles.supportTicketsButton]} 
+              onPress={() => router.push('/support-admin' as any)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="chatbubbles-outline" size={24} color="#F59E0B" />
+              <Text style={styles.coldRegisterButtonText}>Gestionar Tickets de Soporte</Text>
+              <Text style={styles.coldRegisterSubtext}>
+                Ver y responder tickets de usuarios
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -321,7 +461,7 @@ export default function ProfileScreen() {
           <View style={styles.settingsContainer}>
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
             <SettingsRow title="Preguntas Frequentes" onPress={handlePrivacy} />
-            <SettingsRow title="Contactar con Soporte" onPress={handleNotifications} />
+            <SettingsRow title="Soporte y Tickets" onPress={handleContactSupport} />
             <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast />
           </View>
         </View>
@@ -475,6 +615,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: 12,
   },
   barImageContainer: {
@@ -497,11 +639,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  barHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 6,
+  },
   barName: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 4,
+    flex: 1,
   },
   viewProfileButton: {
     flexDirection: 'row',
@@ -681,5 +830,73 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 18,
+  },
+  supportTicketsButton: {
+    borderColor: '#F59E0B',
+    shadowColor: '#F59E0B',
+    marginTop: 12,
+  },
+  verifyBarsButton: {
+    marginTop: 12,
+    borderColor: '#10B981',
+    shadowColor: '#10B981',
+  },
+  verificationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  verificationPillPending: {
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderColor: 'rgba(255, 215, 0, 0.25)',
+  },
+  verificationPillApproved: {
+    backgroundColor: 'rgba(16, 185, 129, 0.10)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+  },
+  verificationPillRejected: {
+    backgroundColor: 'rgba(239, 68, 68, 0.10)',
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
+  verificationPillText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  verificationPillTextPending: {
+    color: '#FFD700',
+  },
+  verificationPillTextApproved: {
+    color: '#10B981',
+  },
+  verificationPillTextRejected: {
+    color: '#EF4444',
+  },
+  verificationHint: {
+    marginBottom: 8,
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  verificationNotesBox: {
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  verificationNotesText: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 12,
+    lineHeight: 16,
+    flex: 1,
   },
 }); 

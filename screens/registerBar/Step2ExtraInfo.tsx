@@ -15,28 +15,28 @@ interface SelectOption {
 
 const Step2ExtraInfo: React.FC = () => {
   const router = useRouter();
-  const { languageIds, foodTypeIds, featureIds, setField } = useBarRegisterStore();
+  const { tvFeatureIds, foodTypeIds, featureIds, setField } = useBarRegisterStore();
   const [loading, setLoading] = useState(false);
-  const [languages, setLanguages] = useState<SelectOption[]>([]);
+  const [tvFeatures, setTvFeatures] = useState<SelectOption[]>([]);
   const [foodTypes, setFoodTypes] = useState<SelectOption[]>([]);
   const [features, setFeatures] = useState<SelectOption[]>([]);
 
-  // Fetch languages from database
-  const fetchLanguages = useCallback(async () => {
+  // Fetch TV features from database
+  const fetchTvFeatures = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('languages')
+        .from('bar_tv_features')
         .select('id, name')
         .order('name');
 
       if (error) {
-        console.error('Error fetching languages:', error);
+        console.error('Error fetching TV features:', error);
         return;
       }
 
-      setLanguages(data?.map(lang => ({ id: lang.id.toString(), label: lang.name })) || []);
+      setTvFeatures(data?.map(feat => ({ id: feat.id.toString(), label: feat.name })) || []);
     } catch (error) {
-      console.error('Error fetching languages:', error);
+      console.error('Error fetching TV features:', error);
     }
   }, []);
 
@@ -83,7 +83,7 @@ const Step2ExtraInfo: React.FC = () => {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
-        fetchLanguages(),
+        fetchTvFeatures(),
         fetchFoodTypes(),
         fetchFeatures(),
       ]);
@@ -91,7 +91,7 @@ const Step2ExtraInfo: React.FC = () => {
     };
 
     loadData();
-  }, [fetchLanguages, fetchFoodTypes, fetchFeatures]);
+  }, [fetchTvFeatures, fetchFoodTypes, fetchFeatures]);
 
   const handleNext = () => {
     const query = useBarRegisterStore.getState().isAutoPreRegister ? '?mode=auto_pre_register' : '';
@@ -132,10 +132,10 @@ const Step2ExtraInfo: React.FC = () => {
             </Text>
 
             <CheckboxGroup
-              label="Idiomas que se hablan"
-              options={languages}
-              selectedIds={languageIds}
-              onSelectionChange={(ids) => setField('languageIds', ids)}
+              label="Características de TV"
+              options={tvFeatures}
+              selectedIds={tvFeatureIds}
+              onSelectionChange={(ids) => setField('tvFeatureIds', ids)}
             />
 
             <CheckboxGroup
