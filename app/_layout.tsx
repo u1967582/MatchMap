@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { BoostSelectionProvider } from '~/context/BoostSelectionContext';
+import { RevenueCatProvider } from '~/contexts/RevenueCatContext';
 import { supabase } from '~/utils/supabase';
 
 export default function Layout() {
@@ -145,17 +146,19 @@ export default function Layout() {
 
   return (
     <SafeAreaProvider>
-      <BoostSelectionProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            presentation: 'card',
-            animation: 'slide_from_right',
-            contentStyle: { backgroundColor: '#1C2A3A' }
-          }}
-        />
-      </BoostSelectionProvider>
+      <RevenueCatProvider>
+        <BoostSelectionProvider>
+          <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              presentation: 'card',
+              animation: 'slide_from_right',
+              contentStyle: { backgroundColor: '#1C2A3A' }
+            }}
+          />
+        </BoostSelectionProvider>
+      </RevenueCatProvider>
     </SafeAreaProvider>
   );
 }

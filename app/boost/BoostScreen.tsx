@@ -5,7 +5,9 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BoostCard from '~/components/boost/BoostCard';
 import { calculateDiscountBadge } from '~/lib/boost/discount';
-import { createCheckoutSession } from '~/lib/boost/boostApi';
+import Paywall from '~/components/revenuecat/Paywall';
+import CustomerCenter from '~/components/revenuecat/CustomerCenter';
+import { useRevenueCat } from '~/contexts/RevenueCatContext';
 
 type PlanKey = '7d' | '1m' | '1y';
 
@@ -49,6 +51,9 @@ const BoostScreen: React.FC = () => {
   const { barId } = useLocalSearchParams<{ barId: string }>();
   const router = useRouter();
   const [loadingKey, setLoadingKey] = useState<PlanKey | null>(null);
+  const [paywallVisible, setPaywallVisible] = useState(false);
+  const [customerCenterVisible, setCustomerCenterVisible] = useState(false);
+  const { hasActiveBoost, refreshCustomerInfo } = useRevenueCat();
 
   const discounts = useMemo(() => ({
     '1m': calculateDiscountBadge('1m'),
@@ -60,17 +65,19 @@ const BoostScreen: React.FC = () => {
       Alert.alert('Error', 'Falta el identificador del bar.');
       return;
     }
-    try {
-      setLoadingKey(plan);
-      const { url } = await createCheckoutSession({ barId, plan });
-      if (!url) throw new Error('No se recibió URL de checkout');
-      // La función abre la URL internamente; si devolvemos una, abrimos fallback aquí
-    } catch (err) {
-      console.error('Error iniciando checkout:', err);
-      Alert.alert('Error', 'No se pudo iniciar el pago. Inténtalo de nuevo.');
-    } finally {
-      setLoadingKey(null);
-    }
+    
+    // Open RevenueCat paywall
+    setPaywallVisible(true);
+  };
+
+  const handlePurchaseComplete = async () => {
+    // Refresh customer info after purchase
+    await refreshCustomerInfo();
+    Alert.alert(
+      '¡Boost Activado!',
+      'Tu bar ahora tiene mayor visibilidad. Los clientes te encontrarán más fácilmente.',
+      [{ text: 'Genial!', onPress: () => router.back() }]
+    );
   };
 
   return (
@@ -87,10 +94,25 @@ const BoostScreen: React.FC = () => {
               Invierte en visibilidad y recupera tu inversión rápidamente
             </Text>
           </View>
+          {hasActiveBoost && (
+            <TouchableOpacity 
+              onPress={() => setCustomerCenterVisible(true)}
+              style={styles.customerCenterButton}
+            >
+              <Ionicons name="person-circle-outline" size={28} color="#10B981" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {hasActiveBoost && (
+          <View style={styles.activeBoostBanner}>
+            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+            <Text style={styles.activeBoostText}>Boost Activo</Text>
+          </View>
+        )}
+
         {PLANS.map(p => (
           <BoostCard
             key={p.key}
@@ -146,6 +168,17 @@ const BoostScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
+
+      <Paywall
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+        onPurchaseComplete={handlePurchaseComplete}
+      />
+
+      <CustomerCenter
+        visible={customerCenterVisible}
+        onClose={() => setCustomerCenterVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -236,7 +269,26 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 12,
     lineHeight: 16,
-  }
+  },
+  customerCenterButton: {
+    padding: 4,
+  },
+  activeBoostBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    gap: 12,
+  },
+  activeBoostText: {
+    color: '#10B981',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });
 
 

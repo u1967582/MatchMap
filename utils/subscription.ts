@@ -33,10 +33,10 @@ export interface UserSubscription {
   bar_id?: string;
 }
 
-// Available subscription plans (debe coincidir con los IDs de Stripe)
+// Available subscription plans (IDs no longer reference payment provider)
 export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
   pro_monthly: {
-    id: 'price_1RvGlr7hGI6XwPtaE9d03BfI',
+    id: 'pro_monthly',
     name: 'Pro Bar - Mensual',
     price: 9.99,
     currency: 'EUR',
@@ -56,7 +56,7 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     }
   },
   pro_yearly: {
-    id: 'price_1RvGlr7hGI6XwPta032XCAwP',
+    id: 'pro_yearly',
     name: 'Pro Bar - Anual',
     price: 79.99,
     currency: 'EUR',
@@ -78,11 +78,10 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
 };
 
 /**
- * Get plan details by Stripe price ID
+ * Get plan details by plan ID
  */
-export function getPlanByPriceId(priceId: string): SubscriptionPlan | null {
-  const plan = Object.values(SUBSCRIPTION_PLANS).find(plan => plan.id === priceId);
-  return plan || null;
+export function getPlanById(planId: string): SubscriptionPlan | null {
+  return SUBSCRIPTION_PLANS[planId] || null;
 }
 
 /**
