@@ -79,11 +79,15 @@
         "UIViewControllerBasedStatusBarAppearance": false,
         "LSApplicationQueriesSchemes": [
           "googlegmail",
+          "googlemail",
+          "googlegmail",
           "googlemail"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#1C2A3A",
@@ -106,7 +110,10 @@
               "host": "*"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
