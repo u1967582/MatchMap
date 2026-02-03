@@ -6,8 +6,12 @@ import Purchases, {
 } from 'react-native-purchases';
 import { Platform } from 'react-native';
 
-// RevenueCat API Keys
-const REVENUECAT_API_KEY = 'test_sMBliApmNvBxEUAAIamKYkUFExu';
+// RevenueCat API Keys - Use environment variable with fallback
+const REVENUECAT_API_KEY = Platform.select({
+  android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || 'goog_HcNKJszQnkNPgLUjQv0qgKsXjqj',
+  ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || 'test_sMBliApmNvBxEUAAIamKYkUFExu',
+  default: 'test_sMBliApmNvBxEUAAIamKYkUFExu',
+}) as string;
 
 // Entitlement identifiers
 export const ENTITLEMENTS = {
