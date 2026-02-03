@@ -5,7 +5,6 @@ interface Subscription {
   id: string;
   bar_id: string;
   user_id: string;
-  stripe_subscription_id: string;
   status: 'active' | 'canceled' | 'past_due' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'trialing';
   plan_type: 'pro_monthly' | 'pro_yearly' | 'elite_monthly' | 'elite_yearly';
   start_date: string;

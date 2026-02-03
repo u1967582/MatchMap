@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '~/utils/supabase';
-import * as Linking from 'expo-linking';
 
 interface SubscriptionPlan {
   id: string;
@@ -20,10 +19,10 @@ interface SubscriptionPlan {
   };
 }
 
-// Planes disponibles (debe coincidir con los IDs de Stripe)
+// Plans available - pricing maintained for reference (RevenueCat will handle actual purchases)
 const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
   pro_monthly: {
-    id: 'price_1RvGlr7hGI6XwPtaE9d03BfI', // ✅ ACTUALIZADO
+    id: 'pro_monthly',
     name: 'Pro Bar - Mensual',
     price: 9.99,
     currency: 'EUR',
@@ -36,7 +35,7 @@ const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     }
   },
   pro_yearly: {
-    id: 'price_1RvGlr7hGI6XwPta032XCAwP', // ✅ ACTUALIZADO
+    id: 'pro_yearly',
     name: 'Pro Bar - Anual',
     price: 79.99,
     currency: 'EUR',
@@ -49,7 +48,7 @@ const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     }
   },
   elite_monthly: {
-    id: 'price_1RvGmN7hGI6XwPtaye2UkCso', // ✅ ACTUALIZADO
+    id: 'elite_monthly',
     name: 'Elite Bar - Mensual',
     price: 19.99,
     currency: 'EUR',
@@ -62,7 +61,7 @@ const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     }
   },
   elite_yearly: {
-    id: 'price_1RvGmN7hGI6XwPta96F6JX70', // ✅ ACTUALIZADO
+    id: 'elite_yearly',
     name: 'Elite Bar - Anual',
     price: 149.99,
     currency: 'EUR',
@@ -109,36 +108,12 @@ export default function SubscriptionPlans() {
       return;
     }
 
-    try {
-      setIsProcessing(true);
-
-      console.log('🛒 Starting subscription for plan:', plan.name);
-      console.log('👤 User:', user.id);
-      console.log('🏪 Bar:', barId);
-
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: { 
-          user_id: user.id, 
-          price_id: plan.id,
-          bar_id: barId // Incluir bar_id para suscripción enlazada
-        },
-      });
-      
-      if (error) throw error;
-
-      console.log('✅ Checkout session created:', data);
-
-      // Abrir Stripe Checkout
-      const checkoutUrl = data?.url;
-      if (checkoutUrl) {
-        await Linking.openURL(checkoutUrl);
-      }
-    } catch (error) {
-      console.error('Failed to create checkout session:', error);
-      Alert.alert('Error', 'No se pudo iniciar el proceso de suscripción. Inténtalo de nuevo.');
-    } finally {
-      setIsProcessing(false);
-    }
+    // Payments temporarily unavailable - preparing for RevenueCat integration
+    Alert.alert(
+      'Suscripciones temporalmente no disponibles',
+      'Estamos actualizando nuestro sistema de suscripciones para ofrecerte una mejor experiencia. Esta función estará disponible muy pronto.',
+      [{ text: 'Entendido', style: 'default' }]
+    );
   };
 
   const formatPrice = (plan: SubscriptionPlan): string => {
