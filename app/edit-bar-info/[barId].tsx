@@ -316,6 +316,17 @@ export default function EditBarInfoScreen() {
         Alert.alert('Límite alcanzado', `Se permiten hasta ${barImagesLimit} imágenes del bar.`);
         return;
       }
+
+      // 🔥 FIX: Solicitar permisos primero
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permiso denegado',
+          'Se necesita acceso a la galería para seleccionar imágenes.'
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -339,6 +350,17 @@ export default function EditBarInfoScreen() {
         Alert.alert('Límite alcanzado', `Se permiten hasta ${menuImagesLimit} imágenes del menú.`);
         return;
       }
+
+      // 🔥 FIX: Solicitar permisos primero
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permiso denegado',
+          'Se necesita acceso a la galería para seleccionar imágenes.'
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -360,21 +382,30 @@ export default function EditBarInfoScreen() {
     try {
       const fileName = `bar-${barId}-${imageType}-${Date.now()}.jpg`;
       
-      // Convert URI to Blob
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
+      // 🔥 FIX: Usar FormData en lugar de Blob (funciona mejor en React Native)
+      const fileUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
+      
+      // Crear FormData con la imagen
+      const formData = new FormData();
+      formData.append('file', {
+        uri: fileUri,
+        type: 'image/jpeg',
+        name: fileName,
+      } as any);
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('bar-images')
-        .upload(fileName, blob, {
+        .upload(fileName, formData as any, {
           contentType: 'image/jpeg',
         });
 
       if (uploadError) {
-        console.error('Error uploading image:', uploadError);
-        Alert.alert('Error', 'No se pudo subir la imagen');
+        console.error('❌ Error uploading image:', uploadError);
+        Alert.alert('Error', `No se pudo subir la imagen: ${uploadError.message}`);
         return;
       }
+
+      console.log('✅ Upload successful:', uploadData);
 
       const { data: { publicUrl } } = supabase.storage
         .from('bar-images')
@@ -398,24 +429,24 @@ export default function EditBarInfoScreen() {
         .single();
 
       if (insertError) {
-        console.error('Error inserting image:', insertError);
-        Alert.alert('Error', 'No se pudo guardar la imagen');
+        console.error('❌ Error inserting image:', insertError);
+        Alert.alert('Error', `No se pudo guardar la imagen: ${insertError.message}`);
         return;
       }
 
       // Update local state
       if (imageType === 'bar') {
         setBarImages(prev => [...prev, newImage]);
-        console.log('📸 Bar image added:', newImage.id);
+        console.log('✅ Bar image added:', newImage.id);
       } else {
         setMenuImages(prev => [...prev, newImage]);
-        console.log('🍽️ Menu image added:', newImage.id);
+        console.log('✅ Menu image added:', newImage.id);
       }
 
       Alert.alert('Éxito', `${imageType === 'bar' ? 'Imagen del bar' : 'Imagen del menú'} añadida correctamente`);
     } catch (error) {
-      console.error('Error processing image:', error);
-      Alert.alert('Error', 'No se pudo procesar la imagen');
+      console.error('❌ Error processing image:', error);
+      Alert.alert('Error', `No se pudo procesar la imagen: ${error}`);
     }
   };
 

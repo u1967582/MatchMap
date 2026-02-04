@@ -65,10 +65,24 @@
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://hmtfxpihkoisncglllmq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtdGZ4cGloa29pc25jZ2xsbW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0Nzg1MjAsImV4cCI6MjA2NzA1NDUyMH0.BN3SSwAQUX2o4dHVilCzsdKFfOdcXjznz6LPnW_ECIY",
+        "EXPO_PUBLIC_FUNCTIONS_URL": "https://hmtfxpihkoisncglllmq.functions.supabase.co",
+        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HcNKJszQnkNPgLUjQv0qgKsXjqj",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_YOUR_IOS_API_KEY_HERE"
+      }
+    },
+    "production-ios": {
+      "distribution": "store",
+      "ios": {
+        "autoIncrement": true
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://hmtfxpihkoisncglllmq.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtdGZ4cGloa29pc25jZ2xsbG1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0Nzg1MjAsImV4cCI6MjA2NzA1NDUyMH0.BN3SSwAQUX2o4dHVilCzsdKFfOdcXjznz6LPnW_ECIY",
         "EXPO_PUBLIC_FUNCTIONS_URL": "https://hmtfxpihkoisncglllmq.functions.supabase.co",
         "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w",
-        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_HcNKJszQnkNPgLUjQv0qgKsXjqj"
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_YOUR_IOS_API_KEY_HERE"
       }
     }
   }

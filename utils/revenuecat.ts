@@ -18,9 +18,12 @@ export const ENTITLEMENTS = {
   BOOST_ACTIVE: 'boost_active',
 } as const;
 
-// Product identifiers
+// Product identifiers - Must match App Store Connect + RevenueCat
 export const PRODUCT_IDS = {
   LIFETIME: 'lifetime',
+  BOOST_7D: 'boost_7d',
+  BOOST_1M: 'boost_1m',
+  BOOST_1Y: 'boost_1y',
 } as const;
 
 /**
