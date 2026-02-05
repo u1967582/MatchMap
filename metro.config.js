@@ -5,4 +5,11 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
+// Deshabilitar el serializer personalizado de Expo que causa problemas
+// Esto soluciona el error: "The 'to' argument must be of type string. Received undefined"
+config.serializer = {
+  ...config.serializer,
+  customSerializer: undefined,
+};
+
 module.exports = config;
