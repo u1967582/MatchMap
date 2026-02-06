@@ -20,12 +20,7 @@
         }
       ],
       "expo-web-browser",
-      [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsVersion": "10.18.3"
-        }
-      ],
+      "@rnmapbox/maps",
       [
         "expo-location",
         {
