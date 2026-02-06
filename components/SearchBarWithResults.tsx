@@ -199,10 +199,10 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
         />
         {value.length > 0 ? (
           <TouchableOpacity onPress={handleClear} style={styles.iconButton}>
-            <Ionicons 
-              name="close-circle" 
-              size={20} 
-              color="#8E8E93" 
+          <Ionicons 
+            name="close-circle" 
+            size={20} 
+            color="#8E8E93" 
             />
           </TouchableOpacity>
         ) : (

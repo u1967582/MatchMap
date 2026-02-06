@@ -13,12 +13,17 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "asyncRoutes": false
+        }
+      ],
       "expo-web-browser",
       [
         "@rnmapbox/maps",
         {
-          "RNMapboxMapsVersion": "10.18.2"
+          "RNMapboxMapsVersion": "11.0.0"
         }
       ],
       [
@@ -43,7 +48,8 @@
           "ios": {
             "infoPlist": {
               "UIViewControllerBasedStatusBarAppearance": false
-            }
+            },
+            "enableBitcode": false
           }
         }
       ],

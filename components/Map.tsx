@@ -847,14 +847,14 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
         </TouchableOpacity>
       
         {/* Bar filter button - Now with text */}
-        <TouchableOpacity
-          style={[
+      <TouchableOpacity
+        style={[
             styles.barFilterButton,
-            (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-             selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterButtonActive
-          ]}
-          onPress={() => setFilterModalVisible(true)}
-        >
+          (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+           selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterButtonActive
+        ]}
+        onPress={() => setFilterModalVisible(true)}
+      >
           <View style={styles.matchButtonContent}>
             <Ionicons name="options-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
             <Text style={[
@@ -865,11 +865,11 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
               Filtros de bar
             </Text>
           </View>
-          {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-            selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
-            <View style={styles.filterDot} />
-          )}
-        </TouchableOpacity>
+        {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+          selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
+          <View style={styles.filterDot} />
+        )}
+      </TouchableOpacity>
       </View>
 
       {/* Search bar - Opens below the controls */}
