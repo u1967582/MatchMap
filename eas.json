@@ -28,6 +28,7 @@
         "EXPO_PUBLIC_FUNCTIONS_URL": "https://hmtfxpihkoisncglllmq.functions.supabase.co",
         "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_CRtAAkRCMobOPrYXnEvjgHHLGZJ",
+        "EXPO_NO_FORKED_METRO_SERIALIZERS": "1",
         "EXPO_NO_FORKED_METRO_SERIALIZERS": "1"
       }
     },
