@@ -147,17 +147,17 @@ export default function Layout() {
   return (
     <SafeAreaProvider>
       <RevenueCatProvider>
-        <BoostSelectionProvider>
-          <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              presentation: 'card',
-              animation: 'slide_from_right',
-              contentStyle: { backgroundColor: '#1C2A3A' }
-            }}
-          />
-        </BoostSelectionProvider>
+      <BoostSelectionProvider>
+        <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            presentation: 'card',
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: '#1C2A3A' }
+          }}
+        />
+      </BoostSelectionProvider>
       </RevenueCatProvider>
     </SafeAreaProvider>
   );
