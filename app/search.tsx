@@ -1,13 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Image,
   TextInput,
-  FlatList,
   Alert,
   Dimensions,
   Platform,
@@ -16,6 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
+import * as Haptics from 'expo-haptics';
+import { FlashList } from '@shopify/flash-list';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import Dropdown from '~/components/ui/Dropdown';
@@ -26,6 +25,17 @@ import { useFavorites } from '~/hooks/useFavorites';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { useBoostBars } from '~/hooks/useBoostBars';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
+import {
+  AppText,
+  AppCard,
+  AppButton,
+  SkeletonList,
+  EmptyState,
+  toast,
+  colors,
+  spacing,
+  radius,
+} from '~/components/ds';
 
 interface Bar {
   id: string;
@@ -224,7 +234,7 @@ export default function SearchScreen() {
 
       if (error) {
         console.error('❌ Error fetching bars:', error);
-        Alert.alert('Error', 'No se pudieron cargar los bares');
+        toast.error('Error', 'No se pudieron cargar los bares');
         return;
       }
 
@@ -504,7 +514,7 @@ export default function SearchScreen() {
       setBars(sortedBars);
     } catch (error) {
       console.error('❌ Error in searchBars:', error);
-      Alert.alert('Error', 'Ocurrió un error al buscar bares');
+      toast.error('Error', 'Ocurrió un error al buscar bares');
     } finally {
       setLoading(false);
     }
@@ -648,6 +658,7 @@ export default function SearchScreen() {
       e.stopPropagation(); // Prevent triggering the card press
       const success = await toggleFavorite(item.id);
       if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setFavoriteStates(prev => ({
           ...prev,
           [item.id]: !prev[item.id]
@@ -674,11 +685,8 @@ export default function SearchScreen() {
     };
 
     return (
-      <TouchableOpacity
-        style={[
-          styles.barCard,
-          isBoosted && styles.barCardBoosted
-        ]}
+      <AppCard
+        style={isBoosted ? styles.barCardBoosted : undefined}
         onPress={() => handleBarPress(item.id)}
       >
         <View style={styles.imageContainer}>
@@ -692,8 +700,8 @@ export default function SearchScreen() {
           {/* Top Sticker for Boosted Bars */}
           {isBoosted && (
             <View style={styles.topSticker}>
-              <Ionicons name="flash" size={14} color="#FFD700" />
-              <Text style={styles.topStickerText}>DESTACADO</Text>
+              <Ionicons name="flash" size={14} color={colors.status.boost} />
+              <AppText variant="caption" color={colors.status.boost} style={styles.topStickerText}>DESTACADO</AppText>
             </View>
           )}
 
@@ -705,52 +713,52 @@ export default function SearchScreen() {
             <Ionicons
               name={favoriteStates[item.id] ? "heart" : "heart-outline"}
               size={20}
-              color="#FFFFFF"
+              color={colors.text.primary}
             />
           </TouchableOpacity>
         </View>
-    
+
         <View style={styles.barInfo}>
-          <Text style={styles.barName}>{item.name}</Text>
-    
+          <AppText variant="title" style={styles.barName}>{item.name}</AppText>
+
           <View style={styles.barMeta}>
             <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color="#F59E0B" />
-              <Text style={styles.ratingText}>
+              <Ionicons name="star" size={16} color={colors.status.warning} />
+              <AppText variant="body">
                 {(typeof item.rating === 'number' ? item.rating.toFixed(1) : 'N/A')} ({item.review_count || 0} reseñas)
-              </Text>
+              </AppText>
             </View>
-    
+
             {typeof item.distance_km === 'number' && !isNaN(item.distance_km) && (
-              <Text style={styles.distanceText}>
+              <AppText variant="body" color={colors.brand.accent} style={styles.distanceText}>
                 {item.distance_km.toFixed(1)} km
-              </Text>
+              </AppText>
             )}
           </View>
-    
+
           {item.next_match?.date && item.next_match?.time && (
             <View style={styles.nextMatchContainer}>
-              <Ionicons name="calendar" size={14} color="#10B981" />
-              <Text style={styles.nextMatchText}>
+              <Ionicons name="calendar" size={14} color={colors.brand.accent} />
+              <AppText variant="body" color={colors.brand.accent} style={styles.nextMatchText}>
                 Próximo partido: {new Date(item.next_match.date).toLocaleDateString('es-ES')} {item.next_match.time}
-              </Text>
+              </AppText>
             </View>
           )}
-    
+
           {item.address && item.city && (
-            <Text style={styles.barAddress}>{item.address}, {item.city}</Text>
+            <AppText variant="body" style={styles.barAddress}>{item.address}, {item.city}</AppText>
           )}
-          
+
           {/* View on Map Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.viewOnMapButton}
             onPress={handleViewOnMap}
           >
-            <Ionicons name="map-outline" size={16} color="#007AFF" />
-            <Text style={styles.viewOnMapText}>Ver en el Mapa</Text>
+            <Ionicons name="map-outline" size={16} color={colors.brand.link} />
+            <AppText variant="label" color={colors.brand.link}>Ver en el Mapa</AppText>
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </AppCard>
     );
 
   }, [handleBarPress, toggleFavorite, favoriteStates, selected3Stable]);
@@ -779,11 +787,11 @@ export default function SearchScreen() {
       <View style={styles.searchContainer}>
         <View style={styles.searchRow}>
           <View style={[styles.searchBar, { flex: 1 }]}>
-            <Ionicons name="search" size={18} color="#A3B3CC" style={styles.searchIcon} />
+            <Ionicons name="search" size={18} color={colors.text.secondary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Buscar nombre de bar..."
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor={colors.text.muted}
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={handleSearch}
@@ -791,7 +799,7 @@ export default function SearchScreen() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color="#A3B3CC" />
+                <Ionicons name="close-circle" size={18} color={colors.text.secondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -802,20 +810,20 @@ export default function SearchScreen() {
             ]}
             onPress={() => setFilterModalVisible(true)}
           >
-            <Ionicons name="filter" size={18} color="#A3B3CC" />
+            <Ionicons name="filter" size={18} color={colors.text.secondary} />
             {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
               <View style={styles.filterDot} />
             )}
           </TouchableOpacity>
         </View>
       </View>
-  
+
       {/* Filtros */}
       <View style={styles.filtersContainer}>
         <View style={styles.filtersRow}>
           {/* Ordenar */}
           <View style={styles.filterColumn}>
-            <Text style={styles.filterLabel}>Ordenar por</Text>
+            <AppText variant="label" style={styles.filterLabelSpacing}>Ordenar por</AppText>
             <Dropdown
               label="Ordenar"
               options={SORT_OPTIONS}
@@ -827,26 +835,23 @@ export default function SearchScreen() {
 
           {/* Partido */}
           <View style={styles.filterColumn}>
-            <Text style={styles.filterLabel}>Partido</Text>
+            <AppText variant="label" style={styles.filterLabelSpacing}>Partido</AppText>
             <TouchableOpacity
               style={[styles.filterButton, selectedMatch && styles.filterButtonActive]}
               onPress={() => setMatchPickerOpen(true)}
             >
-              <Text style={[styles.iconEmoji]}>⚽</Text>
-              <Text style={[
-                styles.filterButtonText,
-                selectedMatch && styles.filterButtonTextActive
-              ]}>
-                {selectedMatch 
+              <AppText style={styles.iconEmoji}>⚽</AppText>
+              <AppText variant="caption" color={selectedMatch ? colors.text.primary : colors.text.secondary}>
+                {selectedMatch
                   ? `${selectedMatch.home_team?.name || 'Local'} vs ${selectedMatch.away_team?.name || 'Visitante'}`
                   : 'Partido'}
-              </Text>
+              </AppText>
               {selectedMatch && (
                 <TouchableOpacity
                   onPress={() => setSelectedMatch(null)}
                   style={{ position: 'absolute', right: 10, padding: 6 }}
                 >
-                  <Ionicons name="close" size={18} color="#FFFFFF" />
+                  <Ionicons name="close" size={18} color={colors.text.primary} />
                 </TouchableOpacity>
               )}
             </TouchableOpacity>
@@ -859,63 +864,42 @@ export default function SearchScreen() {
         {/* Team selector chip moved to top controls */}
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Buscando bares...</Text>
-          </View>
+          <SkeletonList count={3} />
         ) : bars.length > 0 ? (
-          <FlatList
+          <FlashList
             data={bars}
             renderItem={renderBarCard}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.barsList}
+            estimatedItemSize={300}
           />
         ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="search" size={64} color="#A3B3CC" />
-            <Text style={styles.emptyTitle}>No se encontraron bares</Text>
-            <Text style={styles.emptySubtitle}>
-              {selectedMatch
-                ? 'No hay bares transmitiendo este partido'
-                : searchQuery 
-                ? `No hay bares que coincidan con "${searchQuery}"`
-                : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0)
-                  ? `No hay bares que cumplan con los filtros seleccionados${
-                      selectedBarCategories.length > 0 ? ` (${selectedBarCategories.length} categorías)` : ''
-                    }${
-                      selectedFoodTypes.length > 0 ? ` (${selectedFoodTypes.length} tipos de comida)` : ''
-                    }${
-                      selectedFeatures.length > 0 ? ` (${selectedFeatures.length} características)` : ''
-                    }${
-                      selectedTvFeatures.length > 0 ? ` (${selectedTvFeatures.length} características de TV)` : ''
-                    }`
-                  : 'No hay bares disponibles en tu área'
+          <View style={styles.emptyWrapper}>
+            <EmptyState
+              icon="search"
+              title="No se encontraron bares"
+              subtitle={
+                selectedMatch
+                  ? 'No hay bares transmitiendo este partido'
+                  : searchQuery
+                  ? `No hay bares que coincidan con "${searchQuery}"`
+                  : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0)
+                    ? 'No hay bares que cumplan con los filtros seleccionados'
+                    : 'No hay bares disponibles en tu área'
               }
-            </Text>
-            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
-              <TouchableOpacity 
-                style={styles.clearFiltersButton}
-                onPress={handleClearAllFilters}
-              >
-                <Text style={styles.clearFiltersButtonText}>Limpiar filtros</Text>
-              </TouchableOpacity>
-            )}
-            {searchQuery && (
-              <TouchableOpacity 
-                style={styles.clearFiltersButton}
-                onPress={() => setSearchQuery('')}
-              >
-                <Text style={styles.clearFiltersButtonText}>Limpiar búsqueda</Text>
-              </TouchableOpacity>
-            )}
-            {selectedMatch && (
-              <TouchableOpacity 
-                style={styles.clearFiltersButton}
-                onPress={() => setSelectedMatch(null)}
-              >
-                <Text style={styles.clearFiltersButtonText}>Quitar partido</Text>
-              </TouchableOpacity>
-            )}
+            />
+            <View style={styles.emptyActions}>
+              {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
+                <AppButton text="Limpiar filtros" variant="dark" onPress={handleClearAllFilters} />
+              )}
+              {searchQuery ? (
+                <AppButton text="Limpiar búsqueda" variant="dark" onPress={() => setSearchQuery('')} />
+              ) : null}
+              {selectedMatch ? (
+                <AppButton text="Quitar partido" variant="dark" onPress={() => setSelectedMatch(null)} />
+              ) : null}
+            </View>
           </View>
         )}
       </View>
@@ -956,40 +940,33 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C2A3A',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
+    backgroundColor: colors.bg.primary,
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.lg - 6,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2A3A4A',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: Platform.OS === 'android' ? spacing.sm : spacing.lg - 6,
+    ...(Platform.OS === 'android' && {
+      minHeight: 44,
+    }),
   },
   filterIconButton: {
-    backgroundColor: '#243243',
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: colors.bg.element,
+    borderRadius: radius.lg,
+    padding: spacing.lg - 6,
     alignItems: 'center',
     justifyContent: 'center',
     width: 40,
@@ -997,7 +974,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   filterIconButtonActive: {
-    backgroundColor: '#1976D2',
+    backgroundColor: colors.brand.primary,
   },
   filterDot: {
     position: 'absolute',
@@ -1005,126 +982,67 @@ const styles = StyleSheet.create({
     right: 6,
     width: 8,
     height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
+    borderRadius: radius.xs,
+    backgroundColor: colors.status.error,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   searchInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 15,
+    ...(Platform.OS === 'android' && {
+      textAlignVertical: 'center',
+      includeFontPadding: false,
+    }),
   },
   filtersContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
   },
   filtersRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    gap: 10,
+    gap: spacing.lg - 6,
   },
   filterColumn: {
     flex: 1,
   },
-  filterLabel: {
-    color: '#A3B3CC',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 6,
+  filterLabelSpacing: {
+    marginBottom: spacing.sm - 2,
   },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#243243',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    gap: 6,
+    backgroundColor: colors.bg.element,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    gap: spacing.sm - 2,
     position: 'relative',
     minHeight: 38,
     justifyContent: 'center',
   },
   filterButtonActive: {
-    backgroundColor: '#1976D2',
-  },
-  filterButtonText: {
-    color: '#A3B3CC',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  filterButtonTextActive: {
-    color: '#FFFFFF',
+    backgroundColor: colors.brand.primary,
   },
   iconEmoji: {
     fontSize: 15,
-    marginRight: 4,
-  },
-  filterBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: '#EF4444',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-  },
-  filterBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    marginRight: spacing.xs,
   },
   resultsContainer: {
     flex: 1,
-    paddingHorizontal: 16,
-  },
-  
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    color: '#A3B3CC',
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 22,
+    paddingHorizontal: spacing.lg,
   },
   barsList: {
-    paddingBottom: Platform.OS === 'ios' ? 100 : 80, // Space for footer
-  },
-  barCard: {
-    backgroundColor: '#1A2332',
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: 'hidden',
+    paddingBottom: Platform.OS === 'ios' ? 100 : 80,
   },
   barCardBoosted: {
     borderWidth: 2,
-    borderColor: '#FFD700',
-    shadowColor: '#FFD700',
+    borderColor: colors.status.boost,
+    shadowColor: colors.status.boost,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -1142,18 +1060,18 @@ const styles = StyleSheet.create({
   },
   topSticker: {
     position: 'absolute',
-    top: 10,
-    left: 10,
+    top: spacing.lg - 6,
+    left: spacing.lg - 6,
     backgroundColor: 'rgba(26, 35, 50, 0.95)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     borderWidth: 1,
-    borderColor: '#FFD700',
-    shadowColor: '#FFD700',
+    borderColor: colors.status.boost,
+    shadowColor: colors.status.boost,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -1161,17 +1079,15 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   topStickerText: {
-    color: '#FFD700',
-    fontSize: 11,
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
   favoritesButton: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 15,
+    top: spacing.lg - 6,
+    right: spacing.lg - 6,
+    backgroundColor: colors.overlay.dark,
+    borderRadius: radius.round,
     width: 30,
     height: 30,
     justifyContent: 'center',
@@ -1179,81 +1095,58 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   favoritesButtonActive: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.status.error,
   },
   barInfo: {
-    padding: 16,
+    padding: spacing.lg,
   },
   barName: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   barMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  ratingText: {
-    color: '#A3B3CC',
-    fontSize: 14,
+    gap: spacing.xs,
   },
   distanceText: {
-    color: '#10B981',
-    fontSize: 14,
     fontWeight: '500',
   },
   nextMatchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    gap: spacing.sm - 2,
+    marginBottom: spacing.sm,
   },
   nextMatchText: {
-    color: '#10B981',
-    fontSize: 14,
     fontWeight: '500',
   },
   barAddress: {
-    color: '#A3B3CC',
-    fontSize: 14,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   viewOnMapButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    gap: spacing.sm - 2,
+    backgroundColor: colors.alpha.brandLight,
+    paddingVertical: spacing.lg - 6,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(0, 122, 255, 0.3)',
-    marginTop: 4,
+    borderColor: colors.alpha.brandBorder,
+    marginTop: spacing.xs,
   },
-  viewOnMapText: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
+  emptyWrapper: {
+    flex: 1,
   },
-  clearFiltersButton: {
-    marginTop: 20,
-    backgroundColor: '#EF4444',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-  },
-  clearFiltersButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  emptyActions: {
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
   },
 });
