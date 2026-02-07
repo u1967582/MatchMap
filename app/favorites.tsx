@@ -1,15 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   Image,
   FlatList,
   Alert,
-  Dimensions,
   ScrollView,
-  TextInput,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +15,18 @@ import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { useFavorites } from '~/hooks/useFavorites';
+import {
+  AppText,
+  AppCard,
+  AppChip,
+  AppInput,
+  AppButton,
+  EmptyState,
+  SkeletonCard,
+  colors,
+  spacing,
+  radius,
+} from '~/components/ds';
 
 interface FavoriteBar {
   id: string;
@@ -32,7 +41,113 @@ interface FavoriteBar {
   review_count?: number;
 }
 
-const { width } = Dimensions.get('window');
+// Component for individual favorite bar card
+interface FavoriteBarCardProps {
+  bar: FavoriteBar;
+  userLocation: Location.LocationObject | null;
+  onPress: (barId: string) => void;
+  onRemove: (barId: string, barName: string) => void;
+  onViewOnMap: (bar: FavoriteBar) => void;
+}
+
+function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap }: FavoriteBarCardProps) {
+  // Calculate distance if user location is available
+  let distance: number | null = null;
+  if (userLocation && userLocation.coords && bar.latitude && bar.longitude) {
+    const R = 6371; // Earth's radius in kilometers
+    const lat1 = userLocation.coords.latitude;
+    const lon1 = userLocation.coords.longitude;
+    const lat2 = bar.latitude;
+    const lon2 = bar.longitude;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    distance = R * c;
+  }
+
+  return (
+    <AppCard style={styles.barCard}>
+      <TouchableOpacity
+        style={styles.imageContainer}
+        onPress={() => onPress(bar.id)}
+        activeOpacity={0.9}
+      >
+        <Image
+          source={{
+            uri: bar.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
+          }}
+          style={styles.barImage}
+        />
+      </TouchableOpacity>
+
+      <View style={styles.barInfo}>
+        <View style={styles.barHeader}>
+          <View style={styles.barTextContainer}>
+            <AppText variant="subtitle" style={styles.barNameSpacing}>{bar.name}</AppText>
+            {bar.description && (
+              <AppText variant="body" color={colors.text.secondary} style={styles.barDescriptionSpacing}>
+                {bar.description}
+              </AppText>
+            )}
+            <AppText variant="caption" color={colors.text.secondary}>
+              {bar.address}, {bar.city}
+            </AppText>
+
+            {/* Rating and Distance Info */}
+            <View style={styles.barDetails}>
+              {typeof bar.rating === 'number' && (
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={14} color={colors.status.boost} />
+                  <AppText variant="caption" color={colors.status.boost} style={styles.ratingTextSpacing}>
+                    {bar.rating.toFixed(1)}
+                  </AppText>
+                  {typeof bar.review_count === 'number' && (
+                    <AppText variant="caption" color={colors.text.muted} style={styles.reviewCountSpacing}>
+                      ({bar.review_count} reseñas)
+                    </AppText>
+                  )}
+                </View>
+              )}
+
+              {distance !== null && (
+                <View style={styles.distanceContainer}>
+                  <Ionicons name="location-outline" size={14} color={colors.status.success} />
+                  <AppText variant="caption" color={colors.status.success} style={styles.distanceTextSpacing}>
+                    {distance.toFixed(1)} km
+                  </AppText>
+                </View>
+              )}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => onRemove(bar.id, bar.name)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="trash-outline" size={20} color={colors.status.destructive} />
+          </TouchableOpacity>
+        </View>
+
+        {/* View on Map Button */}
+        <TouchableOpacity
+          style={styles.viewOnMapButton}
+          onPress={() => onViewOnMap(bar)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="map-outline" size={16} color={colors.brand.link} />
+          <AppText variant="label" color={colors.brand.link} style={styles.viewOnMapTextSpacing}>
+            Ver en el Mapa
+          </AppText>
+        </TouchableOpacity>
+      </View>
+    </AppCard>
+  );
+}
 
 export default function FavoritesScreen() {
   const router = useRouter();
@@ -218,106 +333,46 @@ export default function FavoritesScreen() {
     applyFilters();
   }, [favoriteBars, searchText, activeFilter, userLocation, applyFilters]);
 
+  // Handle view on map
+  const handleViewOnMap = useCallback((bar: FavoriteBar) => {
+    router.push({
+      pathname: '/(protected)/map',
+      params: {
+        selectedBarId: bar.id,
+        selectedBarLat: bar.latitude,
+        selectedBarLng: bar.longitude,
+        selectedBarName: bar.name,
+      },
+    });
+  }, [router]);
+
   // Render favorite bar card
   const renderFavoriteBar = useCallback(({ item }: { item: FavoriteBar }) => {
-    // Calculate distance if user location is available
-    let distance: number | null = null;
-    if (userLocation && userLocation.coords && item.latitude && item.longitude) {
-      distance = calculateDistance(
-        userLocation.coords.latitude,
-        userLocation.coords.longitude,
-        item.latitude,
-        item.longitude
-      );
-    }
-
-    const handleViewOnMap = (e: any) => {
-      e.stopPropagation();
-      // Navigate to map with bar pre-selected
-      router.push({
-        pathname: '/(protected)/map',
-        params: {
-          selectedBarId: item.id,
-          selectedBarLat: item.latitude,
-          selectedBarLng: item.longitude,
-          selectedBarName: item.name,
-        },
-      });
-    };
-
     return (
-      <View style={styles.barCard}>
-        <TouchableOpacity 
-          style={styles.imageContainer}
-          onPress={() => handleBarPress(item.id)}
-        >
-          <Image
-            source={{
-              uri: item.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
-            }}
-            style={styles.barImage}
-          />
-        </TouchableOpacity>
-
-        <View style={styles.barInfo}>
-          <View style={styles.barHeader}>
-            <View style={styles.barTextContainer}>
-              <Text style={styles.barName}>{item.name}</Text>
-              {item.description && (
-                <Text style={styles.barDescription}>{item.description}</Text>
-              )}
-              <Text style={styles.barAddress}>{item.address}, {item.city}</Text>
-              
-              {/* Rating and Distance Info */}
-              <View style={styles.barDetails}>
-                {typeof item.rating === 'number' && (
-                  <View style={styles.ratingContainer}>
-                    <Ionicons name="star" size={14} color="#FFD700" />
-                    <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-                    {typeof item.review_count === 'number' && (
-                      <Text style={styles.reviewCountText}>
-                        ({item.review_count} reseñas)
-                      </Text>
-                    )}
-                  </View>
-                )}
-                
-                {distance !== null && (
-                  <View style={styles.distanceContainer}>
-                    <Ionicons name="location-outline" size={14} color="#4CAF50" />
-                    <Text style={styles.distanceText}>{distance.toFixed(1)} km</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-            
-            <TouchableOpacity 
-              style={styles.removeButton}
-              onPress={() => handleRemoveFromFavorites(item.id, item.name)}
-            >
-              <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-            </TouchableOpacity>
-          </View>
-          
-          {/* View on Map Button */}
-          <TouchableOpacity 
-            style={styles.viewOnMapButton}
-            onPress={handleViewOnMap}
-          >
-            <Ionicons name="map-outline" size={16} color="#007AFF" />
-            <Text style={styles.viewOnMapText}>Ver en el Mapa</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <FavoriteBarCard
+        bar={item}
+        userLocation={userLocation}
+        onPress={handleBarPress}
+        onRemove={handleRemoveFromFavorites}
+        onViewOnMap={handleViewOnMap}
+      />
     );
-  }, [handleBarPress, handleRemoveFromFavorites, userLocation, calculateDistance, router]);
+  }, [handleBarPress, handleRemoveFromFavorites, handleViewOnMap, userLocation]);
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Cargando favoritos...</Text>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.header}>
+          <AppText variant="title">Favoritos</AppText>
+          <View style={{ width: 24 }} />
         </View>
+        <View style={styles.content}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
+        <BottomTabBar />
       </SafeAreaView>
     );
   }
@@ -325,60 +380,49 @@ export default function FavoritesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-  
+
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Favoritos</Text>
-        <TouchableOpacity style={styles.searchButton} onPress={toggleSearch}>
-          <Ionicons name="search" size={24} color="#FFFFFF" />
+        <AppText variant="title">Favoritos</AppText>
+        <TouchableOpacity style={styles.searchButton} onPress={toggleSearch} activeOpacity={0.7}>
+          <Ionicons name="search" size={24} color={colors.text.primary} />
         </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
       {searchVisible && (
         <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Ionicons name="search" size={20} color="#A3B3CC" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar bares..."
-              placeholderTextColor="#A3B3CC"
-              value={searchText}
-              onChangeText={handleSearchTextChange}
-              autoFocus={true}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity 
-                style={styles.clearButton}
-                onPress={() => handleSearchTextChange('')}
-              >
-                <Ionicons name="close-circle" size={20} color="#A3B3CC" />
-              </TouchableOpacity>
-            )}
-          </View>
+          <AppInput
+            placeholder="Buscar bares..."
+            value={searchText}
+            onChangeText={handleSearchTextChange}
+            autoFocus={true}
+          />
         </View>
       )}
 
       {/* Sort Options */}
       <View style={styles.sortContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity 
-            style={[styles.sortButton, activeFilter === 'recommended' && styles.sortButtonActive]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sortScrollContent}
+        >
+          <AppChip
+            label="Recomendados"
+            selected={activeFilter === 'recommended'}
             onPress={() => setActiveFilter('recommended')}
-          >
-            <Text style={styles.sortButtonText}>Recomendados</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.sortButton, activeFilter === 'nearby' && styles.sortButtonActive]}
+          />
+          <AppChip
+            label="Cercanos"
+            selected={activeFilter === 'nearby'}
             onPress={() => setActiveFilter('nearby')}
-          >
-            <Text style={styles.sortButtonText}>Cercanos</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.sortButton, activeFilter === 'top_rated' && styles.sortButtonActive]}
+          />
+          <AppChip
+            label="Mejor valorado"
+            selected={activeFilter === 'top_rated'}
             onPress={() => setActiveFilter('top_rated')}
-          >
-            <Text style={styles.sortButtonText}>Mejor valorado</Text>
-          </TouchableOpacity>
+          />
         </ScrollView>
       </View>
 
@@ -395,33 +439,21 @@ export default function FavoritesScreen() {
         ) : (
           <View style={styles.emptyContainer}>
             {searchText.length > 0 ? (
-              <>
-                <Ionicons name="search-outline" size={64} color="#A3B3CC" />
-                <Text style={styles.emptyTitle}>No se encontraron resultados</Text>
-                <Text style={styles.emptySubtitle}>
-                  No hay bares favoritos que coincidan con "{searchText}"
-                </Text>
-                <TouchableOpacity 
-                  style={styles.exploreButton}
-                  onPress={() => handleSearchTextChange('')}
-                >
-                  <Text style={styles.exploreButtonText}>Limpiar búsqueda</Text>
-                </TouchableOpacity>
-              </>
+              <EmptyState
+                icon="search-outline"
+                title="No se encontraron resultados"
+                subtitle={`No hay bares favoritos que coincidan con "${searchText}"`}
+                actionLabel="Limpiar búsqueda"
+                onAction={() => handleSearchTextChange('')}
+              />
             ) : (
-              <>
-                <Ionicons name="heart-outline" size={64} color="#A3B3CC" />
-                <Text style={styles.emptyTitle}>No tienes favoritos</Text>
-                <Text style={styles.emptySubtitle}>
-                  Explora bares y añádelos a tus favoritos para verlos aquí
-                </Text>
-                <TouchableOpacity 
-                  style={styles.exploreButton}
-                  onPress={() => router.push('/search' as any)}
-                >
-                  <Text style={styles.exploreButtonText}>Explorar Bares</Text>
-                </TouchableOpacity>
-              </>
+              <EmptyState
+                icon="heart-outline"
+                title="No tienes favoritos"
+                subtitle="Explora bares y añádelos a tus favoritos para verlos aquí"
+                actionLabel="Explorar Bares"
+                onAction={() => router.push('/search' as any)}
+              />
             )}
           </View>
         )}
@@ -435,120 +467,42 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C2A3A',
+    backgroundColor: colors.bg.primary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
   },
   searchButton: {
-    padding: 4,
+    padding: spacing.xs,
   },
   searchContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A2332',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  searchIcon: {
-    marginRight: 12,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  clearButton: {
-    padding: 4,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   sortContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: spacing.lg,
   },
-  sortButton: {
-    backgroundColor: '#2A3A4A',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  sortButtonActive: {
-    backgroundColor: '#1976D2',
-  },
-  sortButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
+  sortScrollContent: {
+    paddingHorizontal: spacing.xl,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    paddingHorizontal: spacing.xl,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    color: '#A3B3CC',
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  exploreButton: {
-    backgroundColor: '#1976D2',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  exploreButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   barsList: {
-    paddingBottom: Platform.OS === 'ios' ? 100 : 80, // Space for footer
+    paddingBottom: Platform.OS === 'ios' ? 100 : 80,
   },
   barCard: {
-    backgroundColor: '#1A2332',
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: 'hidden',
+    marginBottom: spacing.lg,
   },
   imageContainer: {
-    position: 'relative',
     width: '100%',
     height: 200,
   },
@@ -558,7 +512,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   barInfo: {
-    padding: 16,
+    padding: spacing.lg,
   },
   barHeader: {
     flexDirection: 'row',
@@ -567,77 +521,57 @@ const styles = StyleSheet.create({
   },
   barTextContainer: {
     flex: 1,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
-  barName: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
+  barNameSpacing: {
+    marginBottom: spacing.xs,
   },
-  barDescription: {
-    color: '#A3B3CC',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  barAddress: {
-    color: '#A3B3CC',
-    fontSize: 14,
+  barDescriptionSpacing: {
+    marginBottom: spacing.xs,
   },
   barDetails: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
     flexWrap: 'wrap',
+    gap: spacing.lg,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
   },
-  ratingText: {
-    color: '#FFD700',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
+  ratingTextSpacing: {
+    marginLeft: spacing.xs,
   },
-  reviewCountText: {
-    color: '#A3B3CC',
-    fontSize: 10,
-    marginLeft: 4,
+  reviewCountSpacing: {
+    marginLeft: spacing.xs,
   },
   distanceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  distanceText: {
-    color: '#4CAF50',
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
+  distanceTextSpacing: {
+    marginLeft: spacing.xs,
   },
   removeButton: {
-    padding: 8,
+    padding: spacing.sm,
     backgroundColor: 'rgba(255, 107, 107, 0.1)',
-    borderRadius: 8,
+    borderRadius: radius.md,
   },
   viewOnMapButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    gap: spacing.sm,
+    backgroundColor: colors.alpha.brandLight,
+    paddingVertical: spacing.md - 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(0, 122, 255, 0.3)',
-    marginTop: 12,
+    borderColor: colors.alpha.brandBorder,
+    marginTop: spacing.md,
   },
-  viewOnMapText: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
+  viewOnMapTextSpacing: {
+    marginLeft: spacing.xs,
   },
 }); 

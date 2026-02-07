@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   GestureResponderEvent,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SelectableChip from './SelectableChip';
@@ -209,18 +210,26 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     position: 'relative',
+    ...(Platform.OS === 'android' && {
+      overflow: 'hidden',
+      elevation: 8,
+      borderWidth: 0,
+    }),
   },
   closeButton: {
     position: 'absolute',
     top: 16,
     right: 16,
     zIndex: 10,
-    backgroundColor: 'rgba(42, 58, 74, 0.3)', // Más transparente
+    backgroundColor: Platform.OS === 'android' ? 'rgba(42, 58, 74, 0.8)' : 'rgba(42, 58, 74, 0.3)',
     borderRadius: 20,
     width: 36,
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'android' && {
+      elevation: 2,
+    }),
   },
   header: {
     flexDirection: 'row',
@@ -251,14 +260,6 @@ const styles = StyleSheet.create({
     color: '#A3B3CC',
     fontSize: 14,
     fontWeight: '500',
-  },
-  closeButton: {
-    marginTop: 24,
-    alignSelf: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: '#1976D2',
-    borderRadius: 20,
   },
   content: {
     flex: 1,

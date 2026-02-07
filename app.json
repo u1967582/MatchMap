@@ -2,7 +2,7 @@
   "expo": {
     "name": "MatchMap",
     "slug": "matchmap",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "scheme": "matchmap",
     "jsEngine": "hermes",
     "orientation": "portrait",
@@ -20,7 +20,13 @@
         }
       ],
       "expo-web-browser",
-      "@rnmapbox/maps",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "sk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jcTZrN2k0MGM3ZDJqczZtNGxvZGJmciJ9.VBbbRIxQnFym0vb3MVL02A",
+          "RNMapboxMapsVersion": "11.8.0"
+        }
+      ],
       [
         "expo-location",
         {
@@ -93,7 +99,7 @@
       }
     },
     "android": {
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#1C2A3A"

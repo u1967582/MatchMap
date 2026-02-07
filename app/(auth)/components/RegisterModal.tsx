@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Modal,
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -12,8 +11,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
-import InputField from '~/components/ui/InputField';
-import CustomButton from '~/components/ui/CustomButton';
+import {
+  AppText,
+  AppInput,
+  AppButton,
+  colors,
+  spacing,
+} from '~/components/ds';
 
 interface RegisterModalProps {
   visible: boolean;
@@ -159,31 +163,33 @@ export default function RegisterModal({
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Crear Cuenta</Text>
+            <AppText variant="h2">Crear Cuenta</AppText>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={handleClose}
               disabled={loading}
+              activeOpacity={0.7}
             >
-              <Ionicons name="close" size={28} color="#FFFFFF" />
+              <Ionicons name="close" size={28} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            <InputField
-              placeholder="Correo electrónico"
+            <AppInput
+              label="Correo electrónico"
+              placeholder="tu@email.com"
               value={formData.email}
               onChangeText={(email) => setFormData({ ...formData, email })}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
-              theme="dark"
             />
 
-            <InputField
-              placeholder="Nombre de usuario"
+            <AppInput
+              label="Nombre de usuario"
+              placeholder="usuario123"
               value={formData.username}
               onChangeText={(username) =>
                 setFormData({ ...formData, username: username.toLowerCase() })
@@ -191,30 +197,32 @@ export default function RegisterModal({
               autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
-              theme="dark"
+              helperText="Mínimo 3 caracteres"
             />
 
-            <InputField
-              placeholder="Nombre completo"
+            <AppInput
+              label="Nombre completo"
+              placeholder="Juan Pérez"
               value={formData.fullName}
               onChangeText={(fullName) => setFormData({ ...formData, fullName })}
               autoCapitalize="words"
               editable={!loading}
-              theme="dark"
             />
 
-            <InputField
-              placeholder="Contraseña"
+            <AppInput
+              label="Contraseña"
+              placeholder="••••••••"
               value={formData.password}
               onChangeText={(password) => setFormData({ ...formData, password })}
               secureTextEntry
               autoCapitalize="none"
               editable={!loading}
-              theme="dark"
+              helperText="Mínimo 6 caracteres"
             />
 
-            <InputField
-              placeholder="Confirmar contraseña"
+            <AppInput
+              label="Confirmar contraseña"
+              placeholder="••••••••"
               value={formData.confirmPassword}
               onChangeText={(confirmPassword) =>
                 setFormData({ ...formData, confirmPassword })
@@ -222,10 +230,15 @@ export default function RegisterModal({
               secureTextEntry
               autoCapitalize="none"
               editable={!loading}
-              theme="dark"
+              error={
+                formData.confirmPassword.length > 0 &&
+                formData.password !== formData.confirmPassword
+                  ? 'Las contraseñas no coinciden'
+                  : undefined
+              }
             />
 
-            <CustomButton
+            <AppButton
               text="Crear Cuenta"
               onPress={handleRegister}
               variant="primary"
@@ -242,30 +255,25 @@ export default function RegisterModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C2A3A',
+    backgroundColor: colors.bg.primary,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
+    padding: spacing.xl,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30,
-    marginTop: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    marginBottom: spacing.xxl,
+    marginTop: spacing.md,
   },
   closeButton: {
-    padding: 4,
+    padding: spacing.xs,
   },
   form: {
     flex: 1,
-    gap: 16,
+    gap: spacing.xs,
   },
 });
 

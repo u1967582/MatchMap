@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -15,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
+import { AppText, colors, spacing } from '~/components/ds';
 
 interface UserProfile {
   id: string;
@@ -46,8 +46,8 @@ const SettingsRow: React.FC<SettingsRowProps> = ({ title, onPress, isLast = fals
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <Text style={styles.settingsText}>{title}</Text>
-    <Ionicons name="chevron-forward" size={20} color="#A3B3CC" />
+    <AppText variant="body" color={colors.text.primary}>{title}</AppText>
+    <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
   </TouchableOpacity>
 );
 
@@ -248,7 +248,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Cargando...</Text>
+          <AppText variant="body">Cargando...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -279,28 +279,28 @@ export default function ProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Perfil</Text>
+          <AppText variant="title">Perfil</AppText>
           <View style={{ width: 24 }} />
         </View>
 
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
-            <Image 
-              source={{ uri: getProfileImageUrl() }} 
+            <Image
+              source={{ uri: getProfileImageUrl() }}
               style={styles.avatar}
               defaultSource={require('~/assets/icon.png')}
             />
           </View>
-          <Text style={styles.userName}>{displayName}</Text>
-          <Text style={styles.userHandle}>{displayHandle}</Text>
+          <AppText variant="h2">{displayName}</AppText>
+          <AppText variant="body" color={colors.text.secondary} style={styles.userHandleSpacing}>{displayHandle}</AppText>
         </View>
 
         {/* Bar Management Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gestiona tu Bar</Text>
+          <AppText variant="title" style={styles.sectionTitleSpacing}>Gestiona tu Bar</AppText>
           {userBars.length > 0 ? (
             <View>
               {userBars.map((bar) => (
@@ -314,15 +314,15 @@ export default function ProfileScreen() {
                       <Image source={{ uri: bar.image_url }} style={styles.barImage} />
                     ) : (
                       <View style={styles.defaultBarImage}>
-                        <Ionicons name="storefront" size={32} color="#A3B3CC" />
+                        <Ionicons name="storefront" size={32} color={colors.text.secondary} />
                       </View>
                     )}
                   </View>
                   <View style={styles.barInfo}>
                     <View style={styles.barHeaderRow}>
-                      <Text style={styles.barName} numberOfLines={1}>
+                      <AppText variant="subtitle" numberOfLines={1} style={styles.barNameFlex}>
                         {bar.name}
-                      </Text>
+                      </AppText>
 
                       {/* Verification status */}
                       {bar.verification_status ? (
@@ -347,54 +347,55 @@ export default function ProfileScreen() {
                             size={13}
                             color={
                               bar.verification_status === 'approved'
-                                ? '#10B981'
+                                ? colors.status.success
                                 : bar.verification_status === 'rejected'
-                                  ? '#EF4444'
-                                  : '#FFD700'
+                                  ? colors.status.error
+                                  : colors.status.boost
                             }
                           />
-                          <Text
-                            style={[
-                              styles.verificationPillText,
+                          <AppText
+                            variant="caption"
+                            color={
                               bar.verification_status === 'approved'
-                                ? styles.verificationPillTextApproved
+                                ? colors.status.success
                                 : bar.verification_status === 'rejected'
-                                  ? styles.verificationPillTextRejected
-                                  : styles.verificationPillTextPending,
-                            ]}
+                                  ? colors.status.error
+                                  : colors.status.boost
+                            }
+                            style={styles.verificationPillTextBold}
                           >
                             {bar.verification_status === 'approved'
                               ? 'Verificado'
                               : bar.verification_status === 'rejected'
                                 ? 'Rechazado'
                                 : 'Pendiente'}
-                          </Text>
+                          </AppText>
                         </View>
                       ) : null}
                     </View>
 
                     {bar.verification_status === 'pending' ? (
-                      <Text style={styles.verificationHint}>
+                      <AppText variant="caption" color={colors.text.muted} style={styles.verificationHintSpacing}>
                         Tu bar aparecerá en el mapa cuando lo aprobemos.
-                      </Text>
+                      </AppText>
                     ) : null}
 
                     {bar.verification_status === 'rejected' ? (
-                      <Text style={styles.verificationHint}>
+                      <AppText variant="caption" color={colors.text.muted} style={styles.verificationHintSpacing}>
                         Revisa el motivo y actualiza la información.
-                      </Text>
+                      </AppText>
                     ) : null}
 
                     {bar.verification_status === 'rejected' && bar.verification_notes ? (
                       <View style={styles.verificationNotesBox}>
-                        <Ionicons name="information-circle-outline" size={14} color="#A3B3CC" />
-                        <Text style={styles.verificationNotesText}>{bar.verification_notes}</Text>
+                        <Ionicons name="information-circle-outline" size={14} color={colors.text.secondary} />
+                        <AppText variant="caption" color={colors.text.secondary} style={styles.verificationNotesFlex}>{bar.verification_notes}</AppText>
                       </View>
                     ) : null}
 
                     <View style={styles.viewProfileButton}>
-                      <Text style={styles.viewProfileButtonText}>Ver Perfil del Bar</Text>
-                      <Ionicons name="chevron-forward" size={16} color="#1976D2" />
+                      <AppText variant="label" color={colors.brand.primary}>Ver Perfil del Bar</AppText>
+                      <Ionicons name="chevron-forward" size={16} color={colors.brand.primary} />
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -402,8 +403,8 @@ export default function ProfileScreen() {
             </View>
           ) : (
             <TouchableOpacity style={styles.addBarButton} onPress={handleAddBar}>
-              <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.addBarButtonText}>Añadir Bar</Text>
+              <Ionicons name="add-circle-outline" size={24} color={colors.text.primary} />
+              <AppText variant="body" color={colors.text.primary} style={styles.addBarButtonTextBold}>Añadir Bar</AppText>
             </TouchableOpacity>
           )}
         </View>
@@ -411,41 +412,41 @@ export default function ProfileScreen() {
         {/* Super User - Cold Registration Section */}
         {user?.is_super_user && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Super Usuario</Text>
-            <TouchableOpacity 
-              style={styles.coldRegisterButton} 
+            <AppText variant="title" style={styles.sectionTitleSpacing}>Super Usuario</AppText>
+            <TouchableOpacity
+              style={styles.coldRegisterButton}
               onPress={handleColdRegisterBar}
               activeOpacity={0.8}
             >
-              <Ionicons name="business-outline" size={24} color="#1976D2" />
-              <Text style={styles.coldRegisterButtonText}>Registrar Bar en Frío</Text>
-              <Text style={styles.coldRegisterSubtext}>
+              <Ionicons name="business-outline" size={24} color={colors.brand.primary} />
+              <AppText variant="subtitle" color={colors.text.primary} style={styles.coldRegisterButtonTextBold}>Registrar Bar en Frío</AppText>
+              <AppText variant="caption" color={colors.text.light} align="center" style={styles.coldRegisterSubtextSpacing}>
                 Pre-registra un bar para que su propietario lo reclame después
-              </Text>
+              </AppText>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.coldRegisterButton, styles.verifyBarsButton]} 
+            <TouchableOpacity
+              style={[styles.coldRegisterButton, styles.verifyBarsButton]}
               onPress={() => router.push('/bar-verification-admin' as any)}
               activeOpacity={0.8}
             >
-              <Ionicons name="shield-checkmark-outline" size={24} color="#10B981" />
-              <Text style={styles.coldRegisterButtonText}>Verificar Bares</Text>
-              <Text style={styles.coldRegisterSubtext}>
+              <Ionicons name="shield-checkmark-outline" size={24} color={colors.status.success} />
+              <AppText variant="subtitle" color={colors.text.primary} style={styles.coldRegisterButtonTextBold}>Verificar Bares</AppText>
+              <AppText variant="caption" color={colors.text.light} align="center" style={styles.coldRegisterSubtextSpacing}>
                 Aprobar o rechazar bares pendientes de verificación
-              </Text>
+              </AppText>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.coldRegisterButton, styles.supportTicketsButton]} 
+            <TouchableOpacity
+              style={[styles.coldRegisterButton, styles.supportTicketsButton]}
               onPress={() => router.push('/support-admin' as any)}
               activeOpacity={0.8}
             >
-              <Ionicons name="chatbubbles-outline" size={24} color="#F59E0B" />
-              <Text style={styles.coldRegisterButtonText}>Gestionar Tickets de Soporte</Text>
-              <Text style={styles.coldRegisterSubtext}>
+              <Ionicons name="chatbubbles-outline" size={24} color={colors.status.warning} />
+              <AppText variant="subtitle" color={colors.text.primary} style={styles.coldRegisterButtonTextBold}>Gestionar Tickets de Soporte</AppText>
+              <AppText variant="caption" color={colors.text.light} align="center" style={styles.coldRegisterSubtextSpacing}>
                 Ver y responder tickets de usuarios
-              </Text>
+              </AppText>
             </TouchableOpacity>
           </View>
         )}
@@ -455,9 +456,22 @@ export default function ProfileScreen() {
 
 
 
+        {/* 🔧 TEMPORAL: Design System Preview */}
+        <View style={styles.section}>
+          <AppText variant="title" style={styles.sectionTitleSpacing}>🎨 Debug</AppText>
+          <TouchableOpacity
+            style={styles.debugButton}
+            onPress={() => router.push('/ds-preview')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="color-palette-outline" size={24} color={colors.brand.primary} />
+            <AppText variant="body" color={colors.brand.primary} style={styles.debugButtonTextMedium}>Ver Design System Preview</AppText>
+          </TouchableOpacity>
+        </View>
+
         {/* Account Settings Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Configuración de Cuenta</Text>
+          <AppText variant="title" style={styles.sectionTitleSpacing}>Configuración de Cuenta</AppText>
           <View style={styles.settingsContainer}>
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
             <SettingsRow title="Preguntas Frequentes" onPress={handlePrivacy} />
@@ -474,7 +488,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C2A3A',
+    backgroundColor: colors.bg.primary,
   },
   scrollView: {
     flex: 1,
@@ -487,151 +501,131 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
+    padding: spacing.xs,
   },
   headerSpacer: {
     flex: 1,
   },
   headerPlanButton: {
-    backgroundColor: '#1976D2',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    backgroundColor: colors.brand.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: spacing.lg,
   },
   headerPlanButtonText: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 14,
     fontWeight: '600',
   },
   profileSection: {
     alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.lg,
   },
   avatarContainer: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
   },
-  defaultAvatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#2A3A4A',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userName: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  userHandle: {
-    color: '#A3B3CC',
-    fontSize: 16,
+  userHandleSpacing: {
+    marginTop: spacing.xs,
   },
   section: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xxxl,
   },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
+  sectionTitleSpacing: {
+    marginBottom: spacing.lg,
   },
   planButton: {
-    backgroundColor: '#1976D2',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 25,
+    backgroundColor: colors.brand.primary,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxxl,
+    borderRadius: spacing.xxl,
     alignItems: 'center',
     alignSelf: 'center',
   },
   planButtonText: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   addBarButton: {
-    backgroundColor: '#10B981',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    backgroundColor: colors.status.success,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
-  addBarButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  addBarButtonTextBold: {
     fontWeight: '600',
   },
   settingsContainer: {
-    backgroundColor: '#1A2332',
-    borderRadius: 12,
+    backgroundColor: colors.bg.card,
+    borderRadius: spacing.md,
     overflow: 'hidden',
   },
   settingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A3A4A',
+    borderBottomColor: colors.bg.elevated,
   },
   settingsRowLast: {
     borderBottomWidth: 0,
   },
-  settingsText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  debugButton: {
+    backgroundColor: colors.bg.card,
+    borderRadius: spacing.md,
+    padding: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.alpha.brandBorder,
+  },
+  debugButtonTextMedium: {
+    fontWeight: '500',
   },
   barCard: {
-    backgroundColor: '#1A2332',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.bg.card,
+    borderRadius: spacing.md,
+    padding: spacing.lg,
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    marginBottom: 12,
+    borderColor: colors.border.subtle,
+    marginBottom: spacing.md,
   },
   barImageContainer: {
-    marginRight: 16,
+    marginRight: spacing.lg,
   },
   barImage: {
     width: 60,
     height: 60,
-    borderRadius: 8,
+    borderRadius: spacing.sm,
   },
   defaultBarImage: {
     width: 60,
     height: 60,
-    borderRadius: 8,
-    backgroundColor: '#2A3A4A',
+    borderRadius: spacing.sm,
+    backgroundColor: colors.bg.elevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -646,10 +640,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 6,
   },
-  barName: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
+  barNameFlex: {
     flex: 1,
   },
   viewProfileButton: {
@@ -657,59 +648,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  viewProfileButtonText: {
-    color: '#1976D2',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   addAnotherBarButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#10B981',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    borderColor: colors.status.success,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 8,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   addAnotherBarButtonText: {
-    color: '#10B981',
+    color: colors.status.success,
     fontSize: 14,
     fontWeight: '500',
   },
   planContainer: {
-    backgroundColor: '#1A2332',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.bg.card,
+    borderRadius: spacing.md,
+    padding: spacing.lg,
   },
   planHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   planIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#2A3A4A',
+    backgroundColor: colors.bg.elevated,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: spacing.lg,
   },
   planInfo: {
     flex: 1,
   },
   planName: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   planPrice: {
-    color: '#10B981',
+    color: colors.status.success,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -717,134 +703,129 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.lg,
   },
   statusText: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
   },
   planFeatures: {
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   featureText: {
-    color: '#E5E7EB',
+    color: colors.text.light,
     fontSize: 14,
-    marginLeft: 12,
+    marginLeft: spacing.md,
     flex: 1,
   },
   planActions: {
     alignItems: 'center',
   },
   upgradeButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.status.success,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    gap: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: spacing.sm,
+    gap: spacing.sm,
   },
   upgradeButtonText: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 14,
     fontWeight: '600',
   },
   subscriptionDetails: {
-    backgroundColor: '#2A3A4A',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 20,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: spacing.sm,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   detailLabel: {
-    color: '#A3B3CC',
+    color: colors.text.secondary,
     fontSize: 14,
     fontWeight: '500',
-    marginLeft: 8,
-    marginRight: 8,
+    marginLeft: spacing.sm,
+    marginRight: spacing.sm,
     minWidth: 80,
   },
   detailValue: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 14,
     fontWeight: '600',
   },
   usageWarning: {
     backgroundColor: '#FEF3C7',
     borderWidth: 1,
-    borderColor: '#F59E0B',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
+    borderColor: colors.status.warning,
+    borderRadius: spacing.sm,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   warningText: {
     color: '#92400E',
     fontSize: 13,
-    marginLeft: 8,
+    marginLeft: spacing.sm,
     flex: 1,
     lineHeight: 18,
   },
   planText: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '500',
   },
   coldRegisterButton: {
-    backgroundColor: '#2A3A4A',
-    borderRadius: 12,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: spacing.md,
     borderWidth: 2,
-    borderColor: '#1976D2',
-    padding: 16,
+    borderColor: colors.brand.primary,
+    padding: spacing.lg,
     alignItems: 'center',
-    gap: 8,
-    shadowColor: '#1976D2',
+    gap: spacing.sm,
+    shadowColor: colors.brand.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-  coldRegisterButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
+  coldRegisterButtonTextBold: {
     fontWeight: '700',
     marginTop: 4,
   },
-  coldRegisterSubtext: {
-    color: '#E5E7EB',
-    fontSize: 13,
-    textAlign: 'center',
+  coldRegisterSubtextSpacing: {
     marginTop: 4,
     lineHeight: 18,
   },
   supportTicketsButton: {
-    borderColor: '#F59E0B',
-    shadowColor: '#F59E0B',
-    marginTop: 12,
+    borderColor: colors.status.warning,
+    shadowColor: colors.status.warning,
+    marginTop: spacing.md,
   },
   verifyBarsButton: {
-    marginTop: 12,
-    borderColor: '#10B981',
-    shadowColor: '#10B981',
+    marginTop: spacing.md,
+    borderColor: colors.status.success,
+    shadowColor: colors.status.success,
   },
   verificationPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.xs,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 999,
@@ -862,41 +843,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239, 68, 68, 0.10)',
     borderColor: 'rgba(239, 68, 68, 0.25)',
   },
-  verificationPillText: {
-    fontSize: 12,
+  verificationPillTextBold: {
     fontWeight: '800',
   },
-  verificationPillTextPending: {
-    color: '#FFD700',
-  },
-  verificationPillTextApproved: {
-    color: '#10B981',
-  },
-  verificationPillTextRejected: {
-    color: '#EF4444',
-  },
-  verificationHint: {
-    marginBottom: 8,
-    color: 'rgba(255, 255, 255, 0.65)',
-    fontSize: 12,
+  verificationHintSpacing: {
+    marginBottom: spacing.sm,
     lineHeight: 16,
   },
   verificationNotesBox: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 6,
+    gap: spacing.xs,
     paddingVertical: 10,
     paddingHorizontal: 10,
-    borderRadius: 12,
+    borderRadius: spacing.md,
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.10)',
   },
-  verificationNotesText: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 12,
-    lineHeight: 16,
+  verificationNotesFlex: {
     flex: 1,
+    lineHeight: 16,
   },
 }); 

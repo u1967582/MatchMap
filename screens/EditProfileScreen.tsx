@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -15,9 +14,15 @@ import { useRouter, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '~/utils/supabase';
-import InputField from '~/components/ui/InputField';
-import CustomButton from '~/components/ui/CustomButton';
-import ScreenTitle from '~/components/ui/ScreenTitle';
+import {
+  AppText,
+  AppInput,
+  AppButton,
+  AppCard,
+  colors,
+  spacing,
+  radius,
+} from '~/components/ds';
 
 interface UserProfile {
   id: string;
@@ -616,8 +621,8 @@ export default function EditProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Cargando perfil...</Text>
+          <ActivityIndicator size="large" color={colors.brand.link} />
+          <AppText variant="body" style={styles.loadingText}>Cargando perfil...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -628,20 +633,15 @@ export default function EditProfileScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={handleBack}
             disabled={saving}
+            activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <ScreenTitle 
-            title="Editar Perfil" 
-            color="#FFFFFF" 
-            shadow={false}
-            marginBottom={0}
-            fontSize={20}
-          />
+          <AppText variant="title">Editar Perfil</AppText>
           <View style={styles.placeholder} />
         </View>
 
@@ -649,115 +649,110 @@ export default function EditProfileScreen() {
           <View style={styles.contentContainer}>
             {/* Profile Image Section */}
             <View style={styles.imageSection}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.imageContainer}
                 onPress={handleSelectImage}
                 disabled={saving || uploadingImage}
+                activeOpacity={0.9}
               >
-                <Image 
-                  source={{ uri: getProfileImageUrl() }} 
+                <Image
+                  source={{ uri: getProfileImageUrl() }}
                   style={styles.profileImage}
                 />
                 <View style={styles.imageOverlay}>
                   {uploadingImage ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
+                    <ActivityIndicator color={colors.text.primary} size="small" />
                   ) : (
-                    <Ionicons name="camera" size={24} color="#FFFFFF" />
+                    <Ionicons name="camera" size={24} color={colors.text.primary} />
                   )}
                 </View>
               </TouchableOpacity>
-              <Text style={styles.imageHint}>Toca para cambiar foto</Text>
+              <AppText variant="caption" color={colors.text.muted}>
+                Toca para cambiar foto
+              </AppText>
             </View>
 
             {/* Form Section */}
             <View style={styles.formContainer}>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Nombre completo</Text>
-                <InputField
-                  placeholder={user?.full_name || 'Ingresa tu nombre completo'}
-                  value={formData.full_name}
-                  onChangeText={handleFullNameChange}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  theme="dark"
-                  editable={!saving}
-                />
-              </View>
+              <AppInput
+                label="Nombre completo"
+                placeholder={user?.full_name || 'Ingresa tu nombre completo'}
+                value={formData.full_name}
+                onChangeText={handleFullNameChange}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!saving}
+              />
 
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Nombre de usuario</Text>
-                <InputField
-                  placeholder={user?.username || 'Ingresa tu nombre de usuario'}
-                  value={formData.username}
-                  onChangeText={handleUsernameChange}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  theme="dark"
-                  editable={!saving}
-                />
-              </View>
+              <AppInput
+                label="Nombre de usuario"
+                placeholder={user?.username || 'Ingresa tu nombre de usuario'}
+                value={formData.username}
+                onChangeText={handleUsernameChange}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!saving}
+                helperText="Mínimo 3 caracteres"
+              />
 
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Email</Text>
-                <InputField
-                  placeholder={user?.email || 'Correo electrónico'}
-                  value={formData.email}
-                  onChangeText={() => {}} // No-op since it's disabled
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  theme="dark"
-                  editable={false}
-                />
-                <Text style={styles.fieldHint}>
-                  Para cambiar tu email, contacta con soporte
-                </Text>
-              </View>
+              <AppInput
+                label="Email"
+                placeholder={user?.email || 'Correo electrónico'}
+                value={formData.email}
+                onChangeText={() => {}} // No-op since it's disabled
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={false}
+                helperText="Para cambiar tu email, contacta con soporte"
+              />
 
               {/* Password Section */}
               <View style={styles.passwordSection}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.passwordToggle}
                   onPress={togglePasswordFields}
                   disabled={saving}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.passwordToggleText}>
+                  <AppText variant="subtitle" color={colors.brand.link}>
                     {showPasswordFields ? 'Cancelar cambio de contraseña' : 'Cambiar contraseña'}
-                  </Text>
-                  <Ionicons 
-                    name={showPasswordFields ? "chevron-up" : "chevron-down"} 
-                    size={20} 
-                    color="#007AFF" 
+                  </AppText>
+                  <Ionicons
+                    name={showPasswordFields ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color={colors.brand.link}
                   />
                 </TouchableOpacity>
 
                 {showPasswordFields && (
                   <>
-                    <View style={styles.fieldContainer}>
-                      <Text style={styles.fieldLabel}>Nueva contraseña</Text>
-                      <InputField
-                        placeholder="Ingresa tu nueva contraseña"
-                        value={formData.password}
-                        onChangeText={handlePasswordChange}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        theme="dark"
-                        editable={!saving}
-                      />
-                    </View>
+                    <AppInput
+                      label="Nueva contraseña"
+                      placeholder="Ingresa tu nueva contraseña"
+                      value={formData.password}
+                      onChangeText={handlePasswordChange}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      editable={!saving}
+                      helperText="Mínimo 6 caracteres"
+                    />
 
-                    <View style={styles.fieldContainer}>
-                      <Text style={styles.fieldLabel}>Confirmar contraseña</Text>
-                      <InputField
-                        placeholder="Confirma tu nueva contraseña"
-                        value={formData.confirmPassword}
-                        onChangeText={handleConfirmPasswordChange}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        theme="dark"
-                        editable={!saving}
-                      />
-                    </View>
+                    <AppInput
+                      label="Confirmar contraseña"
+                      placeholder="Confirma tu nueva contraseña"
+                      value={formData.confirmPassword}
+                      onChangeText={handleConfirmPasswordChange}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      editable={!saving}
+                      error={
+                        formData.confirmPassword.length > 0 &&
+                        formData.password !== formData.confirmPassword
+                          ? 'Las contraseñas no coinciden'
+                          : undefined
+                      }
+                    />
                   </>
                 )}
               </View>
@@ -765,18 +760,18 @@ export default function EditProfileScreen() {
 
             {/* Save Button */}
             <View style={styles.buttonContainer}>
-              <CustomButton
+              <AppButton
                 text="Guardar cambios"
                 onPress={handleSaveProfile}
                 variant="primary"
                 loading={saving}
                 disabled={!formValidation.isValid || saving || !hasChanges}
               />
-              
+
               {!hasChanges && !loading && (
-                <Text style={styles.noChangesText}>
+                <AppText variant="caption" color={colors.text.muted} align="center" style={styles.noChangesText}>
                   Modifica algún campo para guardar cambios
-                </Text>
+                </AppText>
               )}
             </View>
           </View>
@@ -789,18 +784,18 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C2A3A',
+    backgroundColor: colors.bg.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   backButton: {
-    padding: 8,
+    padding: spacing.sm,
   },
   placeholder: {
     width: 40,
@@ -809,94 +804,67 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxxxl,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 16,
+    gap: spacing.lg,
   },
   loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    marginTop: spacing.sm,
   },
   imageSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.xxxxl,
   },
   imageContainer: {
     position: 'relative',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#3A4A5C',
+    backgroundColor: colors.bg.input,
   },
   imageOverlay: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.brand.link,
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#1C2A3A',
-  },
-  imageHint: {
-    color: '#8E8E93',
-    fontSize: 14,
+    borderColor: colors.bg.primary,
   },
   formContainer: {
-    marginBottom: 32,
-  },
-  fieldContainer: {
-    marginBottom: 20,
-  },
-  fieldLabel: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  fieldHint: {
-    color: '#8E8E93',
-    fontSize: 12,
-    marginTop: 4,
-    fontStyle: 'italic',
+    marginBottom: spacing.xxxl,
+    gap: spacing.xs,
   },
   passwordSection: {
-    marginTop: 24,
+    marginTop: spacing.xxl,
   },
   passwordToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: '#2A3A4A',
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  passwordToggleText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '500',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: radius.xl,
+    marginBottom: spacing.lg,
   },
   buttonContainer: {
-    gap: 12,
+    gap: spacing.md,
     alignItems: 'center',
   },
   noChangesText: {
-    color: '#8E8E93',
-    fontSize: 14,
-    textAlign: 'center',
     fontStyle: 'italic',
   },
 }); 

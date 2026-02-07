@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Modal,
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -13,9 +12,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import { checkAndPromotePreRegisteredBar } from '~/utils/auth';
-import InputField from '~/components/ui/InputField';
-import CustomButton from '~/components/ui/CustomButton';
 import ForgotPasswordModal from './ForgotPasswordModal';
+import {
+  AppText,
+  AppInput,
+  AppButton,
+  colors,
+  spacing,
+  radius,
+} from '~/components/ds';
 
 interface LoginModalProps {
   visible: boolean;
@@ -112,50 +117,52 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Iniciar Sesión</Text>
+            <AppText variant="h2">Iniciar Sesión</AppText>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={handleClose}
               disabled={loading}
+              activeOpacity={0.7}
             >
-              <Ionicons name="close" size={28} color="#FFFFFF" />
+              <Ionicons name="close" size={28} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            <InputField
-              placeholder="Correo electrónico"
+            <AppInput
+              label="Correo electrónico"
+              placeholder="tu@email.com"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
-              theme="dark"
             />
 
-            <InputField
-              placeholder="Contraseña"
+            <AppInput
+              label="Contraseña"
+              placeholder="••••••••"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
               autoCapitalize="none"
               editable={!loading}
-              theme="dark"
             />
 
             <TouchableOpacity
               onPress={handleForgotPassword}
               style={styles.forgotPassword}
               disabled={loading}
+              activeOpacity={0.7}
             >
-              <Text style={styles.forgotPasswordText}>
+              <AppText variant="label" color={colors.brand.link}>
                 ¿Olvidaste tu contraseña?
-              </Text>
+              </AppText>
             </TouchableOpacity>
 
-            <CustomButton
+            <AppButton
               text="Iniciar Sesión"
               onPress={handleLogin}
               variant="primary"
@@ -179,38 +186,30 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C2A3A',
+    backgroundColor: colors.bg.primary,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
+    padding: spacing.xl,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30,
-    marginTop: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    marginBottom: spacing.xxxl,
+    marginTop: spacing.md,
   },
   closeButton: {
-    padding: 4,
+    padding: spacing.xs,
   },
   form: {
     flex: 1,
-    gap: 16,
+    gap: spacing.sm,
   },
   forgotPassword: {
     alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  forgotPasswordText: {
-    color: '#7FB3FF',
-    fontSize: 14,
+    marginBottom: spacing.sm,
+    marginTop: -spacing.xs,
   },
 });
 

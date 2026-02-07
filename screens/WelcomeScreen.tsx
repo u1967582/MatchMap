@@ -104,9 +104,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               <View style={styles.dividerLine} />
             </View>
 
-            <CustomButton 
-              text="Continuar con Google" 
-              onPress={onGooglePress} 
+            <CustomButton
+              text="Continuar con Google"
+              onPress={onGooglePress}
               variant="social"
               loading={loadingGoogle}
               disabled={loadingGoogle}

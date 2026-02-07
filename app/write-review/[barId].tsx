@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Image, Alert, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import { useReviews } from '~/hooks/useReviews';
+import {
+  AppText,
+  AppButton,
+  AppCard,
+  colors,
+  spacing,
+  radius,
+} from '~/components/ds';
 
 interface Bar {
   id: string;
@@ -11,6 +20,36 @@ interface Bar {
   description?: string;
   image_url?: string;
   category?: { name: string } | null;
+}
+
+// Rating Star Component
+interface RatingStarProps {
+  value: number;
+  selected: boolean;
+  onPress: () => void;
+}
+
+function RatingStar({ value, selected, onPress }: RatingStarProps) {
+  return (
+    <TouchableOpacity
+      style={[styles.ratingButton, selected && styles.ratingButtonSelected]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Ionicons
+        name={selected ? 'star' : 'star-outline'}
+        size={32}
+        color={selected ? colors.status.boost : colors.text.secondary}
+      />
+      <AppText
+        variant="caption"
+        color={selected ? colors.status.boost : colors.text.secondary}
+        style={styles.ratingValueText}
+      >
+        {value}
+      </AppText>
+    </TouchableOpacity>
+  );
 }
 
 export default function WriteReviewScreen() {
@@ -130,234 +169,209 @@ export default function WriteReviewScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
+    <SafeAreaView style={styles.container}>
+      <Stack.Screen
+        options={{
           headerShown: false,
           title: 'Write a Review'
-        }} 
+        }}
       />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <AppText variant="title">
           {existingReview ? 'Editar Reseña' : 'Escribir Reseña'}
-        </Text>
+        </AppText>
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Bar Information */}
-      {bar && (
-        <View style={styles.barSection}>
-          <Image
-            source={{
-              uri: bar.image_url || 'https://via.placeholder.com/120x120/2A3A4A/A3B3CC?text=Bar'
-            }}
-            style={styles.barImage}
-            resizeMode="cover"
-          />
-          <View style={styles.barInfo}>
-            <Text style={styles.barName}>{bar.name}</Text>
-            <Text style={styles.barType}>{bar.category?.name || 'Bar'}</Text>
-          </View>
-        </View>
-      )}
-
-      {/* Rating Section */}
-      <View style={styles.ratingSection}>
-        <Text style={styles.ratingTitle}>Valora tu experiencia</Text>
-        <View style={styles.ratingRow}>
-          {[1, 2, 3, 4, 5].map((value) => (
-            <TouchableOpacity
-              key={value}
-              style={[
-                styles.ratingButton,
-                rating !== null && value <= rating && styles.ratingButtonSelected
-              ]}
-              onPress={() => setRating(value)}
-            >
-              <Text style={styles.ratingText}>
-                {value}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Review Input */}
-      <View style={styles.inputSection}>
-        <Text style={styles.inputLabel}>Escribe tu Valoración</Text>
-        <TextInput
-          placeholder="Write your review..."
-          value={comment}
-          onChangeText={setComment}
-          multiline
-          style={styles.textInput}
-          placeholderTextColor="#94A3B8"
-          textAlignVertical="top"
-        />
-      </View>
-
-      {/* Submit Button */}
-      <TouchableOpacity 
-        style={[
-          styles.submitButton, 
-          (!rating || !comment.trim() || loading) && styles.submitButtonDisabled
-        ]} 
-        onPress={handleSubmit}
-        disabled={!rating || !comment.trim() || loading}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={[
-          styles.submitButtonText,
-          (!rating || !comment.trim() || loading) && styles.submitButtonTextDisabled
-        ]}>
-          {loading ? 'Publicando...' : 'Publicar Reseña'}
-        </Text>
-      </TouchableOpacity>
-    </View>
+        {/* Bar Information */}
+        {bar && (
+          <AppCard style={styles.barSection}>
+            <Image
+              source={{
+                uri: bar.image_url || 'https://via.placeholder.com/120x120/2A3A4A/A3B3CC?text=Bar'
+              }}
+              style={styles.barImage}
+              resizeMode="cover"
+            />
+            <View style={styles.barInfo}>
+              <AppText variant="h2" numberOfLines={2}>{bar.name}</AppText>
+              <AppText variant="caption" color={colors.text.secondary} style={styles.barTypeSpacing}>
+                {bar.category?.name || 'Bar'}
+              </AppText>
+            </View>
+          </AppCard>
+        )}
+
+        {/* Rating Section */}
+        <AppCard style={styles.ratingSection}>
+          <AppText variant="subtitle" style={styles.ratingSectionTitle}>
+            Valora tu experiencia
+          </AppText>
+          <View style={styles.ratingRow}>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <RatingStar
+                key={value}
+                value={value}
+                selected={rating !== null && value <= rating}
+                onPress={() => setRating(value)}
+              />
+            ))}
+          </View>
+          {rating !== null && (
+            <AppText variant="caption" color={colors.text.secondary} align="center" style={styles.ratingHint}>
+              {rating === 5 ? '¡Excelente!' : rating === 4 ? 'Muy bueno' : rating === 3 ? 'Bueno' : rating === 2 ? 'Regular' : 'Mejorable'}
+            </AppText>
+          )}
+        </AppCard>
+
+        {/* Review Input */}
+        <AppCard style={styles.inputSection}>
+          <AppText variant="subtitle" style={styles.inputLabel}>
+            Escribe tu Valoración
+          </AppText>
+          <TextInput
+            placeholder="Cuéntanos tu experiencia en este bar..."
+            value={comment}
+            onChangeText={setComment}
+            multiline
+            style={styles.textInput}
+            placeholderTextColor={colors.text.muted}
+            textAlignVertical="top"
+            editable={!loading}
+          />
+          <AppText variant="caption" color={colors.text.muted} style={styles.charCount}>
+            {comment.length} caracteres
+          </AppText>
+        </AppCard>
+
+        {/* Submit Button */}
+        <View style={styles.buttonContainer}>
+          <AppButton
+            text={loading ? 'Publicando...' : existingReview ? 'Actualizar Reseña' : 'Publicar Reseña'}
+            onPress={handleSubmit}
+            variant="primary"
+            loading={loading}
+            disabled={!rating || !comment.trim() || loading}
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C2A3A',
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    backgroundColor: colors.bg.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A3A4A',
+    borderBottomColor: colors.border.subtle,
   },
   backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    padding: spacing.sm,
   },
   headerSpacer: {
-    width: 40, // Same width as back button for centering
+    width: 40,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxxl,
   },
   barSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#1A2332',
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2A3A4A',
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   barImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-    marginRight: 16,
+    width: 80,
+    height: 80,
+    borderRadius: radius.xl,
+    marginRight: spacing.lg,
   },
   barInfo: {
     flex: 1,
   },
-  barName: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  barType: {
-    color: '#94A3B8',
-    fontSize: 14,
-  },
-  inputLabel: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+  barTypeSpacing: {
+    marginTop: spacing.xs,
   },
   ratingSection: {
-    padding: 20,
-    backgroundColor: '#1A2332',
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2A3A4A',
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
   },
-  ratingTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
+  ratingSectionTitle: {
+    marginBottom: spacing.lg,
   },
   ratingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   ratingButton: {
-    borderWidth: 1,
-    borderColor: '#2A3A4A',
-    borderRadius: 12,
-    padding: 12,
-    width: 48,
+    flex: 1,
     alignItems: 'center',
-    backgroundColor: '#2A3A4A',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.xl,
+    backgroundColor: colors.bg.elevated,
+    borderWidth: 2,
+    borderColor: colors.border.subtle,
   },
   ratingButtonSelected: {
-    backgroundColor: '#1976D2',
-    borderColor: '#1976D2',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderColor: colors.status.boost,
   },
-  ratingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  ratingValueText: {
+    marginTop: spacing.xs,
     fontWeight: '600',
   },
-
+  ratingHint: {
+    marginTop: spacing.lg,
+  },
   inputSection: {
-    padding: 20,
-    flex: 1,
-    backgroundColor: '#1A2332',
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2A3A4A',
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  inputLabel: {
+    marginBottom: spacing.md,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#2A3A4A',
-    borderRadius: 12,
-    height: 120,
-    padding: 16,
-    color: '#FFFFFF',
+    borderColor: colors.border.subtle,
+    borderRadius: radius.xl,
+    minHeight: 150,
+    padding: spacing.lg,
+    color: colors.text.primary,
     fontSize: 16,
-    backgroundColor: '#2A3A4A',
+    backgroundColor: colors.bg.input,
+    lineHeight: 24,
   },
-  submitButton: {
-    backgroundColor: '#1976D2',
-    paddingVertical: 16,
-    marginHorizontal: 20,
-    marginBottom: Platform.OS === 'ios' ? 40 : 20,
-    borderRadius: 12,
-    alignItems: 'center',
+  charCount: {
+    marginTop: spacing.sm,
+    textAlign: 'right',
   },
-  submitButtonDisabled: {
-    backgroundColor: '#2A3A4A',
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  submitButtonTextDisabled: {
-    color: '#94A3B8',
+  buttonContainer: {
+    marginBottom: spacing.xl,
   },
 }); 
