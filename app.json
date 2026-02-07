@@ -20,13 +20,7 @@
         }
       ],
       "expo-web-browser",
-      [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsDownloadToken": "sk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jcTZrN2k0MGM3ZDJqczZtNGxvZGJmciJ9.VBbbRIxQnFym0vb3MVL02A",
-          "RNMapboxMapsVersion": "11.8.0"
-        }
-      ],
+      "@rnmapbox/maps",
       [
         "expo-location",
         {
