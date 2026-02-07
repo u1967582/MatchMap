@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
@@ -301,6 +301,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     maxHeight: 350, // Increased height for more content
+    ...(Platform.OS === 'android' && {
+      minHeight: 320,
+      flexShrink: 0,
+    }),
   },
   imageContainer: {
     position: 'relative',

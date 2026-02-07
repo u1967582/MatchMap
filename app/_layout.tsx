@@ -3,9 +3,11 @@ import { StatusBar, Platform, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { requireOptionalNativeModule } from 'expo-modules-core';
+import ToastRoot from 'react-native-toast-message';
 import { BoostSelectionProvider } from '~/context/BoostSelectionContext';
 import { RevenueCatProvider } from '~/contexts/RevenueCatContext';
 import { supabase } from '~/utils/supabase';
+import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 
 export default function Layout() {
   const router = useRouter();
@@ -159,6 +161,7 @@ export default function Layout() {
         />
       </BoostSelectionProvider>
       </RevenueCatProvider>
+      <ToastRoot config={toastConfig} position="top" topOffset={60} />
     </SafeAreaProvider>
   );
 }

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Modal,
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -11,8 +10,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { sendPasswordResetEmail } from '~/utils/auth';
-import InputField from '~/components/ui/InputField';
-import CustomButton from '~/components/ui/CustomButton';
+import {
+  AppText,
+  AppInput,
+  AppButton,
+  colors,
+  spacing,
+  radius,
+} from '~/components/ds';
 
 interface ForgotPasswordModalProps {
   visible: boolean;
@@ -82,36 +87,37 @@ export default function ForgotPasswordModal({
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Recuperar Contraseña</Text>
+            <AppText variant="h2">Recuperar Contraseña</AppText>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={handleClose}
               disabled={loading}
+              activeOpacity={0.7}
             >
-              <Ionicons name="close" size={28} color="#FFFFFF" />
+              <Ionicons name="close" size={28} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           {/* Descripción */}
-          <Text style={styles.description}>
+          <AppText variant="body" color={colors.text.secondary} style={styles.description}>
             Ingresa tu email y te enviaremos instrucciones para restablecer tu
             contraseña.
-          </Text>
+          </AppText>
 
           {/* Form */}
           <View style={styles.form}>
-            <InputField
-              placeholder="Correo electrónico"
+            <AppInput
+              label="Correo electrónico"
+              placeholder="tu@email.com"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
-              theme="dark"
             />
 
-            <CustomButton
+            <AppButton
               text="Enviar Email"
               onPress={handleSubmit}
               variant="primary"
@@ -122,15 +128,15 @@ export default function ForgotPasswordModal({
 
           {/* Info adicional */}
           <View style={styles.infoContainer}>
-            <Text style={styles.infoTitle}>
+            <AppText variant="subtitle" style={styles.infoTitle}>
               💡 ¿No recuerdas cómo te registraste?
-            </Text>
-            <Text style={styles.infoText}>
+            </AppText>
+            <AppText variant="body" color={colors.text.secondary} style={styles.infoText}>
               • Si te registraste con Google, usa "Continuar con Google"
-            </Text>
-            <Text style={styles.infoText}>
+            </AppText>
+            <AppText variant="body" color={colors.text.secondary} style={styles.infoText}>
               • Si te registraste con email, ingresa tu email aquí
-            </Text>
+            </AppText>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -141,55 +147,43 @@ export default function ForgotPasswordModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C2A3A',
+    backgroundColor: colors.bg.primary,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: spacing.xl,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    marginBottom: spacing.xl,
+    marginTop: spacing.md,
   },
   closeButton: {
-    padding: 4,
+    padding: spacing.xs,
   },
   description: {
-    fontSize: 16,
-    color: '#8E8E93',
-    marginBottom: 30,
+    marginBottom: spacing.xxxl,
     lineHeight: 24,
   },
   form: {
-    gap: 16,
-    marginBottom: 30,
+    gap: spacing.lg,
+    marginBottom: spacing.xxxl,
   },
   infoContainer: {
-    backgroundColor: 'rgba(127, 179, 255, 0.1)',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.alpha.brandLight,
+    padding: spacing.lg,
+    borderRadius: radius.xl,
     borderLeftWidth: 4,
-    borderLeftColor: '#7FB3FF',
+    borderLeftColor: colors.brand.link,
   },
   infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   infoText: {
-    fontSize: 14,
-    color: '#8E8E93',
     lineHeight: 20,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
 });
 

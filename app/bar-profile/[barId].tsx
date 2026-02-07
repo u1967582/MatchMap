@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard, Modal, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { useFavorites } from '~/hooks/useFavorites';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
 import { useBarBoost } from '~/hooks/useBoostBars';
+import { AppText, colors, spacing } from '~/components/ds';
 // Plans removed: all bars are PRO
 
 interface BarProfile {
@@ -88,12 +89,12 @@ export default function BarProfileScreen() {
       title: 'Añadir Partido Manualmente',
       content: (
         <View>
-          <Text style={styles.infoModalText}>
+          <AppText variant="body" color={colors.text.light}>
             Esta opción te permite seleccionar y añadir partidos específicos que quieras retransmitir en tu bar.
-          </Text>
-          <Text style={[styles.infoModalText, { marginTop: 12 }]}>
+          </AppText>
+          <AppText variant="body" color={colors.text.light} style={{ marginTop: spacing.md }}>
             Ideal para cuando tienes eventos especiales o partidos concretos que sabes que tus clientes quieren ver.
-          </Text>
+          </AppText>
         </View>
       ),
     });
@@ -105,12 +106,12 @@ export default function BarProfileScreen() {
       title: 'Automatizar Retransmisiones',
       content: (
         <View>
-          <Text style={styles.infoModalText}>
+          <AppText variant="body" color={colors.text.light}>
             Configura tus equipos y competiciones favoritas para que automáticamente se añadan todos sus partidos a tu calendario de retransmisiones.
-          </Text>
-          <Text style={[styles.infoModalText, { marginTop: 12 }]}>
+          </AppText>
+          <AppText variant="body" color={colors.text.light} style={{ marginTop: spacing.md }}>
             ¡Ahorra tiempo! Una vez configurado, no tendrás que añadir partidos manualmente.
-          </Text>
+          </AppText>
         </View>
       ),
     });
@@ -122,48 +123,48 @@ export default function BarProfileScreen() {
       title: '✨ Beneficios del Boost',
       content: (
         <View>
-          <Text style={styles.boostMainText}>
+          <AppText variant="body" color={colors.text.primary} align="center" style={styles.boostMainTextSpacing}>
             Aumenta la visibilidad de tu bar y atrae más clientes
-          </Text>
+          </AppText>
 
           {/* Beneficios */}
           <View style={styles.benefitItem}>
             <View style={styles.benefitIcon}>
-              <Text style={styles.benefitEmoji}>⬆️</Text>
+              <AppText style={styles.benefitEmoji}>⬆️</AppText>
             </View>
             <View style={styles.benefitContent}>
-              <Text style={styles.benefitTitle}>Mayor visibilidad en listas</Text>
-              <Text style={styles.benefitDescription}>Tu bar aparece primero en búsquedas y filtros</Text>
+              <AppText variant="label" color={colors.text.primary}>Mayor visibilidad en listas</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Tu bar aparece primero en búsquedas y filtros</AppText>
             </View>
           </View>
 
           <View style={styles.benefitItem}>
             <View style={styles.benefitIcon}>
-              <Text style={styles.benefitEmoji}>⭐</Text>
+              <AppText style={styles.benefitEmoji}>⭐</AppText>
             </View>
             <View style={styles.benefitContent}>
-              <Text style={styles.benefitTitle}>Etiqueta destacado</Text>
-              <Text style={styles.benefitDescription}>Badge especial que llama la atención</Text>
+              <AppText variant="label" color={colors.text.primary}>Etiqueta destacado</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Badge especial que llama la atención</AppText>
             </View>
           </View>
 
           <View style={styles.benefitItem}>
             <View style={styles.benefitIcon}>
-              <Text style={styles.benefitEmoji}>📈</Text>
+              <AppText style={styles.benefitEmoji}>📈</AppText>
             </View>
             <View style={styles.benefitContent}>
-              <Text style={styles.benefitTitle}>Prioridad en resultados</Text>
-              <Text style={styles.benefitDescription}>Aparece antes que la competencia</Text>
+              <AppText variant="label" color={colors.text.primary}>Prioridad en resultados</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Aparece antes que la competencia</AppText>
             </View>
           </View>
 
           {/* Call to action */}
           <View style={styles.ctaContainer}>
-            <Text style={styles.ctaTitle}>💰 ¡Llena tu bar!</Text>
-            <Text style={styles.ctaSubtitle}>Cada cliente genera ~13€ de beneficio medio</Text>
-            <Text style={styles.ctaDescription}>
+            <AppText variant="subtitle" color={colors.status.boost} align="center" style={styles.ctaTitleSpacing}>💰 ¡Llena tu bar!</AppText>
+            <AppText variant="label" color={colors.text.primary} align="center" style={styles.ctaSubtitleSpacing}>Cada cliente genera ~13€ de beneficio medio</AppText>
+            <AppText variant="caption" color={colors.text.light} align="center" style={styles.ctaDescriptionSpacing}>
               Una inversión pequeña puede traerte muchos más clientes y aumentar significativamente tus ingresos
-            </Text>
+            </AppText>
           </View>
         </View>
       ),
@@ -219,10 +220,10 @@ export default function BarProfileScreen() {
         return (
           <View style={styles.headerContainer}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
             </TouchableOpacity>
             <View style={styles.headerContent}>
-              <Text style={styles.barName}>{bar?.name}</Text>
+              <AppText variant="h2" align="center">{bar?.name}</AppText>
               {isOwner && verificationStatus ? (
                 <View
                   style={[
@@ -245,35 +246,36 @@ export default function BarProfileScreen() {
                     size={14}
                     color={
                       verificationStatus === 'approved'
-                        ? '#10B981'
+                        ? colors.status.success
                         : verificationStatus === 'rejected'
-                          ? '#EF4444'
-                          : '#FFD700'
+                          ? colors.status.error
+                          : colors.status.boost
                     }
                   />
-                  <Text
-                    style={[
-                      styles.verificationPillText,
+                  <AppText
+                    variant="caption"
+                    color={
                       verificationStatus === 'approved'
-                        ? styles.verificationPillTextApproved
+                        ? colors.status.success
                         : verificationStatus === 'rejected'
-                          ? styles.verificationPillTextRejected
-                          : styles.verificationPillTextPending,
-                    ]}
+                          ? colors.status.error
+                          : colors.status.boost
+                    }
+                    style={styles.verificationPillTextBold}
                   >
                     {verificationStatus === 'approved'
                       ? 'Verificado'
                       : verificationStatus === 'rejected'
                         ? 'Rechazado'
                         : 'Pendiente de verificación'}
-                  </Text>
+                  </AppText>
                 </View>
               ) : null}
 
               {isOwner && verificationStatus === 'rejected' && verificationNotes ? (
                 <View style={styles.verificationNotesBox}>
-                  <Ionicons name="information-circle-outline" size={14} color="#A3B3CC" />
-                  <Text style={styles.verificationNotesText}>{verificationNotes}</Text>
+                  <Ionicons name="information-circle-outline" size={14} color={colors.text.secondary} />
+                  <AppText variant="caption" color={colors.text.secondary} style={styles.verificationNotesFlex}>{verificationNotes}</AppText>
                 </View>
               ) : null}
             </View>
@@ -333,15 +335,15 @@ export default function BarProfileScreen() {
               </View>
             ) : (
               <View style={styles.defaultImageContainer}>
-                <Ionicons name="storefront" size={64} color="#A3B3CC" />
-                <Text style={styles.noImagesText}>No hay imágenes disponibles</Text>
+                <Ionicons name="storefront" size={64} color={colors.text.secondary} />
+                <AppText variant="body" color={colors.text.secondary} style={styles.noImagesTextSpacing}>No hay imágenes disponibles</AppText>
               </View>
             )}
-            
+
                 {isOwner && (
               <TouchableOpacity style={styles.editButton} onPress={handleEditInfo}>
-                <Ionicons name="create-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.editButtonText}>Editar información</Text>
+                <Ionicons name="create-outline" size={16} color={colors.text.primary} />
+                <AppText variant="label" color={colors.text.primary}>Editar información</AppText>
               </TouchableOpacity>
             )}
           </View>
@@ -350,51 +352,51 @@ export default function BarProfileScreen() {
       case 'info':
         return (
           <View style={styles.infoSection}>
-            <Text style={styles.sectionTitle}>📝 Información del Bar</Text>
-            
+            <AppText variant="title" style={styles.sectionTitleSpacing}>📝 Información del Bar</AppText>
+
             {bar?.description && (
               <View style={styles.infoItem}>
-                <Ionicons name="information-circle-outline" size={20} color="#A3B3CC" />
+                <Ionicons name="information-circle-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Descripción</Text>
-                  <Text style={styles.infoText}>{bar.description}</Text>
+                  <AppText variant="label" color={colors.text.secondary}>Descripción</AppText>
+                  <AppText variant="body" color={colors.text.primary}>{bar.description}</AppText>
                 </View>
               </View>
             )}
 
             <View style={styles.infoItem}>
-              <Ionicons name="location-outline" size={20} color="#A3B3CC" />
+              <Ionicons name="location-outline" size={20} color={colors.text.secondary} />
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Dirección</Text>
-                <Text style={styles.infoText}>{bar?.address}, {bar?.city}</Text>
+                <AppText variant="label" color={colors.text.secondary}>Dirección</AppText>
+                <AppText variant="body" color={colors.text.primary}>{bar?.address}, {bar?.city}</AppText>
               </View>
               <TouchableOpacity style={styles.copyButton} onPress={copyAddress}>
-                <Ionicons name="copy-outline" size={18} color="#007AFF" />
+                <Ionicons name="copy-outline" size={18} color={colors.brand.link} />
               </TouchableOpacity>
             </View>
 
             {bar?.phone && (
               <View style={styles.infoItem}>
-                <Ionicons name="call-outline" size={20} color="#A3B3CC" />
+                <Ionicons name="call-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Teléfono</Text>
-                  <Text style={styles.infoText}>{bar.phone}</Text>
+                  <AppText variant="label" color={colors.text.secondary}>Teléfono</AppText>
+                  <AppText variant="body" color={colors.text.primary}>{bar.phone}</AppText>
                 </View>
                 <TouchableOpacity style={styles.copyButton} onPress={copyPhone}>
-                  <Ionicons name="copy-outline" size={18} color="#007AFF" />
+                  <Ionicons name="copy-outline" size={18} color={colors.brand.link} />
                 </TouchableOpacity>
               </View>
             )}
 
             {bar?.website && (
               <View style={styles.infoItem}>
-                <Ionicons name="globe-outline" size={20} color="#A3B3CC" />
+                <Ionicons name="globe-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Sitio Web</Text>
-                  <Text style={styles.infoText}>{bar.website}</Text>
+                  <AppText variant="label" color={colors.text.secondary}>Sitio Web</AppText>
+                  <AppText variant="body" color={colors.text.primary}>{bar.website}</AppText>
                 </View>
                 <TouchableOpacity style={styles.copyButton} onPress={copyWebsite}>
-                  <Ionicons name="copy-outline" size={18} color="#007AFF" />
+                  <Ionicons name="copy-outline" size={18} color={colors.brand.link} />
                 </TouchableOpacity>
               </View>
             )}
@@ -419,30 +421,30 @@ export default function BarProfileScreen() {
                   
                   switch (item.type) {
                     case 'category':
-                      backgroundColor = '#1976D2';
+                      backgroundColor = colors.tags.category;
                       icon = '📂';
                       text = (item.data as { name: string }).name;
                       break;
                     case 'food':
-                      backgroundColor = '#FF6B35';
+                      backgroundColor = colors.tags.food;
                       icon = '🍽️';
                       text = (item.data as { food_type: { name: string } }).food_type.name;
                       break;
                     case 'tv_feature':
-                      backgroundColor = '#4CAF50';
+                      backgroundColor = colors.tags.tv;
                       icon = '📺';
                       text = (item.data as { tv_feature: { name: string } }).tv_feature.name;
                       break;
                     case 'feature':
-                      backgroundColor = '#9C27B0';
+                      backgroundColor = colors.tags.feature;
                       icon = '✨';
                       text = (item.data as { feature: { name: string } }).feature.name;
                       break;
                   }
-                  
+
                   return (
                     <View style={[styles.tag, { backgroundColor }]}>
-                      <Text style={styles.tagText}>{icon} {text}</Text>
+                      <AppText variant="label" color={colors.text.primary}>{icon} {text}</AppText>
                     </View>
                   );
                 }}
@@ -459,12 +461,12 @@ export default function BarProfileScreen() {
         return (
           canShowMenuButton ? (
             <View style={styles.menuSection}>
-              <Text style={styles.menuSectionTitle}>🍽️ La Carta</Text>
+              <AppText variant="subtitle" style={styles.menuSectionTitleSpacing}>🍽️ La Carta</AppText>
               <TouchableOpacity
                 style={styles.menuButton}
                 onPress={() => router.push(`/bar-menu/${barId}` as any)}
               >
-                <Text style={styles.menuButtonText}>Ver Carta</Text>
+                <AppText variant="label" color={colors.text.primary}>Ver Carta</AppText>
               </TouchableOpacity>
             </View>
           ) : null
@@ -474,15 +476,15 @@ export default function BarProfileScreen() {
         return (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>📰 Posts</Text>
+              <AppText variant="title">📰 Posts</AppText>
             {isOwner && (
                 <TouchableOpacity style={styles.createPostButton} onPress={handleCreatePost}>
-                  <Ionicons name="add" size={16} color="#FFFFFF" />
-                  <Text style={styles.createPostButtonText}>Crear Post</Text>
+                  <Ionicons name="add" size={16} color={colors.text.primary} />
+                  <AppText variant="label" color={colors.text.primary}>Crear Post</AppText>
                 </TouchableOpacity>
               )}
             </View>
-            
+
             {posts.length > 0 ? (
               <FlatList
                 data={posts}
@@ -494,14 +496,14 @@ export default function BarProfileScreen() {
               />
             ) : (
               <View style={styles.noPostsContainer}>
-                <Ionicons name="document-text-outline" size={48} color="#A3B3CC" />
-                <Text style={styles.noPostsText}>No hay posts disponibles</Text>
-                <Text style={styles.noPostsSubtext}>
+                <Ionicons name="document-text-outline" size={48} color={colors.text.secondary} />
+                <AppText variant="subtitle" color={colors.text.primary} style={styles.noPostsTextSpacing}>No hay posts disponibles</AppText>
+                <AppText variant="body" color={colors.text.secondary} align="center" style={styles.noPostsSubtextSpacing}>
                   {isOwner ? 'Crea tu primer post para compartir novedades' : 'Este bar aún no ha publicado nada'}
-                </Text>
+                </AppText>
               </View>
             )}
-            
+
             {/* CTA para reseña se muestra únicamente dentro del bloque de Reseñas */}
           </View>
         );
@@ -509,7 +511,7 @@ export default function BarProfileScreen() {
       case 'reviews':
         return (
               <View style={styles.section}>
-            <Text style={styles.sectionTitle}>⭐ Reseñas</Text>
+            <AppText variant="title" style={styles.sectionTitleSpacing}>⭐ Reseñas</AppText>
             {/* Siempre mostrar BarReviewsSection - maneja el caso sin reseñas internamente */}
               <BarReviewsSection barId={barId} showHeader title="Reseñas" />
           </View>
@@ -520,39 +522,39 @@ export default function BarProfileScreen() {
           isOwner ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>⚽ Gestión de Partidos</Text>
+                <AppText variant="title">⚽ Gestión de Partidos</AppText>
               </View>
-              
+
               <View style={styles.matchesContainer}>
                 <View style={styles.buttonWrapper}>
                   <TouchableOpacity
                     style={styles.matchButton}
                     onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
                   >
-                    <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
-                    <Text style={styles.matchButtonText}>Añadir partido manualmente</Text>
+                    <Ionicons name="calendar-outline" size={20} color={colors.text.primary} />
+                    <AppText variant="label" color={colors.text.primary}>Añadir partido manualmente</AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButtonIntegrated}
                     onPress={showManualMatchInfo}
                   >
-                    <Ionicons name="information-circle-outline" size={20} color="#A3B3CC" />
+                    <Ionicons name="information-circle-outline" size={20} color={colors.text.secondary} />
                   </TouchableOpacity>
                 </View>
-                
+
                 <View style={styles.buttonWrapper}>
                   <TouchableOpacity
                     style={styles.matchButtonOutline}
                     onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
                   >
-                    <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
-                    <Text style={styles.matchButtonOutlineText}>Automatizar retransmisiones</Text>
+                    <Ionicons name="settings-outline" size={20} color={colors.text.primary} />
+                    <AppText variant="label" color={colors.text.primary}>Automatizar retransmisiones</AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButtonIntegrated}
                     onPress={showAutoMatchInfo}
                   >
-                    <Ionicons name="information-circle-outline" size={20} color="#A3B3CC" />
+                    <Ionicons name="information-circle-outline" size={20} color={colors.text.secondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -563,20 +565,20 @@ export default function BarProfileScreen() {
                     onPress={() => router.push(`/boost?barId=${barId}` as any)}
                     style={styles.promoteButton}
                   >
-                    <Ionicons name="flash" size={20} color="#FFD700" />
-                    <Text style={styles.promoteButtonText}>Aumenta la visibilidad de tu bar</Text>
+                    <Ionicons name="flash" size={20} color={colors.status.boost} />
+                    <AppText variant="label" color={colors.status.boost}>Aumenta la visibilidad de tu bar</AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButtonIntegratedBoost}
                     onPress={showBoostInfo}
                   >
-                    <Ionicons name="information-circle-outline" size={20} color="#FFD700" />
+                    <Ionicons name="information-circle-outline" size={20} color={colors.status.boost} />
                   </TouchableOpacity>
                 </View>
 
                 {/* Boost Countdown - shown when boost is active */}
                 {boost?.isActive && boost?.endAt && (
-                  <BoostCountdown endAt={boost.endAt} style={{ marginTop: 12 }} />
+                  <BoostCountdown endAt={boost.endAt} style={{ marginTop: spacing.md }} />
                 )}
               </View>
             </View>
@@ -587,7 +589,7 @@ export default function BarProfileScreen() {
         return (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>📺 Próximos partidos</Text>
+              <AppText variant="title">📺 Próximos partidos</AppText>
             </View>
             
             {upcomingMatches.length > 0 ? (
@@ -603,15 +605,15 @@ export default function BarProfileScreen() {
                           style={styles.upcomingTeamLogo}
                           defaultSource={require('~/assets/icon.png')}
                         />
-                        <Text style={styles.upcomingTeamName} numberOfLines={2}>
+                        <AppText variant="body" color={colors.text.primary} align="center" numberOfLines={2}>
                           {match.home_team_name}
-                        </Text>
+                        </AppText>
                       </View>
-                      
+
                       <View style={styles.upcomingVsContainer}>
-                        <Text style={styles.upcomingVsText}>VS</Text>
+                        <AppText variant="body" color={colors.text.secondary}>VS</AppText>
                       </View>
-                      
+
                       <View style={styles.upcomingTeamContainer}>
                         <Image
                           source={{
@@ -620,15 +622,15 @@ export default function BarProfileScreen() {
                           style={styles.upcomingTeamLogo}
                           defaultSource={require('~/assets/icon.png')}
                         />
-                        <Text style={styles.upcomingTeamName} numberOfLines={2}>
+                        <AppText variant="body" color={colors.text.primary} align="center" numberOfLines={2}>
                           {match.away_team_name}
-                        </Text>
+                        </AppText>
                       </View>
                     </View>
-                    
 
-                    
-                    <Text style={styles.upcomingMatchTime}>
+
+
+                    <AppText variant="body" color={colors.brand.accent} align="center" style={styles.upcomingMatchTimeSpacing}>
                       {new Date(`${match.date} ${match.time}`).toLocaleString('es-ES', {
                         weekday: 'short',
                         day: 'numeric',
@@ -636,19 +638,19 @@ export default function BarProfileScreen() {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
-                    </Text>
-                    
-                    <Text style={styles.upcomingMatchCompetition}>
+                    </AppText>
+
+                    <AppText variant="caption" color={colors.text.secondary} align="center">
                       {match.competition_name}
-                    </Text>
+                    </AppText>
                     
                     {isOwner && (
                       <TouchableOpacity
                         style={styles.deleteMatchButton}
                         onPress={() => handleDeleteMatch(match.id)}
                       >
-                        <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-                        <Text style={styles.deleteMatchButtonText}>Eliminar</Text>
+                        <Ionicons name="trash-outline" size={16} color={colors.status.destructive} />
+                        <AppText variant="caption" color={colors.status.destructive}>Eliminar</AppText>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -656,9 +658,9 @@ export default function BarProfileScreen() {
               </View>
             ) : (
               <View style={styles.emptyUpcomingMatches}>
-                <Text style={styles.emptyUpcomingMatchesText}>
+                <AppText variant="body" color={colors.text.muted} align="center" style={styles.emptyUpcomingMatchesTextItalic}>
                   Este bar no tiene retransmisiones programadas actualmente
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
@@ -669,8 +671,8 @@ export default function BarProfileScreen() {
           isOwner ? (
             <View style={styles.dangerSection}>
               <TouchableOpacity style={styles.deleteBarButton} onPress={handleDeleteBar}>
-                <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-                <Text style={styles.deleteBarButtonText}>Eliminar Bar</Text>
+                <Ionicons name="trash-outline" size={20} color={colors.status.destructive} />
+                <AppText variant="body" color={colors.status.destructive} style={styles.deleteBarButtonTextMedium}>Eliminar Bar</AppText>
               </TouchableOpacity>
             </View>
           ) : null
@@ -1107,27 +1109,27 @@ export default function BarProfileScreen() {
     <View style={styles.postCard}>
       {item.pinned && (
         <View style={styles.pinnedBadge}>
-          <Ionicons name="pin" size={12} color="#FFFFFF" />
-          <Text style={styles.pinnedText}>Destacado</Text>
+          <Ionicons name="pin" size={12} color={colors.text.primary} />
+          <AppText variant="caption" color={colors.text.primary} style={styles.pinnedTextBold}>Destacado</AppText>
         </View>
       )}
-      
+
       <View style={styles.postHeader}>
         <View style={styles.postTypeContainer}>
-          <Ionicons 
-            name={getPostTypeIcon(item.post_type) as any} 
-            size={16} 
-            color={getPostTypeColor(item.post_type)} 
+          <Ionicons
+            name={getPostTypeIcon(item.post_type) as any}
+            size={16}
+            color={getPostTypeColor(item.post_type)}
           />
-          <Text style={[styles.postTypeText, { color: getPostTypeColor(item.post_type) }]}>
+          <AppText variant="caption" color={getPostTypeColor(item.post_type)} style={styles.postTypeTextUppercase}>
             {getPostTypeLabel(item.post_type)}
-          </Text>
+          </AppText>
         </View>
-        <Text style={styles.postDate}>{formatDate(item.created_at)}</Text>
+        <AppText variant="caption" color={colors.text.secondary}>{formatDate(item.created_at)}</AppText>
       </View>
 
-      <Text style={styles.postTitle}>{item.title}</Text>
-      <Text style={styles.postDescription}>{item.description}</Text>
+      <AppText variant="subtitle" color={colors.text.primary} style={styles.postTitleSpacing}>{item.title}</AppText>
+      <AppText variant="body" color={colors.text.secondary} style={styles.postDescriptionSpacing}>{item.description}</AppText>
 
       {item.image_url && (
         <Image source={{ uri: item.image_url }} style={styles.postImage} />
@@ -1135,34 +1137,34 @@ export default function BarProfileScreen() {
 
       {(item.start_date || item.end_date) && (
         <View style={styles.postDates}>
-          <Ionicons name="time-outline" size={16} color="#A3B3CC" />
-          <Text style={styles.postDatesText}>
+          <Ionicons name="time-outline" size={16} color={colors.text.secondary} />
+          <AppText variant="caption" color={colors.text.secondary}>
             {item.start_date && item.end_date
               ? `${formatDate(item.start_date)} - ${formatDate(item.end_date)}`
               : item.start_date
               ? `Desde ${formatDate(item.start_date)}`
               : `Hasta ${formatDate(item.end_date!)}`
             }
-          </Text>
+          </AppText>
         </View>
       )}
 
       {isOwner && (
         <View style={styles.postActions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.postActionButton}
             onPress={() => router.push(`/edit-post/${item.id}` as any)}
           >
-            <Ionicons name="create-outline" size={16} color="#007AFF" />
-            <Text style={styles.postActionText}>Editar</Text>
+            <Ionicons name="create-outline" size={16} color={colors.brand.link} />
+            <AppText variant="caption" color={colors.brand.link} style={styles.postActionTextMedium}>Editar</AppText>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[styles.postActionButton, styles.deletePostButton]}
             onPress={() => handleDeletePost(item.id)}
           >
-            <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-            <Text style={[styles.postActionText, styles.deletePostText]}>Eliminar</Text>
+            <Ionicons name="trash-outline" size={16} color={colors.status.destructive} />
+            <AppText variant="caption" color={colors.status.destructive} style={styles.postActionTextMedium}>Eliminar</AppText>
           </TouchableOpacity>
         </View>
       )}
@@ -1276,7 +1278,7 @@ export default function BarProfileScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top','bottom']}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Cargando...</Text>
+          <AppText variant="body">Cargando...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -1286,7 +1288,7 @@ export default function BarProfileScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top','bottom']}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Bar no encontrado</Text>
+          <AppText variant="body">Bar no encontrado</AppText>
         </View>
       </SafeAreaView>
     );
@@ -1326,15 +1328,15 @@ export default function BarProfileScreen() {
               contentContainerStyle={styles.modalScrollContent}
             >
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>{infoModalContent.title}</Text>
-                <TouchableOpacity 
+                <AppText variant="title" color={colors.text.primary} style={styles.modalTitleFlex}>{infoModalContent.title}</AppText>
+                <TouchableOpacity
                   onPress={() => setInfoModalVisible(false)}
                   style={styles.modalCloseButton}
                 >
-                  <Ionicons name="close" size={24} color="#A3B3CC" />
+                  <Ionicons name="close" size={24} color={colors.text.secondary} />
                 </TouchableOpacity>
               </View>
-              
+
               <View style={styles.modalBody}>
                 {infoModalContent.content}
               </View>
@@ -1343,7 +1345,7 @@ export default function BarProfileScreen() {
                 style={styles.modalOkButton}
                 onPress={() => setInfoModalVisible(false)}
               >
-                <Text style={styles.modalOkButtonText}>Entendido</Text>
+                <AppText variant="body" color={colors.text.primary} style={styles.modalOkButtonTextBold}>Entendido</AppText>
               </TouchableOpacity>
             </ScrollView>
           </TouchableOpacity>
@@ -1809,11 +1811,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: Platform.OS === 'android' ? 16 : 14,
     paddingHorizontal: 16,
     borderTopLeftRadius: 8,
     borderBottomLeftRadius: 8,
     gap: 10,
+    ...(Platform.OS === 'android' && {
+      minHeight: 54,
+    }),
   },
   matchButtonOutline: {
     flex: 1,
@@ -1821,11 +1826,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: Platform.OS === 'android' ? 14 : 12,
     paddingHorizontal: 16,
     borderTopLeftRadius: 8,
     borderBottomLeftRadius: 8,
     gap: 10,
+    ...(Platform.OS === 'android' && {
+      minHeight: 52,
+    }),
   },
   promoteButton: {
     flex: 1,
@@ -1835,12 +1843,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRightWidth: 0,
     borderColor: 'rgba(255, 215, 0, 0.3)',
-    paddingVertical: 12,
+    paddingVertical: Platform.OS === 'android' ? 14 : 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+    ...(Platform.OS === 'android' && {
+      minHeight: 52,
+    }),
   },
   matchButtonText: {
     color: '#FFFFFF',
@@ -2153,6 +2164,79 @@ const styles = StyleSheet.create({
   modalOkButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Estilos auxiliares para AppText
+  boostMainTextSpacing: {
+    marginBottom: spacing.lg,
+    fontWeight: '600',
+  },
+  ctaTitleSpacing: {
+    marginBottom: spacing.sm,
+  },
+  ctaSubtitleSpacing: {
+    marginBottom: spacing.sm,
+    fontWeight: '600',
+  },
+  ctaDescriptionSpacing: {
+    lineHeight: 20,
+  },
+  verificationPillTextBold: {
+    fontWeight: '800',
+  },
+  verificationNotesFlex: {
+    flex: 1,
+    lineHeight: 16,
+  },
+  noImagesTextSpacing: {
+    marginTop: spacing.sm,
+  },
+  sectionTitleSpacing: {
+    marginBottom: spacing.lg,
+  },
+  menuSectionTitleSpacing: {
+    marginBottom: spacing.md,
+  },
+  noPostsTextSpacing: {
+    marginTop: spacing.lg,
+    fontWeight: '600',
+  },
+  noPostsSubtextSpacing: {
+    marginTop: spacing.sm,
+    lineHeight: 20,
+  },
+  upcomingMatchTimeSpacing: {
+    marginBottom: spacing.xs,
+    fontWeight: '500',
+  },
+  emptyUpcomingMatchesTextItalic: {
+    fontStyle: 'italic',
+  },
+  deleteBarButtonTextMedium: {
+    fontWeight: '500',
+  },
+  pinnedTextBold: {
+    fontWeight: '600',
+  },
+  postTypeTextUppercase: {
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  postTitleSpacing: {
+    marginBottom: spacing.sm,
+  },
+  postDescriptionSpacing: {
+    marginBottom: spacing.md,
+    lineHeight: 20,
+  },
+  postActionTextMedium: {
+    fontWeight: '500',
+  },
+  modalTitleFlex: {
+    flex: 1,
+    fontWeight: '700',
+  },
+  modalOkButtonTextBold: {
     fontWeight: '600',
   },
 }); 

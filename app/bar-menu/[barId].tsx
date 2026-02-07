@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import ImageViewing from 'react-native-image-viewing';
+
+const { width } = Dimensions.get('window');
+const numColumns = 3;
+const spacing = 16;
+const containerPadding = 40;
+const imageWidth = (width - containerPadding - (spacing * (numColumns - 1))) / numColumns;
 
 interface MenuImage {
   id: string;
@@ -156,11 +162,10 @@ const BarMenuScreen: React.FC = () => {
           data={menuImages}
           renderItem={renderMenuImage}
           keyExtractor={(item) => `${item.id}-${item.image_order}`}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.galleryContainer}
-          snapToAlignment="start"
-          decelerationRate="fast"
+          numColumns={3}
+          showsVerticalScrollIndicator={false}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={styles.gridContainer}
         />
       </View>
 
@@ -214,11 +219,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 24,
   },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: spacing,
+  },
+  gridContainer: {
+    paddingVertical: 20,
+  },
   galleryContainer: {
     paddingHorizontal: 10,
   },
   menuThumbnailContainer: {
-    marginHorizontal: 8,
+    width: imageWidth,
+    aspectRatio: 1,
+    marginBottom: 0,
     borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -231,8 +246,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   menuThumbnail: {
-    width: 120,
-    height: 160,
+    width: '100%',
+    height: '100%',
+    aspectRatio: 1,
     borderRadius: 12,
   },
   imageOverlay: {
