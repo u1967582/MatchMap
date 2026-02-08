@@ -11,13 +11,13 @@ export default function ProtectedLayout() {
     const checkAuthState = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const authenticated = !!session;
-      
+
       if (!authenticated) {
         // Redirect to home if not authenticated
         router.replace('/');
         return;
       }
-      
+
       setIsAuthenticated(authenticated);
     };
 

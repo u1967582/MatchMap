@@ -59,13 +59,19 @@ export default function Home() {
 
       if (result.success) {
         console.log('✅ Google sign in successful!');
-        router.replace('/(protected)/map');
+        // ✅ NO navegar aquí - el listener de auth state en _layout.tsx lo hará
+        // La navegación se maneja en el hook useAuthStateChange de auth.ts
+        console.log('⏳ Esperando a que el listener de auth redirija...');
       } else {
         console.error('❌ Google sign in failed:', result.error);
-        Alert.alert(
-          'Error de Google',
-          result.error || 'No se pudo completar el inicio de sesión con Google'
-        );
+
+        // Solo mostrar error si no fue cancelado por el usuario
+        if (result.error && !result.error.includes('cancel') && !result.error.includes('dismiss')) {
+          Alert.alert(
+            'Error de Google',
+            result.error || 'No se pudo completar el inicio de sesión con Google'
+          );
+        }
       }
     } catch (error: any) {
       console.error('❌ Exception in handleGoogleLogin:', error);

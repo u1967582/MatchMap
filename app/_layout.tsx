@@ -31,6 +31,24 @@ export default function Layout() {
     // Initialize session on app start
     initializeSession();
 
+    // 🔥 Listener de auth state para manejar login/logout
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔐 Auth State Change en _layout:', event);
+
+        if (event === 'SIGNED_IN' && session) {
+          console.log('✅ Usuario autenticado en _layout, navegando a mapa...');
+          // Pequeño delay para asegurar que todo esté listo
+          setTimeout(() => {
+            router.replace('/(protected)/map');
+          }, 300);
+        } else if (event === 'SIGNED_OUT') {
+          console.log('👋 Usuario cerró sesión en _layout, navegando a inicio...');
+          router.replace('/');
+        }
+      }
+    );
+
     // 🔥 NUEVO: Manejar deep links de autenticación de Supabase
     const handleDeepLink = async (event: { url: string }) => {
       console.log('🔗 Deep link recibido:', event.url);
@@ -122,6 +140,7 @@ export default function Layout() {
 
     return () => {
       subscription.remove();
+      authSubscription.unsubscribe();
     };
   }, []);
 

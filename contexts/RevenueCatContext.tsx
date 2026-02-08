@@ -29,7 +29,7 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
       try {
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         // Initialize RevenueCat with user ID if available
         await RevenueCatService.initializeRevenueCat(user?.id);
 
