@@ -93,10 +93,10 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   chipSelected: {
-    backgroundColor: colors.brand.primary,
-    borderColor: colors.brand.primary,
-    shadowColor: colors.brand.primary,
-    shadowOpacity: 0.4,
+    backgroundColor: colors.brand.link,
+    borderColor: colors.brand.link,
+    shadowColor: colors.brand.link,
+    shadowOpacity: 0.3,
   },
   icon: {
     fontSize: 18,

@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   Platform,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,8 +20,6 @@ import {
   AppText,
   AppCard,
   AppChip,
-  AppInput,
-  AppButton,
   EmptyState,
   SkeletonCard,
   colors,
@@ -392,12 +391,24 @@ export default function FavoritesScreen() {
       {/* Search Bar */}
       {searchVisible && (
         <View style={styles.searchContainer}>
-          <AppInput
-            placeholder="Buscar bares..."
-            value={searchText}
-            onChangeText={handleSearchTextChange}
-            autoFocus={true}
-          />
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search" size={20} color={colors.text.muted} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar bares..."
+              placeholderTextColor={colors.text.muted}
+              value={searchText}
+              onChangeText={handleSearchTextChange}
+              autoFocus={true}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchText.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
 
@@ -482,6 +493,28 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.lg,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg.element,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    minHeight: 50,
+  },
+  searchIcon: {
+    marginRight: spacing.md,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.text.primary,
+    paddingVertical: 0,
+  },
+  clearButton: {
+    marginLeft: spacing.sm,
+    padding: spacing.xs,
   },
   sortContainer: {
     paddingBottom: spacing.lg,
