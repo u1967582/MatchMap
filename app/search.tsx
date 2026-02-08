@@ -690,12 +690,25 @@ export default function SearchScreen() {
         onPress={() => handleBarPress(item.id)}
       >
         <View style={styles.imageContainer}>
-          <Image
-            source={{
-              uri: item.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
-            }}
-            style={styles.barImage}
-          />
+          {item.image_url ? (
+            <Image
+              source={{ uri: item.image_url }}
+              style={styles.barImage}
+            />
+          ) : (
+            <View style={styles.placeholderContainer}>
+              <Ionicons name="beer-outline" size={48} color={colors.text.muted} />
+              <AppText variant="title" color={colors.text.primary} align="center" style={styles.placeholderBarName}>
+                {item.name}
+              </AppText>
+              <View style={styles.placeholderInfo}>
+                <Ionicons name="location-outline" size={16} color={colors.text.secondary} />
+                <AppText variant="caption" color={colors.text.secondary}>
+                  {item.city}
+                </AppText>
+              </View>
+            </View>
+          )}
 
           {/* Top Sticker for Boosted Bars */}
           {isBoosted && (
@@ -1057,6 +1070,24 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  placeholderContainer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.bg.elevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  placeholderBarName: {
+    marginTop: spacing.sm,
+  },
+  placeholderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
   },
   topSticker: {
     position: 'absolute',
