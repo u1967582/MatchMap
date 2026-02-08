@@ -38,7 +38,7 @@ const BoostCard: React.FC<BoostCardProps> = ({
       
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
-          <Ionicons name={iconName} size={20} color={isPopular ? "#FFD700" : "#60A5FA"} />
+          <Ionicons name={iconName} size={20} color={isPopular ? "#D4AF37" : "#60A5FA"} />
           <Text style={styles.title}>{title}</Text>
         </View>
         {discountBadge && !isPopular ? (
@@ -63,10 +63,10 @@ const BoostCard: React.FC<BoostCardProps> = ({
       </View>
 
       <TouchableOpacity activeOpacity={0.9} onPress={onPay} style={styles.ctaWrapper}>
-        <Gradient 
-          colors={isPopular ? ["#FFD700", "#FFA500"] : ["#3B82F6", "#10B981"]} 
-          start={{x:0,y:0}} 
-          end={{x:1,y:1}} 
+        <Gradient
+          colors={isPopular ? ["#D4AF37", "#B8956A"] : ["#3B82F6", "#10B981"]}
+          start={{x:0,y:0}}
+          end={{x:1,y:1}}
           style={styles.cta}
         >
           <Ionicons name="card-outline" size={17} color="#FFFFFF" />
@@ -91,9 +91,9 @@ const styles = StyleSheet.create({
     position: 'relative'
   },
   cardPopular: {
-    borderColor: '#FFD700',
-    backgroundColor: 'rgba(255, 215, 0, 0.05)',
-    shadowColor: '#FFD700',
+    borderColor: '#D4AF37',
+    backgroundColor: 'rgba(212, 175, 55, 0.05)',
+    shadowColor: '#D4AF37',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
@@ -103,14 +103,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#D4AF37',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 16,
-    shadowColor: '#FFD700',
+    shadowColor: '#D4AF37',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   pricePopular: {
-    color: '#FFD700',
+    color: '#D4AF37',
   },
   duration: {
     color: '#A3B3CC',
