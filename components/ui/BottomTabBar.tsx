@@ -31,6 +31,11 @@ const BottomTabBar = () => {
   }).current;
 
   const handleTabPress = useCallback((route: string) => {
+    // Don't navigate if already on the same tab
+    if (isActiveTab(route)) {
+      return;
+    }
+
     // Animate the pressed tab
     Animated.sequence([
       Animated.timing(tabAnimations[route], {
@@ -46,7 +51,7 @@ const BottomTabBar = () => {
     ]).start();
 
     router.push(route as any);
-  }, [router, tabAnimations]);
+  }, [router, tabAnimations, isActiveTab]);
 
   const isActiveTab = useCallback((route: string) => {
     // Special handling for map route
