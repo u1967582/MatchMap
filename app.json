@@ -2,7 +2,7 @@
   "expo": {
     "name": "MatchMap",
     "slug": "matchmap",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "scheme": "matchmap",
     "jsEngine": "hermes",
     "orientation": "portrait",
@@ -93,7 +93,7 @@
       }
     },
     "android": {
-      "versionCode": 7,
+      "versionCode": 8,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#1C2A3A"
