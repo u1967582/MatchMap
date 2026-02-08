@@ -10,7 +10,7 @@ import { useFavorites } from '~/hooks/useFavorites';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
 import { useBarBoost } from '~/hooks/useBoostBars';
-import { AppText, colors, spacing, BarProfileSkeleton } from '~/components/ds';
+import { AppText, colors, spacing, radius, BarProfileSkeleton } from '~/components/ds';
 // Plans removed: all bars are PRO
 
 interface BarProfile {
@@ -526,40 +526,44 @@ export default function BarProfileScreen() {
               </View>
 
               <View style={styles.matchesContainer}>
-                <View style={styles.buttonWrapper}>
+                <View style={styles.buttonRow}>
                   <TouchableOpacity
                     style={styles.matchButton}
                     onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
+                    activeOpacity={0.8}
                   >
                     <Ionicons name="calendar-outline" size={20} color={colors.text.primary} />
                     <AppText variant="label" color={colors.text.primary}>Añadir partido manualmente</AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.infoButtonIntegrated}
+                    style={styles.infoButton}
                     onPress={showManualMatchInfo}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="information-circle-outline" size={20} color={colors.text.secondary} />
+                    <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.buttonWrapper}>
+                <View style={styles.buttonRow}>
                   <TouchableOpacity
                     style={styles.matchButtonOutline}
                     onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
+                    activeOpacity={0.8}
                   >
                     <Ionicons name="settings-outline" size={20} color={colors.text.primary} />
                     <AppText variant="label" color={colors.text.primary}>Automatizar retransmisiones</AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.infoButtonIntegrated}
+                    style={styles.infoButton}
                     onPress={showAutoMatchInfo}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="information-circle-outline" size={20} color={colors.text.secondary} />
+                    <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
                   </TouchableOpacity>
                 </View>
 
                 {/* Promote visibility button (boost style) */}
-                <View style={styles.buttonWrapper}>
+                <View style={styles.buttonRow}>
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => router.push(`/boost?barId=${barId}` as any)}
@@ -569,10 +573,11 @@ export default function BarProfileScreen() {
                     <AppText variant="label" color={colors.status.boost}>Aumenta la visibilidad de tu bar</AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.infoButtonIntegratedBoost}
+                    style={styles.infoButton}
                     onPress={showBoostInfo}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="information-circle-outline" size={20} color={colors.status.boost} />
+                    <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
                   </TouchableOpacity>
                 </View>
 
@@ -1805,51 +1810,41 @@ const styles = StyleSheet.create({
   },
   matchButton: {
     flex: 1,
-    backgroundColor: '#1976D2',
+    backgroundColor: colors.brand.link,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Platform.OS === 'android' ? 16 : 14,
-    paddingHorizontal: 16,
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-    gap: 10,
-    ...(Platform.OS === 'android' && {
-      minHeight: 54,
-    }),
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.xl,
+    gap: spacing.sm,
+    minHeight: 50,
   },
   matchButtonOutline: {
     flex: 1,
-    backgroundColor: '#1976D2',
+    backgroundColor: colors.brand.link,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Platform.OS === 'android' ? 14 : 12,
-    paddingHorizontal: 16,
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-    gap: 10,
-    ...(Platform.OS === 'android' && {
-      minHeight: 52,
-    }),
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.xl,
+    gap: spacing.sm,
+    minHeight: 50,
   },
   promoteButton: {
     flex: 1,
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
+    backgroundColor: 'rgba(255, 215, 0, 0.12)',
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderRightWidth: 0,
     borderColor: 'rgba(255, 215, 0, 0.3)',
-    paddingVertical: Platform.OS === 'android' ? 14 : 12,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    ...(Platform.OS === 'android' && {
-      minHeight: 52,
-    }),
+    gap: spacing.sm,
+    minHeight: 50,
   },
   matchButtonText: {
     color: '#FFFFFF',
@@ -1989,51 +1984,41 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
-  buttonWrapper: {
+  buttonRow: {
     flexDirection: 'row',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    borderRadius: 8,
-    overflow: 'hidden',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   buttonWithInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   infoButton: {
-    padding: 4,
-    borderRadius: 20,
-    backgroundColor: 'rgba(163, 179, 204, 0.1)',
+    width: 44,
+    height: 44,
+    borderRadius: radius.round,
+    backgroundColor: colors.bg.elevated,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   infoButtonIntegrated: {
-    backgroundColor: '#1565C0',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    width: 44,
+    height: 44,
+    borderRadius: radius.round,
+    backgroundColor: colors.bg.elevated,
     justifyContent: 'center',
     alignItems: 'center',
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
   },
   infoButtonIntegratedBoost: {
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
-    borderWidth: 1,
-    borderLeftWidth: 0,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    width: 44,
+    height: 44,
+    borderRadius: radius.round,
+    backgroundColor: colors.bg.elevated,
     justifyContent: 'center',
     alignItems: 'center',
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
   },
   modalOverlay: {
     flex: 1,
