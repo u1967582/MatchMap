@@ -2,7 +2,7 @@
   "expo": {
     "name": "MatchMap",
     "slug": "matchmap",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "scheme": "matchmap",
     "jsEngine": "hermes",
     "orientation": "portrait",
@@ -78,7 +78,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tuorg.matchmap",
-      "buildNumber": "1",
+      "buildNumber": "3",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
         "LSApplicationQueriesSchemes": [
@@ -93,7 +93,8 @@
       }
     },
     "android": {
-      "versionCode": 5,
+      "versionCode": 6,
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#1C2A3A"

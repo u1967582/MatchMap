@@ -79,13 +79,13 @@ export const useAuthStateChange = (onUserSignedIn?: (user: any) => Promise<void>
             }
           }
 
-          // Redirigir al mapa
-          console.log('🗺️  Redirigiendo al mapa...');
-          router.replace('/(protected)/map' as any);
-        } 
+          // ✅ NO navegar aquí - la navegación se maneja en _layout.tsx
+          console.log('ℹ️  Navegación manejada por _layout.tsx');
+        }
         else if (event === 'SIGNED_OUT') {
           console.log('👋 Usuario cerró sesión');
-          router.replace('/');
+          // ✅ NO navegar aquí - la navegación se maneja en _layout.tsx
+          console.log('ℹ️  Navegación manejada por _layout.tsx');
         }
         else if (event === 'TOKEN_REFRESHED') {
           console.log('🔄 Token de sesión renovado');
