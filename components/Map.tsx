@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform, ActivityIndicator } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
 import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
+import { MapSkeleton } from '~/components/ds';
 
 // Use environment variable for Mapbox token
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
@@ -84,6 +85,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
   const [bars, setBars] = React.useState<Bar[]>([]);
+  const [loadingBars, setLoadingBars] = React.useState(true);
   const [searchText, setSearchText] = React.useState('');
   const [selectedBar, setSelectedBar] = React.useState<Bar | null>(null);
   const [showBarCard, setShowBarCard] = React.useState(false);
@@ -95,7 +97,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   const [selectedMarkerId, setSelectedMarkerId] = React.useState<string | null>(null);
   const cameraRef = React.useRef<MapboxGL.Camera>(null);
   const searchBarRef = React.useRef<SearchBarRef>(null);
-  
+
   // Filter states
   const [filterModalVisible, setFilterModalVisible] = React.useState(false);
   const [selectedBarCategories, setSelectedBarCategories] = React.useState<number[]>([]);
@@ -466,7 +468,8 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
     const fetchBars = async () => {
       try {
         console.log('📍 Fetching bars from Supabase...');
-        
+        setLoadingBars(true);
+
         // Step 1: If match filter is active, get bar IDs that have events for that match
         let barIdsFilter: string[] | null = null;
         if (selectedMatch) {
@@ -480,6 +483,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           if (!barIdsFilter || barIdsFilter.length === 0) {
             console.log('⚽ No bars found with events for this match');
             setBars([]);
+            setLoadingBars(false);
             return;
           }
           console.log('⚽ Found', barIdsFilter.length, 'bars broadcasting this match');
@@ -582,6 +586,8 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
         }
       } catch (error) {
         console.error('❌ Error fetching bars:', error);
+      } finally {
+        setLoadingBars(false);
       }
     };
 
@@ -689,10 +695,19 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
     );
   }
 
+  // Show skeleton while loading bars
+  if (loadingBars) {
+    return (
+      <View style={styles.container}>
+        <MapSkeleton />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <MapboxGL.MapView 
-        style={styles.map} 
+      <MapboxGL.MapView
+        style={styles.map}
         styleURL="mapbox://styles/mapbox/dark-v11"
         scaleBarEnabled={false}
       >
@@ -874,9 +889,9 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
       {/* Search bar - Opens below the controls */}
       <View style={styles.searchWrapper} pointerEvents="box-none">
-        <SearchBarWithResults 
+        <SearchBarWithResults
           ref={searchBarRef}
-          value={searchText} 
+          value={searchText}
           onChangeText={handleSearchChange}
           searchResults={searchResults}
           isSearching={isSearching}

@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3A4A5C',
+    backgroundColor: '#243243',
     borderRadius: 25,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   resultsContainer: {
-    backgroundColor: '#3A4A5C',
+    backgroundColor: '#243243',
     borderRadius: 12,
     marginTop: 8,
     maxHeight: 300,

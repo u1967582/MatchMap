@@ -17,6 +17,6 @@ export { default as Divider } from './primitives/Divider';
 // Feedback
 export { toast } from './feedback/Toast';
 export { toastConfig } from './feedback/ToastConfig';
-export { SkeletonBox, SkeletonCard, SkeletonList } from './feedback/Skeleton';
+export { SkeletonBox, SkeletonCard, SkeletonList, ProfileSkeleton, BarProfileSkeleton, MapSkeleton } from './feedback/Skeleton';
 export { default as EmptyState } from './feedback/EmptyState';
 export { default as ErrorState } from './feedback/ErrorState';

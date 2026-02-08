@@ -10,7 +10,7 @@ import { useFavorites } from '~/hooks/useFavorites';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
 import { useBarBoost } from '~/hooks/useBoostBars';
-import { AppText, colors, spacing } from '~/components/ds';
+import { AppText, colors, spacing, BarProfileSkeleton } from '~/components/ds';
 // Plans removed: all bars are PRO
 
 interface BarProfile {
@@ -1277,9 +1277,7 @@ export default function BarProfileScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top','bottom']}>
-        <View style={styles.loadingContainer}>
-          <AppText variant="body">Cargando...</AppText>
-        </View>
+        <BarProfileSkeleton />
       </SafeAreaView>
     );
   }
