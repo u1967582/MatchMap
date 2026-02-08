@@ -697,16 +697,10 @@ export default function SearchScreen() {
             />
           ) : (
             <View style={styles.placeholderContainer}>
-              <Ionicons name="beer-outline" size={48} color={colors.text.muted} />
-              <AppText variant="title" color={colors.text.primary} align="center" style={styles.placeholderBarName}>
-                {item.name}
+              <Ionicons name="image-outline" size={32} color={colors.text.muted} />
+              <AppText variant="caption" color={colors.text.muted}>
+                Sin imagen
               </AppText>
-              <View style={styles.placeholderInfo}>
-                <Ionicons name="location-outline" size={16} color={colors.text.secondary} />
-                <AppText variant="caption" color={colors.text.secondary}>
-                  {item.city}
-                </AppText>
-              </View>
             </View>
           )}
 
@@ -1077,17 +1071,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg.elevated,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  placeholderBarName: {
-    marginTop: spacing.sm,
-  },
-  placeholderInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
+    gap: spacing.sm,
   },
   topSticker: {
     position: 'absolute',
