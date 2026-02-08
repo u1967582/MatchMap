@@ -1,15 +1,15 @@
 import * as React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
-  Alert, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
   Image,
   Platform,
-  
+
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -526,135 +526,118 @@ export default function EditBarInfoScreen() {
     }
   };
 
-  const handleAddCategory = async (categoryType: 'food_type' | 'tv_feature' | 'feature', categoryId: number, categoryName: string) => {
+  const handleToggleFoodType = async (foodTypeId: number, foodTypeName: string) => {
     try {
-      let tableName: string;
-      let columnName: string;
+      const isSelected = foodTypes.some(ft => ft.category_id === foodTypeId);
 
-      switch (categoryType) {
-        case 'food_type':
-          tableName = 'bar_food_types';
-          columnName = 'food_type_id';
-          break;
-        case 'tv_feature':
-          tableName = 'bar_selected_tv_features';
-          columnName = 'tv_feature_id';
-          break;
-        case 'feature':
-          tableName = 'bar_selected_features';
-          columnName = 'feature_id';
-          break;
-        default:
-          throw new Error('Invalid category type');
-      }
+      if (isSelected) {
+        // Remove
+        const itemToRemove = foodTypes.find(ft => ft.category_id === foodTypeId);
+        if (itemToRemove) {
+          const { error } = await supabase
+            .from('bar_food_types')
+            .delete()
+            .eq('bar_id', barId)
+            .eq('food_type_id', foodTypeId);
 
-      const { error } = await supabase
-        .from(tableName)
-        .insert({
-          bar_id: barId,
-          [columnName]: categoryId,
-        });
-
-      if (error) {
-        console.error('Error adding category:', error);
-        Alert.alert('Error', 'No se pudo añadir la categoría');
-        return;
-      }
-
-      // Update local state
-      const newBarCategory: BarCategory = {
-        id: `${barId}-${categoryType === 'food_type' ? 'food' : categoryType === 'tv_feature' ? 'tvfeature' : 'feature'}-${categoryId}`,
-        bar_id: barId,
-        category_type: categoryType,
-        category_id: categoryId,
-        category_name: categoryName,
-      };
-
-      if (categoryType === 'food_type') {
-        setFoodTypes(prev => [...prev, newBarCategory]);
-        console.log('🍕 Food type added:', categoryName);
-      } else if (categoryType === 'tv_feature') {
-        setTvFeatures(prev => [...prev, newBarCategory]);
-        console.log('📺 TV Feature added:', categoryName);
+          if (error) throw error;
+          setFoodTypes(foodTypes.filter(ft => ft.category_id !== foodTypeId));
+        }
       } else {
-        setFeatures(prev => [...prev, newBarCategory]);
-        console.log('⭐ Feature added:', categoryName);
-      }
+        // Add
+        const { error } = await supabase
+          .from('bar_food_types')
+          .insert({ bar_id: barId, food_type_id: foodTypeId });
 
-      Alert.alert('Éxito', `${categoryType === 'food_type' ? 'Tipo de comida' : categoryType === 'tv_feature' ? 'Característica de TV' : 'Característica'} añadido correctamente`);
+        if (error) throw error;
+        setFoodTypes([...foodTypes, {
+          id: `${barId}-food-${foodTypeId}`,
+          bar_id: barId,
+          category_type: 'food_type',
+          category_id: foodTypeId,
+          category_name: foodTypeName,
+        }]);
+      }
     } catch (error) {
-      console.error('Error in handleAddCategory:', error);
-      Alert.alert('Error', 'Ocurrió un error al añadir la categoría');
+      console.error('Error toggling food type:', error);
+      Alert.alert('Error', 'No se pudo actualizar el tipo de comida');
     }
   };
 
-  const handleRemoveCategory = async (categoryId: string, categoryType: 'food_type' | 'tv_feature' | 'feature') => {
-    Alert.alert(
-      'Eliminar Categoría',
-      '¿Estás seguro de que quieres eliminar esta categoría?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              let tableName: string;
-              let columnName: string;
+  const handleToggleTvFeature = async (tvFeatureId: number, tvFeatureName: string) => {
+    try {
+      const isSelected = tvFeatures.some(tvf => tvf.category_id === tvFeatureId);
 
-              switch (categoryType) {
-                case 'food_type':
-                  tableName = 'bar_food_types';
-                  columnName = 'food_type_id';
-                  break;
-                case 'tv_feature':
-                  tableName = 'bar_selected_tv_features';
-                  columnName = 'tv_feature_id';
-                  break;
-                case 'feature':
-                  tableName = 'bar_selected_features';
-                  columnName = 'feature_id';
-                  break;
-                default:
-                  throw new Error('Invalid category type');
-              }
+      if (isSelected) {
+        // Remove
+        const itemToRemove = tvFeatures.find(tvf => tvf.category_id === tvFeatureId);
+        if (itemToRemove) {
+          const { error } = await supabase
+            .from('bar_selected_tv_features')
+            .delete()
+            .eq('bar_id', barId)
+            .eq('tv_feature_id', tvFeatureId);
 
-              // Extract the actual ID from the generated ID
-              const actualId = parseInt(categoryId.split('-').pop() || '0');
+          if (error) throw error;
+          setTvFeatures(tvFeatures.filter(tvf => tvf.category_id !== tvFeatureId));
+        }
+      } else {
+        // Add
+        const { error } = await supabase
+          .from('bar_selected_tv_features')
+          .insert({ bar_id: barId, tv_feature_id: tvFeatureId });
 
-              const { error } = await supabase
-                .from(tableName)
-                .delete()
-                .eq('bar_id', barId)
-                .eq(columnName, actualId);
+        if (error) throw error;
+        setTvFeatures([...tvFeatures, {
+          id: `${barId}-tvfeature-${tvFeatureId}`,
+          bar_id: barId,
+          category_type: 'tv_feature',
+          category_id: tvFeatureId,
+          category_name: tvFeatureName,
+        }]);
+      }
+    } catch (error) {
+      console.error('Error toggling TV feature:', error);
+      Alert.alert('Error', 'No se pudo actualizar la característica de TV');
+    }
+  };
 
-              if (error) {
-                console.error('Error deleting category:', error);
-                Alert.alert('Error', 'No se pudo eliminar la categoría');
-                return;
-              }
+  const handleToggleFeature = async (featureId: number, featureName: string) => {
+    try {
+      const isSelected = features.some(f => f.category_id === featureId);
 
-              // Update local state
-              if (categoryType === 'food_type') {
-                setFoodTypes(prev => prev.filter(cat => cat.id !== categoryId));
-                console.log('🍕 Food type removed');
-              } else if (categoryType === 'tv_feature') {
-                setTvFeatures(prev => prev.filter(cat => cat.id !== categoryId));
-                console.log('📺 TV Feature removed');
-              } else {
-                setFeatures(prev => prev.filter(cat => cat.id !== categoryId));
-                console.log('⭐ Feature removed');
-              }
+      if (isSelected) {
+        // Remove
+        const itemToRemove = features.find(f => f.category_id === featureId);
+        if (itemToRemove) {
+          const { error } = await supabase
+            .from('bar_selected_features')
+            .delete()
+            .eq('bar_id', barId)
+            .eq('feature_id', featureId);
 
-              Alert.alert('Éxito', `${categoryType === 'food_type' ? 'Tipo de comida' : categoryType === 'tv_feature' ? 'Característica de TV' : 'Característica'} eliminado correctamente`);
-            } catch (error) {
-              console.error('Error in handleRemoveCategory:', error);
-              Alert.alert('Error', 'Ocurrió un error al eliminar la categoría');
-            }
-          },
-        },
-      ]
-    );
+          if (error) throw error;
+          setFeatures(features.filter(f => f.category_id !== featureId));
+        }
+      } else {
+        // Add
+        const { error } = await supabase
+          .from('bar_selected_features')
+          .insert({ bar_id: barId, feature_id: featureId });
+
+        if (error) throw error;
+        setFeatures([...features, {
+          id: `${barId}-feature-${featureId}`,
+          bar_id: barId,
+          category_type: 'feature',
+          category_id: featureId,
+          category_name: featureName,
+        }]);
+      }
+    } catch (error) {
+      console.error('Error toggling feature:', error);
+      Alert.alert('Error', 'No se pudo actualizar la característica');
+    }
   };
 
   const validateForm = () => {
@@ -799,126 +782,81 @@ export default function EditBarInfoScreen() {
         {/* Food Types Section */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Tipos de Comida</Text>
-          <View style={styles.categoriesContainer}>
-            {foodTypes.length > 0 ? (
-              foodTypes.map((foodType) => (
-                <View key={foodType.id} style={styles.categoryChip}>
-                  <Text style={styles.categoryChipText}>{foodType.category_name}</Text>
-                  <TouchableOpacity
-                    style={styles.removeCategoryButton}
-                    onPress={() => handleRemoveCategory(foodType.id, 'food_type')}
-                  >
-                    <Ionicons name="close" size={16} color="#FF6B6B" />
-                  </TouchableOpacity>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noCategoriesText}>No hay tipos de comida seleccionados</Text>
-            )}
-            <TouchableOpacity style={styles.addCategoryButton} onPress={() => {
-              const availableOptions = availableFoodTypes.filter(
-                ft => !foodTypes.some(existing => existing.category_id === ft.id)
+          <View style={styles.categoryContainer}>
+            {availableFoodTypes.map((foodType) => {
+              const isSelected = foodTypes.some(ft => ft.category_id === foodType.id);
+              return (
+                <TouchableOpacity
+                  key={foodType.id}
+                  style={[
+                    styles.categoryButton,
+                    isSelected && styles.categoryButtonActive
+                  ]}
+                  onPress={() => handleToggleFoodType(foodType.id, foodType.name)}
+                >
+                  <Text style={[
+                    styles.categoryButtonText,
+                    isSelected && styles.categoryButtonTextActive
+                  ]}>
+                    {foodType.name}
+                  </Text>
+                </TouchableOpacity>
               );
-              if (availableOptions.length > 0) {
-                Alert.alert(
-                  'Añadir Tipo de Comida',
-                  'Selecciona un tipo de comida:',
-                  availableOptions.map(option => ({
-                    text: option.name,
-                    onPress: () => handleAddCategory('food_type', option.id, option.name),
-                  }))
-                );
-              } else {
-                Alert.alert('Info', 'Ya tienes todos los tipos de comida disponibles');
-              }
-            }}>
-              <Ionicons name="add" size={20} color="#A3B3CC" />
-              <Text style={styles.addCategoryText}>Añadir</Text>
-            </TouchableOpacity>
+            })}
           </View>
         </View>
 
         {/* TV Features Section */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Características de TV</Text>
-          <View style={styles.categoriesContainer}>
-            {tvFeatures.length > 0 ? (
-              tvFeatures.map((tvFeature) => (
-                <View key={tvFeature.id} style={styles.categoryChip}>
-                  <Text style={styles.categoryChipText}>{tvFeature.category_name}</Text>
-                  <TouchableOpacity
-                    style={styles.removeCategoryButton}
-                    onPress={() => handleRemoveCategory(tvFeature.id, 'tv_feature')}
-                  >
-                    <Ionicons name="close" size={16} color="#FF6B6B" />
-                  </TouchableOpacity>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noCategoriesText}>No hay características de TV seleccionadas</Text>
-            )}
-            <TouchableOpacity style={styles.addCategoryButton} onPress={() => {
-              const availableOptions = availableTvFeatures.filter(
-                tvf => !tvFeatures.some(existing => existing.category_id === tvf.id)
+          <View style={styles.categoryContainer}>
+            {availableTvFeatures.map((tvFeature) => {
+              const isSelected = tvFeatures.some(tvf => tvf.category_id === tvFeature.id);
+              return (
+                <TouchableOpacity
+                  key={tvFeature.id}
+                  style={[
+                    styles.categoryButton,
+                    isSelected && styles.categoryButtonActive
+                  ]}
+                  onPress={() => handleToggleTvFeature(tvFeature.id, tvFeature.name)}
+                >
+                  <Text style={[
+                    styles.categoryButtonText,
+                    isSelected && styles.categoryButtonTextActive
+                  ]}>
+                    {tvFeature.name}
+                  </Text>
+                </TouchableOpacity>
               );
-              if (availableOptions.length > 0) {
-                Alert.alert(
-                  'Añadir Característica de TV',
-                  'Selecciona una característica:',
-                  availableOptions.map(option => ({
-                    text: option.name,
-                    onPress: () => handleAddCategory('tv_feature', option.id, option.name),
-                  }))
-                );
-              } else {
-                Alert.alert('Info', 'Ya tienes todas las características de TV disponibles');
-              }
-            }}>
-              <Ionicons name="add" size={20} color="#A3B3CC" />
-              <Text style={styles.addCategoryText}>Añadir</Text>
-            </TouchableOpacity>
+            })}
           </View>
         </View>
 
         {/* Features Section */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Características</Text>
-          <View style={styles.categoriesContainer}>
-            {features.length > 0 ? (
-              features.map((feature) => (
-                <View key={feature.id} style={styles.categoryChip}>
-                  <Text style={styles.categoryChipText}>{feature.category_name}</Text>
-                  <TouchableOpacity
-                    style={styles.removeCategoryButton}
-                    onPress={() => handleRemoveCategory(feature.id, 'feature')}
-                  >
-                    <Ionicons name="close" size={16} color="#FF6B6B" />
-                  </TouchableOpacity>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noCategoriesText}>No hay características seleccionadas</Text>
-            )}
-            <TouchableOpacity style={styles.addCategoryButton} onPress={() => {
-              const availableOptions = availableFeatures.filter(
-                feat => !features.some(existing => existing.category_id === feat.id)
+          <View style={styles.categoryContainer}>
+            {availableFeatures.map((feature) => {
+              const isSelected = features.some(f => f.category_id === feature.id);
+              return (
+                <TouchableOpacity
+                  key={feature.id}
+                  style={[
+                    styles.categoryButton,
+                    isSelected && styles.categoryButtonActive
+                  ]}
+                  onPress={() => handleToggleFeature(feature.id, feature.name)}
+                >
+                  <Text style={[
+                    styles.categoryButtonText,
+                    isSelected && styles.categoryButtonTextActive
+                  ]}>
+                    {feature.name}
+                  </Text>
+                </TouchableOpacity>
               );
-              if (availableOptions.length > 0) {
-                Alert.alert(
-                  'Añadir Característica',
-                  'Selecciona una característica:',
-                  availableOptions.map(option => ({
-                    text: option.name,
-                    onPress: () => handleAddCategory('feature', option.id, option.name),
-                  }))
-                );
-              } else {
-                Alert.alert('Info', 'Ya tienes todas las características disponibles');
-              }
-            }}>
-              <Ionicons name="add" size={20} color="#A3B3CC" />
-              <Text style={styles.addCategoryText}>Añadir</Text>
-            </TouchableOpacity>
+            })}
           </View>
         </View>
 
@@ -1282,56 +1220,6 @@ const styles = StyleSheet.create({
     color: '#A3B3CC',
     fontSize: 12,
     marginTop: 4,
-  },
-  categoriesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1E3A5F',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  categoryChipText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    marginRight: 6,
-  },
-  removeCategoryButton: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 107, 107, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addCategoryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#A3B3CC',
-    borderStyle: 'dashed',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginBottom: 8,
-  },
-  addCategoryText: {
-    color: '#A3B3CC',
-    fontSize: 14,
-    marginLeft: 4,
-  },
-  noCategoriesText: {
-    color: '#8E8E93',
-    fontSize: 14,
-    fontStyle: 'italic',
-    marginBottom: 8,
   },
   reorderButton: {
     position: 'absolute',
