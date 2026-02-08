@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
-import { AppText, colors, spacing } from '~/components/ds';
+import { AppText, colors, spacing, ProfileSkeleton } from '~/components/ds';
 
 interface UserProfile {
   id: string;
@@ -247,9 +247,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <AppText variant="body">Cargando...</AppText>
-        </View>
+        <ProfileSkeleton />
       </SafeAreaView>
     );
   }

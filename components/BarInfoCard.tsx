@@ -177,36 +177,41 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
       >
         {/* Image Container with Favorite Button */}
         <View style={styles.imageContainer}>
-          <Image
-            source={{
-              uri: bar.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
-            }}
-            style={styles.barImage}
-            resizeMode="cover"
-          />
-          
+          {bar.image_url ? (
+            <Image
+              source={{ uri: bar.image_url }}
+              style={styles.barImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.noImageContainer}>
+              <Ionicons name="image-outline" size={64} color="#A3B3CC" />
+              <Text style={styles.noImageText}>Sin fotos disponibles</Text>
+            </View>
+          )}
+
           {/* Favorites Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.favoritesButton, isFavorite && styles.favoritesButtonActive]}
             onPress={(e) => {
               e.stopPropagation();
               handleFavoriteToggle();
             }}
           >
-            <Ionicons 
-              name={isFavorite ? "heart" : "heart-outline"} 
-              size={20} 
-              color="#FFFFFF" 
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={20}
+              color="#FFFFFF"
             />
           </TouchableOpacity>
 
           {/* Close Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={(e) => {
               e.stopPropagation();
               console.log('📍 Closing bar card for:', bar.name);
               onClose();
-            }} 
+            }}
             style={styles.closeButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -315,6 +320,19 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  noImageContainer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#2A3A4A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  noImageText: {
+    color: '#A3B3CC',
+    fontSize: 16,
+    fontWeight: '500',
   },
   favoritesButton: {
     position: 'absolute',
