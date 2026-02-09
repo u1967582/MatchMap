@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SelectableChip from './SelectableChip';
+import { toast } from '~/components/ds';
 
 interface FilterItem {
   id: number;
@@ -101,6 +102,7 @@ export default function FilterModal({
     onFoodTypesChange([]);
     onFeaturesChange([]);
     onTvFeaturesChange([]);
+    toast.info('Filtros restablecidos');
   };
 
   const getActiveFiltersCount = () => {
@@ -148,10 +150,17 @@ export default function FilterModal({
 
   function handleApplyFilters(event: GestureResponderEvent): void {
     console.log('✅ Aplicando filtros...');
-  if (onApplyFilters) {
-    onApplyFilters(); // Llama al callback externo si existe
-  }
-  onClose(); // Cierra el modal
+    const activeFilters = getActiveFiltersCount();
+
+    if (onApplyFilters) {
+      onApplyFilters(); // Llama al callback externo si existe
+    }
+
+    onClose(); // Cierra el modal
+
+    if (activeFilters > 0) {
+      toast.success('Filtros aplicados');
+    }
   }
 
   return (

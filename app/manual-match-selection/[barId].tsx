@@ -17,6 +17,7 @@ import { supabase } from '~/utils/supabase';
 import CustomCalendar from '~/components/ui/CustomCalendar';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
 import { type Capabilities, CAP_BY_TIER, type Tier } from '~/lib/planCapabilities';
+import { toast } from '~/components/ds';
 
 interface Team {
   id: string;
@@ -100,7 +101,7 @@ export default function ManualMatchSelectionScreen() {
 
       if (matchesError) {
         console.error('Error fetching matches:', matchesError);
-        Alert.alert('Error', 'No se pudieron cargar los partidos');
+        toast.error('No se pudieron cargar los partidos');
         return;
       }
 
@@ -124,7 +125,7 @@ export default function ManualMatchSelectionScreen() {
 
         if (teamsError) {
           console.error('Error fetching teams:', teamsError);
-          Alert.alert('Error', 'No se pudieron cargar los equipos');
+          toast.error('No se pudieron cargar los equipos');
           return;
         }
 
@@ -136,7 +137,7 @@ export default function ManualMatchSelectionScreen() {
 
         if (competitionsError) {
           console.error('Error fetching competitions:', competitionsError);
-          Alert.alert('Error', 'No se pudieron cargar las competiciones');
+          toast.error('No se pudieron cargar las competiciones');
           return;
         }
 
@@ -219,7 +220,7 @@ export default function ManualMatchSelectionScreen() {
 
   const handleSaveSelectedMatches = async () => {
     if (selectedMatches.length === 0) {
-      Alert.alert('Info', 'No has seleccionado ningún partido');
+      toast.info('Selecciona al menos un partido');
       return;
     }
 
@@ -235,6 +236,7 @@ export default function ManualMatchSelectionScreen() {
           .gte('start_time', new Date().toISOString());
         if (typeof count === 'number' && count + selectedMatches.length > maxEvents) {
           const remaining = Math.max(0, (maxEvents as number) - count);
+          // Usar Alert aquí porque es un límite del plan (importante)
           Alert.alert(
             'Límite de eventos alcanzado',
             `Tu plan ${planTier} permite máximo ${maxEvents} eventos. ${remaining === 0 ? 'No puedes añadir más eventos.' : `Solo puedes añadir ${remaining} más.`}`
@@ -257,23 +259,16 @@ export default function ManualMatchSelectionScreen() {
 
       if (error) {
         console.error('Error saving events:', error);
-        Alert.alert('Error', 'No se pudieron guardar los partidos seleccionados');
+        toast.error('No se pudieron guardar los partidos');
         return;
       }
 
-      Alert.alert(
-        'Éxito',
-        `${selectedMatches.length} partido(s) añadido(s) correctamente`,
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      const partidosText = selectedMatches.length === 1 ? 'Partido añadido' : `${selectedMatches.length} partidos añadidos`;
+      toast.success(partidosText);
+      router.back();
     } catch (error) {
       console.error('Error in handleSaveSelectedMatches:', error);
-      Alert.alert('Error', 'Ocurrió un error al guardar los partidos');
+      toast.error('Error al guardar los partidos', 'Inténtalo de nuevo');
     } finally {
       setSaving(false);
     }

@@ -15,6 +15,7 @@ import {
   AppText,
   AppInput,
   AppButton,
+  toast,
   colors,
   spacing,
 } from '~/components/ds';
@@ -53,32 +54,32 @@ export default function RegisterModal({
   const handleRegister = async () => {
     // Validaciones detalladas
     if (formData.email.trim().length === 0) {
-      Alert.alert('Error', 'Por favor ingresa tu correo electrónico');
+      toast.warning('Ingresa tu correo electrónico');
       return;
     }
-    
+
     if (!formData.email.includes('@')) {
-      Alert.alert('Error', 'Por favor ingresa un correo electrónico válido');
+      toast.warning('Ingresa un correo válido');
       return;
     }
 
     if (formData.username.trim().length < 3) {
-      Alert.alert('Error', 'El nombre de usuario debe tener al menos 3 caracteres');
+      toast.warning('El nombre de usuario debe tener al menos 3 caracteres');
       return;
     }
 
     if (formData.fullName.trim().length === 0) {
-      Alert.alert('Error', 'Por favor ingresa tu nombre completo');
+      toast.warning('Ingresa tu nombre completo');
       return;
     }
 
     if (formData.password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      toast.warning('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      toast.error('Las contraseñas no coinciden');
       return;
     }
 
@@ -98,7 +99,7 @@ export default function RegisterModal({
       });
 
       if (error) {
-        Alert.alert('Error de registro', error.message);
+        toast.supabaseError(error, 'No se pudo crear la cuenta');
         return;
       }
 
@@ -123,14 +124,11 @@ export default function RegisterModal({
 
       // Cerrar modal y notificar éxito
       onClose();
-      Alert.alert(
-        'Registro exitoso',
-        'Tu cuenta ha sido creada correctamente',
-        [{ text: 'OK', onPress: onRegisterSuccess }]
-      );
+      toast.success('Cuenta creada correctamente');
+      onRegisterSuccess();
     } catch (error: any) {
       console.error('Register error:', error);
-      Alert.alert('Error', 'Error inesperado durante el registro');
+      toast.error('Error inesperado', 'No se pudo crear la cuenta');
     } finally {
       setLoading(false);
     }

@@ -8,6 +8,7 @@ import { calculateDiscountBadge } from '~/lib/boost/discount';
 import Paywall from '~/components/revenuecat/Paywall';
 import CustomerCenter from '~/components/revenuecat/CustomerCenter';
 import { useRevenueCat } from '~/contexts/RevenueCatContext';
+import { toast } from '~/components/ds';
 
 type PlanKey = '7d' | '1m' | '1y';
 
@@ -62,22 +63,21 @@ const BoostScreen: React.FC = () => {
 
   const onPay = async (plan: PlanKey) => {
     if (!barId) {
+      // Este es un caso crítico de error de configuración
       Alert.alert('Error', 'Falta el identificador del bar.');
       return;
     }
-    
+
     // Open RevenueCat paywall
+    toast.info('Redirigiendo al pago…');
     setPaywallVisible(true);
   };
 
   const handlePurchaseComplete = async () => {
     // Refresh customer info after purchase
     await refreshCustomerInfo();
-    Alert.alert(
-      '¡Boost Activado!',
-      'Tu bar ahora tiene mayor visibilidad. Los clientes te encontrarán más fácilmente.',
-      [{ text: 'Genial!', onPress: () => router.back() }]
-    );
+    toast.success('¡Boost activado! ✅', 'Tu bar tiene mayor visibilidad');
+    router.back();
   };
 
   return (

@@ -9,6 +9,7 @@ import {
   AppText,
   AppButton,
   AppCard,
+  toast,
   colors,
   spacing,
   radius,
@@ -127,12 +128,12 @@ export default function WriteReviewScreen() {
 
   const handleSubmit = async () => {
     if (!rating || !user?.id || !barId) {
-      Alert.alert('Error', 'Please select a rating and make sure you are logged in.');
+      toast.warning('Selecciona una valoración');
       return;
     }
 
     if (!comment.trim()) {
-      Alert.alert('Error', 'Please write a review comment.');
+      toast.warning('Escribe un comentario sobre tu experiencia');
       return;
     }
 
@@ -140,7 +141,7 @@ export default function WriteReviewScreen() {
 
     try {
       let success = false;
-      
+
       if (existingReview) {
         // Update existing review
         success = await updateReview(existingReview.id, rating, comment.trim());
@@ -150,15 +151,14 @@ export default function WriteReviewScreen() {
       }
 
       if (success) {
-        Alert.alert('Success', existingReview ? 'Review updated successfully!' : 'Review posted successfully!', [
-          { text: 'OK', onPress: () => router.back() }
-        ]);
+        toast.success(existingReview ? 'Reseña actualizada' : 'Reseña publicada');
+        router.back();
       } else {
-        Alert.alert('Error', 'Failed to post review. Please try again.');
+        toast.error('No se pudo publicar la reseña');
       }
     } catch (error) {
       console.error('❌ Error posting review:', error);
-      Alert.alert('Error', 'Failed to post review. Please try again.');
+      toast.error('No se pudo publicar la reseña', 'Inténtalo de nuevo');
     } finally {
       setLoading(false);
     }

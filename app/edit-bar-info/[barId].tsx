@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
+import { toast } from '~/components/ds';
 // Subscriptions removed; use fixed limits
 
 interface Bar {
@@ -111,7 +112,7 @@ export default function EditBarInfoScreen() {
 
         if (barError || !barData) {
           console.error('Error fetching bar:', barError);
-          Alert.alert('Error', 'No se pudo cargar la información del bar');
+          toast.error('No se pudo cargar la información del bar');
           router.back();
           return;
         }
@@ -642,19 +643,19 @@ export default function EditBarInfoScreen() {
 
   const validateForm = () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'El nombre del bar es obligatorio');
+      toast.warning('El nombre del bar es obligatorio');
       return false;
     }
 
     // Validate phone format (optional)
     if (phone.trim() && !/^[\+]?[0-9\s\-\(\)]{9,}$/.test(phone.trim())) {
-      Alert.alert('Error', 'El formato del teléfono no es válido');
+      toast.warning('El formato del teléfono no es válido');
       return false;
     }
 
     // Validate website format (optional)
     if (website.trim() && !/^https?:\/\/.+/.test(website.trim())) {
-      Alert.alert('Error', 'El formato de la URL no es válido (debe empezar con http:// o https://)');
+      toast.warning('La URL debe empezar con http:// o https://');
       return false;
     }
 
@@ -686,24 +687,16 @@ export default function EditBarInfoScreen() {
 
       if (updateError) {
         console.error('Error updating bar:', updateError);
-        Alert.alert('Error', 'No se pudo actualizar la información del bar');
+        toast.error('No se pudo actualizar la información');
         return;
       }
 
-      Alert.alert(
-        'Éxito',
-        'Información del bar actualizada correctamente',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      toast.success('Información actualizada');
+      router.back();
 
     } catch (error) {
       console.error('Error in handleSave:', error);
-      Alert.alert('Error', 'Ocurrió un error al guardar la información');
+      toast.error('Error al guardar', 'Inténtalo de nuevo');
     } finally {
       setSaving(false);
     }

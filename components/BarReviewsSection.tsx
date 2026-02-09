@@ -3,6 +3,7 @@ import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity } from 'react
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { toast } from '~/components/ds';
 
 interface Review {
   id: string;
@@ -157,6 +158,9 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           .eq('user_id', userId);
         if (!error) {
           setReviews(prev => prev.map(r => r.id === review.id ? { ...r, likedByMe: false, likes: (r.likes ?? 1) - 1 } : r));
+          // No mostrar toast al quitar like (sería molesto)
+        } else {
+          toast.error('No se pudo quitar el like');
         }
       } else {
         const { error } = await supabase
@@ -164,8 +168,13 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           .insert([{ review_id: review.id, user_id: userId }]);
         if (!error) {
           setReviews(prev => prev.map(r => r.id === review.id ? { ...r, likedByMe: true, likes: (r.likes ?? 0) + 1 } : r));
+          toast.success('Te ha gustado esta reseña');
+        } else {
+          toast.error('No se pudo registrar el like');
         }
       }
+    } catch (error) {
+      toast.error('Error al actualizar el like', 'Inténtalo de nuevo');
     } finally {
       setBusyById(prev => ({ ...prev, [review.id]: false }));
     }

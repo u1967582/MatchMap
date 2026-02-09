@@ -19,6 +19,7 @@ import {
   AppInput,
   AppButton,
   AppCard,
+  toast,
   colors,
   spacing,
   radius,
@@ -110,7 +111,7 @@ export default function EditProfileScreen() {
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile:', profileError);
-        Alert.alert('Error', 'No se pudo cargar el perfil');
+        toast.error('No se pudo cargar el perfil');
         return;
       }
 
@@ -134,7 +135,7 @@ export default function EditProfileScreen() {
       setProfileImage(profile?.profile_image_url || null);
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
-      Alert.alert('Error', 'Error inesperado al cargar el perfil');
+      toast.error('Error al cargar el perfil', 'Inténtalo de nuevo');
     } finally {
       setLoading(false);
     }
@@ -233,7 +234,7 @@ export default function EditProfileScreen() {
       });
       
       if (!file.uri) {
-        Alert.alert('Error', 'No se pudo obtener la imagen seleccionada');
+        toast.error('No se pudo obtener la imagen');
         return;
       }
 
@@ -242,12 +243,12 @@ export default function EditProfileScreen() {
       console.log('📋 Verificación del archivo:', fileInfo);
 
       if (!fileInfo.exists) {
-        Alert.alert('Error', 'El archivo seleccionado no existe');
+        toast.error('El archivo no existe');
         return;
       }
 
       if (fileInfo.size === 0) {
-        Alert.alert('Error', 'El archivo seleccionado está vacío');
+        toast.error('El archivo está vacío');
         return;
       }
 
@@ -256,7 +257,7 @@ export default function EditProfileScreen() {
       
     } catch (error) {
       console.error('Error picking image from gallery:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen de la galería');
+      toast.error('No se pudo seleccionar la imagen');
     }
   }, []);
 
@@ -300,7 +301,7 @@ export default function EditProfileScreen() {
       });
       
       if (!file.uri) {
-        Alert.alert('Error', 'No se pudo obtener la foto tomada');
+        toast.error('No se pudo obtener la foto');
         return;
       }
 
@@ -309,12 +310,12 @@ export default function EditProfileScreen() {
       console.log('📋 Verificación de la foto:', fileInfo);
 
       if (!fileInfo.exists) {
-        Alert.alert('Error', 'La foto tomada no existe');
+        toast.error('La foto no existe');
         return;
       }
 
       if (fileInfo.size === 0) {
-        Alert.alert('Error', 'La foto tomada está vacía');
+        toast.error('La foto está vacía');
         return;
       }
 
@@ -323,7 +324,7 @@ export default function EditProfileScreen() {
       
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'No se pudo tomar la foto con la cámara');
+      toast.error('No se pudo tomar la foto');
     }
   }, []);
 
@@ -483,14 +484,14 @@ export default function EditProfileScreen() {
   // Save profile changes
   const handleSaveProfile = useCallback(async () => {
     if (!formValidation.isValid) {
-      Alert.alert('Error', formValidation.errors[0]);
+      toast.error(formValidation.errors[0]);
       return;
     }
 
     if (!user) return;
 
     if (!hasChanges) {
-      Alert.alert('Sin cambios', 'No se han detectado cambios para guardar.');
+      toast.info('No hay cambios para guardar');
       return;
     }
 
@@ -524,7 +525,7 @@ export default function EditProfileScreen() {
       await saveProfileData(imageUrl);
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'No se pudo guardar el perfil');
+      toast.error('No se pudo guardar el perfil', 'Inténtalo de nuevo');
     } finally {
       setSaving(false);
     }
@@ -582,9 +583,8 @@ export default function EditProfileScreen() {
         }
       }
 
-      Alert.alert('Éxito', 'Perfil actualizado correctamente', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      toast.success('Perfil actualizado');
+      router.back();
     } catch (error) {
       throw error;
     }

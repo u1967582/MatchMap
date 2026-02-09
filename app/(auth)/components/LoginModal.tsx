@@ -17,6 +17,7 @@ import {
   AppText,
   AppInput,
   AppButton,
+  toast,
   colors,
   spacing,
   radius,
@@ -38,7 +39,7 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
 
   const handleLogin = async () => {
     if (!isFormValid) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      toast.warning('Completa todos los campos');
       return;
     }
 
@@ -51,7 +52,7 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
       });
 
       if (error) {
-        Alert.alert('Error de inicio de sesión', error.message);
+        toast.supabaseError(error, 'No se pudo iniciar sesión');
         return;
       }
 
@@ -72,13 +73,14 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
       // Limpiar formulario
       setEmail('');
       setPassword('');
-      
+
       // Cerrar modal y notificar éxito
       onClose();
+      toast.success('¡Bienvenido! 👋');
       onLoginSuccess();
     } catch (error: any) {
       console.error('Login error:', error);
-      Alert.alert('Error', 'Error inesperado durante el inicio de sesión');
+      toast.error('Error inesperado', 'No se pudo iniciar sesión');
     } finally {
       setLoading(false);
     }

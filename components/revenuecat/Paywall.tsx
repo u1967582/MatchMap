@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { PurchasesPackage, PurchasesOffering } from 'react-native-purchases';
 import * as RevenueCatService from '~/utils/revenuecat';
+import { toast } from '~/components/ds';
 
 interface PaywallProps {
   visible: boolean;
@@ -51,7 +52,7 @@ export default function Paywall({
       }
     } catch (error) {
       console.error('Failed to load offering:', error);
-      Alert.alert('Error', 'No se pudieron cargar los productos disponibles.');
+      toast.error('No se pudieron cargar los productos', 'Inténtalo de nuevo');
     } finally {
       setLoading(false);
     }
@@ -59,33 +60,27 @@ export default function Paywall({
 
   const handlePurchase = async () => {
     if (!selectedPackage) {
-      Alert.alert('Error', 'Por favor selecciona un plan.');
+      toast.warning('Selecciona un plan primero');
       return;
     }
 
     try {
       setPurchasing(true);
       await RevenueCatService.purchasePackage(selectedPackage);
-      
-      Alert.alert(
-        '¡Compra exitosa!',
-        'Tu boost ha sido activado correctamente.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              onPurchaseComplete?.();
-              onClose();
-            },
-          },
-        ]
-      );
+
+      onPurchaseComplete?.();
+      onClose();
+      toast.success('¡Compra exitosa!', 'Tu boost ha sido activado');
     } catch (error: any) {
       if (!error.userCancelled) {
+        // Error crítico de pago - usar Alert
         Alert.alert(
           'Error en la compra',
           'No se pudo completar la compra. Por favor, inténtalo de nuevo.'
         );
+      } else {
+        // Usuario canceló - usar toast
+        toast.info('Pago cancelado');
       }
     } finally {
       setPurchasing(false);
@@ -96,24 +91,11 @@ export default function Paywall({
     try {
       setPurchasing(true);
       await RevenueCatService.restorePurchases();
-      Alert.alert(
-        'Compras restauradas',
-        'Tus compras anteriores han sido restauradas correctamente.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              onPurchaseComplete?.();
-              onClose();
-            },
-          },
-        ]
-      );
+      toast.success('Compras restauradas');
+      onPurchaseComplete?.();
+      onClose();
     } catch (error) {
-      Alert.alert(
-        'Error',
-        'No se pudieron restaurar las compras. Asegúrate de haber realizado compras previamente.'
-      );
+      toast.error('No se pudieron restaurar las compras', 'Asegúrate de haber realizado compras previamente');
     } finally {
       setPurchasing(false);
     }
