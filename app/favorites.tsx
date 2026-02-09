@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import BottomTabBar from '~/components/ui/BottomTabBar';
-import { useFavorites } from '~/hooks/useFavorites';
+import { useFavoritesStore } from '~/stores/favoritesStore';
 import {
   AppText,
   AppCard,
@@ -151,8 +151,12 @@ function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap }: 
 
 export default function FavoritesScreen() {
   const router = useRouter();
-  const { getFavoriteBars, removeFromFavorites } = useFavorites();
-  
+
+  // Store de favoritos (con actualizaciones automáticas)
+  const getFavoriteBars = useFavoritesStore(state => state.getFavoriteBars);
+  const removeFavorite = useFavoritesStore(state => state.removeFavorite);
+  const favorites = useFavoritesStore(state => state.favorites);
+
   const [favoriteBars, setFavoriteBars] = useState<FavoriteBar[]>([]);
   const [filteredBars, setFilteredBars] = useState<FavoriteBar[]>([]);
   const [loading, setLoading] = useState(true);
@@ -237,6 +241,11 @@ export default function FavoritesScreen() {
     getUserLocation();
   }, [loadFavoriteBars, getUserLocation]);
 
+  // Reload favorites when favorites store changes (auto-update)
+  useEffect(() => {
+    loadFavoriteBars();
+  }, [favorites, loadFavoriteBars]);
+
   // Handle bar press
   const handleBarPress = useCallback((barId: string) => {
     router.push(`/bar-profile/${barId}` as any);
@@ -253,13 +262,11 @@ export default function FavoritesScreen() {
           text: 'Eliminar',
           style: 'destructive',
           onPress: async () => {
-            const success = await removeFromFavorites(barId);
+            const success = await removeFavorite(barId);
             if (success) {
-              // Remove from local state
-              setFavoriteBars(prev => prev.filter(bar => bar.id !== barId));
-              setFilteredBars(prev => prev.filter(bar => bar.id !== barId));
               console.log('🗑️ Removed from favorites:', barName);
               toast.success('Eliminado de favoritos');
+              // La lista se actualizará automáticamente por el efecto que escucha `favorites`
             } else {
               toast.error('No se pudo eliminar de favoritos');
             }
@@ -267,7 +274,7 @@ export default function FavoritesScreen() {
         },
       ]
     );
-  }, [removeFromFavorites]);
+  }, [removeFavorite]);
 
   // Apply filters and sorting
   const applyFilters = useCallback(() => {

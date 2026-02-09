@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from '~/components/ds';
+import { useLikesStore } from '~/stores/likesStore';
 
 interface Review {
   id: string;
@@ -15,7 +16,6 @@ interface Review {
     profile_image_url: string;
   };
   likes?: number;
-  likedByMe?: boolean;
 }
 
 interface BarReviewsSectionProps {
@@ -32,6 +32,10 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [busyById, setBusyById] = useState<Record<string, boolean>>({});
+
+  // Store de likes (actualizaciones optimistas)
+  const isLiked = useLikesStore(state => state.isLiked);
+  const toggleLikeStore = useLikesStore(state => state.toggleLike);
 
   useEffect(() => {
     const fetchReviewsAndBarData = async () => {
@@ -78,18 +82,6 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
               profile_image_url: item.user?.profile_image_url || '',
             },
           }));
-
-          // mark liked by current user
-          if (uid && transformedData.length > 0) {
-            const ids = transformedData.map(r => r.id);
-            const { data: myLikes } = await supabase
-              .from('review_likes')
-              .select('review_id')
-              .in('review_id', ids)
-              .eq('user_id', uid);
-            const likedSet = new Set((myLikes ?? []).map((r: any) => r.review_id));
-            transformedData.forEach(r => { r.likedByMe = likedSet.has(r.id); });
-          }
 
           setReviews(transformedData);
 
@@ -149,36 +141,48 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   const toggleLike = useCallback(async (review: Review) => {
     if (!userId || busyById[review.id]) return;
     setBusyById(prev => ({ ...prev, [review.id]: true }));
+
     try {
-      if (review.likedByMe) {
-        const { error } = await supabase
-          .from('review_likes')
-          .delete()
-          .eq('review_id', review.id)
-          .eq('user_id', userId);
-        if (!error) {
-          setReviews(prev => prev.map(r => r.id === review.id ? { ...r, likedByMe: false, likes: (r.likes ?? 1) - 1 } : r));
-          // No mostrar toast al quitar like (sería molesto)
-        } else {
-          toast.error('No se pudo quitar el like');
-        }
+      const wasLiked = isLiked(review.id);
+
+      // Actualización optimista del contador de likes local
+      if (wasLiked) {
+        setReviews(prev => prev.map(r =>
+          r.id === review.id ? { ...r, likes: Math.max(0, (r.likes ?? 1) - 1) } : r
+        ));
       } else {
-        const { error } = await supabase
-          .from('review_likes')
-          .insert([{ review_id: review.id, user_id: userId }]);
-        if (!error) {
-          setReviews(prev => prev.map(r => r.id === review.id ? { ...r, likedByMe: true, likes: (r.likes ?? 0) + 1 } : r));
+        setReviews(prev => prev.map(r =>
+          r.id === review.id ? { ...r, likes: (r.likes ?? 0) + 1 } : r
+        ));
+      }
+
+      // Toggle en el store (optimista)
+      const success = await toggleLikeStore(review.id);
+
+      if (success) {
+        if (!wasLiked) {
           toast.success('Te ha gustado esta reseña');
-        } else {
-          toast.error('No se pudo registrar el like');
         }
+        // No mostrar toast al quitar like (sería molesto)
+      } else {
+        // Rollback del contador si falló
+        if (wasLiked) {
+          setReviews(prev => prev.map(r =>
+            r.id === review.id ? { ...r, likes: (r.likes ?? 0) + 1 } : r
+          ));
+        } else {
+          setReviews(prev => prev.map(r =>
+            r.id === review.id ? { ...r, likes: Math.max(0, (r.likes ?? 1) - 1) } : r
+          ));
+        }
+        toast.error(wasLiked ? 'No se pudo quitar el like' : 'No se pudo registrar el like');
       }
     } catch (error) {
       toast.error('Error al actualizar el like', 'Inténtalo de nuevo');
     } finally {
       setBusyById(prev => ({ ...prev, [review.id]: false }));
     }
-  }, [userId, busyById]);
+  }, [userId, busyById, isLiked, toggleLikeStore]);
 
   // Build header consistently on every render to keep hook order stable
   const header = useMemo(() => (
@@ -229,8 +233,8 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionButton} onPress={() => toggleLike(item)} disabled={!userId || busyById[item.id]}>
-          <Ionicons name={item.likedByMe ? 'heart' : 'heart-outline'} size={16} color={item.likedByMe ? '#EF4444' : '#94A3B8'} />
-          <Text style={[styles.actionText, item.likedByMe && styles.actionTextActive]}>{item.likes ?? 0}</Text>
+          <Ionicons name={isLiked(item.id) ? 'heart' : 'heart-outline'} size={16} color={isLiked(item.id) ? '#EF4444' : '#94A3B8'} />
+          <Text style={[styles.actionText, isLiked(item.id) && styles.actionTextActive]}>{item.likes ?? 0}</Text>
         </TouchableOpacity>
       </View>
     </View>

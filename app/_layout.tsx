@@ -8,9 +8,13 @@ import { BoostSelectionProvider } from '~/context/BoostSelectionContext';
 import { RevenueCatProvider } from '~/contexts/RevenueCatContext';
 import { supabase } from '~/utils/supabase';
 import { toastConfig } from '~/components/ds/feedback/ToastConfig';
+import { useFavoritesStore } from '~/stores/favoritesStore';
+import { useLikesStore } from '~/stores/likesStore';
 
 export default function Layout() {
   const router = useRouter();
+  const setFavoritesUserId = useFavoritesStore(state => state.setUserId);
+  const setLikesUserId = useLikesStore(state => state.setUserId);
 
   useEffect(() => {
     // Configure Android navigation bar
@@ -38,12 +42,20 @@ export default function Layout() {
 
         if (event === 'SIGNED_IN' && session) {
           console.log('✅ Usuario autenticado en _layout, navegando a mapa...');
+          // Inicializar stores con el userId
+          setFavoritesUserId(session.user.id);
+          setLikesUserId(session.user.id);
+          console.log('🔄 Stores inicializados con userId:', session.user.id);
           // Pequeño delay para asegurar que todo esté listo
           setTimeout(() => {
             router.replace('/(protected)/map');
           }, 300);
         } else if (event === 'SIGNED_OUT') {
           console.log('👋 Usuario cerró sesión en _layout, navegando a inicio...');
+          // Limpiar stores
+          setFavoritesUserId(null);
+          setLikesUserId(null);
+          console.log('🧹 Stores limpiados');
           router.replace('/');
         }
       }
@@ -148,7 +160,7 @@ export default function Layout() {
     try {
       // This will automatically restore the session from AsyncStorage if it exists
       const { data: { session }, error } = await supabase.auth.getSession();
-      
+
       if (error) {
         console.error('❌ Error al inicializar la sesión:', error);
         return;
@@ -157,6 +169,10 @@ export default function Layout() {
       if (session) {
         console.log('✅ Sesión restaurada automáticamente al iniciar la app');
         console.log('   Usuario:', session.user.email);
+        // Inicializar stores con el userId
+        setFavoritesUserId(session.user.id);
+        setLikesUserId(session.user.id);
+        console.log('🔄 Stores inicializados en session restore con userId:', session.user.id);
       } else {
         console.log('ℹ️ No hay sesión guardada');
       }
