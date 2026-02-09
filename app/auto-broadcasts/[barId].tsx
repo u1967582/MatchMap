@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
+import { toast } from '~/components/ds';
 
 type Competition = { id: number | string; name: string; gender?: string | null };
 type Team = { id: string; name: string; short_name?: string | null; logo_url?: string | null };
@@ -71,11 +72,12 @@ export default function AutoBroadcastsScreen() {
 				}
 			}
 
-			// Volver al perfil sin alertas
+				// Volver al perfil con toast de éxito
+			toast.success('Automatización activada');
 			router.back();
 		} catch (e: any) {
 			console.error('Persist selections error:', e);
-			Alert.alert('Error', e?.message ?? 'No se pudieron guardar las selecciones');
+			toast.error('No se pudieron guardar las selecciones');
 		}
 	}, [barId, selectedCompetitions, selectedTeams]);
 
@@ -171,13 +173,14 @@ export default function AutoBroadcastsScreen() {
 				_competition_ids: competition_ids,
 				_team_ids: team_ids,
 			});
-			if (error) throw error;
+				if (error) throw error;
 			setOrigComps(competition_ids.map(String));
 			setOrigTeams(team_ids.map(String));
-			// Volver al perfil del bar tras guardar
+			// Volver al perfil del bar tras guardar con toast de éxito
+			toast.success('Automatización activada');
 			router.back();
 		} catch (e: any) {
-			Alert.alert('Error', e?.message ?? 'No se pudo guardar');
+			toast.error('No se pudo guardar', 'Inténtalo de nuevo');
 		} finally {
 			setSaving(false);
 		}

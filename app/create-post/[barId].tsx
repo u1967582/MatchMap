@@ -15,6 +15,7 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '~/utils/supabase';
+import { toast } from '~/components/ds';
 import CustomButton from '~/components/ui/CustomButton';
 import ScreenTitle from '~/components/ui/ScreenTitle';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
@@ -119,7 +120,7 @@ export default function CreatePostScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      toast.error('No se pudo seleccionar la imagen');
     }
   }, []);
 
@@ -246,12 +247,12 @@ export default function CreatePostScreen() {
 
   const handleCreatePost = useCallback(async () => {
     if (!formData.title.trim() || !formData.description.trim()) {
-      Alert.alert('Error', 'El título y la descripción son obligatorios');
+      toast.warning('El título y la descripción son obligatorios');
       return;
     }
 
     if (!barId) {
-      Alert.alert('Error', 'ID del bar no válido');
+      toast.error('ID del bar no válido');
       return;
     }
 
@@ -292,7 +293,7 @@ export default function CreatePostScreen() {
 
       if (postError) {
         console.error('Error creating post:', postError);
-        Alert.alert('Error', 'No se pudo crear el post');
+        toast.error('No se pudo crear el post');
         return;
       }
 
@@ -315,23 +316,19 @@ export default function CreatePostScreen() {
           }
         } catch (imageError) {
           console.error('Error uploading image:', imageError);
-          Alert.alert(
-            'Post creado',
-            'El post se creó correctamente, pero hubo un problema al subir la imagen.',
-            [{ text: 'OK', onPress: () => router.back() }]
-          );
+          toast.warning('Post creado, pero no se pudo subir la imagen');
+          router.back();
           return;
         }
       }
 
-      Alert.alert('Éxito', 'Post creado correctamente', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      toast.success('Post creado correctamente');
+      router.back();
 
     } catch (error) {
       console.error('Error in handleCreatePost:', error);
-      Alert.alert('Error', 'Ocurrió un error al crear el post');
-    } finally {
+      toast.error('Error al crear el post', 'Inténtalo de nuevo');
+    } finally{
       setLoading(false);
     }
   }, [formData, barId, selectedImage, uploadPostImage, router]);

@@ -22,6 +22,7 @@ import {
   AppChip,
   EmptyState,
   SkeletonCard,
+  toast,
   colors,
   spacing,
   radius,
@@ -258,8 +259,9 @@ export default function FavoritesScreen() {
               setFavoriteBars(prev => prev.filter(bar => bar.id !== barId));
               setFilteredBars(prev => prev.filter(bar => bar.id !== barId));
               console.log('🗑️ Removed from favorites:', barName);
+              toast.success('Eliminado de favoritos');
             } else {
-              Alert.alert('Error', 'No se pudo eliminar de favoritos');
+              toast.error('No se pudo eliminar de favoritos');
             }
           },
         },

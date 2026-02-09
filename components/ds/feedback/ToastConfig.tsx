@@ -6,23 +6,23 @@ import { spacing } from '../tokens/spacing';
 import { typography } from '../tokens/typography';
 
 const baseStyle = {
-  borderLeftWidth: 4,
+  borderLeftWidth: 3,
   backgroundColor: colors.bg.card,
-  borderRadius: radius.xl,
-  paddingVertical: spacing.md,
-  paddingHorizontal: spacing.lg,
-  minHeight: 56,
-  width: '92%' as const,
+  borderRadius: radius.lg,
+  paddingVertical: spacing.sm,
+  paddingHorizontal: spacing.md,
+  minHeight: 48,
+  width: '88%' as const,
 };
 
 const text1Style = {
-  fontSize: typography.size.body,
+  fontSize: typography.size.caption,
   fontWeight: typography.weight.semibold,
   color: colors.text.primary,
 };
 
 const text2Style = {
-  fontSize: typography.size.caption,
+  fontSize: typography.size.caption - 1,
   fontWeight: typography.weight.regular,
   color: colors.text.secondary,
 };

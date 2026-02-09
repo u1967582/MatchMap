@@ -14,6 +14,7 @@ import {
   AppText,
   AppInput,
   AppButton,
+  toast,
   colors,
   spacing,
   radius,
@@ -35,7 +36,7 @@ export default function ForgotPasswordModal({
 
   const handleSubmit = async () => {
     if (!isEmailValid) {
-      Alert.alert('Error', 'Por favor ingresa un email válido');
+      toast.warning('Ingresa un email válido');
       return;
     }
 
@@ -46,21 +47,14 @@ export default function ForgotPasswordModal({
 
       // Siempre mostrar mensaje de éxito por seguridad
       // (no revelar si el email existe o no)
-      Alert.alert(
-        'Email Enviado',
-        'Si el email está registrado, recibirás instrucciones para recuperar tu contraseña. Revisa tu bandeja de entrada.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setEmail('');
-              onClose();
-            },
-          },
-        ]
+      setEmail('');
+      onClose();
+      toast.success(
+        'Email enviado',
+        'Revisa tu bandeja de entrada'
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error inesperado');
+      toast.error('No se pudo enviar el email', 'Inténtalo de nuevo');
     } finally {
       setLoading(false);
     }

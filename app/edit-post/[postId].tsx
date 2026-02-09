@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
+import { toast } from '~/components/ds';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
 import { CAP_BY_TIER, type Capabilities, type Tier } from '~/lib/planCapabilities';
 
@@ -91,7 +92,7 @@ export default function EditPostScreen() {
 
         if (postError || !postData) {
           console.error('Error fetching post:', postError);
-          Alert.alert('Error', 'No se pudo cargar el post');
+          toast.error('No se pudo cargar el post');
           router.back();
           return;
         }
@@ -175,12 +176,12 @@ export default function EditPostScreen() {
 
     // Validation
     if (!title.trim()) {
-      Alert.alert('Error', 'El título es obligatorio');
+      toast.warning('El título es obligatorio');
       return;
     }
 
     if (!description.trim()) {
-      Alert.alert('Error', 'La descripción es obligatoria');
+      toast.warning('La descripción es obligatoria');
       return;
     }
 
@@ -210,7 +211,7 @@ export default function EditPostScreen() {
 
           if (uploadError) {
             console.error('Error uploading image:', uploadError);
-            Alert.alert('Error', 'No se pudo subir la imagen');
+            toast.error('No se pudo subir la imagen');
             return;
           }
 
@@ -221,7 +222,7 @@ export default function EditPostScreen() {
           finalImageUrl = publicUrl;
         } catch (error) {
           console.error('Error processing image:', error);
-          Alert.alert('Error', 'No se pudo procesar la imagen');
+          toast.error('No se pudo procesar la imagen');
           return;
         }
       }
@@ -244,24 +245,16 @@ export default function EditPostScreen() {
 
       if (updateError) {
         console.error('Error updating post:', updateError);
-        Alert.alert('Error', 'No se pudo actualizar el post');
+        toast.error('No se pudo actualizar el post');
         return;
       }
 
-      Alert.alert(
-        'Éxito',
-        'Post actualizado correctamente',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      toast.success('Post actualizado');
+      router.back();
 
     } catch (error) {
       console.error('Error in handleSave:', error);
-      Alert.alert('Error', 'Ocurrió un error al guardar el post');
+      toast.error('Error al guardar el post', 'Inténtalo de nuevo');
     } finally {
       setSaving(false);
     }
