@@ -25,6 +25,7 @@ import { useFavorites } from '~/hooks/useFavorites';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { useBoostBars } from '~/hooks/useBoostBars';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
+import { useFavoritesStore } from '~/stores/favoritesStore';
 import {
   AppText,
   AppCard,
@@ -79,8 +80,7 @@ export default function SearchScreen() {
   const [bars, setBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [favoriteStates, setFavoriteStates] = useState<{ [key: string]: boolean }>({});
-  
+
   // Filters state
   const [selectedSort, setSelectedSort] = useState('proximity'); // Default to "Proximidad"
   const [selectedBarCategories, setSelectedBarCategories] = useState<number[]>([]);
@@ -96,8 +96,9 @@ export default function SearchScreen() {
   // Load filter data
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
 
-  // Load favorites functionality
-  const { toggleFavorite, isFavorite } = useFavorites();
+  // Load favorites functionality from store (optimistic updates)
+  const isFavorite = useFavoritesStore(state => state.isFavorite);
+  const toggleFavorite = useFavoritesStore(state => state.toggleFavorite);
 
   // Boost selection context
   const { setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
@@ -632,38 +633,17 @@ export default function SearchScreen() {
     router.push(`/bar-profile/${barId}` as any);
   }, [router]);
 
-  // Check favorite status for all bars
-  useEffect(() => {
-    const checkFavorites = async () => {
-      const newFavoriteStates: { [key: string]: boolean } = {};
-      
-      for (const bar of bars) {
-        const isFav = await isFavorite(bar.id);
-        newFavoriteStates[bar.id] = isFav;
-      }
-      
-      setFavoriteStates(newFavoriteStates);
-    };
-    
-    if (bars.length > 0) {
-      checkFavorites();
-    }
-  }, [bars, isFavorite]);
-
   // Render bar card
   const renderBarCard = useCallback(({ item }: { item: Bar }) => {
     console.log("Rendering bar card for:", item.name);
 
     const handleFavoriteToggle = async (e: any) => {
       e.stopPropagation(); // Prevent triggering the card press
+      const wasFavorite = isFavorite(item.id);
       const success = await toggleFavorite(item.id);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setFavoriteStates(prev => ({
-          ...prev,
-          [item.id]: !prev[item.id]
-        }));
-        console.log(favoriteStates[item.id] ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', item.name);
+        console.log(wasFavorite ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', item.name);
       }
     };
 
@@ -714,11 +694,11 @@ export default function SearchScreen() {
 
           {/* Favorites Button */}
           <TouchableOpacity
-            style={[styles.favoritesButton, favoriteStates[item.id] && styles.favoritesButtonActive]}
+            style={[styles.favoritesButton, isFavorite(item.id) && styles.favoritesButtonActive]}
             onPress={handleFavoriteToggle}
           >
             <Ionicons
-              name={favoriteStates[item.id] ? "heart" : "heart-outline"}
+              name={isFavorite(item.id) ? "heart" : "heart-outline"}
               size={20}
               color={colors.text.primary}
             />
@@ -768,7 +748,7 @@ export default function SearchScreen() {
       </AppCard>
     );
 
-  }, [handleBarPress, toggleFavorite, favoriteStates, selected3Stable]);
+  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable]);
 
   // Load initial data
   useEffect(() => {

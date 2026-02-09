@@ -1,16 +1,17 @@
 import { View, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard, Modal, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
+import { useRouter, Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import Gradient from '~/components/ui/Gradient';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
-import { useFavorites } from '~/hooks/useFavorites';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
 import { useBarBoost } from '~/hooks/useBoostBars';
 import { AppText, colors, spacing, radius, BarProfileSkeleton } from '~/components/ds';
+import { useFavoritesStore } from '~/stores/favoritesStore';
 // Plans removed: all bars are PRO
 
 interface BarProfile {
@@ -63,13 +64,15 @@ const { width } = Dimensions.get('window');
 export default function BarProfileScreen() {
   const router = useRouter();
   const { barId } = useLocalSearchParams<{ barId: string }>();
-  const { isFavorite, toggleFavorite } = useFavorites();
-  
+
+  // Store de favoritos (actualizaciones optimistas)
+  const isFavorite = useFavoritesStore(state => state.isFavorite);
+  const toggleFavorite = useFavoritesStore(state => state.toggleFavorite);
+
   const [bar, setBar] = useState<BarProfile | null>(null);
   const [posts, setPosts] = useState<BarPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
-  const [isFav, setIsFav] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
@@ -79,6 +82,7 @@ export default function BarProfileScreen() {
   const [verificationNotes, setVerificationNotes] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any }>({ title: '', content: null });
+  const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
 
   // Get boost status for countdown
   const { boost, isLoading: boostLoading } = useBarBoost(barId);
@@ -325,10 +329,10 @@ export default function BarProfileScreen() {
                     style={[styles.favoritesButton, isFav && styles.favoritesButtonActive]}
                     onPress={handleFavoriteToggle}
                   >
-                    <Ionicons 
-                      name={isFav ? "heart" : "heart-outline"} 
-                      size={20} 
-                      color="#FFFFFF" 
+                    <Ionicons
+                      name={barId && isFavorite(barId) ? "heart" : "heart-outline"}
+                      size={20}
+                      color="#FFFFFF"
                     />
                   </TouchableOpacity>
                 )}
@@ -513,7 +517,7 @@ export default function BarProfileScreen() {
               <View style={styles.section}>
             <AppText variant="title" style={styles.sectionTitleSpacing}>⭐ Reseñas</AppText>
             {/* Siempre mostrar BarReviewsSection - maneja el caso sin reseñas internamente */}
-              <BarReviewsSection barId={barId} showHeader title="Reseñas" />
+              <BarReviewsSection key={`reviews-${reviewsRefreshKey}`} barId={barId} showHeader title="Reseñas" />
           </View>
         );
 
@@ -1216,26 +1220,27 @@ export default function BarProfileScreen() {
     fetchBarProfile();
   }, [fetchBarProfile]);
 
-  // Tier loading removed
+  // Reload posts, reviews, and matches when screen comes back into focus (after creating/editing)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (bar && user) {
+        console.log('🔄 Screen focused, reloading posts, reviews, and matches...');
+        fetchBarPosts(bar.id, user);
+        fetchUpcomingMatches(bar.id);
+        setReviewsRefreshKey(prev => prev + 1); // Trigger reviews reload
+      }
+    }, [bar, user, fetchBarPosts, fetchUpcomingMatches])
+  );
 
-  // Check if bar is in favorites when bar loads
-  useEffect(() => {
-    if (barId) {
-      const checkFavorite = async () => {
-        const favorite = await isFavorite(barId);
-        setIsFav(favorite);
-      };
-      checkFavorite();
-    }
-  }, [barId, isFavorite]);
+  // Tier loading removed
 
   const handleFavoriteToggle = async () => {
     if (!barId) return;
-    
+
+    const wasFavorite = isFavorite(barId);
     const success = await toggleFavorite(barId);
     if (success) {
-      setIsFav(!isFav);
-      console.log(isFav ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', bar?.name);
+      console.log(wasFavorite ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', bar?.name);
     }
   };
 
