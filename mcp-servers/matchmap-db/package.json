@@ -1,0 +1,25 @@
+{
+  "name": "matchmap-db-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server personalizado para MatchMap - Operaciones de base de datos Supabase",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "matchmap-db": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "keywords": [
+    "mcp",
+    "matchmap",
+    "supabase",
+    "database"
+  ],
+  "author": "MatchMap Team",
+  "license": "MIT"
+}

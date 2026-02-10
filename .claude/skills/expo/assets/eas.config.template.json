@@ -1,0 +1,49 @@
+{
+  "cli": {
+    "version": ">= 5.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "ios": {
+        "simulator": false,
+        "buildNumber": "auto-increment"
+      },
+      "android": {
+        "buildType": "apk",
+        "versionCode": "auto-increment"
+      }
+    },
+    "production": {
+      "channel": "production",
+      "autoIncrement": true,
+      "ios": {
+        "buildNumber": "auto-increment"
+      },
+      "android": {
+        "versionCode": "auto-increment"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "tu-apple-id@email.com",
+        "ascAppId": "tu-asc-app-id",
+        "appleTeamId": "tu-team-id"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      }
+    }
+  }
+}
