@@ -208,6 +208,74 @@ export function MapSkeleton() {
   );
 }
 
+/* ─── EditBarSkeleton: skeleton para editar info del bar ─── */
+
+export function EditBarSkeleton() {
+  return (
+    <Animated.View style={styles.editBarContainer}>
+      {/* Header con botones */}
+      <Animated.View style={styles.editBarHeader}>
+        <SkeletonBox width={40} height={40} borderRadius={20} />
+        <SkeletonBox width="50%" height={24} />
+        <SkeletonBox width={80} height={40} borderRadius={radius.md} />
+      </Animated.View>
+
+      {/* Bar Info */}
+      <Animated.View style={styles.editBarInfo}>
+        <SkeletonBox width="60%" height={20} />
+        <SkeletonBox width="40%" height={14} style={{ marginTop: spacing.xs }} />
+      </Animated.View>
+
+      {/* Form Inputs */}
+      <Animated.View style={styles.editBarForm}>
+        {/* Input 1 */}
+        <Animated.View style={styles.inputGroup}>
+          <SkeletonBox width="30%" height={16} style={{ marginBottom: spacing.sm }} />
+          <SkeletonBox width="100%" height={48} borderRadius={radius.md} />
+        </Animated.View>
+
+        {/* Input 2 */}
+        <Animated.View style={styles.inputGroup}>
+          <SkeletonBox width="40%" height={16} style={{ marginBottom: spacing.sm }} />
+          <SkeletonBox width="100%" height={100} borderRadius={radius.md} />
+        </Animated.View>
+
+        {/* Input 3 */}
+        <Animated.View style={styles.inputGroup}>
+          <SkeletonBox width="35%" height={16} style={{ marginBottom: spacing.sm }} />
+          <SkeletonBox width="100%" height={48} borderRadius={radius.md} />
+        </Animated.View>
+
+        {/* Input 4 */}
+        <Animated.View style={styles.inputGroup}>
+          <SkeletonBox width="25%" height={16} style={{ marginBottom: spacing.sm }} />
+          <SkeletonBox width="100%" height={48} borderRadius={radius.md} />
+        </Animated.View>
+
+        {/* Images Section */}
+        <Animated.View style={styles.inputGroup}>
+          <SkeletonBox width="45%" height={16} style={{ marginBottom: spacing.sm }} />
+          <Animated.View style={styles.imagesRow}>
+            <SkeletonBox width={100} height={100} borderRadius={radius.md} />
+            <SkeletonBox width={100} height={100} borderRadius={radius.md} style={{ marginLeft: spacing.md }} />
+            <SkeletonBox width={100} height={100} borderRadius={radius.md} style={{ marginLeft: spacing.md }} />
+          </Animated.View>
+        </Animated.View>
+
+        {/* Categories Section */}
+        <Animated.View style={styles.inputGroup}>
+          <SkeletonBox width="40%" height={16} style={{ marginBottom: spacing.sm }} />
+          <Animated.View style={styles.tagsRow}>
+            <SkeletonBox width={90} height={32} borderRadius={radius.pill} />
+            <SkeletonBox width={110} height={32} borderRadius={radius.pill} style={{ marginLeft: spacing.sm }} />
+            <SkeletonBox width={85} height={32} borderRadius={radius.pill} style={{ marginLeft: spacing.sm }} />
+          </Animated.View>
+        </Animated.View>
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
 /* ─── BarProfileSkeleton: skeleton para perfil de bar ─── */
 
 export function BarProfileSkeleton() {
@@ -439,5 +507,35 @@ const styles = StyleSheet.create({
     bottom: 120,
     right: spacing.xl,
     zIndex: 10,
+  },
+  // EditBarSkeleton styles
+  editBarContainer: {
+    flex: 1,
+    backgroundColor: colors.bg.primary,
+  },
+  editBarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  editBarInfo: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xl,
+  },
+  editBarForm: {
+    paddingHorizontal: spacing.xl,
+    gap: spacing.xl,
+  },
+  inputGroup: {
+    marginBottom: spacing.lg,
+  },
+  imagesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
