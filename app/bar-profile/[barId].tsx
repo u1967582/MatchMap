@@ -326,7 +326,7 @@ export default function BarProfileScreen() {
                 
                 {!isOwner && (
                   <TouchableOpacity 
-                    style={[styles.favoritesButton, isFav && styles.favoritesButtonActive]}
+                    style={[styles.favoritesButton, barId && isFavorite(barId) && styles.favoritesButtonActive]}
                     onPress={handleFavoriteToggle}
                   >
                     <Ionicons
@@ -1873,51 +1873,51 @@ const styles = StyleSheet.create({
   upcomingMatchCard: {
     backgroundColor: '#1E3A5F',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 10,
   },
   upcomingMatchTeams: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   upcomingTeamContainer: {
     flex: 1,
     alignItems: 'center',
   },
   upcomingTeamLogo: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    marginBottom: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    marginBottom: 6,
     resizeMode: 'contain',
   },
   upcomingTeamName: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',
   },
   upcomingVsContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   upcomingVsText: {
     color: '#A3B3CC',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
 
   upcomingMatchTime: {
     color: '#4CAF50',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',
     marginBottom: 4,
   },
   upcomingMatchCompetition: {
     color: '#A3B3CC',
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
   },
   emptyUpcomingMatches: {
