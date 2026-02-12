@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Image, Alert, Platform, ScrollView } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+} from 'react-native-reanimated';
 import { supabase } from '~/utils/supabase';
 import { useReviews } from '~/hooks/useReviews';
 import {
@@ -13,6 +19,7 @@ import {
   colors,
   spacing,
   radius,
+  shadows,
 } from '~/components/ds';
 
 interface Bar {
@@ -23,7 +30,7 @@ interface Bar {
   category?: { name: string } | null;
 }
 
-// Rating Star Component
+// Rating Star Component with Animation
 interface RatingStarProps {
   value: number;
   selected: boolean;
@@ -31,25 +38,34 @@ interface RatingStarProps {
 }
 
 function RatingStar({ value, selected, onPress }: RatingStarProps) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePress = () => {
+    scale.value = withSequence(
+      withSpring(1.3, { damping: 10 }),
+      withSpring(1, { damping: 8 })
+    );
+    onPress();
+  };
+
   return (
-    <TouchableOpacity
-      style={[styles.ratingButton, selected && styles.ratingButtonSelected]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <Ionicons
-        name={selected ? 'star' : 'star-outline'}
-        size={32}
-        color={selected ? colors.status.boost : colors.text.secondary}
-      />
-      <AppText
-        variant="caption"
-        color={selected ? colors.status.boost : colors.text.secondary}
-        style={styles.ratingValueText}
+    <Animated.View style={[styles.starContainer, animatedStyle]}>
+      <TouchableOpacity
+        style={styles.starButton}
+        onPress={handlePress}
+        activeOpacity={0.8}
       >
-        {value}
-      </AppText>
-    </TouchableOpacity>
+        <Ionicons
+          name={selected ? 'star' : 'star-outline'}
+          size={48}
+          color={selected ? colors.status.boost : colors.text.muted}
+        />
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -193,31 +209,41 @@ export default function WriteReviewScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Bar Information */}
+        {/* Bar Information Card - Premium Design */}
         {bar && (
-          <AppCard style={styles.barSection}>
-            <Image
-              source={{
-                uri: bar.image_url || 'https://via.placeholder.com/120x120/2A3A4A/A3B3CC?text=Bar'
-              }}
-              style={styles.barImage}
-              resizeMode="cover"
-            />
-            <View style={styles.barInfo}>
-              <AppText variant="h2" numberOfLines={2}>{bar.name}</AppText>
-              <AppText variant="caption" color={colors.text.secondary} style={styles.barTypeSpacing}>
-                {bar.category?.name || 'Bar'}
-              </AppText>
+          <View style={styles.barCard}>
+            <View style={styles.barImageContainer}>
+              <Image
+                source={{
+                  uri: bar.image_url || 'https://via.placeholder.com/120x120/2A3A4A/A3B3CC?text=Bar'
+                }}
+                style={styles.barImage}
+                resizeMode="cover"
+              />
+              <View style={styles.barImageOverlay} />
             </View>
-          </AppCard>
+            <View style={styles.barInfoContainer}>
+              <AppText variant="h2" style={styles.barName}>{bar.name}</AppText>
+              <View style={styles.barCategoryRow}>
+                <Ionicons name="location" size={14} color={colors.status.boost} />
+                <AppText variant="caption" color={colors.text.secondary} style={styles.barCategory}>
+                  {bar.category?.name || 'Bar'}
+                </AppText>
+              </View>
+            </View>
+          </View>
         )}
 
-        {/* Rating Section */}
-        <AppCard style={styles.ratingSection}>
-          <AppText variant="subtitle" style={styles.ratingSectionTitle}>
-            Valora tu experiencia
-          </AppText>
-          <View style={styles.ratingRow}>
+        {/* Rating Section - Redesigned */}
+        <View style={styles.ratingSection}>
+          <View style={styles.ratingHeader}>
+            <Ionicons name="star" size={20} color={colors.status.boost} />
+            <AppText variant="subtitle" style={styles.ratingTitle}>
+              ¿Qué te pareció?
+            </AppText>
+          </View>
+
+          <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map((value) => (
               <RatingStar
                 key={value}
@@ -227,32 +253,77 @@ export default function WriteReviewScreen() {
               />
             ))}
           </View>
-          {rating !== null && (
-            <AppText variant="caption" color={colors.text.secondary} align="center" style={styles.ratingHint}>
-              {rating === 5 ? '¡Excelente!' : rating === 4 ? 'Muy bueno' : rating === 3 ? 'Bueno' : rating === 2 ? 'Regular' : 'Mejorable'}
-            </AppText>
-          )}
-        </AppCard>
 
-        {/* Review Input */}
-        <AppCard style={styles.inputSection}>
-          <AppText variant="subtitle" style={styles.inputLabel}>
-            Escribe tu Valoración
-          </AppText>
-          <TextInput
-            placeholder="Cuéntanos tu experiencia en este bar..."
-            value={comment}
-            onChangeText={setComment}
-            multiline
-            style={styles.textInput}
-            placeholderTextColor={colors.text.muted}
-            textAlignVertical="top"
-            editable={!loading}
-          />
-          <AppText variant="caption" color={colors.text.muted} style={styles.charCount}>
-            {comment.length} caracteres
-          </AppText>
-        </AppCard>
+          {rating !== null && (
+            <View style={styles.ratingFeedback}>
+              <View style={[
+                styles.ratingBadge,
+                {
+                  backgroundColor: rating >= 4
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : rating === 3
+                      ? 'rgba(255, 215, 0, 0.15)'
+                      : 'rgba(239, 68, 68, 0.15)'
+                }
+              ]}>
+                <AppText
+                  variant="body"
+                  color={
+                    rating >= 4
+                      ? colors.status.success
+                      : rating === 3
+                        ? colors.status.boost
+                        : colors.status.error
+                  }
+                  style={styles.ratingFeedbackText}
+                >
+                  {rating === 5 ? '¡Excelente!' : rating === 4 ? 'Muy bueno' : rating === 3 ? 'Bueno' : rating === 2 ? 'Regular' : 'Mejorable'}
+                </AppText>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Review Input - Premium Design */}
+        <View style={styles.commentSection}>
+          <View style={styles.commentHeader}>
+            <Ionicons name="create-outline" size={20} color={colors.brand.primary} />
+            <AppText variant="subtitle" style={styles.commentTitle}>
+              Comparte tu experiencia
+            </AppText>
+          </View>
+
+          <View style={styles.textInputContainer}>
+            <TextInput
+              placeholder="Cuéntanos qué te gustó, qué mejorarías, ambiente, atención..."
+              value={comment}
+              onChangeText={setComment}
+              multiline
+              style={styles.textInput}
+              placeholderTextColor={colors.text.muted}
+              textAlignVertical="top"
+              editable={!loading}
+              maxLength={500}
+            />
+          </View>
+
+          <View style={styles.commentFooter}>
+            <View style={styles.charCountContainer}>
+              <Ionicons
+                name="document-text-outline"
+                size={14}
+                color={comment.length > 450 ? colors.status.warning : colors.text.muted}
+              />
+              <AppText
+                variant="caption"
+                color={comment.length > 450 ? colors.status.warning : colors.text.muted}
+                style={styles.charCountText}
+              >
+                {comment.length}/500
+              </AppText>
+            </View>
+          </View>
+        </View>
 
         {/* Submit Button */}
         <View style={styles.buttonContainer}>
@@ -293,85 +364,144 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.xxl,
     paddingBottom: spacing.xxxxl,
   },
-  barSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+
+  // Bar Card - Premium Design
+  barCard: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xxxl,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.xxl,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  barImageContainer: {
+    width: '100%',
+    height: 160,
+    position: 'relative',
   },
   barImage: {
-    width: 80,
-    height: 80,
-    borderRadius: radius.xl,
-    marginRight: spacing.lg,
+    width: '100%',
+    height: '100%',
   },
-  barInfo: {
-    flex: 1,
+  barImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
-  barTypeSpacing: {
-    marginTop: spacing.xs,
-  },
-  ratingSection: {
+  barInfoContainer: {
     padding: spacing.xl,
-    marginBottom: spacing.lg,
   },
-  ratingSectionTitle: {
-    marginBottom: spacing.lg,
+  barName: {
+    marginBottom: spacing.sm,
   },
-  ratingRow: {
+  barCategoryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.xs,
   },
-  ratingButton: {
-    flex: 1,
+  barCategory: {
+    fontSize: 14,
+  },
+
+  // Rating Section - Redesigned
+  ratingSection: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xxxl,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.xxl,
+    padding: spacing.xxl,
+    ...shadows.sm,
+  },
+  ratingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.xxl,
+  },
+  ratingTitle: {
+    fontWeight: '700',
+  },
+  starsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  starContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  starButton: {
+    padding: spacing.xs,
+  },
+  ratingFeedback: {
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  ratingBadge: {
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.xl,
-    backgroundColor: colors.bg.elevated,
-    borderWidth: 2,
-    borderColor: colors.border.subtle,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.pill,
   },
-  ratingButtonSelected: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
-    borderColor: colors.status.boost,
+  ratingFeedbackText: {
+    fontWeight: '700',
+    fontSize: 16,
   },
-  ratingValueText: {
-    marginTop: spacing.xs,
-    fontWeight: '600',
+
+  // Comment Section - Premium Design
+  commentSection: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xxl,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.xxl,
+    padding: spacing.xxl,
+    ...shadows.sm,
   },
-  ratingHint: {
-    marginTop: spacing.lg,
-  },
-  inputSection: {
-    padding: spacing.xl,
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  inputLabel: {
-    marginBottom: spacing.md,
+  commentTitle: {
+    fontWeight: '700',
   },
-  textInput: {
-    borderWidth: 1,
+  textInputContainer: {
+    borderWidth: 2,
     borderColor: colors.border.subtle,
     borderRadius: radius.xl,
-    minHeight: 150,
+    backgroundColor: colors.bg.input,
+    overflow: 'hidden',
+  },
+  textInput: {
+    minHeight: 160,
+    maxHeight: 240,
     padding: spacing.lg,
     color: colors.text.primary,
-    fontSize: 16,
-    backgroundColor: colors.bg.input,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
   },
-  charCount: {
-    marginTop: spacing.sm,
-    textAlign: 'right',
+  commentFooter: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
+  charCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  charCountText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Submit Button
   buttonContainer: {
+    marginHorizontal: spacing.xl,
     marginBottom: spacing.xl,
   },
 }); 
