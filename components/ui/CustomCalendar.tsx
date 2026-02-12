@@ -43,10 +43,9 @@ export default function CustomCalendar({
     const days = [];
 
     // Add days from previous month to fill the first week
-    // Add 2 extra days to shift the grid 2 positions to the right
     const prevMonth = new Date(year, month, 0); // Last day of previous month
     const daysInPrevMonth = prevMonth.getDate();
-    for (let i = firstDayOfWeek + 1; i >= 0; i--) {
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
       days.push({
         date: new Date(year, month - 1, daysInPrevMonth - i),
         isCurrentMonth: false,
