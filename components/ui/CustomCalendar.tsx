@@ -38,7 +38,9 @@ export default function CustomCalendar({
     const dayOfWeek = firstDay.getDay();
     // Convert: getDay() returns 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
     // We need: 0=Mon,1=Tue,2=Wed,3=Thu,4=Fri,5=Sat,6=Sun
-    const firstDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    // Apply +2 offset to shift grid to the right and maintain 7-column layout
+    const baseOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const firstDayOfWeek = (baseOffset + 2) % 7;
 
     const days = [];
 
