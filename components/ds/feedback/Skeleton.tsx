@@ -185,16 +185,19 @@ export function MapSkeleton() {
         </Animated.View>
       </Animated.View>
 
-      {/* Top Controls with shadows */}
+      {/* Top Controls - Exact replica of Map.tsx */}
       <Animated.View style={styles.mapTopControls}>
+        {/* Search button - 50x50 */}
         <Animated.View style={styles.mapButton}>
-          <SkeletonBox width={50} height={50} borderRadius={radius.md} />
+          <SkeletonBox width={50} height={50} borderRadius={12} />
         </Animated.View>
-        <Animated.View style={[styles.mapButton, { marginLeft: spacing.sm }]}>
-          <SkeletonBox width={120} height={50} borderRadius={radius.md} />
+        {/* Match filter button - flex: 1 */}
+        <Animated.View style={[styles.mapButton, styles.mapButtonFlex]}>
+          <SkeletonBox width="100%" height={50} borderRadius={12} />
         </Animated.View>
-        <Animated.View style={[styles.mapButton, { marginLeft: spacing.sm }]}>
-          <SkeletonBox width={100} height={50} borderRadius={radius.md} />
+        {/* Bar filter button - flex: 1 */}
+        <Animated.View style={[styles.mapButton, styles.mapButtonFlex]}>
+          <SkeletonBox width="100%" height={50} borderRadius={12} />
         </Animated.View>
       </Animated.View>
 
@@ -449,19 +452,22 @@ const styles = StyleSheet.create({
   },
   mapTopControls: {
     position: 'absolute',
-    top: spacing.xxxxl,
-    left: spacing.xl,
-    right: spacing.xl,
+    top: 80, // Exactamente igual que Map.tsx (iOS)
+    left: 20,
+    right: 20,
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 10,
     zIndex: 10,
   },
   mapButton: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
     elevation: 5,
+  },
+  mapButtonFlex: {
+    flex: 1,
   },
   mapButtonCircle: {
     shadowColor: '#000',
@@ -511,8 +517,8 @@ const styles = StyleSheet.create({
   },
   mapCenterButton: {
     position: 'absolute',
-    bottom: 120,
-    right: spacing.xl,
+    bottom: 120, // Exactamente igual que Map.tsx
+    right: 20,
     zIndex: 10,
   },
   // EditBarSkeleton styles
