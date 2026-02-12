@@ -42,18 +42,15 @@ export default function CustomCalendar({
     const days = [];
 
     // Add days from previous month to fill the first week
-    if (firstDayOfWeek > 0) {
-      const prevMonthDate = new Date(year, month, 0); // Last day of previous month
-      const daysInPrevMonth = prevMonthDate.getDate();
-
-      for (let i = firstDayOfWeek; i > 0; i--) {
-        days.push({
-          date: new Date(year, month - 1, daysInPrevMonth - i + 1),
-          isCurrentMonth: false,
-          isSelected: false,
-          isDisabled: true,
-        });
-      }
+    const prevMonth = new Date(year, month, 0); // Last day of previous month
+    const daysInPrevMonth = prevMonth.getDate();
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month - 1, daysInPrevMonth - i),
+        isCurrentMonth: false,
+        isSelected: false,
+        isDisabled: true,
+      });
     }
 
     // Add days from current month
