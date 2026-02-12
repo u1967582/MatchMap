@@ -48,6 +48,22 @@ interface Match {
 
 const { width } = Dimensions.get('window');
 
+// Helper function to get competition logo filename
+function getCompetitionLogoFilename(compName: string): string | null {
+  const nameLower = compName.toLowerCase();
+
+  if (nameLower.includes('champions')) return 'champions.png';
+  if (nameLower.includes('liga f')) return 'ligaf.png';
+  if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) {
+    return 'primera-division-ea.png';
+  }
+  if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) {
+    return 'segunda-division-hypermotion.png';
+  }
+
+  return null;
+}
+
 export default function ManualMatchSelectionScreen() {
   const router = useRouter();
   const { barId } = useLocalSearchParams<{ barId: string }>();
@@ -404,10 +420,20 @@ export default function ManualMatchSelectionScreen() {
               const isAll = item.id === -1;
               const selected = isAll ? selectedCompetitionId === null : selectedCompetitionId === item.id;
               const label = isAll ? 'Todas' : item.name;
+
+              // Get competition logo
+              const logoFilename = isAll ? null : getCompetitionLogoFilename(item.name);
+              const compLogo = logoFilename
+                ? `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo-teams/${logoFilename}`
+                : null;
+
               return (
                 <TouchableOpacity
                   onPress={() => setSelectedCompetitionId(isAll ? null : item.id)}
                   style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
                     paddingHorizontal: 14,
                     paddingVertical: 10,
                     borderRadius: 16,
@@ -417,6 +443,13 @@ export default function ManualMatchSelectionScreen() {
                     borderColor: '#28415F',
                   }}
                 >
+                  {compLogo && (
+                    <Image
+                      source={{ uri: compLogo }}
+                      style={{ width: 20, height: 20, borderRadius: 10 }}
+                      defaultSource={require('~/assets/icon.png')}
+                    />
+                  )}
                   <Text style={{ color: selected ? '#FFFFFF' : '#A3B3CC', fontWeight: '600' }}>{label}</Text>
                 </TouchableOpacity>
               );
