@@ -188,7 +188,7 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
           ref={inputRef}
           style={styles.searchInput}
           placeholder={placeholder}
-          placeholderTextColor="#8E8E93"
+          placeholderTextColor="#B8C5D6"
           value={value}
           onChangeText={handleTextChange}
           autoCapitalize="none"
@@ -250,19 +250,21 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#243243',
+    backgroundColor: '#3A4F68',
     borderRadius: 25,
     paddingHorizontal: 12,
     paddingVertical: 12,
     minHeight: 50,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 6,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 12,
   },
   collapsedButton: {
     width: '100%',
@@ -277,6 +279,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#FFFFFF',
+    fontWeight: '600',
     paddingVertical: 0,
   },
   iconButton: {
@@ -284,19 +287,21 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   resultsContainer: {
-    backgroundColor: '#243243',
+    backgroundColor: '#3A4F68',
     borderRadius: 12,
     marginTop: 8,
     maxHeight: 300,
     width: 350, // Match the expanded search bar width
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 6,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 12,
   },
   resultsList: {
     maxHeight: 250,
@@ -305,9 +310,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A3A4A',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   resultIcon: {
     marginRight: 12,
@@ -316,14 +321,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   resultTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 2,
   },
   resultSubtitle: {
-    fontSize: 12,
-    color: '#A3B3CC',
+    fontSize: 13,
+    color: '#E8EEF5',
+    fontWeight: '500',
   },
   loadingContainer: {
     paddingVertical: 16,
