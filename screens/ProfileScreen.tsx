@@ -459,7 +459,9 @@ export default function ProfileScreen() {
           <View style={styles.settingsContainer}>
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
             <SettingsRow title="Preguntas Frequentes" onPress={handlePrivacy} />
-            <SettingsRow title="Soporte y Tickets" onPress={handleContactSupport} />
+            {userBars.length > 0 && (
+              <SettingsRow title="Soporte y Tickets" onPress={handleContactSupport} />
+            )}
             <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast />
           </View>
         </View>
