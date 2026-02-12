@@ -453,20 +453,6 @@ export default function ProfileScreen() {
         {/* Plan section removed: all users are PRO now */}
 
 
-
-        {/* 🔧 TEMPORAL: Design System Preview */}
-        <View style={styles.section}>
-          <AppText variant="title" style={styles.sectionTitleSpacing}>🎨 Debug</AppText>
-          <TouchableOpacity
-            style={styles.debugButton}
-            onPress={() => router.push('/ds-preview')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="color-palette-outline" size={24} color={colors.brand.primary} />
-            <AppText variant="body" color={colors.brand.primary} style={styles.debugButtonTextMedium}>Ver Design System Preview</AppText>
-          </TouchableOpacity>
-        </View>
-
         {/* Account Settings Section */}
         <View style={styles.section}>
           <AppText variant="title" style={styles.sectionTitleSpacing}>Configuración de Cuenta</AppText>
@@ -588,19 +574,6 @@ const styles = StyleSheet.create({
   },
   settingsRowLast: {
     borderBottomWidth: 0,
-  },
-  debugButton: {
-    backgroundColor: colors.bg.card,
-    borderRadius: spacing.md,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.alpha.brandBorder,
-  },
-  debugButtonTextMedium: {
-    fontWeight: '500',
   },
   barCard: {
     backgroundColor: colors.bg.card,
