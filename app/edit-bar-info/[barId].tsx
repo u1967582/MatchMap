@@ -16,7 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
-import { toast } from '~/components/ds';
+import { toast, EditBarSkeleton } from '~/components/ds';
 // Subscriptions removed; use fixed limits
 
 interface Bar {
@@ -705,9 +705,7 @@ export default function EditBarInfoScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top','bottom']}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Cargando...</Text>
-        </View>
+        <EditBarSkeleton />
       </SafeAreaView>
     );
   }
