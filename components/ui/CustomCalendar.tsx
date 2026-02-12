@@ -34,10 +34,11 @@ export default function CustomCalendar({
     const daysInMonth = lastDay.getDate();
 
     // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-    // Convert to Monday-based (0 = Monday, 1 = Tuesday, ..., 6 = Sunday)
-    let firstDayOfWeek = firstDay.getDay();
-    // Adjust: Monday = 0, Tuesday = 1, ..., Sunday = 6
-    firstDayOfWeek = (firstDayOfWeek + 6) % 7;
+    // For a Monday-based week: Monday = 0, Tuesday = 1, ..., Sunday = 6
+    const dayOfWeek = firstDay.getDay();
+    // Convert: getDay() returns 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+    // We need: 0=Mon,1=Tue,2=Wed,3=Thu,4=Fri,5=Sat,6=Sun
+    const firstDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 
     const days = [];
 
