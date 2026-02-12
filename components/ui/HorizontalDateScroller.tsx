@@ -68,8 +68,8 @@ export default function HorizontalDateScroller({
   useEffect(() => {
     const selectedIndex = dates.findIndex(date => isSelected(date));
     if (selectedIndex !== -1 && scrollViewRef.current) {
-      // Scroll to center the selected date
-      const offset = Math.max(0, (selectedIndex * 80) - (width / 2) + 40);
+      // Scroll to center the selected date (56px width + 8px gap)
+      const offset = Math.max(0, (selectedIndex * 64) - (width / 2) + 32);
       setTimeout(() => {
         scrollViewRef.current?.scrollTo({ x: offset, animated: true });
       }, 100);
@@ -136,17 +136,17 @@ export default function HorizontalDateScroller({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 12,
+    marginVertical: 10,
   },
   scrollContent: {
     paddingHorizontal: 8,
-    gap: 12,
+    gap: 8,
   },
   dateItem: {
-    width: 68,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderRadius: 16,
+    width: 56,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -157,10 +157,10 @@ const styles = StyleSheet.create({
     borderWidth: 0,
   },
   dayOfWeek: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.5)',
-    marginBottom: 6,
+    marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -171,10 +171,10 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
   },
   dayNumber: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   dayNumberSelected: {
     color: '#FFFFFF',
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
   },
   month: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.5)',
     textTransform: 'uppercase',

@@ -23,7 +23,8 @@ export default function CustomCalendar({
 }: CustomCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
 
-  const daysOfWeek = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  // Days of week in Spanish (Monday to Sunday)
+  const daysOfWeek = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -31,15 +32,17 @@ export default function CustomCalendar({
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
-    
-    // Convert Sunday (0) to 6, Monday (1) to 0, etc.
+
+    // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    // Convert to Monday-based (0 = Monday, 1 = Tuesday, ..., 6 = Sunday)
     let firstDayOfWeek = firstDay.getDay();
-    firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+    // Adjust: Monday = 0, Tuesday = 1, ..., Sunday = 6
+    firstDayOfWeek = (firstDayOfWeek + 6) % 7;
 
     const days = [];
-    
-    // Add days from previous month
-    const prevMonth = new Date(year, month - 1, 0);
+
+    // Add days from previous month to fill the first week
+    const prevMonth = new Date(year, month, 0); // Last day of previous month
     const daysInPrevMonth = prevMonth.getDate();
     for (let i = firstDayOfWeek - 1; i >= 0; i--) {
       days.push({
@@ -92,10 +95,12 @@ export default function CustomCalendar({
   };
 
   const formatMonthYear = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    const formatted = date.toLocaleDateString('es-ES', {
       month: 'long',
       year: 'numeric',
     });
+    // Capitalize first letter (español → Español)
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   };
 
   const days = getDaysInMonth(currentMonth);

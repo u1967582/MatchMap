@@ -46,6 +46,22 @@ interface MatchPickerModalProps {
   selectedMatchId?: string | null;
 }
 
+// Helper function to get competition logo filename
+function getCompetitionLogoFilename(compName: string): string | null {
+  const nameLower = compName.toLowerCase();
+
+  if (nameLower.includes('champions')) return 'champions.png';
+  if (nameLower.includes('liga f')) return 'ligaf.png';
+  if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) {
+    return 'primera-division-ea.png';
+  }
+  if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) {
+    return 'segunda-division-hypermotion.png';
+  }
+
+  return null;
+}
+
 export default function MatchPickerModal({
   visible,
   onClose,
@@ -206,15 +222,15 @@ export default function MatchPickerModal({
                 }}
                 style={styles.teamLogo}
               />
-              <Text style={styles.teamName} numberOfLines={2}>
+              <Text style={styles.teamName} numberOfLines={1}>
                 {item.home_team?.name || 'Equipo Local'}
               </Text>
             </View>
-            
+
             <View style={styles.vsContainer}>
               <Text style={styles.vsText}>VS</Text>
             </View>
-            
+
             <View style={styles.teamContainer}>
               <Image
                 source={{
@@ -222,13 +238,13 @@ export default function MatchPickerModal({
                 }}
                 style={styles.teamLogo}
               />
-              <Text style={styles.teamName} numberOfLines={2}>
+              <Text style={styles.teamName} numberOfLines={1}>
                 {item.away_team?.name || 'Equipo Visitante'}
               </Text>
             </View>
           </View>
         </View>
-        
+
         <View style={styles.matchDetails}>
           <Text style={styles.matchTime}>
             {new Date(`${item.date} ${item.time}`).toLocaleTimeString('es-ES', {
@@ -290,6 +306,11 @@ export default function MatchPickerModal({
                   const isAll = item.id === -1;
                   const selected = isAll ? selectedCompetitionId === null : selectedCompetitionId === item.id;
                   const label = isAll ? 'Todas' : item.name;
+                  const logoFilename = !isAll ? getCompetitionLogoFilename(item.name) : null;
+                  const logoUrl = logoFilename
+                    ? `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo-teams/${logoFilename}`
+                    : null;
+
                   return (
                     <TouchableOpacity
                       onPress={() => setSelectedCompetitionId(isAll ? null : item.id)}
@@ -298,6 +319,13 @@ export default function MatchPickerModal({
                         selected && styles.competitionChipSelected
                       ]}
                     >
+                      {logoUrl && (
+                        <Image
+                          source={{ uri: logoUrl }}
+                          style={styles.competitionChipLogo}
+                          defaultSource={require('~/assets/icon.png')}
+                        />
+                      )}
                       <Text style={[
                         styles.competitionChipText,
                         selected && styles.competitionChipTextSelected
@@ -402,16 +430,25 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   competitionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     marginRight: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 0,
+    gap: 6,
   },
   competitionChipSelected: {
     backgroundColor: '#1976D2',
     borderWidth: 0,
+  },
+  competitionChipLogo: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    resizeMode: 'contain',
   },
   competitionChipText: {
     color: 'rgba(255, 255, 255, 0.6)',
@@ -440,9 +477,9 @@ const styles = StyleSheet.create({
   },
   matchCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 12,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -451,7 +488,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(16, 185, 129, 0.08)',
   },
   matchHeader: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   teamsContainer: {
     flexDirection: 'row',
@@ -463,24 +500,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   teamLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginBottom: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginBottom: 6,
     resizeMode: 'contain',
   },
   teamName: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '500',
     textAlign: 'center',
   },
   vsContainer: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
   },
   vsText: {
     color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   matchDetails: {
@@ -488,13 +525,13 @@ const styles = StyleSheet.create({
   },
   matchTime: {
     color: '#4CAF50',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     marginBottom: 4,
   },
   competitionName: {
     color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 13,
+    fontSize: 11,
   },
   selectedBadge: {
     position: 'absolute',
