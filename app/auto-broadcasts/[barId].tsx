@@ -9,6 +9,22 @@ import { toast } from '~/components/ds';
 type Competition = { id: number | string; name: string; gender?: string | null };
 type Team = { id: string; name: string; short_name?: string | null; logo_url?: string | null };
 
+// Helper function to get competition logo filename based on competition name
+function getCompetitionLogoFilename(compName: string): string | null {
+	const nameLower = compName.toLowerCase();
+
+	if (nameLower.includes('champions')) return 'champions.png';
+	if (nameLower.includes('liga f')) return 'ligaf.png';
+	if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) {
+		return 'primera-division-ea.png';
+	}
+	if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) {
+		return 'segunda-division-hypermotion.png';
+	}
+
+	return null;
+}
+
 export default function AutoBroadcastsScreen() {
 	const router = useRouter();
 	const { barId } = useLocalSearchParams<{ barId: string }>();
@@ -191,14 +207,20 @@ export default function AutoBroadcastsScreen() {
 		const isOpen = !!expanded[key];
 		const cache = teamsCache[key];
 		const compChecked = !!selectedCompetitions[key];
+
+		// Exactamente igual que logo_teams
+		const logoFilename = getCompetitionLogoFilename(item.name) || 'default.png';
+		const compLogo = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo-teams/${logoFilename}`;
+
 		return (
 			<View style={styles.compCard}>
 				<View style={styles.compHeader}>
 					<TouchableOpacity onPress={() => toggleCompetitionSelected(item.id)} style={styles.checkboxBtn}>
 						<Ionicons name={compChecked ? 'checkbox' : 'square-outline'} size={20} color={compChecked ? '#4CAF50' : '#A3B3CC'} />
 					</TouchableOpacity>
-					<TouchableOpacity onPress={() => toggleExpand(item.id)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-						<Text style={styles.compTitle}>{item.name}</Text>
+					<Image source={{ uri: compLogo }} style={styles.compLogo} defaultSource={require('~/assets/icon.png')} />
+					<TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.compTitleContainer}>
+						<Text style={styles.compTitle} numberOfLines={1}>{item.name}</Text>
 						<Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#A3B3CC" />
 					</TouchableOpacity>
 				</View>
@@ -290,8 +312,10 @@ const styles = StyleSheet.create({
 	headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
 	loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 	compCard: { backgroundColor: '#15263A', borderRadius: 12, padding: 12, marginBottom: 12 },
-	compHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-	compTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+	compHeader: { flexDirection: 'row', alignItems: 'center' },
+	compLogo: { width: 28, height: 28, borderRadius: 14, marginRight: 8, resizeMode: 'contain' },
+	compTitleContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+	compTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '600', flex: 1, marginRight: 8 },
 	compBody: { marginTop: 10 },
 	loadingRow: { paddingVertical: 8 },
 	teamRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
