@@ -132,23 +132,15 @@ export function ProfileSkeleton() {
 export function MapSkeleton() {
   return (
     <Animated.View style={styles.mapSkeletonContainer}>
-      {/* Map Area with Grid Pattern */}
+      {/* Map Area - Clean base */}
       <Animated.View style={styles.mapArea}>
-        {/* Grid lines to simulate streets */}
-        <Animated.View style={[styles.mapGridLine, styles.mapGridLineHorizontal, { top: '25%' }]} />
-        <Animated.View style={[styles.mapGridLine, styles.mapGridLineHorizontal, { top: '50%' }]} />
-        <Animated.View style={[styles.mapGridLine, styles.mapGridLineHorizontal, { top: '75%' }]} />
-        <Animated.View style={[styles.mapGridLine, styles.mapGridLineVertical, { left: '30%' }]} />
-        <Animated.View style={[styles.mapGridLine, styles.mapGridLineVertical, { left: '60%' }]} />
+        {/* Subtle grid lines to simulate streets */}
+        <Animated.View style={[styles.mapGridLine, styles.mapGridLineHorizontal, { top: '30%' }]} />
+        <Animated.View style={[styles.mapGridLine, styles.mapGridLineHorizontal, { top: '60%' }]} />
+        <Animated.View style={[styles.mapGridLine, styles.mapGridLineVertical, { left: '35%' }]} />
+        <Animated.View style={[styles.mapGridLine, styles.mapGridLineVertical, { left: '65%' }]} />
 
-        {/* Map blocks to simulate buildings/areas */}
-        <Animated.View style={[styles.mapBlock, { top: '10%', left: '10%' }]} />
-        <Animated.View style={[styles.mapBlock, { top: '10%', right: '10%' }]} />
-        <Animated.View style={[styles.mapBlock, { bottom: '20%', left: '15%' }]} />
-        <Animated.View style={[styles.mapBlock, { bottom: '20%', right: '15%' }]} />
-        <Animated.View style={[styles.mapBlock, { top: '40%', left: '50%' }]} />
-
-        {/* Bar markers with varied sizes */}
+        {/* Bar markers scattered across the map */}
         <Animated.View style={[styles.mapMarker, { top: '18%', left: '22%' }]}>
           <SkeletonBox width={36} height={36} borderRadius={radius.round} />
         </Animated.View>
@@ -193,16 +185,24 @@ export function MapSkeleton() {
         </Animated.View>
       </Animated.View>
 
-      {/* Top Controls */}
+      {/* Top Controls with shadows */}
       <Animated.View style={styles.mapTopControls}>
-        <SkeletonBox width={50} height={50} borderRadius={radius.md} />
-        <SkeletonBox width="40%" height={50} borderRadius={radius.md} style={{ marginLeft: spacing.sm }} />
-        <SkeletonBox width="30%" height={50} borderRadius={radius.md} style={{ marginLeft: spacing.sm }} />
+        <Animated.View style={styles.mapButton}>
+          <SkeletonBox width={50} height={50} borderRadius={radius.md} />
+        </Animated.View>
+        <Animated.View style={[styles.mapButton, { marginLeft: spacing.sm }]}>
+          <SkeletonBox width={120} height={50} borderRadius={radius.md} />
+        </Animated.View>
+        <Animated.View style={[styles.mapButton, { marginLeft: spacing.sm }]}>
+          <SkeletonBox width={100} height={50} borderRadius={radius.md} />
+        </Animated.View>
       </Animated.View>
 
-      {/* Center Location Button */}
+      {/* Center Location Button with shadow */}
       <Animated.View style={styles.mapCenterButton}>
-        <SkeletonBox width={56} height={56} borderRadius={28} />
+        <Animated.View style={styles.mapButtonCircle}>
+          <SkeletonBox width={56} height={56} borderRadius={28} />
+        </Animated.View>
       </Animated.View>
     </Animated.View>
   );
@@ -456,6 +456,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
+  mapButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  mapButtonCircle: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
   mapArea: {
     flex: 1,
     backgroundColor: '#1A252F', // Darker map-like background
@@ -463,7 +477,7 @@ const styles = StyleSheet.create({
   },
   mapGridLine: {
     position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   mapGridLineHorizontal: {
     width: '100%',
@@ -472,13 +486,6 @@ const styles = StyleSheet.create({
   mapGridLineVertical: {
     width: 1,
     height: '100%',
-  },
-  mapBlock: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderRadius: radius.sm,
   },
   mapMarker: {
     position: 'absolute',
