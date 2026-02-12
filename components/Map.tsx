@@ -706,11 +706,12 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
   return (
     <View style={styles.container}>
-      <MapboxGL.MapView
-        style={styles.map}
-        styleURL="mapbox://styles/mapbox/dark-v11"
-        scaleBarEnabled={false}
-      >
+      <View style={styles.mapWrapper}>
+        <MapboxGL.MapView
+          style={styles.map}
+          styleURL="mapbox://styles/mapbox/dark-v11"
+          scaleBarEnabled={false}
+        >
         {/* Camera that centers on user location or search result */}
       <MapboxGL.Camera
         ref={cameraRef}
@@ -816,6 +817,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           </MapboxGL.ShapeSource>
         )}
       </MapboxGL.MapView>
+      </View>
 
       {/* Search bar with adjusted right margin for filter button */}
       {/* Top controls row - Search, Match Filter, and Bar Filter */}
@@ -1124,6 +1126,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  mapWrapper: {
+    flex: 1,
   },
   map: {
     flex: 1,

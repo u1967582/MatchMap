@@ -21,7 +21,7 @@ const BottomTabBar = () => {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
-  
+
   // Animation values for each tab
   const tabAnimations = useRef<Record<string, Animated.Value>>({
     '/(protected)/map': new Animated.Value(1),
@@ -84,7 +84,7 @@ const BottomTabBar = () => {
     const iconColor = isActive ? '#1976D2' : 'rgba(163,179,204,0.85)';
     const textColor = isActive ? '#1976D2' : 'rgba(163,179,204,0.85)';
     const animation = tabAnimations[route];
-    
+
     return (
       <Animated.View
         key={route}

@@ -25,9 +25,9 @@ export default function ProtectedLayout() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         const authenticated = !!session;
-        
+
         if (!authenticated) {
           // Redirect to home if user logs out
           router.replace('/');
@@ -51,13 +51,13 @@ export default function ProtectedLayout() {
 
   // Only render the stack if user is authenticated
   return (
-    <Stack 
-      screenOptions={{ 
+    <Stack
+      screenOptions={{
         headerShown: false,
         presentation: 'card',
         animation: 'none',
         contentStyle: { backgroundColor: 'transparent' }
-      }} 
+      }}
     />
   );
 }

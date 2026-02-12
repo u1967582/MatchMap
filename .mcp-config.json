@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:YOUR_DB_PASSWORD@db.hmtfxpihkoisncglllmq.supabase.co:5432/postgres"
+      ],
+      "description": "Supabase PostgreSQL database for MatchMap project"
+    }
+  }
+}

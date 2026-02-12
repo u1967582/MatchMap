@@ -1,4 +1,4 @@
-import { useCallback, ReactNode } from 'react';
+import { useCallback, ReactNode, forwardRef } from 'react';
 import { StyleSheet, ViewStyle, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -20,12 +20,12 @@ interface AppCardProps {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export default function AppCard({
+const AppCard = forwardRef<any, AppCardProps>(function AppCard({
   children,
   onPress,
   style,
   pressable = !!onPress,
-}: AppCardProps) {
+}, ref) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -46,6 +46,7 @@ export default function AppCard({
 
   return (
     <AnimatedPressable
+      ref={ref}
       style={[styles.card, animatedStyle, style]}
       onPress={onPress}
       onPressIn={handlePressIn}
@@ -55,7 +56,9 @@ export default function AppCard({
       {children}
     </AnimatedPressable>
   );
-}
+});
+
+export default AppCard;
 
 const styles = StyleSheet.create({
   card: {
