@@ -57,7 +57,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [planName, setPlanName] = useState<string>('Cargando...');
   const router = useRouter();
-  
+
   // All users are PRO; no subscription gating
 
   const fetchUserProfile = useCallback(async () => {
@@ -302,9 +302,9 @@ export default function ProfileScreen() {
           {userBars.length > 0 ? (
             <View>
               {userBars.map((bar) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={bar.id}
-                  style={styles.barCard} 
+                  style={styles.barCard}
                   onPress={() => handleViewBarProfile(bar.id)}
                 >
                   <View style={styles.barImageContainer}>

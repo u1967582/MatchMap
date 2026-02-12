@@ -48,9 +48,10 @@ interface FavoriteBarCardProps {
   onPress: (barId: string) => void;
   onRemove: (barId: string, barName: string) => void;
   onViewOnMap: (bar: FavoriteBar) => void;
+  innerRef?: React.RefObject<any>;
 }
 
-function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap }: FavoriteBarCardProps) {
+function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap, innerRef }: FavoriteBarCardProps) {
   // Calculate distance if user location is available
   let distance: number | null = null;
   if (userLocation && userLocation.coords && bar.latitude && bar.longitude) {
@@ -70,7 +71,7 @@ function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap }: 
   }
 
   return (
-    <AppCard style={styles.barCard}>
+    <AppCard ref={innerRef} style={styles.barCard}>
       <TouchableOpacity
         style={styles.imageContainer}
         onPress={() => onPress(bar.id)}
