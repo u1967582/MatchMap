@@ -38,6 +38,7 @@ export default function AutoBroadcastsScreen() {
 	const [origComps, setOrigComps] = useState<string[]>([]);
 	const [origTeams, setOrigTeams] = useState<string[]>([]);
 	const [saving, setSaving] = useState(false);
+	const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 	const selectedSummary = (() => {
 		const comps = Object.values(selectedCompetitions).filter(Boolean).length;
 		const teams = selectedTeams.size;
@@ -96,6 +97,25 @@ export default function AutoBroadcastsScreen() {
 			toast.error('No se pudieron guardar las selecciones');
 		}
 	}, [barId, selectedCompetitions, selectedTeams]);
+
+	// Check if user is super admin
+	useEffect(() => {
+		const checkSuperAdmin = async () => {
+			const { data: { user } } = await supabase.auth.getUser();
+			if (!user) return;
+
+			const { data, error } = await supabase
+				.from('users')
+				.select('is_super_user')
+				.eq('id', user.id)
+				.single();
+
+			if (!error && data) {
+				setIsSuperAdmin(!!data.is_super_user);
+			}
+		};
+		checkSuperAdmin();
+	}, []);
 
 	useEffect(() => {
 		const loadCompetitions = async () => {
@@ -182,25 +202,41 @@ export default function AutoBroadcastsScreen() {
 		try {
 			setSaving(true);
 			const bar = String(barId);
-			const competition_ids = Object.entries(selectedCompetitions).filter(([, v]) => v).map(([k]) => (/^\d+$/.test(k) ? Number(k) : k));
+
+			// For super admin, always use strings (UUIDs)
+			// For regular users, keep the original logic that converts to numbers if needed
+			const competition_ids = isSuperAdmin
+				? Object.entries(selectedCompetitions).filter(([, v]) => v).map(([k]) => k)
+				: Object.entries(selectedCompetitions).filter(([, v]) => v).map(([k]) => (/^\d+$/.test(k) ? Number(k) : k));
 			const team_ids = Array.from(selectedTeams);
-			const { error } = await supabase.rpc('fn_sync_bar_preferences', {
+
+			// Use admin RPC if super admin, otherwise use regular RPC
+			const rpcFunction = isSuperAdmin ? 'fn_sync_bar_preferences_admin' : 'fn_sync_bar_preferences';
+			console.log(`[AutoBroadcasts] Using RPC: ${rpcFunction}`, { isSuperAdmin, bar, competition_ids, team_ids });
+
+			const { error } = await supabase.rpc(rpcFunction, {
 				_bar_id: bar,
 				_competition_ids: competition_ids,
 				_team_ids: team_ids,
 			});
-				if (error) throw error;
+
+			if (error) {
+				console.error('[AutoBroadcasts] RPC error:', error);
+				throw error;
+			}
+
 			setOrigComps(competition_ids.map(String));
 			setOrigTeams(team_ids.map(String));
 			// Volver al perfil del bar tras guardar con toast de éxito
 			toast.success('Automatización activada');
 			router.back();
 		} catch (e: any) {
-			toast.error('No se pudo guardar', 'Inténtalo de nuevo');
+			console.error('[AutoBroadcasts] Save error:', e);
+			toast.error('No se pudo guardar', e.message || 'Inténtalo de nuevo');
 		} finally {
 			setSaving(false);
 		}
-	}, [barId, selectedCompetitions, selectedTeams]);
+	}, [barId, selectedCompetitions, selectedTeams, isSuperAdmin]);
 
 	const renderCompetition = ({ item }: { item: Competition }) => {
 		const key = String(item.id);
