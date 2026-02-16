@@ -78,7 +78,7 @@ export default function AdminSelectBarAutoBroadcastsScreen() {
     try {
       const { data, error } = await supabase
         .from('bars')
-        .select('id, name, address, city, image_url, latitude, longitude, verification_status')
+        .select('id, name, address, city, latitude, longitude, verification_status, bar_images(image_url, image_order)')
         .order('name');
 
       if (error) {
@@ -86,7 +86,11 @@ export default function AdminSelectBarAutoBroadcastsScreen() {
         return;
       }
 
-      let barsWithDistance = data || [];
+      // Transform data to include first image
+      let barsWithDistance = (data || []).map((bar: any) => ({
+        ...bar,
+        image_url: bar.bar_images?.[0]?.image_url || null,
+      }));
 
       // Add distance if user location is available
       if (userLocation && userLocation.coords) {
