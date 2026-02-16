@@ -94,9 +94,13 @@ function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap, in
                 {bar.description}
               </AppText>
             )}
-            <AppText variant="caption" color={colors.text.secondary}>
-              {bar.address}, {bar.city}
-            </AppText>
+            {/* Address Row */}
+            <View style={styles.addressRow}>
+              <Ionicons name="location-outline" size={14} color={colors.text.muted} />
+              <AppText variant="caption" color={colors.text.secondary} style={styles.addressText}>
+                {bar.address}, {bar.city}
+              </AppText>
+            </View>
 
             {/* Rating and Distance Info */}
             <View style={styles.barDetails}>
@@ -571,6 +575,15 @@ const styles = StyleSheet.create({
   },
   barDescriptionSpacing: {
     marginBottom: spacing.xs,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  addressText: {
+    flex: 1,
   },
   barDetails: {
     flexDirection: 'row',

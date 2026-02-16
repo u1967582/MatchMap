@@ -251,11 +251,14 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
           {/* Address */}
           {bar.address && bar.city && (
             <View>
-              <Text style={styles.barAddress}>{bar.address}, {bar.city}</Text>
-              
+              <View style={styles.addressRow}>
+                <Ionicons name="location-outline" size={14} color="#A3B3CC" />
+                <Text style={styles.barAddress}>{bar.address}, {bar.city}</Text>
+              </View>
+
               {/* Navigate Button */}
               {onStartNavigation && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.navigateButton}
                   onPress={(e) => {
                     e.stopPropagation();
@@ -401,10 +404,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
+  },
   barAddress: {
     color: '#A3B3CC',
     fontSize: 14,
-    marginBottom: 8,
+    flex: 1,
   },
   categoryContainer: {
     marginTop: 4,
