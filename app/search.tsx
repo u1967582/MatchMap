@@ -733,7 +733,12 @@ export default function SearchScreen() {
           )}
 
           {item.address && item.city && (
-            <AppText variant="body" style={styles.barAddress}>{item.address}, {item.city}</AppText>
+            <View style={styles.addressRow}>
+              <Ionicons name="location-outline" size={14} color={colors.text.muted} />
+              <AppText variant="caption" color={colors.text.secondary} style={styles.barAddress}>
+                {item.address}, {item.city}
+              </AppText>
+            </View>
           )}
 
           {/* View on Map Button */}
@@ -1121,8 +1126,14 @@ const styles = StyleSheet.create({
   nextMatchText: {
     fontWeight: '500',
   },
-  barAddress: {
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     marginBottom: spacing.sm,
+  },
+  barAddress: {
+    flex: 1,
   },
   viewOnMapButton: {
     flexDirection: 'row',
