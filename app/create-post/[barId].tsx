@@ -75,10 +75,6 @@ export default function CreatePostScreen() {
   }, [router, formData, selectedImage]);
 
   const handleSelectImage = useCallback(async () => {
-    if (!capabilities.images_allowed) {
-      Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes en los posts.');
-      return;
-    }
     const hasPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (hasPermission.status !== 'granted') {
       Alert.alert(
@@ -125,10 +121,6 @@ export default function CreatePostScreen() {
   }, []);
 
   const pickImageFromCamera = useCallback(async () => {
-    if (!capabilities.images_allowed) {
-      Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes en los posts.');
-      return;
-    }
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -436,25 +428,23 @@ export default function CreatePostScreen() {
             </View>
 
             {/* Image Selection */}
-            {capabilities.images_allowed && (
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Imagen (Opcional)</Text>
-                <TouchableOpacity 
-                  style={styles.imageSelector}
-                  onPress={handleSelectImage}
-                  disabled={loading || uploadingImage}
-                >
-                  {selectedImage ? (
-                    <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
-                  ) : (
-                    <View style={styles.imagePlaceholder}>
-                      <Ionicons name="camera" size={32} color="#A3B3CC" />
-                      <Text style={styles.imagePlaceholderText}>Toca para agregar imagen</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Imagen (Opcional)</Text>
+              <TouchableOpacity
+                style={styles.imageSelector}
+                onPress={handleSelectImage}
+                disabled={loading || uploadingImage}
+              >
+                {selectedImage ? (
+                  <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons name="camera" size={32} color="#A3B3CC" />
+                    <Text style={styles.imagePlaceholderText}>Toca para agregar imagen</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
 
             {/* Date Range */}
             <View style={styles.fieldContainer}>
