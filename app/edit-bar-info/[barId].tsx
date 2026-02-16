@@ -502,15 +502,16 @@ export default function EditBarInfoScreen() {
 
       const tableName = imageType === 'bar' ? 'bar_images' : 'bar_menus';
 
-      // Update all images with new order
-      const updates = images.map((image, index) => ({
-        id: image.id,
-        image_order: index + 1,
-      }));
+      // Update each image individually with new order
+      const updatePromises = images.map((image, index) =>
+        supabase
+          .from(tableName)
+          .update({ image_order: index + 1 })
+          .eq('id', image.id)
+      );
 
-      const { error } = await supabase
-        .from(tableName)
-        .upsert(updates, { onConflict: 'id' });
+      const results = await Promise.all(updatePromises);
+      const error = results.find(result => result.error)?.error;
 
       if (error) {
         console.error('Error reordering images:', error);
