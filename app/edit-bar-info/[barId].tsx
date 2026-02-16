@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '~/utils/supabase';
 import { toast, EditBarSkeleton } from '~/components/ds';
 // Subscriptions removed; use fixed limits
@@ -495,8 +497,11 @@ export default function EditBarInfoScreen() {
 
   const handleReorderImages = async (imageType: 'bar' | 'menu', images: BarImage[]) => {
     try {
+      // Store previous state for rollback
+      const previousImages = imageType === 'bar' ? barImages : menuImages;
+
       const tableName = imageType === 'bar' ? 'bar_images' : 'bar_menus';
-      
+
       // Update all images with new order
       const updates = images.map((image, index) => ({
         id: image.id,
@@ -509,11 +514,19 @@ export default function EditBarInfoScreen() {
 
       if (error) {
         console.error('Error reordering images:', error);
+
+        // Rollback to previous state
+        if (imageType === 'bar') {
+          setBarImages(previousImages);
+        } else {
+          setMenuImages(previousImages);
+        }
+
         toast.error('No se pudo reordenar las imágenes');
-        return;
+        return false;
       }
 
-      // Update local state
+      // Update local state (redundant if optimistic update already happened, but safe)
       if (imageType === 'bar') {
         setBarImages(images);
       } else {
@@ -521,11 +534,94 @@ export default function EditBarInfoScreen() {
       }
 
       toast.success('Orden actualizado');
+      return true;
     } catch (error) {
       console.error('Error in handleReorderImages:', error);
-      Alert.alert('Error', 'Ocurrió un error al reordenar las imágenes');
+      toast.error('Ocurrió un error al reordenar');
+      return false;
     }
   };
+
+  const handleDragEndBarImages = async ({ data }: { data: BarImage[] }) => {
+    const reorderedImages = data.map((img, index) => ({
+      ...img,
+      image_order: index + 1,
+    }));
+
+    // Optimistic update for instant feedback
+    setBarImages(reorderedImages);
+    await handleReorderImages('bar', reorderedImages);
+  };
+
+  const handleDragEndMenuImages = async ({ data }: { data: BarImage[] }) => {
+    const reorderedImages = data.map((img, index) => ({
+      ...img,
+      image_order: index + 1,
+    }));
+
+    // Optimistic update for instant feedback
+    setMenuImages(reorderedImages);
+    await handleReorderImages('menu', reorderedImages);
+  };
+
+  const renderBarImageItem = ({ item, drag, isActive }: RenderItemParams<BarImage>) => (
+    <ScaleDecorator>
+      <TouchableOpacity
+        style={[styles.imageItem, isActive && styles.imageItemDragging]}
+        onLongPress={drag}
+        disabled={isActive}
+        activeOpacity={1}
+      >
+        <Image source={{ uri: item.image_url }} style={styles.imageThumbnail} />
+
+        {/* Delete button - top right */}
+        <TouchableOpacity
+          style={styles.deleteImageButton}
+          onPress={() => handleDeleteImage(item.id, 'bar')}
+        >
+          <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+        </TouchableOpacity>
+
+        {/* Order badge - top left */}
+        <View style={styles.imageOrderBadge}>
+          <Text style={styles.imageOrderText}>{item.image_order}</Text>
+        </View>
+
+        {/* Drag handle - bottom center (NEW) */}
+        <View style={styles.dragHandle}>
+          <Ionicons name="reorder-three" size={24} color="#FFFFFF" />
+        </View>
+      </TouchableOpacity>
+    </ScaleDecorator>
+  );
+
+  const renderMenuImageItem = ({ item, drag, isActive }: RenderItemParams<BarImage>) => (
+    <ScaleDecorator>
+      <TouchableOpacity
+        style={[styles.imageItem, isActive && styles.imageItemDragging]}
+        onLongPress={drag}
+        disabled={isActive}
+        activeOpacity={1}
+      >
+        <Image source={{ uri: item.image_url }} style={styles.imageThumbnail} />
+
+        <TouchableOpacity
+          style={styles.deleteImageButton}
+          onPress={() => handleDeleteImage(item.id, 'menu')}
+        >
+          <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+        </TouchableOpacity>
+
+        <View style={styles.imageOrderBadge}>
+          <Text style={styles.imageOrderText}>{item.image_order}</Text>
+        </View>
+
+        <View style={styles.dragHandle}>
+          <Ionicons name="reorder-three" size={24} color="#FFFFFF" />
+        </View>
+      </TouchableOpacity>
+    </ScaleDecorator>
+  );
 
   const handleToggleFoodType = async (foodTypeId: number, foodTypeName: string) => {
     try {
@@ -698,26 +794,31 @@ export default function EditBarInfoScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
-        <EditBarSkeleton />
-      </SafeAreaView>
+      <GestureHandlerRootView style={styles.flex}>
+        <SafeAreaView style={styles.container} edges={['top','bottom']}>
+          <EditBarSkeleton />
+        </SafeAreaView>
+      </GestureHandlerRootView>
     );
   }
 
   if (!bar) {
     return (
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Bar no encontrado</Text>
-        </View>
-      </SafeAreaView>
+      <GestureHandlerRootView style={styles.flex}>
+        <SafeAreaView style={styles.container} edges={['top','bottom']}>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Bar no encontrado</Text>
+          </View>
+        </SafeAreaView>
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','bottom']}>
-      {/* Header */}
-      <View style={styles.header}>
+    <GestureHandlerRootView style={styles.flex}>
+      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+        {/* Header */}
+        <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
@@ -901,114 +1002,79 @@ export default function EditBarInfoScreen() {
 
         {/* Bar Images Section */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Imágenes del Bar</Text>
-          <View style={styles.imagesContainer}>
-            {barImages.length > 0 ? (
-              barImages.map((image, index) => (
-                <View key={image.id} style={styles.imageItem}>
-                  <Image source={{ uri: image.image_url }} style={styles.imageThumbnail} />
-                  <TouchableOpacity
-                    style={styles.deleteImageButton}
-                    onPress={() => handleDeleteImage(image.id, 'bar')}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-                  </TouchableOpacity>
-                  <Text style={styles.imageOrderText}>{index + 1}</Text>
-                  <TouchableOpacity
-                    style={styles.reorderButton}
-                    onPress={() => {
-                      // Show reorder options
-                      Alert.alert(
-                        'Reordenar Imagen',
-                        'Selecciona la nueva posición:',
-                        barImages.map((_, idx) => ({
-                          text: `Posición ${idx + 1}`,
-                          onPress: () => {
-                            if (idx !== index) {
-                              const newImages = [...barImages];
-                              const [movedImage] = newImages.splice(index, 1);
-                              newImages.splice(idx, 0, movedImage);
-                              handleReorderImages('bar', newImages);
-                            }
-                          },
-                        }))
-                      );
-                    }}
-                  >
-                    <Ionicons name="swap-vertical" size={16} color="#A3B3CC" />
-                  </TouchableOpacity>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noImagesText}>No hay imágenes del bar</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.inputLabel}>Imágenes del Bar</Text>
+            {barImages.length > 0 && (
+              <Text style={styles.helperText}>Mantén presionado para reordenar</Text>
             )}
-            {barImages.length < barImagesLimit && (
-              <TouchableOpacity style={styles.addImageButton} onPress={handleAddBarImage}>
+          </View>
+
+          {barImages.length > 0 ? (
+            <View style={styles.draggableContainer}>
+              <DraggableFlatList
+                data={barImages}
+                renderItem={renderBarImageItem}
+                keyExtractor={(item) => item.id}
+                onDragEnd={handleDragEndBarImages}
+                numColumns={4}
+                scrollEnabled={false}
+                containerStyle={styles.imagesGrid}
+              />
+            </View>
+          ) : (
+            <Text style={styles.noImagesText}>No hay imágenes del bar</Text>
+          )}
+
+          {barImages.length < barImagesLimit && (
+            <TouchableOpacity style={styles.addImageButton} onPress={handleAddBarImage}>
+              <Ionicons name="add" size={24} color="#A3B3CC" />
+              <Text style={styles.addImageText}>Añadir</Text>
+            </TouchableOpacity>
+          )}
+
+          <Text style={styles.imageCounter}>{barImages.length}/{barImagesLimit} fotos</Text>
+        </View>
+
+        {/* Menu Images Section */}
+        {menuImagesLimit > 0 && (
+          <View style={styles.inputContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.inputLabel}>Imágenes del Menú</Text>
+              {menuImages.length > 0 && (
+                <Text style={styles.helperText}>Mantén presionado para reordenar</Text>
+              )}
+            </View>
+
+            {menuImages.length > 0 ? (
+              <View style={styles.draggableContainer}>
+                <DraggableFlatList
+                  data={menuImages}
+                  renderItem={renderMenuImageItem}
+                  keyExtractor={(item) => item.id}
+                  onDragEnd={handleDragEndMenuImages}
+                  numColumns={4}
+                  scrollEnabled={false}
+                  containerStyle={styles.imagesGrid}
+                />
+              </View>
+            ) : (
+              <Text style={styles.noImagesText}>No hay imágenes del menú</Text>
+            )}
+
+            {menuImages.length < menuImagesLimit && (
+              <TouchableOpacity style={styles.addImageButton} onPress={handleAddMenuImage}>
                 <Ionicons name="add" size={24} color="#A3B3CC" />
                 <Text style={styles.addImageText}>Añadir</Text>
               </TouchableOpacity>
             )}
-          </View>
-          <Text style={styles.noImagesText}>{barImages.length}/{barImagesLimit} fotos</Text>
-        </View>
 
-        {/* Menu Images Section (hidden if plan doesn't allow) */}
-        {menuImagesLimit > 0 && (
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Imágenes del Menú</Text>
-            <View style={styles.imagesContainer}>
-              {menuImages.length > 0 ? (
-                menuImages.map((image, index) => (
-                  <View key={image.id} style={styles.imageItem}>
-                    <Image source={{ uri: image.image_url }} style={styles.imageThumbnail} />
-                    <TouchableOpacity
-                      style={styles.deleteImageButton}
-                      onPress={() => handleDeleteImage(image.id, 'menu')}
-                    >
-                      <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-                    </TouchableOpacity>
-                    <Text style={styles.imageOrderText}>{index + 1}</Text>
-                    <TouchableOpacity
-                      style={styles.reorderButton}
-                      onPress={() => {
-                        // Show reorder options
-                        Alert.alert(
-                          'Reordenar Imagen',
-                          'Selecciona la nueva posición:',
-                          menuImages.map((_, idx) => ({
-                            text: `Posición ${idx + 1}`,
-                            onPress: () => {
-                              if (idx !== index) {
-                                const newImages = [...menuImages];
-                                const [movedImage] = newImages.splice(index, 1);
-                                newImages.splice(idx, 0, movedImage);
-                                handleReorderImages('menu', newImages);
-                              }
-                            },
-                          }))
-                        );
-                      }}
-                    >
-                      <Ionicons name="swap-vertical" size={16} color="#A3B3CC" />
-                    </TouchableOpacity>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.noImagesText}>No hay imágenes del menú</Text>
-              )}
-              {menuImages.length < menuImagesLimit && (
-                <TouchableOpacity style={styles.addImageButton} onPress={handleAddMenuImage}>
-                  <Ionicons name="add" size={24} color="#A3B3CC" />
-                  <Text style={styles.addImageText}>Añadir</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <Text style={styles.noImagesText}>{menuImages.length}/{menuImagesLimit} fotos</Text>
+            <Text style={styles.imageCounter}>{menuImages.length}/{menuImagesLimit} fotos</Text>
           </View>
         )}
 
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 
@@ -1150,9 +1216,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   imagesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+    marginBottom: 12,
   },
   imageItem: {
     position: 'relative',
@@ -1160,6 +1224,8 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     overflow: 'hidden',
+    margin: 4,
+    backgroundColor: '#2A3A4A',
   },
   imageThumbnail: {
     width: '100%',
@@ -1177,17 +1243,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  imageOrderText: {
+  imageOrderBadge: {
     position: 'absolute',
-    bottom: 4,
+    top: 4,
     left: 4,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageOrderText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
   },
   addImageButton: {
     width: 80,
@@ -1205,21 +1276,57 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  reorderButton: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   noImagesText: {
     color: '#8E8E93',
     fontSize: 14,
     fontStyle: 'italic',
     marginBottom: 8,
+  },
+  flex: {
+    flex: 1,
+  },
+  sectionHeader: {
+    marginBottom: 12,
+  },
+  helperText: {
+    color: '#8E8E93',
+    fontSize: 14,
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  draggableContainer: {
+    marginBottom: 12,
+  },
+  imagesGrid: {
+    // Container style for DraggableFlatList
+  },
+  imageItemDragging: {
+    opacity: 0.8,
+    transform: [{ scale: 1.05 }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  dragHandle: {
+    position: 'absolute',
+    bottom: 4,
+    left: '50%',
+    transform: [{ translateX: -12 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 8,
+    width: 32,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  imageCounter: {
+    color: '#8E8E93',
+    fontSize: 14,
+    textAlign: 'right',
+    marginTop: 8,
   },
 }); 
