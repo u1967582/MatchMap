@@ -15,10 +15,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '~/utils/supabase';
 import { toast, EditBarSkeleton } from '~/components/ds';
+import { DraggableImageGrid } from '~/components/images';
 // Subscriptions removed; use fixed limits
 
 interface Bar {
@@ -80,6 +80,10 @@ export default function EditBarInfoScreen() {
   const [barImages, setBarImages] = React.useState<BarImage[]>([]);
   const [menuImages, setMenuImages] = React.useState<BarImage[]>([]);
   const [planLoading] = React.useState(false);
+
+  // Original images state for change detection
+  const [originalBarImages, setOriginalBarImages] = React.useState<BarImage[]>([]);
+  const [originalMenuImages, setOriginalMenuImages] = React.useState<BarImage[]>([]);
   
   // Categories state
   const [foodTypes, setFoodTypes] = React.useState<BarCategory[]>([]);
@@ -149,6 +153,7 @@ export default function EditBarInfoScreen() {
 
         if (!barImagesError && barImagesData) {
           setBarImages(barImagesData);
+          setOriginalBarImages(barImagesData);  // Save original state
           console.log('📸 Bar images loaded:', barImagesData.length);
         }
 
@@ -161,6 +166,7 @@ export default function EditBarInfoScreen() {
 
         if (!menuImagesError && menuImagesData) {
           setMenuImages(menuImagesData);
+          setOriginalMenuImages(menuImagesData);  // Save original state
           console.log('🍽️ Menu images loaded:', menuImagesData.length);
         }
 
@@ -543,86 +549,17 @@ export default function EditBarInfoScreen() {
     }
   };
 
-  const handleDragEndBarImages = async ({ data }: { data: BarImage[] }) => {
-    const reorderedImages = data.map((img, index) => ({
-      ...img,
-      image_order: index + 1,
-    }));
-
-    // Optimistic update for instant feedback
+  const handleReorderBarImages = (reorderedImages: BarImage[]) => {
+    // Update local state immediately for instant feedback
     setBarImages(reorderedImages);
-    await handleReorderImages('bar', reorderedImages);
+    console.log('📸 Bar images reordered locally');
   };
 
-  const handleDragEndMenuImages = async ({ data }: { data: BarImage[] }) => {
-    const reorderedImages = data.map((img, index) => ({
-      ...img,
-      image_order: index + 1,
-    }));
-
-    // Optimistic update for instant feedback
+  const handleReorderMenuImages = (reorderedImages: BarImage[]) => {
+    // Update local state immediately for instant feedback
     setMenuImages(reorderedImages);
-    await handleReorderImages('menu', reorderedImages);
+    console.log('🍽️ Menu images reordered locally');
   };
-
-  const renderBarImageItem = ({ item, drag, isActive }: RenderItemParams<BarImage>) => (
-    <ScaleDecorator>
-      <TouchableOpacity
-        style={[styles.imageItem, isActive && styles.imageItemDragging]}
-        onLongPress={drag}
-        disabled={isActive}
-        activeOpacity={1}
-      >
-        <Image source={{ uri: item.image_url }} style={styles.imageThumbnail} />
-
-        {/* Delete button - top right */}
-        <TouchableOpacity
-          style={styles.deleteImageButton}
-          onPress={() => handleDeleteImage(item.id, 'bar')}
-        >
-          <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-        </TouchableOpacity>
-
-        {/* Order badge - top left */}
-        <View style={styles.imageOrderBadge}>
-          <Text style={styles.imageOrderText}>{item.image_order}</Text>
-        </View>
-
-        {/* Drag handle - bottom center (NEW) */}
-        <View style={styles.dragHandle}>
-          <Ionicons name="reorder-three" size={24} color="#FFFFFF" />
-        </View>
-      </TouchableOpacity>
-    </ScaleDecorator>
-  );
-
-  const renderMenuImageItem = ({ item, drag, isActive }: RenderItemParams<BarImage>) => (
-    <ScaleDecorator>
-      <TouchableOpacity
-        style={[styles.imageItem, isActive && styles.imageItemDragging]}
-        onLongPress={drag}
-        disabled={isActive}
-        activeOpacity={1}
-      >
-        <Image source={{ uri: item.image_url }} style={styles.imageThumbnail} />
-
-        <TouchableOpacity
-          style={styles.deleteImageButton}
-          onPress={() => handleDeleteImage(item.id, 'menu')}
-        >
-          <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-        </TouchableOpacity>
-
-        <View style={styles.imageOrderBadge}>
-          <Text style={styles.imageOrderText}>{item.image_order}</Text>
-        </View>
-
-        <View style={styles.dragHandle}>
-          <Ionicons name="reorder-three" size={24} color="#FFFFFF" />
-        </View>
-      </TouchableOpacity>
-    </ScaleDecorator>
-  );
 
   const handleToggleFoodType = async (foodTypeId: number, foodTypeName: string) => {
     try {
@@ -763,6 +700,29 @@ export default function EditBarInfoScreen() {
     setSaving(true);
 
     try {
+      // Detect if image order changed
+      const hasBarImagesChanged = JSON.stringify(barImages.map(img => img.id)) !==
+                                  JSON.stringify(originalBarImages.map(img => img.id));
+      const hasMenuImagesChanged = JSON.stringify(menuImages.map(img => img.id)) !==
+                                   JSON.stringify(originalMenuImages.map(img => img.id));
+
+      // Save image order if changed
+      if (hasBarImagesChanged && barImages.length > 0) {
+        console.log('💾 Saving bar images order...');
+        const success = await handleReorderImages('bar', barImages);
+        if (success) {
+          setOriginalBarImages(barImages);  // Update original state after saving
+        }
+      }
+
+      if (hasMenuImagesChanged && menuImages.length > 0) {
+        console.log('💾 Saving menu images order...');
+        const success = await handleReorderImages('menu', menuImages);
+        if (success) {
+          setOriginalMenuImages(menuImages);  // Update original state after saving
+        }
+      }
+
       // Update bar (only editable fields)
       const { error: updateError } = await supabase
         .from('bars')
@@ -792,6 +752,19 @@ export default function EditBarInfoScreen() {
       setSaving(false);
     }
   };
+
+  // Detect if there are unsaved changes in images
+  const hasBarImagesChanged = React.useMemo(() =>
+    JSON.stringify(barImages.map(img => img.id)) !==
+    JSON.stringify(originalBarImages.map(img => img.id))
+  , [barImages, originalBarImages]);
+
+  const hasMenuImagesChanged = React.useMemo(() =>
+    JSON.stringify(menuImages.map(img => img.id)) !==
+    JSON.stringify(originalMenuImages.map(img => img.id))
+  , [menuImages, originalMenuImages]);
+
+  const hasImagesChanged = hasBarImagesChanged || hasMenuImagesChanged;
 
   if (loading) {
     return (
@@ -824,9 +797,16 @@ export default function EditBarInfoScreen() {
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Editar Información</Text>
-        <TouchableOpacity onPress={handleSave} style={styles.saveButton} disabled={saving}>
+        <TouchableOpacity
+          onPress={handleSave}
+          style={[
+            styles.saveButton,
+            hasImagesChanged && styles.saveButtonHighlight,
+          ]}
+          disabled={saving}
+        >
           <Text style={[styles.saveButtonText, saving && styles.saveButtonTextDisabled]}>
-            {saving ? 'Guardando...' : 'Guardar'}
+            {saving ? 'Guardando...' : hasImagesChanged ? '★ Guardar Cambios' : 'Guardar'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1011,17 +991,14 @@ export default function EditBarInfoScreen() {
           </View>
 
           {barImages.length > 0 ? (
-            <View style={styles.draggableContainer}>
-              <DraggableFlatList
-                data={barImages}
-                renderItem={renderBarImageItem}
-                keyExtractor={(item) => item.id}
-                onDragEnd={handleDragEndBarImages}
-                numColumns={4}
-                scrollEnabled={false}
-                containerStyle={styles.imagesGrid}
-              />
-            </View>
+            <DraggableImageGrid
+              images={barImages}
+              onReorder={handleReorderBarImages}
+              onDelete={(imageId) => handleDeleteImage(imageId, 'bar')}
+              columns={4}
+              itemSize={80}
+              gap={8}
+            />
           ) : (
             <Text style={styles.noImagesText}>No hay imágenes del bar</Text>
           )}
@@ -1047,17 +1024,14 @@ export default function EditBarInfoScreen() {
             </View>
 
             {menuImages.length > 0 ? (
-              <View style={styles.draggableContainer}>
-                <DraggableFlatList
-                  data={menuImages}
-                  renderItem={renderMenuImageItem}
-                  keyExtractor={(item) => item.id}
-                  onDragEnd={handleDragEndMenuImages}
-                  numColumns={4}
-                  scrollEnabled={false}
-                  containerStyle={styles.imagesGrid}
-                />
-              </View>
+              <DraggableImageGrid
+                images={menuImages}
+                onReorder={handleReorderMenuImages}
+                onDelete={(imageId) => handleDeleteImage(imageId, 'menu')}
+                columns={4}
+                itemSize={80}
+                gap={8}
+              />
             ) : (
               <Text style={styles.noImagesText}>No hay imágenes del menú</Text>
             )}
@@ -1123,6 +1097,9 @@ const styles = StyleSheet.create({
   },
   saveButtonTextDisabled: {
     opacity: 0.6,
+  },
+  saveButtonHighlight: {
+    backgroundColor: '#007AFF',  // Same blue as normal (only text changes)
   },
   content: {
     flex: 1,
