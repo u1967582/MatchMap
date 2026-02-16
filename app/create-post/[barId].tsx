@@ -271,8 +271,8 @@ export default function CreatePostScreen() {
         title: formData.title.trim(),
         description: formData.description.trim(),
         post_type: formData.post_type,
-        start_date: formData.start_date || null,
-        end_date: formData.end_date || null,
+        start_date: formData.start_date ? convertToISODate(formData.start_date) : null,
+        end_date: formData.end_date ? convertToISODate(formData.end_date) : null,
         is_active: formData.is_active,
         pinned: formData.pinned,
       };
@@ -325,13 +325,33 @@ export default function CreatePostScreen() {
     }
   }, [formData, barId, selectedImage, uploadPostImage, router]);
 
-  const formatDateForInput = useCallback((dateString: string) => {
+  // Convert DD/MM/YYYY to YYYY-MM-DD for database
+  const convertToISODate = useCallback((dateString: string): string => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
+    // If already in ISO format, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;
+    // Convert DD/MM/YYYY to YYYY-MM-DD
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return dateString;
+  }, []);
+
+  // Convert YYYY-MM-DD to DD/MM/YYYY for display
+  const formatDateForDisplay = useCallback((isoDate: string): string => {
+    if (!isoDate) return '';
+    const parts = isoDate.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day}/${month}/${year}`;
+    }
+    return isoDate;
   }, []);
 
   const handleDateChange = useCallback((field: 'start_date' | 'end_date', value: string) => {
+    // Store the display format in state, will convert to ISO when saving
     setFormData(prev => ({
       ...prev,
       [field]: value,
@@ -455,17 +475,21 @@ export default function CreatePostScreen() {
                   <View style={styles.dateInputContainer}>
                     <TextInput
                       style={styles.dateInput}
-                      placeholder="YYYY-MM-DD"
+                      placeholder="DD/MM/YYYY"
                       placeholderTextColor="#8E8E93"
                       value={formData.start_date}
                       onChangeText={(text) => handleDateChange('start_date', text)}
                       editable={!loading}
+                      keyboardType="numeric"
                     />
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.todayButton}
                       onPress={() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        handleDateChange('start_date', today);
+                        const today = new Date();
+                        const day = String(today.getDate()).padStart(2, '0');
+                        const month = String(today.getMonth() + 1).padStart(2, '0');
+                        const year = today.getFullYear();
+                        handleDateChange('start_date', `${day}/${month}/${year}`);
                       }}
                       disabled={loading}
                     >
@@ -477,11 +501,12 @@ export default function CreatePostScreen() {
                   <Text style={styles.dateFieldLabel}>Fecha fin</Text>
                   <TextInput
                     style={styles.dateInput}
-                    placeholder="YYYY-MM-DD"
+                    placeholder="DD/MM/YYYY"
                     placeholderTextColor="#8E8E93"
                     value={formData.end_date}
                     onChangeText={(text) => handleDateChange('end_date', text)}
                     editable={!loading}
+                    keyboardType="numeric"
                   />
                 </View>
               </View>
