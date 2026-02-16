@@ -1,8 +1,7 @@
 import ToastLib from 'react-native-toast-message';
-import * as Haptics from 'expo-haptics';
 
 /**
- * Helper para mostrar toasts con haptic feedback.
+ * Helper para mostrar toasts sin haptic feedback.
  *
  * Uso:
  *   toast.success('Guardado correctamente');
@@ -13,22 +12,18 @@ import * as Haptics from 'expo-haptics';
  */
 export const toast = {
   success(title: string, subtitle?: string) {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     ToastLib.show({ type: 'success', text1: title, text2: subtitle });
   },
 
   error(title: string, subtitle?: string) {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     ToastLib.show({ type: 'error', text1: title, text2: subtitle });
   },
 
   info(title: string, subtitle?: string) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     ToastLib.show({ type: 'info', text1: title, text2: subtitle });
   },
 
   warning(title: string, subtitle?: string) {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     ToastLib.show({ type: 'warning', text1: title, text2: subtitle });
   },
 
@@ -38,7 +33,6 @@ export const toast = {
    * @param fallbackMsg Mensaje por defecto si no se puede parsear el error
    */
   supabaseError(error: any, fallbackMsg: string) {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
     let message = fallbackMsg;
     let subtitle: string | undefined;
