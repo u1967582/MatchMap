@@ -653,12 +653,6 @@ export default function EditBarInfoScreen() {
       return false;
     }
 
-    // Validate website format (optional)
-    if (website.trim() && !/^https?:\/\/.+/.test(website.trim())) {
-      toast.warning('La URL debe empezar con http:// o https://');
-      return false;
-    }
-
     return true;
   };
 
@@ -867,15 +861,14 @@ export default function EditBarInfoScreen() {
 
         {/* Website Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Sitio Web</Text>
+          <Text style={styles.inputLabel}>Web / Redes Sociales</Text>
           <TextInput
             style={styles.textInput}
             value={website}
             onChangeText={setWebsite}
-            placeholder="https://www.tubar.com"
+            placeholder="Instagram, Facebook, web, etc."
             placeholderTextColor="#8E8E93"
             maxLength={200}
-            keyboardType="url"
             autoCapitalize="none"
           />
         </View>
