@@ -444,7 +444,7 @@ export default function EditBarInfoScreen() {
         console.log('✅ Menu image added:', newImage.id);
       }
 
-      Alert.alert('Éxito', `${imageType === 'bar' ? 'Imagen del bar' : 'Imagen del menú'} añadida correctamente`);
+      toast.success(`${imageType === 'bar' ? 'Imagen del bar' : 'Imagen del menú'} añadida`);
     } catch (error) {
       console.error('❌ Error processing image:', error);
       Alert.alert('Error', `No se pudo procesar la imagen: ${error}`);
@@ -471,7 +471,7 @@ export default function EditBarInfoScreen() {
 
               if (error) {
                 console.error('Error deleting image:', error);
-                Alert.alert('Error', 'No se pudo eliminar la imagen');
+                toast.error('No se pudo eliminar la imagen');
                 return;
               }
 
@@ -482,7 +482,7 @@ export default function EditBarInfoScreen() {
                 setMenuImages(prev => prev.filter(img => img.id !== imageId));
               }
 
-              Alert.alert('Éxito', 'Imagen eliminada correctamente');
+              toast.success('Imagen eliminada');
             } catch (error) {
               console.error('Error in handleDeleteImage:', error);
               Alert.alert('Error', 'Ocurrió un error al eliminar la imagen');
@@ -509,7 +509,7 @@ export default function EditBarInfoScreen() {
 
       if (error) {
         console.error('Error reordering images:', error);
-        Alert.alert('Error', 'No se pudo reordenar las imágenes');
+        toast.error('No se pudo reordenar las imágenes');
         return;
       }
 
@@ -520,7 +520,7 @@ export default function EditBarInfoScreen() {
         setMenuImages(images);
       }
 
-      Alert.alert('Éxito', 'Orden de imágenes actualizado correctamente');
+      toast.success('Orden actualizado');
     } catch (error) {
       console.error('Error in handleReorderImages:', error);
       Alert.alert('Error', 'Ocurrió un error al reordenar las imágenes');
