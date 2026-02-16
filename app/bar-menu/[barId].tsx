@@ -8,8 +8,8 @@ import ImageViewing from 'react-native-image-viewing';
 
 const { width } = Dimensions.get('window');
 const numColumns = 3;
-const spacing = 16;
-const containerPadding = 40;
+const spacing = 12;
+const containerPadding = 20 * 2; // 20px padding on each side
 const imageWidth = (width - containerPadding - (spacing * (numColumns - 1))) / numColumns;
 
 interface MenuImage {
@@ -220,12 +220,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   columnWrapper: {
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    gap: spacing,
     marginBottom: spacing,
   },
   gridContainer: {
-    paddingVertical: 20,
+    paddingTop: 20,
+    paddingBottom: 80,
   },
   galleryContainer: {
     paddingHorizontal: 10,
@@ -233,23 +233,22 @@ const styles = StyleSheet.create({
   menuThumbnailContainer: {
     width: imageWidth,
     aspectRatio: 1,
-    marginBottom: 0,
-    borderRadius: 12,
+    borderRadius: 8,
     overflow: 'hidden',
+    backgroundColor: '#2A3A4A',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   menuThumbnail: {
     width: '100%',
     height: '100%',
-    aspectRatio: 1,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   imageOverlay: {
     position: 'absolute',
