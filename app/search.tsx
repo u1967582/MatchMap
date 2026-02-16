@@ -829,23 +829,13 @@ export default function SearchScreen() {
           <View style={styles.filterColumn}>
             <AppText variant="label" style={styles.filterLabelSpacing}>Partido</AppText>
             <TouchableOpacity
-              style={[styles.filterButton, selectedMatch && styles.filterButtonActive]}
+              style={styles.filterButton}
               onPress={() => setMatchPickerOpen(true)}
             >
               <AppText style={styles.iconEmoji}>⚽</AppText>
-              <AppText variant="caption" color={selectedMatch ? colors.text.primary : colors.text.secondary}>
-                {selectedMatch
-                  ? `${selectedMatch.home_team?.name || 'Local'} vs ${selectedMatch.away_team?.name || 'Visitante'}`
-                  : 'Partido'}
+              <AppText variant="caption" color={colors.text.secondary}>
+                {selectedMatch ? 'Cambiar partido' : 'Seleccionar partido'}
               </AppText>
-              {selectedMatch && (
-                <TouchableOpacity
-                  onPress={() => setSelectedMatch(null)}
-                  style={{ position: 'absolute', right: 10, padding: 6 }}
-                >
-                  <Ionicons name="close" size={18} color={colors.text.primary} />
-                </TouchableOpacity>
-              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -895,6 +885,48 @@ export default function SearchScreen() {
           </View>
         )}
       </View>
+
+      {/* Floating Match Banner - Above BottomTabBar */}
+      {selectedMatch && (
+        <View style={styles.floatingMatchBanner}>
+          <View style={styles.matchBannerContent}>
+            <View style={styles.matchTeam}>
+              {selectedMatch.home_team?.logo_url ? (
+                <Image
+                  source={{ uri: selectedMatch.home_team.logo_url }}
+                  style={styles.matchTeamLogo}
+                />
+              ) : (
+                <Ionicons name="shield-outline" size={14} color="#FFFFFF" />
+              )}
+              <AppText variant="caption" color="#FFFFFF" numberOfLines={1} style={styles.matchTeamName}>
+                {selectedMatch.home_team?.name || 'Local'}
+              </AppText>
+            </View>
+            <AppText variant="caption" color="rgba(255,255,255,0.7)" style={styles.matchVsBanner}>vs</AppText>
+            <View style={styles.matchTeam}>
+              {selectedMatch.away_team?.logo_url ? (
+                <Image
+                  source={{ uri: selectedMatch.away_team.logo_url }}
+                  style={styles.matchTeamLogo}
+                />
+              ) : (
+                <Ionicons name="shield-outline" size={14} color="#FFFFFF" />
+              )}
+              <AppText variant="caption" color="#FFFFFF" numberOfLines={1} style={styles.matchTeamName}>
+                {selectedMatch.away_team?.name || 'Visitante'}
+              </AppText>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => setSelectedMatch(null)}
+            style={styles.matchBannerClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close" size={16} color="rgba(255,255,255,0.9)" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <BottomTabBar />
 
@@ -1154,5 +1186,63 @@ const styles = StyleSheet.create({
   emptyActions: {
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
+  },
+  floatingMatchBanner: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 95 : 75,
+    left: '5%',
+    right: '5%',
+    backgroundColor: 'rgba(25, 118, 210, 0.6)', // Transparent blue like map
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  matchBannerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingRight: 10,
+  },
+  matchTeam: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 0,
+  },
+  matchTeamLogo: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  matchTeamName: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  matchVsBanner: {
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  matchBannerClose: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
 });

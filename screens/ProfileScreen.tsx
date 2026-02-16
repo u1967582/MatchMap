@@ -407,57 +407,107 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Super User - Cold Registration Section */}
+        {/* Super User - Admin Dashboard */}
         {user?.is_super_user && (
           <View style={styles.section}>
             <AppText variant="title" style={styles.sectionTitleSpacing}>Super Usuario</AppText>
-            <TouchableOpacity
-              style={styles.coldRegisterButton}
-              onPress={handleColdRegisterBar}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="business-outline" size={24} color={colors.brand.primary} />
-              <AppText variant="subtitle" color={colors.text.primary} style={styles.coldRegisterButtonTextBold}>Registrar Bar en Frío</AppText>
-              <AppText variant="caption" color={colors.text.light} align="center" style={styles.coldRegisterSubtextSpacing}>
-                Pre-registra un bar para que su propietario lo reclame después
-              </AppText>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.coldRegisterButton, styles.verifyBarsButton]}
-              onPress={() => router.push('/bar-verification-admin' as any)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="shield-checkmark-outline" size={24} color={colors.status.success} />
-              <AppText variant="subtitle" color={colors.text.primary} style={styles.coldRegisterButtonTextBold}>Verificar Bares</AppText>
-              <AppText variant="caption" color={colors.text.light} align="center" style={styles.coldRegisterSubtextSpacing}>
-                Aprobar o rechazar bares pendientes de verificación
+            {/* Gestión de Bares */}
+            <View style={styles.adminCategory}>
+              <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
+                Gestión de Bares
               </AppText>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.coldRegisterButton, styles.supportTicketsButton]}
-              onPress={() => router.push('/support-admin' as any)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="chatbubbles-outline" size={24} color={colors.status.warning} />
-              <AppText variant="subtitle" color={colors.text.primary} style={styles.coldRegisterButtonTextBold}>Gestionar Tickets de Soporte</AppText>
-              <AppText variant="caption" color={colors.text.light} align="center" style={styles.coldRegisterSubtextSpacing}>
-                Ver y responder tickets de usuarios
-              </AppText>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={handleColdRegisterBar}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.adminButtonIcon, styles.adminButtonIconBlue]}>
+                  <Ionicons name="business-outline" size={24} color={colors.brand.primary} />
+                </View>
+                <View style={styles.adminButtonContent}>
+                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                    Registrar Bar en Frío
+                  </AppText>
+                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                    Pre-registra un bar para que su propietario lo reclame después
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.coldRegisterButton, styles.autoMatchesButton]}
-              onPress={() => router.push('/admin-select-bar-auto-broadcasts' as any)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="settings-outline" size={24} color={colors.brand.link} />
-              <AppText variant="subtitle" color={colors.text.primary} style={styles.coldRegisterButtonTextBold}>Automatizar Partidos (Admin)</AppText>
-              <AppText variant="caption" color={colors.text.light} align="center" style={styles.coldRegisterSubtextSpacing}>
-                Configurar automatización de partidos para cualquier bar
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/bar-verification-admin' as any)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.adminButtonIcon, styles.adminButtonIconGreen]}>
+                  <Ionicons name="shield-checkmark-outline" size={24} color={colors.status.success} />
+                </View>
+                <View style={styles.adminButtonContent}>
+                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                    Verificar Bares
+                  </AppText>
+                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                    Aprobar o rechazar bares pendientes de verificación
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Soporte */}
+            <View style={styles.adminCategory}>
+              <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
+                Soporte
               </AppText>
-            </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/support-admin' as any)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.adminButtonIcon, styles.adminButtonIconOrange]}>
+                  <Ionicons name="chatbubbles-outline" size={24} color={colors.status.warning} />
+                </View>
+                <View style={styles.adminButtonContent}>
+                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                    Gestionar Tickets
+                  </AppText>
+                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                    Ver y responder tickets de usuarios
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Automatización */}
+            <View style={styles.adminCategory}>
+              <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
+                Automatización
+              </AppText>
+
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/admin-select-bar-auto-broadcasts' as any)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.adminButtonIcon, styles.adminButtonIconPurple]}>
+                  <Ionicons name="settings-outline" size={24} color={colors.brand.link} />
+                </View>
+                <View style={styles.adminButtonContent}>
+                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                    Automatizar Partidos
+                  </AppText>
+                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                    Configurar automatización de partidos para cualquier bar
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -811,6 +861,57 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     borderColor: colors.brand.link,
     shadowColor: colors.brand.link,
+  },
+  adminCategory: {
+    marginTop: spacing.lg,
+  },
+  adminCategoryTitle: {
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  adminButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg.elevated,
+    borderRadius: spacing.md,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  adminButtonIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  adminButtonIconBlue: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+  },
+  adminButtonIconGreen: {
+    backgroundColor: 'rgba(52, 199, 89, 0.15)',
+  },
+  adminButtonIconOrange: {
+    backgroundColor: 'rgba(255, 149, 0, 0.15)',
+  },
+  adminButtonIconPurple: {
+    backgroundColor: 'rgba(88, 86, 214, 0.15)',
+  },
+  adminButtonContent: {
+    flex: 1,
+  },
+  adminButtonTitle: {
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  adminButtonSubtitle: {
+    lineHeight: 16,
   },
   verificationPill: {
     flexDirection: 'row',
