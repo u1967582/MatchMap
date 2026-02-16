@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform, ActivityIndicator, Image } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -832,35 +832,15 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
         {/* Match filter button */}
         <TouchableOpacity
-          style={[
-            styles.matchFilterButton,
-            selectedMatch && styles.matchFilterButtonActive
-          ]}
+          style={styles.matchFilterButton}
           onPress={() => setMatchPickerOpen(true)}
         >
           <View style={styles.matchButtonContent}>
             <Text style={styles.matchButtonEmoji}>⚽</Text>
-            <Text style={[
-              styles.matchButtonText,
-              selectedMatch && styles.matchButtonTextActive,
-              selectedMatch && { flex: 1, textAlign: 'left' }
-            ]}>
-              {selectedMatch 
-                ? `${selectedMatch.home_team?.name || 'Local'} - ${selectedMatch.away_team?.name || 'Visitante'}`
-                : 'Busca tu partido'}
+            <Text style={styles.matchButtonText}>
+              Busca tu partido
             </Text>
           </View>
-          {selectedMatch && (
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation();
-                setSelectedMatch(null);
-              }}
-              style={styles.matchCloseButton}
-            >
-              <Ionicons name="close" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
         </TouchableOpacity>
       
         {/* Bar filter button - Now with text */}
@@ -949,6 +929,47 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
         >
           <Ionicons name="locate" size={28} color="#007AFF" />
         </TouchableOpacity>
+      )}
+
+      {/* Active Match Filter Banner */}
+      {selectedMatch && (
+        <View style={styles.activeMatchBanner}>
+          <View style={styles.bannerTeamsRow}>
+            <View style={styles.bannerTeam}>
+              {selectedMatch.home_team?.logo_url ? (
+                <Image
+                  source={{ uri: selectedMatch.home_team.logo_url }}
+                  style={styles.bannerTeamLogo}
+                />
+              ) : (
+                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
+              )}
+              <Text style={styles.bannerTeamName} numberOfLines={1}>
+                {selectedMatch.home_team?.name || 'Local'}
+              </Text>
+            </View>
+            <Text style={styles.bannerVs}>vs</Text>
+            <View style={styles.bannerTeam}>
+              {selectedMatch.away_team?.logo_url ? (
+                <Image
+                  source={{ uri: selectedMatch.away_team.logo_url }}
+                  style={styles.bannerTeamLogo}
+                />
+              ) : (
+                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
+              )}
+              <Text style={styles.bannerTeamName} numberOfLines={1}>
+                {selectedMatch.away_team?.name || 'Visitante'}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => setSelectedMatch(null)}
+            style={styles.bannerCloseButton}
+          >
+            <Ionicons name="close" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Turn-by-Turn Navigation Instructions - Top (Only when navigation started) */}
@@ -1268,6 +1289,68 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#EF4444',
+  },
+  activeMatchBanner: {
+    position: 'absolute',
+    top: 160,
+    left: '5%',
+    right: '5%',
+    backgroundColor: 'rgba(25, 118, 210, 0.6)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'column',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
+    zIndex: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  bannerTeamsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 12,
+  },
+  bannerTeam: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 6,
+  },
+  bannerTeamLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    resizeMode: 'contain',
+  },
+  bannerTeamName: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  bannerVs: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+  },
+  bannerCloseButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    padding: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 10,
   },
   centerButton: {
     position: 'absolute',
