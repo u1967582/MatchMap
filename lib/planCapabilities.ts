@@ -33,7 +33,7 @@ export const CAP_BY_TIER: Record<Tier, Capabilities> = {
     posts_limit: 1,
     bar_images_limit: 2,
     allow_reviews: true,
-    images_allowed: false,
+    images_allowed: true,
     favorite_competitions: false,
     analytics: false,
     home_promotion: false,

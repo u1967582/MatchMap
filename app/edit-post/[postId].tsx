@@ -149,10 +149,6 @@ export default function EditPostScreen() {
   }, [bar?.id]);
 
   const handleImagePick = async () => {
-    if (!capabilities.images_allowed) {
-      Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes en los posts.');
-      return;
-    }
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -190,12 +186,8 @@ export default function EditPostScreen() {
     try {
       let finalImageUrl = imageUrl;
 
-      // Upload new image if changed (respect plan capabilities)
+      // Upload new image if changed
       if (imageUrl && imageUrl !== post.image_url && !imageUrl.startsWith('http')) {
-        if (!capabilities.images_allowed) {
-          Alert.alert('Plan insuficiente', 'Tu plan actual no permite subir imágenes en los posts.');
-          return;
-        }
         try {
           const fileName = `post-${post.id}-${Date.now()}.jpg`;
           
@@ -383,22 +375,20 @@ export default function EditPostScreen() {
           </View>
         </View>
 
-        {/* Image Section (only for plans that allow images) */}
-        {capabilities.images_allowed && (
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Imagen (opcional)</Text>
-            <TouchableOpacity style={styles.imageContainer} onPress={handleImagePick}>
-              {imageUrl ? (
-                <Image source={{ uri: imageUrl }} style={styles.selectedImage} />
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Ionicons name="image-outline" size={32} color="#A3B3CC" />
-                  <Text style={styles.imagePlaceholderText}>Seleccionar imagen</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Image Section */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Imagen (opcional)</Text>
+          <TouchableOpacity style={styles.imageContainer} onPress={handleImagePick}>
+            {imageUrl ? (
+              <Image source={{ uri: imageUrl }} style={styles.selectedImage} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Ionicons name="image-outline" size={32} color="#A3B3CC" />
+                <Text style={styles.imagePlaceholderText}>Seleccionar imagen</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* Date Range */}
         <View style={styles.inputContainer}>
