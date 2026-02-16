@@ -446,6 +446,18 @@ export default function ProfileScreen() {
                 Ver y responder tickets de usuarios
               </AppText>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.coldRegisterButton, styles.autoMatchesButton]}
+              onPress={() => router.push('/admin-select-bar-auto-broadcasts' as any)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="settings-outline" size={24} color={colors.brand.link} />
+              <AppText variant="subtitle" color={colors.text.primary} style={styles.coldRegisterButtonTextBold}>Automatizar Partidos (Admin)</AppText>
+              <AppText variant="caption" color={colors.text.light} align="center" style={styles.coldRegisterSubtextSpacing}>
+                Configurar automatización de partidos para cualquier bar
+              </AppText>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -794,6 +806,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     borderColor: colors.status.success,
     shadowColor: colors.status.success,
+  },
+  autoMatchesButton: {
+    marginTop: spacing.md,
+    borderColor: colors.brand.link,
+    shadowColor: colors.brand.link,
   },
   verificationPill: {
     flexDirection: 'row',
