@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform, ActivityIndicator, Image, BackHandler, ToastAndroid } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -146,6 +146,37 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
       setSelectedBoostBarIds(boostIds);
     }
   }, [boostBars, setSelectedBoostBarIds]);
+
+  // Handle Android back button - double tap to exit
+  React.useEffect(() => {
+    let backPressCount = 0;
+    let timeout: NodeJS.Timeout;
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (backPressCount === 0) {
+        backPressCount++;
+
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('Presiona de nuevo para salir', ToastAndroid.SHORT);
+        }
+
+        timeout = setTimeout(() => {
+          backPressCount = 0;
+        }, 2000);
+
+        return true; // Prevent default behavior
+      } else {
+        // Second press within 2 seconds - exit app
+        BackHandler.exitApp();
+        return false;
+      }
+    });
+
+    return () => {
+      backHandler.remove();
+      if (timeout) clearTimeout(timeout);
+    };
+  }, []);
 
   // Update center when user location changes
   React.useEffect(() => {
