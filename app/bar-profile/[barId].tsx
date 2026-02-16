@@ -1216,20 +1216,12 @@ export default function BarProfileScreen() {
     );
   }, [bar, user, fetchBarPosts]);
 
-  useEffect(() => {
-    fetchBarProfile();
-  }, [fetchBarProfile]);
-
-  // Reload posts, reviews, and matches when screen comes back into focus (after creating/editing)
+  // Load bar profile on initial mount and when screen comes back into focus
   useFocusEffect(
     React.useCallback(() => {
-      if (bar && user) {
-        console.log('🔄 Screen focused, reloading posts, reviews, and matches...');
-        fetchBarPosts(bar.id, user);
-        fetchUpcomingMatches(bar.id);
-        setReviewsRefreshKey(prev => prev + 1); // Trigger reviews reload
-      }
-    }, [bar, user, fetchBarPosts, fetchUpcomingMatches])
+      console.log('🔄 Loading bar profile...');
+      fetchBarProfile(); // Loads bar profile including images, posts, reviews, and matches
+    }, [fetchBarProfile])
   );
 
   // Tier loading removed
