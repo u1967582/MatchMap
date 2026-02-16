@@ -115,8 +115,8 @@ export default function EditPostScreen() {
         setDescription(postData.description);
         setImageUrl(postData.image_url);
         setPostType(postData.post_type);
-        setStartDate(postData.start_date || '');
-        setEndDate(postData.end_date || '');
+        setStartDate(postData.start_date ? formatDateForDisplay(postData.start_date) : '');
+        setEndDate(postData.end_date ? formatDateForDisplay(postData.end_date) : '');
         setIsActive(postData.is_active);
         setPinned(postData.pinned);
 
@@ -147,6 +147,31 @@ export default function EditPostScreen() {
     };
     loadCapabilities();
   }, [bar?.id]);
+
+  // Convert DD/MM/YYYY to YYYY-MM-DD for database
+  const convertToISODate = (dateString: string): string => {
+    if (!dateString) return '';
+    // If already in ISO format, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;
+    // Convert DD/MM/YYYY to YYYY-MM-DD
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return dateString;
+  };
+
+  // Convert YYYY-MM-DD to DD/MM/YYYY for display
+  const formatDateForDisplay = (isoDate: string): string => {
+    if (!isoDate) return '';
+    const parts = isoDate.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day}/${month}/${year}`;
+    }
+    return isoDate;
+  };
 
   const handleImagePick = async () => {
     try {
@@ -227,8 +252,8 @@ export default function EditPostScreen() {
           description: description.trim(),
           image_url: finalImageUrl,
           post_type: postType,
-          start_date: startDate || null,
-          end_date: endDate || null,
+          start_date: startDate ? convertToISODate(startDate) : null,
+          end_date: endDate ? convertToISODate(endDate) : null,
           is_active: isActive,
           pinned: pinned,
           updated_at: new Date().toISOString(),
@@ -400,8 +425,9 @@ export default function EditPostScreen() {
                 style={styles.textInput}
                 value={startDate}
                 onChangeText={setStartDate}
-                placeholder="YYYY-MM-DD"
+                placeholder="DD/MM/YYYY"
                 placeholderTextColor="#8E8E93"
+                keyboardType="numeric"
               />
             </View>
             <View style={styles.dateInput}>
@@ -410,8 +436,9 @@ export default function EditPostScreen() {
                 style={styles.textInput}
                 value={endDate}
                 onChangeText={setEndDate}
-                placeholder="YYYY-MM-DD"
+                placeholder="DD/MM/YYYY"
                 placeholderTextColor="#8E8E93"
+                keyboardType="numeric"
               />
             </View>
           </View>
