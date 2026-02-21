@@ -327,7 +327,8 @@ export default function MatchPickerModal({
                         />
                       )}
                       <AppText style={[
-                        styles.competitionChip                        selected && styles.competitionChipTextSelected
+                        styles.competitionChipText,
+                        selected && styles.competitionChipTextSelected,
                       ]}>
                         {label}
                       </AppText>

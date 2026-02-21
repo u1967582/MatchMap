@@ -76,7 +76,8 @@ export default function Dropdown({
         activeOpacity={0.7}
       >
         <AppText style={[
-          styles.dropdownButton          selectedValue !== options[0]?.value && styles.dropdownButtonTextActive
+          styles.dropdownButtonText,
+          selectedValue !== options[0]?.value && styles.dropdownButtonTextActive
         ]}>
           {String(displayText)}
         </AppText>
@@ -125,7 +126,8 @@ export default function Dropdown({
                   onPress={() => handleSelect(item.value)}
                 >
                   <AppText style={[
-                    styles.dropdownItem                    selectedValue === item.value && styles.dropdownItemTextActive
+                    styles.dropdownItemText,
+                    selectedValue === item.value && styles.dropdownItemTextActive
                   ]}>
                     {String(item.label)}
                   </AppText>
