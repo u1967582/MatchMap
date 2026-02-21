@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
+import { AppText } from '~/components/ds';
 import { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
 import * as RevenueCatService from '~/utils/revenuecat';
 import { supabase } from '~/utils/supabase';
@@ -130,7 +131,7 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1C2A3A' }}>
         <ActivityIndicator size="large" color="#1976D2" />
-        <Text style={{ color: '#FFFFFF', marginTop: 16, fontSize: 16 }}>Iniciando MatchMap...</Text>
+        <AppText style={{ color: '#FFFFFF', marginTop: 16, fontSize: 16 }}>Iniciando MatchMap...</AppText>
       </View>
     );
   }

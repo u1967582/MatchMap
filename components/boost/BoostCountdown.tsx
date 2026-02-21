@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { useCountdown, formatCountdown } from '~/hooks/useCountdown';
 
@@ -25,8 +26,8 @@ const BoostCountdown: React.FC<BoostCountdownProps> = ({ endAt, style }) => {
     <View style={[styles.container, style]}>
       <View style={styles.content}>
         <Ionicons name="flash" size={16} color="#FFD700" />
-        <Text style={styles.label}>Boost activo:</Text>
-        <Text style={styles.time}>{formattedTime}</Text>
+        <AppText maxScale={1.0} style={styles.label}>Boost activo:</AppText>
+        <AppText maxScale={1.0} style={styles.time}>{formattedTime}</AppText>
       </View>
     </View>
   );

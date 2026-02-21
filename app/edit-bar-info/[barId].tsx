@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -17,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '~/utils/supabase';
-import { toast, EditBarSkeleton } from '~/components/ds';
+import { toast, EditBarSkeleton, AppText } from '~/components/ds';
 import { DraggableImageGrid } from '~/components/images';
 // Subscriptions removed; use fixed limits
 
@@ -781,7 +780,7 @@ export default function EditBarInfoScreen() {
       <GestureHandlerRootView style={styles.flex}>
         <SafeAreaView style={styles.container} edges={['top','bottom']}>
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Bar no encontrado</Text>
+            <AppText style={styles.loadingText}>Bar no encontrado</AppText>
           </View>
         </SafeAreaView>
       </GestureHandlerRootView>
@@ -796,7 +795,7 @@ export default function EditBarInfoScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar Información</Text>
+        <AppText style={styles.headerTitle}>Editar Información</AppText>
         <TouchableOpacity
           onPress={handleSave}
           style={[
@@ -805,22 +804,22 @@ export default function EditBarInfoScreen() {
           ]}
           disabled={saving}
         >
-          <Text style={[styles.saveButtonText, saving && styles.saveButtonTextDisabled]}>
+          <AppText style={[styles.saveButtonText, saving && styles.saveButtonTextDisabled]}>
             {saving ? 'Guardando...' : hasImagesChanged ? '★ Guardar Cambios' : 'Guardar'}
-          </Text>
+          </AppText>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Bar Info */}
         <View style={styles.barInfo}>
-          <Text style={styles.barName}>{bar.name}</Text>
-          <Text style={styles.barSubtitle}>Editando información del bar</Text>
+          <AppText style={styles.barName}>{bar.name}</AppText>
+          <AppText style={styles.barSubtitle}>Editando información del bar</AppText>
         </View>
 
         {/* Name Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Nombre del Bar *</Text>
+          <AppText style={styles.inputLabel}>Nombre del Bar *</AppText>
           <TextInput
             style={styles.textInput}
             value={name}
@@ -833,7 +832,7 @@ export default function EditBarInfoScreen() {
 
         {/* Description Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Descripción</Text>
+          <AppText style={styles.inputLabel}>Descripción</AppText>
           <TextInput
             style={[styles.textInput, styles.textArea]}
             value={description}
@@ -848,7 +847,7 @@ export default function EditBarInfoScreen() {
 
         {/* Food Types Section */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Tipos de Comida</Text>
+          <AppText style={styles.inputLabel}>Tipos de Comida</AppText>
           <View style={styles.categoryContainer}>
             {availableFoodTypes.map((foodType) => {
               const isSelected = foodTypes.some(ft => ft.category_id === foodType.id);
@@ -861,12 +860,12 @@ export default function EditBarInfoScreen() {
                   ]}
                   onPress={() => handleToggleFoodType(foodType.id, foodType.name)}
                 >
-                  <Text style={[
+                  <AppText style={[
                     styles.categoryButtonText,
                     isSelected && styles.categoryButtonTextActive
                   ]}>
                     {foodType.name}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               );
             })}
@@ -875,7 +874,7 @@ export default function EditBarInfoScreen() {
 
         {/* TV Features Section */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Características de TV</Text>
+          <AppText style={styles.inputLabel}>Características de TV</AppText>
           <View style={styles.categoryContainer}>
             {availableTvFeatures.map((tvFeature) => {
               const isSelected = tvFeatures.some(tvf => tvf.category_id === tvFeature.id);
@@ -888,12 +887,12 @@ export default function EditBarInfoScreen() {
                   ]}
                   onPress={() => handleToggleTvFeature(tvFeature.id, tvFeature.name)}
                 >
-                  <Text style={[
+                  <AppText style={[
                     styles.categoryButtonText,
                     isSelected && styles.categoryButtonTextActive
                   ]}>
                     {tvFeature.name}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               );
             })}
@@ -902,7 +901,7 @@ export default function EditBarInfoScreen() {
 
         {/* Features Section */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Características</Text>
+          <AppText style={styles.inputLabel}>Características</AppText>
           <View style={styles.categoryContainer}>
             {availableFeatures.map((feature) => {
               const isSelected = features.some(f => f.category_id === feature.id);
@@ -915,12 +914,12 @@ export default function EditBarInfoScreen() {
                   ]}
                   onPress={() => handleToggleFeature(feature.id, feature.name)}
                 >
-                  <Text style={[
+                  <AppText style={[
                     styles.categoryButtonText,
                     isSelected && styles.categoryButtonTextActive
                   ]}>
                     {feature.name}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               );
             })}
@@ -929,7 +928,7 @@ export default function EditBarInfoScreen() {
 
         {/* Phone Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Teléfono</Text>
+          <AppText style={styles.inputLabel}>Teléfono</AppText>
           <TextInput
             style={styles.textInput}
             value={phone}
@@ -943,7 +942,7 @@ export default function EditBarInfoScreen() {
 
         {/* Website Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Web / Redes Sociales</Text>
+          <AppText style={styles.inputLabel}>Web / Redes Sociales</AppText>
           <TextInput
             style={styles.textInput}
             value={website}
@@ -957,7 +956,7 @@ export default function EditBarInfoScreen() {
 
         {/* Category Selection */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Categoría</Text>
+          <AppText style={styles.inputLabel}>Categoría</AppText>
           <View style={styles.categoryContainer}>
             {categories.map((category) => (
               <TouchableOpacity
@@ -970,12 +969,12 @@ export default function EditBarInfoScreen() {
                   selectedCategoryId === category.id ? null : category.id
                 )}
               >
-                <Text style={[
+                <AppText style={[
                   styles.categoryButtonText,
                   selectedCategoryId === category.id && styles.categoryButtonTextActive
                 ]}>
                   {category.name}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
@@ -984,9 +983,9 @@ export default function EditBarInfoScreen() {
         {/* Bar Images Section */}
         <View style={styles.inputContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.inputLabel}>Imágenes del Bar</Text>
+            <AppText style={styles.inputLabel}>Imágenes del Bar</AppText>
             {barImages.length > 0 && (
-              <Text style={styles.helperText}>Mantén presionado para reordenar</Text>
+              <AppText style={styles.helperText}>Mantén presionado para reordenar</AppText>
             )}
           </View>
 
@@ -1000,26 +999,26 @@ export default function EditBarInfoScreen() {
               gap={8}
             />
           ) : (
-            <Text style={styles.noImagesText}>No hay imágenes del bar</Text>
+            <AppText style={styles.noImagesText}>No hay imágenes del bar</AppText>
           )}
 
           {barImages.length < barImagesLimit && (
             <TouchableOpacity style={styles.addImageButton} onPress={handleAddBarImage}>
               <Ionicons name="add" size={24} color="#A3B3CC" />
-              <Text style={styles.addImageText}>Añadir</Text>
+              <AppText style={styles.addImageText}>Añadir</AppText>
             </TouchableOpacity>
           )}
 
-          <Text style={styles.imageCounter}>{barImages.length}/{barImagesLimit} fotos</Text>
+          <AppText style={styles.imageCounter}>{barImages.length}/{barImagesLimit} fotos</AppText>
         </View>
 
         {/* Menu Images Section */}
         {menuImagesLimit > 0 && (
           <View style={styles.inputContainer}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.inputLabel}>Imágenes del Menú</Text>
+              <AppText style={styles.inputLabel}>Imágenes del Menú</AppText>
               {menuImages.length > 0 && (
-                <Text style={styles.helperText}>Mantén presionado para reordenar</Text>
+                <AppText style={styles.helperText}>Mantén presionado para reordenar</AppText>
               )}
             </View>
 
@@ -1033,17 +1032,17 @@ export default function EditBarInfoScreen() {
                 gap={8}
               />
             ) : (
-              <Text style={styles.noImagesText}>No hay imágenes del menú</Text>
+              <AppText style={styles.noImagesText}>No hay imágenes del menú</AppText>
             )}
 
             {menuImages.length < menuImagesLimit && (
               <TouchableOpacity style={styles.addImageButton} onPress={handleAddMenuImage}>
                 <Ionicons name="add" size={24} color="#A3B3CC" />
-                <Text style={styles.addImageText}>Añadir</Text>
+                <AppText style={styles.addImageText}>Añadir</AppText>
               </TouchableOpacity>
             )}
 
-            <Text style={styles.imageCounter}>{menuImages.length}/{menuImagesLimit} fotos</Text>
+            <AppText style={styles.imageCounter}>{menuImages.length}/{menuImagesLimit} fotos</AppText>
           </View>
         )}
 

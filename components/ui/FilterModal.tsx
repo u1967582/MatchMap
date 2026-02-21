@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -13,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SelectableChip from './SelectableChip';
-import { toast } from '~/components/ds';
+import { AppText, toast } from '~/components/ds';
 
 interface FilterItem {
   id: number;
@@ -120,12 +119,12 @@ export default function FilterModal({
   ) => {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <AppText style={styles.sectionTitle}>{title}</AppText>
   
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#1976D2" />
-            <Text style={styles.loadingText}>Cargando opciones...</Text>
+            <AppText style={styles.loadingText}>Cargando opciones...</AppText>
           </View>
         ) : items && items.length > 0 ? (
           <View style={styles.chipsWrapContainer}>
@@ -140,7 +139,7 @@ export default function FilterModal({
             ))}
           </View>
         ) : (
-          <Text style={styles.emptyText}>No hay opciones disponibles</Text>
+          <AppText style={styles.emptyText}>No hay opciones disponibles</AppText>
         )}
       </View>
     );
@@ -185,7 +184,7 @@ export default function FilterModal({
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>🎯 Filtros disponibles</Text>
+          <AppText style={styles.title}>🎯 Filtros disponibles</AppText>
 
           {renderSection('Tipo de bar', barCategories, selectedBarCategories, toggleCategory)}
           {renderSection('Características de TV', tvFeatures, selectedTvFeatures, toggleTvFeature)}
@@ -195,7 +194,7 @@ export default function FilterModal({
 
         {/* Botón fijo al fondo */}
         <TouchableOpacity style={styles.applyButton} onPress={handleApplyFilters}>
-          <Text style={styles.applyButtonText}>Aplicar filtros ({getActiveFiltersCount()})</Text>
+          <AppText style={styles.applyButtonText}>Aplicar filtros ({getActiveFiltersCount()})</AppText>
         </TouchableOpacity>
       </View>
     </View>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSubscription } from '~/hooks/useSubscription';
@@ -59,7 +60,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Cargando estado de suscripción...</Text>
+          <AppText style={styles.loadingText}>Cargando estado de suscripción...</AppText>
         </View>
       </View>
     );
@@ -70,13 +71,13 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
       <View style={styles.header}>
         <View style={styles.planInfo}>
           {getPlanSubtitle() && (
-            <Text style={styles.planSubtitle}>{getPlanSubtitle()}</Text>
+            <AppText maxScale={1.0} style={styles.planSubtitle}>{getPlanSubtitle()}</AppText>
           )}
-          <Text style={styles.planName}>{getPlanName()}</Text>
+          <AppText maxScale={1.2} style={styles.planName}>{getPlanName()}</AppText>
           {hasActiveSubscription && (
-            <Text style={styles.planStatus}>
+            <AppText style={styles.planStatus}>
               Estado: Activo
-            </Text>
+            </AppText>
           )}
         </View>
         
@@ -85,56 +86,56 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
             style={styles.upgradeButton}
             onPress={handleUpgrade}
           >
-            <Text style={styles.upgradeButtonText}>
+            <AppText maxScale={1.0} style={styles.upgradeButtonText}>
               {hasActiveSubscription ? 'Mejorar' : 'Actualizar'}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         )}
       </View>
 
       {hasActiveSubscription && (
         <View style={styles.featuresContainer}>
-          <Text style={styles.featuresTitle}>Funciones incluidas:</Text>
-          
+          <AppText style={styles.featuresTitle}>Funciones incluidas:</AppText>
+
           <View style={styles.featureRow}>
             <Ionicons name="images" size={14} color={getPlanColor()} />
-            <Text style={styles.featureText}>
+            <AppText style={styles.featureText}>
               Hasta {maxPhotosAllowed} fotos del bar
-            </Text>
+            </AppText>
           </View>
 
           <View style={styles.featureRow}>
             <Ionicons name="calendar" size={14} color={getPlanColor()} />
-            <Text style={styles.featureText}>
+            <AppText style={styles.featureText}>
               {(isPro || isElite) ? 'Eventos ilimitados' : `Hasta ${CAP_BY_TIER.free.events_limit} evento${CAP_BY_TIER.free.events_limit === 1 ? '' : 's'} activo${CAP_BY_TIER.free.events_limit === 1 ? '' : 's'}`}
-            </Text>
+            </AppText>
           </View>
 
           {(isPro || isElite) && (
             <View style={styles.featureRow}>
               <Ionicons name="checkmark-circle" size={14} color={getPlanColor()} />
-              <Text style={styles.featureText}>Automatización de partidos</Text>
+              <AppText style={styles.featureText}>Automatización de partidos</AppText>
             </View>
           )}
 
           {canUsePrioritySupport && (
             <View style={styles.featureRow}>
               <Ionicons name="headset" size={14} color={getPlanColor()} />
-              <Text style={styles.featureText}>Soporte prioritario</Text>
+              <AppText style={styles.featureText}>Soporte prioritario</AppText>
             </View>
           )}
 
           {canUseAdvancedStats && (
             <View style={styles.featureRow}>
               <Ionicons name="analytics" size={14} color={getPlanColor()} />
-              <Text style={styles.featureText}>Estadísticas avanzadas</Text>
+              <AppText style={styles.featureText}>Estadísticas avanzadas</AppText>
             </View>
           )}
 
           {canUseAutomation && (
             <View style={styles.featureRow}>
               <Ionicons name="settings" size={14} color={getPlanColor()} />
-              <Text style={styles.featureText}>Automatización total</Text>
+              <AppText style={styles.featureText}>Automatización total</AppText>
             </View>
           )}
         </View>
@@ -142,20 +143,20 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
 
       {!hasActiveSubscription && (
         <View style={styles.upgradePrompt}>
-          <Text style={styles.upgradePromptTitle}>
+          <AppText style={styles.upgradePromptTitle}>
             🔒 Funciones premium bloqueadas
-          </Text>
-          <Text style={styles.upgradePromptText}>
+          </AppText>
+          <AppText maxScale={1.5} style={styles.upgradePromptText}>
             Actualiza tu plan para desbloquear:{"\n"}• Más imágenes en tu perfil{"\n"}• Ver la carta del bar{"\n"}• Destacar publicaciones{"\n"}• Búsqueda prioritaria
-          </Text>
+          </AppText>
         </View>
       )}
 
       {subscription && hasActiveSubscription && (
         <View style={styles.subscriptionDetails}>
-          <Text style={styles.detailsText}>
+          <AppText style={styles.detailsText}>
             Renovación: {new Date(subscription.end_date).toLocaleDateString('es-ES')}
-          </Text>
+          </AppText>
         </View>
       )}
     </View>

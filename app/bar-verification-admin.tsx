@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
@@ -15,6 +14,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import { useFocusEffect } from '@react-navigation/native';
+import { AppText } from '~/components/ds';
 
 type VerificationStatus = 'pending' | 'approved' | 'rejected';
 
@@ -133,15 +133,15 @@ export default function BarVerificationAdminScreen() {
             )}
           </View>
           <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle} numberOfLines={1}>
+            <AppText style={styles.cardTitle} numberOfLines={1}>
               {item.name}
-            </Text>
-            <Text style={styles.cardSub} numberOfLines={1}>
+            </AppText>
+            <AppText style={styles.cardSub} numberOfLines={1}>
               {(item.address || 'Sin dirección') + (item.city ? `, ${item.city}` : '')}
-            </Text>
-            <Text style={styles.cardMeta}>
+            </AppText>
+            <AppText style={styles.cardMeta}>
               {item.created_at ? `Creado: ${new Date(item.created_at).toLocaleDateString('es-ES')}` : '—'}
-            </Text>
+            </AppText>
           </View>
           <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.35)" />
         </View>
@@ -155,7 +155,7 @@ export default function BarVerificationAdminScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loading}>
           <ActivityIndicator color="#FFD700" />
-          <Text style={styles.loadingText}>Cargando…</Text>
+          <AppText style={styles.loadingText}>Cargando…</AppText>
         </View>
       </SafeAreaView>
     );
@@ -169,14 +169,14 @@ export default function BarVerificationAdminScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Verificación de Bares</Text>
+          <AppText style={styles.headerTitle}>Verificación de Bares</AppText>
           <View style={{ width: 28 }} />
         </View>
 
         <View style={styles.emptyWrap}>
           <Ionicons name="lock-closed-outline" size={34} color="#A3B3CC" />
-          <Text style={styles.emptyTitle}>Acceso restringido</Text>
-          <Text style={styles.emptySub}>Esta pantalla solo está disponible para superusuarios.</Text>
+          <AppText style={styles.emptyTitle}>Acceso restringido</AppText>
+          <AppText style={styles.emptySub}>Esta pantalla solo está disponible para superusuarios.</AppText>
         </View>
       </SafeAreaView>
     );
@@ -190,7 +190,7 @@ export default function BarVerificationAdminScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Verificación de Bares</Text>
+        <AppText style={styles.headerTitle}>Verificación de Bares</AppText>
         <TouchableOpacity onPress={refresh} style={styles.iconBtn} disabled={refreshing}>
           <Ionicons name="refresh" size={20} color="#A3B3CC" />
         </TouchableOpacity>
@@ -205,8 +205,8 @@ export default function BarVerificationAdminScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="checkmark-done-outline" size={34} color="#10B981" />
-            <Text style={styles.emptyTitle}>No hay bares pendientes</Text>
-            <Text style={styles.emptySub}>Cuando un bar nuevo se registre, aparecerá aquí.</Text>
+            <AppText style={styles.emptyTitle}>No hay bares pendientes</AppText>
+            <AppText style={styles.emptySub}>Cuando un bar nuevo se registre, aparecerá aquí.</AppText>
           </View>
         }
       />
@@ -254,5 +254,3 @@ const styles = StyleSheet.create({
   emptyTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
   emptySub: { color: 'rgba(255,255,255,0.6)', fontSize: 13, textAlign: 'center', paddingHorizontal: 20 },
 });
-
-

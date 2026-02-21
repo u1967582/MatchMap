@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, Dimensions, Platform } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -384,14 +385,14 @@ const Step4Photos: React.FC = () => {
           <Ionicons name="close-circle" size={24} color="#FF6B6B" />
         </TouchableOpacity>
         <View style={styles.orderBadge}>
-          <Text style={styles.orderText}>{item.order}</Text>
+          <AppText style={styles.orderText}>{item.order}</AppText>
         </View>
         <View style={styles.dragHandle}>
           <Ionicons name="reorder-three" size={20} color="#666" />
         </View>
         {item.uploading && (
           <View style={styles.uploadingOverlay}>
-            <Text style={styles.uploadingText}>Subiendo...</Text>
+            <AppText style={styles.uploadingText}>Subiendo...</AppText>
           </View>
         )}
       </TouchableOpacity>
@@ -793,7 +794,7 @@ const Step4Photos: React.FC = () => {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Fotos del Bar</Text>
+          <AppText style={styles.headerTitle}>Fotos del Bar</AppText>
           <View style={styles.headerSpacer} />
           {/* Plan badge removed */}
         </View>
@@ -805,7 +806,7 @@ const Step4Photos: React.FC = () => {
             <View style={[styles.progressStep, styles.progressStepActive]} />
             <View style={[styles.progressStep, styles.progressStepActive]} />
           </View>
-          <Text style={styles.progressText}>Paso 4 de 4</Text>
+          <AppText style={styles.progressText}>Paso 4 de 4</AppText>
         </View>
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -813,8 +814,8 @@ const Step4Photos: React.FC = () => {
             {/* Bar Images Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Fotos del Bar</Text>
-                <Text style={styles.sectionSubtitle}>Máximo {MAX_BAR_PHOTOS} imágenes (16:9) - Mantén presionado para reordenar</Text>
+                <AppText style={styles.sectionTitle}>Fotos del Bar</AppText>
+                <AppText style={styles.sectionSubtitle}>Máximo {MAX_BAR_PHOTOS} imágenes (16:9) - Mantén presionado para reordenar</AppText>
               </View>
               
               <TouchableOpacity
@@ -823,9 +824,9 @@ const Step4Photos: React.FC = () => {
                 disabled={loading || barImages.length >= MAX_BAR_PHOTOS}
               >
                 <Ionicons name="camera" size={24} color="#007AFF" />
-                <Text style={styles.addButtonText}>
+                <AppText style={styles.addButtonText}>
                   {barImages.length >= MAX_BAR_PHOTOS ? 'Máximo alcanzado' : 'Agregar fotos del bar'}
-                </Text>
+                </AppText>
               </TouchableOpacity>
 
               {barImages.length > 0 && (
@@ -841,15 +842,15 @@ const Step4Photos: React.FC = () => {
                 </View>
               )}
               
-              <Text style={styles.counter}>{barImages.length}/{MAX_BAR_PHOTOS} fotos</Text>
+              <AppText style={styles.counter}>{barImages.length}/{MAX_BAR_PHOTOS} fotos</AppText>
             </View>
 
             {/* Menu Images Section (hidden for free plan) */}
             {MAX_MENU_PHOTOS > 0 && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Fotos del Menú</Text>
-                  <Text style={styles.sectionSubtitle}>Máximo {MAX_MENU_PHOTOS} imágenes (3:4) - Mantén presionado para reordenar</Text>
+                  <AppText style={styles.sectionTitle}>Fotos del Menú</AppText>
+                  <AppText style={styles.sectionSubtitle}>Máximo {MAX_MENU_PHOTOS} imágenes (3:4) - Mantén presionado para reordenar</AppText>
                 </View>
                 
                 <TouchableOpacity
@@ -858,9 +859,9 @@ const Step4Photos: React.FC = () => {
                   disabled={loading || menuImages.length >= MAX_MENU_PHOTOS}
                 >
                   <Ionicons name="restaurant" size={24} color="#007AFF" />
-                  <Text style={styles.addButtonText}>
+                  <AppText style={styles.addButtonText}>
                     {menuImages.length >= MAX_MENU_PHOTOS ? 'Máximo alcanzado' : 'Agregar fotos del menú'}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
   
                 {menuImages.length > 0 && (
@@ -876,17 +877,17 @@ const Step4Photos: React.FC = () => {
                   </View>
                 )}
                 
-                <Text style={styles.counter}>{menuImages.length}/{MAX_MENU_PHOTOS} fotos</Text>
+                <AppText style={styles.counter}>{menuImages.length}/{MAX_MENU_PHOTOS} fotos</AppText>
               </View>
             )}
 
             {/* Info Box */}
             <View style={styles.infoBox}>
               <Ionicons name="information-circle" size={20} color="#007AFF" />
-              <Text style={styles.infoText}>
+              <AppText style={styles.infoText}>
                 Las imágenes son opcionales. El orden de las fotos importa - la primera será la imagen principal.
                 Mantén presionado para reordenar.
-              </Text>
+              </AppText>
             </View>
           </View>
         </ScrollView>

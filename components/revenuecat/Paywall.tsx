@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   Modal,
@@ -12,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { PurchasesPackage, PurchasesOffering } from 'react-native-purchases';
 import * as RevenueCatService from '~/utils/revenuecat';
-import { toast } from '~/components/ds';
+import { AppText, toast } from '~/components/ds';
 
 interface PaywallProps {
   visible: boolean;
@@ -126,8 +125,8 @@ export default function Paywall({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
+              <AppText style={styles.title}>{title}</AppText>
+              <AppText style={styles.subtitle}>{subtitle}</AppText>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#A3B3CC" />
@@ -137,7 +136,7 @@ export default function Paywall({
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#1976D2" />
-              <Text style={styles.loadingText}>Cargando productos...</Text>
+              <AppText style={styles.loadingText}>Cargando productos...</AppText>
             </View>
           ) : (
             <ScrollView
@@ -152,10 +151,10 @@ export default function Paywall({
                     <Ionicons name="arrow-up-circle" size={20} color="#10B981" />
                   </View>
                   <View style={styles.benefitTextContainer}>
-                    <Text style={styles.benefitTitle}>Mayor visibilidad</Text>
-                    <Text style={styles.benefitDescription}>
+                    <AppText style={styles.benefitTitle}>Mayor visibilidad</AppText>
+                    <AppText style={styles.benefitDescription}>
                       Tu bar aparece primero en búsquedas
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
 
@@ -164,10 +163,10 @@ export default function Paywall({
                     <Ionicons name="star" size={20} color="#FFD700" />
                   </View>
                   <View style={styles.benefitTextContainer}>
-                    <Text style={styles.benefitTitle}>Etiqueta destacado</Text>
-                    <Text style={styles.benefitDescription}>
+                    <AppText style={styles.benefitTitle}>Etiqueta destacado</AppText>
+                    <AppText style={styles.benefitDescription}>
                       Badge especial que llama la atención
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
 
@@ -176,10 +175,10 @@ export default function Paywall({
                     <Ionicons name="trending-up" size={20} color="#60A5FA" />
                   </View>
                   <View style={styles.benefitTextContainer}>
-                    <Text style={styles.benefitTitle}>Prioridad en resultados</Text>
-                    <Text style={styles.benefitDescription}>
+                    <AppText style={styles.benefitTitle}>Prioridad en resultados</AppText>
+                    <AppText style={styles.benefitDescription}>
                       Aparece antes que la competencia
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               </View>
@@ -197,15 +196,15 @@ export default function Paywall({
                 >
                   <View style={styles.packageHeader}>
                     <View style={styles.packageInfo}>
-                      <Text style={styles.packageTitle}>
+                      <AppText style={styles.packageTitle}>
                         {getPackageTitle(pkg)}
-                      </Text>
-                      <Text style={styles.packageDescription}>
+                      </AppText>
+                      <AppText style={styles.packageDescription}>
                         {getPackageDescription(pkg)}
-                      </Text>
+                      </AppText>
                     </View>
                     <View style={styles.packagePriceContainer}>
-                      <Text style={styles.packagePrice}>{formatPrice(pkg)}</Text>
+                      <AppText style={styles.packagePrice}>{formatPrice(pkg)}</AppText>
                       {selectedPackage?.identifier === pkg.identifier && (
                         <Ionicons name="checkmark-circle" size={24} color="#10B981" />
                       )}
@@ -223,7 +222,7 @@ export default function Paywall({
                 {purchasing ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.purchaseButtonText}>Comprar Ahora</Text>
+                  <AppText style={styles.purchaseButtonText}>Comprar Ahora</AppText>
                 )}
               </TouchableOpacity>
 
@@ -233,13 +232,13 @@ export default function Paywall({
                 onPress={handleRestore}
                 disabled={purchasing}
               >
-                <Text style={styles.restoreButtonText}>Restaurar Compras</Text>
+                <AppText style={styles.restoreButtonText}>Restaurar Compras</AppText>
               </TouchableOpacity>
 
               {/* Footer Info */}
-              <Text style={styles.footerText}>
+              <AppText style={styles.footerText}>
                 La compra se cargará a tu cuenta de Apple/Google. Puedes cancelar en cualquier momento.
-              </Text>
+              </AppText>
             </ScrollView>
           )}
         </View>

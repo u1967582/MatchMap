@@ -1,5 +1,6 @@
 // components/SearchBarWithResults.tsx
-import { View, TextInput, StyleSheet, Platform, FlatList, TouchableOpacity, Text, Animated } from 'react-native';
+import { View, TextInput, StyleSheet, Platform, FlatList, TouchableOpacity, Animated } from 'react-native';
+import { AppText } from '~/components/ds';
 import { useCallback, useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
@@ -38,8 +39,7 @@ interface SearchBarWithResultsProps {
 
 const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>(({ 
   value, 
-  onChangeText, 
-  placeholder = 'Buscar ciudad, lugar...', 
+  onChangeplaceholder = 'Buscar ciudad, lugar...', 
   editable = true,
   searchResults,
   isSearching,
@@ -61,7 +61,7 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
       tension: 50,
       friction: 7,
     }).start();
-  }, [onChangeText, widthAnim, onExpandChange]);
+  }, [onChangewidthAnim, onExpandChange]);
   
   // Auto-colapsar desactivado - se controla manualmente desde el componente padre
   // useEffect(() => {
@@ -148,12 +148,12 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
       >
         <Ionicons name={iconName as any} size={16} color="#A3B3CC" style={styles.resultIcon} />
         <View style={styles.resultTextContainer}>
-          <Text style={styles.resultTitle} numberOfLines={1}>
+          <AppText style={styles.resultTitle} numberOfLines={1}>
             {item.text}
-          </Text>
-          <Text style={styles.resultSubtitle} numberOfLines={1}>
+          </AppText>
+          <AppText style={styles.resultSubtitle} numberOfLines={1}>
             {subtitle}
-          </Text>
+          </AppText>
         </View>
       </TouchableOpacity>
     );
@@ -221,7 +221,7 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
         <View style={styles.resultsContainer}>
           {isSearching ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Buscando...</Text>
+              <AppText style={styles.loadingText}>Buscando...</AppText>
             </View>
           ) : (
             <FlatList

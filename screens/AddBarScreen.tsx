@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, ScrollView } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Alert, SafeAreaView, ScrollView } from 'react-native';
+import { AppText } from '~/components/ds';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
@@ -187,7 +188,7 @@ const AddBarScreen: React.FC = () => {
           <View style={styles.contentContainer}>
             <View style={styles.formContainer}>
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Nombre del Bar</Text>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>Nombre del Bar</AppText>
                 <InputField
                   placeholder="Ingresa el nombre del bar"
                   value={formData.name}
@@ -200,7 +201,7 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Descripción</Text>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>Descripción</AppText>
                 <InputField
                   placeholder="Describe tu bar"
                   value={formData.description}
@@ -215,7 +216,7 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Dirección</Text>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>Dirección</AppText>
                 <InputField
                   placeholder="Dirección completa"
                   value={formData.address}
@@ -228,7 +229,7 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Ciudad</Text>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>Ciudad</AppText>
                 <InputField
                   placeholder="Ciudad"
                   value={formData.city}
@@ -241,7 +242,7 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Teléfono</Text>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>Teléfono</AppText>
                 <InputField
                   placeholder="Número de teléfono"
                   value={formData.phone}
@@ -255,7 +256,7 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Email</Text>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>Email</AppText>
                 <InputField
                   placeholder="Email del bar"
                   value={formData.email}
@@ -269,7 +270,7 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Sitio Web (Opcional)</Text>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>Sitio Web (Opcional)</AppText>
                 <InputField
                   placeholder="www.ejemplo.com"
                   value={formData.website}
@@ -283,7 +284,7 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Horario (Opcional)</Text>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>Horario (Opcional)</AppText>
                 <InputField
                   placeholder="Ej: Lun-Dom 18:00-02:00"
                   value={formData.openingHours}
@@ -296,7 +297,7 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Categoría</Text>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>Categoría</AppText>
                 <InputField
                   placeholder="Ej: Cocktail Bar, Pub, Lounge"
                   value={formData.category}

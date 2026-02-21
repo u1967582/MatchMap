@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 
 interface CustomCalendarProps {
@@ -120,9 +120,9 @@ export default function CustomCalendar({
             <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           
-          <Text style={styles.monthYearText}>
+          <AppText style={styles.monthYearText}>
             {formatMonthYear(currentMonth)}
-          </Text>
+          </AppText>
           
           <TouchableOpacity
             style={styles.navButton}
@@ -135,9 +135,9 @@ export default function CustomCalendar({
         {/* Days of Week Header */}
         <View style={styles.daysHeader}>
           {daysOfWeek.map((day, index) => (
-            <Text key={index} style={styles.dayHeaderText}>
+            <AppText key={index} style={styles.dayHeaderText}>
               {day}
-            </Text>
+            </AppText>
           ))}
         </View>
 
@@ -154,16 +154,11 @@ export default function CustomCalendar({
               onPress={() => handleDateSelect(day.date)}
               disabled={day.isDisabled}
             >
-              <Text
-                style={[
-                  styles.dayText,
-                  day.isSelected && styles.selectedDayText,
-                  !day.isCurrentMonth && styles.otherMonthDayText,
-                  day.isDisabled && styles.disabledDayText,
-                ]}
+              <                style={[
+                  styles.day                  day.isSelected && styles.selectedDay                  !day.isCurrentMonth && styles.otherMonthDay                  day.isDisabled && styles.disabledDay                ]}
               >
                 {day.date.getDate()}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           ))}
         </View>

@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -15,7 +14,7 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '~/utils/supabase';
-import { toast } from '~/components/ds';
+import { toast, AppText } from '~/components/ds';
 import CustomButton from '~/components/ui/CustomButton';
 import ScreenTitle from '~/components/ui/ScreenTitle';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
@@ -385,7 +384,7 @@ export default function CreatePostScreen() {
             
             {/* Post Type Selection */}
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Tipo de Post</Text>
+              <AppText style={styles.fieldLabel}>Tipo de Post</AppText>
               <View style={styles.postTypeGrid}>
                 {POST_TYPES.map((type) => (
                   <TouchableOpacity
@@ -405,12 +404,12 @@ export default function CreatePostScreen() {
                       size={20} 
                       color={formData.post_type === type.value ? type.color : '#A3B3CC'} 
                     />
-                    <Text style={[
+                    <AppText style={[
                       styles.postTypeButtonText,
                       formData.post_type === type.value && { color: type.color }
                     ]}>
                       {type.label}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -418,7 +417,7 @@ export default function CreatePostScreen() {
 
             {/* Title */}
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Título *</Text>
+              <AppText style={styles.fieldLabel}>Título *</AppText>
               <TextInput
                 style={styles.textInput}
                 placeholder="Ingresa el título del post"
@@ -432,7 +431,7 @@ export default function CreatePostScreen() {
 
             {/* Description */}
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Descripción *</Text>
+              <AppText style={styles.fieldLabel}>Descripción *</AppText>
               <TextInput
                 style={[styles.textInput, styles.textArea]}
                 placeholder="Describe tu post..."
@@ -449,7 +448,7 @@ export default function CreatePostScreen() {
 
             {/* Image Selection */}
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Imagen (Opcional)</Text>
+              <AppText style={styles.fieldLabel}>Imagen (Opcional)</AppText>
               <TouchableOpacity
                 style={styles.imageSelector}
                 onPress={handleSelectImage}
@@ -460,7 +459,7 @@ export default function CreatePostScreen() {
                 ) : (
                   <View style={styles.imagePlaceholder}>
                     <Ionicons name="camera" size={32} color="#A3B3CC" />
-                    <Text style={styles.imagePlaceholderText}>Toca para agregar imagen</Text>
+                    <AppText style={styles.imagePlaceholderText}>Toca para agregar imagen</AppText>
                   </View>
                 )}
               </TouchableOpacity>
@@ -468,10 +467,10 @@ export default function CreatePostScreen() {
 
             {/* Date Range */}
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Fechas</Text>
+              <AppText style={styles.fieldLabel}>Fechas</AppText>
               <View style={styles.dateContainer}>
                 <View style={styles.dateField}>
-                  <Text style={styles.dateFieldLabel}>Fecha inicio</Text>
+                  <AppText style={styles.dateFieldLabel}>Fecha inicio</AppText>
                   <View style={styles.dateInputContainer}>
                     <TextInput
                       style={styles.dateInput}
@@ -493,12 +492,12 @@ export default function CreatePostScreen() {
                       }}
                       disabled={loading}
                     >
-                      <Text style={styles.todayButtonText}>Hoy</Text>
+                      <AppText style={styles.todayButtonText}>Hoy</AppText>
                     </TouchableOpacity>
                   </View>
                 </View>
                 <View style={styles.dateField}>
-                  <Text style={styles.dateFieldLabel}>Fecha fin</Text>
+                  <AppText style={styles.dateFieldLabel}>Fecha fin</AppText>
                   <TextInput
                     style={styles.dateInput}
                     placeholder="DD/MM/YYYY"
@@ -514,7 +513,7 @@ export default function CreatePostScreen() {
 
             {/* Options */}
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Opciones</Text>
+              <AppText style={styles.fieldLabel}>Opciones</AppText>
               
               <TouchableOpacity 
                 style={styles.optionRow}
@@ -523,7 +522,7 @@ export default function CreatePostScreen() {
               >
                 <View style={styles.optionLeft}>
                   <Ionicons name="eye" size={20} color="#A3B3CC" />
-                  <Text style={styles.optionText}>Post activo</Text>
+                  <AppText style={styles.optionText}>Post activo</AppText>
                 </View>
                 <View style={[styles.toggle, formData.is_active && styles.toggleActive]}>
                   <View style={[styles.toggleThumb, formData.is_active && styles.toggleThumbActive]} />
@@ -537,7 +536,7 @@ export default function CreatePostScreen() {
               >
                 <View style={styles.optionLeft}>
                   <Ionicons name="pin" size={20} color="#A3B3CC" />
-                  <Text style={styles.optionText}>Post destacado</Text>
+                  <AppText style={styles.optionText}>Post destacado</AppText>
                 </View>
                 <View style={[styles.toggle, formData.pinned && styles.toggleActive]}>
                   <View style={[styles.toggleThumb, formData.pinned && styles.toggleThumbActive]} />
@@ -738,4 +737,4 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: 20,
   },
-}); 
+});

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Dimensions } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Dimensions } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -112,7 +113,7 @@ const BarMenuScreen: React.FC = () => {
         <Stack.Screen options={{ title: 'Carta del Bar', headerShown: false }} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Cargando carta del bar...</Text>
+          <AppText style={styles.loadingText}>Cargando carta del bar...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -126,15 +127,15 @@ const BarMenuScreen: React.FC = () => {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Carta del Bar</Text>
+          <AppText style={styles.headerTitle}>Carta del Bar</AppText>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.emptyContainer}>
           <Ionicons name="restaurant-outline" size={64} color="#8E8E93" />
-          <Text style={styles.emptyTitle}>No hay carta disponible</Text>
-          <Text style={styles.emptySubtitle}>
+          <AppText style={styles.emptyTitle}>No hay carta disponible</AppText>
+          <AppText style={styles.emptySubtitle}>
             Este bar aún no ha subido imágenes de su carta
-          </Text>
+          </AppText>
         </View>
       </SafeAreaView>
     );
@@ -148,15 +149,15 @@ const BarMenuScreen: React.FC = () => {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Carta del Bar</Text>
+        <AppText style={styles.headerTitle}>Carta del Bar</AppText>
         <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.barName}>{barName}</Text>
-        <Text style={styles.subtitle}>
+        <AppText style={styles.barName}>{barName}</AppText>
+        <AppText style={styles.subtitle}>
           Toca una imagen para verla a pantalla completa
-        </Text>
+        </AppText>
 
         <FlatList
           data={menuImages}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -16,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
+import { AppText } from '~/components/ds';
 
 type SupportCategory = 'technical' | 'account' | 'payment' | 'feature' | 'other';
 type TabType = 'new' | 'my-tickets';
@@ -322,12 +322,12 @@ export default function ContactSupportScreen() {
                 color="#1976D2"
               />
               <View style={styles.ticketHeaderText}>
-                <Text style={styles.ticketSubject} numberOfLines={1}>
+                <AppText style={styles.ticketSubject} numberOfLines={1}>
                   {item.subject}
-                </Text>
-                <Text style={styles.ticketCategory}>
+                </AppText>
+                <AppText style={styles.ticketCategory}>
                   {CATEGORY_LABELS[item.category] || item.category}
-                </Text>
+                </AppText>
               </View>
             </View>
             <Ionicons
@@ -341,16 +341,16 @@ export default function ContactSupportScreen() {
           <View style={styles.statusRow}>
             <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] }]}>
               <View style={[styles.statusDot, { backgroundColor: '#FFFFFF' }]} />
-              <Text style={styles.statusBadgeText}>{STATUS_LABELS[item.status]}</Text>
+              <AppText style={styles.statusBadgeText}>{STATUS_LABELS[item.status]}</AppText>
             </View>
-            <Text style={styles.ticketDate}>{formatDate(item.created_at)}</Text>
+            <AppText style={styles.ticketDate}>{formatDate(item.created_at)}</AppText>
           </View>
 
           {/* Message Preview */}
           {!isExpanded && (
-            <Text style={styles.messagePreview} numberOfLines={2}>
+            <AppText style={styles.messagePreview} numberOfLines={2}>
               {messagePreview}
-            </Text>
+            </AppText>
           )}
         </TouchableOpacity>
 
@@ -363,26 +363,26 @@ export default function ContactSupportScreen() {
                 size={20} 
                 color={STATUS_COLORS[item.status]} 
               />
-              <Text style={[styles.statusMessageText, { color: STATUS_COLORS[item.status] }]}>
+              <AppText style={[styles.statusMessageText, { color: STATUS_COLORS[item.status] }]}>
                 {getStatusMessage(item.status)}
-              </Text>
+              </AppText>
             </View>
 
             {/* Full Message */}
             <View style={styles.ticketSection}>
-              <Text style={styles.ticketLabel}>Tu Consulta:</Text>
-              <Text style={styles.ticketMessage}>{item.message}</Text>
+              <AppText style={styles.ticketLabel}>Tu Consulta:</AppText>
+              <AppText style={styles.ticketMessage}>{item.message}</AppText>
             </View>
 
             {/* Metadata */}
             <View style={styles.metadataRow}>
               <View style={styles.metadataItem}>
                 <Ionicons name="mail-outline" size={16} color="#6B7280" />
-                <Text style={styles.metadataText}>{item.email}</Text>
+                <AppText style={styles.metadataText}>{item.email}</AppText>
               </View>
               <View style={styles.metadataItem}>
                 <Ionicons name="calendar-outline" size={16} color="#6B7280" />
-                <Text style={styles.metadataText}>
+                <AppText style={styles.metadataText}>
                   {new Date(item.created_at).toLocaleDateString('es-ES', {
                     day: 'numeric',
                     month: 'short',
@@ -390,15 +390,15 @@ export default function ContactSupportScreen() {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
-                </Text>
+                </AppText>
               </View>
             </View>
 
             {/* Last Updated */}
             {item.updated_at !== item.created_at && (
-              <Text style={styles.updatedText}>
+              <AppText style={styles.updatedText}>
                 Última actualización: {formatDate(item.updated_at)}
-              </Text>
+              </AppText>
             )}
           </View>
         )}
@@ -419,14 +419,14 @@ export default function ContactSupportScreen() {
         {/* Info Box */}
         <View style={styles.infoBox}>
           <Ionicons name="information-circle" size={24} color="#1976D2" />
-          <Text style={styles.infoText}>
+          <AppText style={styles.infoText}>
             Nuestro equipo responde en menos de 48 horas
-          </Text>
+          </AppText>
         </View>
 
         {/* Category Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>¿En qué podemos ayudarte?</Text>
+          <AppText style={styles.sectionTitle}>¿En qué podemos ayudarte?</AppText>
           <View style={styles.categoriesGrid}>
             {CATEGORIES.map((category) => (
               <TouchableOpacity
@@ -443,15 +443,15 @@ export default function ContactSupportScreen() {
                   size={28}
                   color={selectedCategory === category.id ? '#1976D2' : '#A3B3CC'}
                 />
-                <Text
+                <AppText
                   style={[
                     styles.categoryLabel,
                     selectedCategory === category.id && styles.categoryLabelActive,
                   ]}
                 >
                   {category.label}
-                </Text>
-                <Text style={styles.categoryDescription}>{category.description}</Text>
+                </AppText>
+                <AppText style={styles.categoryDescription}>{category.description}</AppText>
               </TouchableOpacity>
             ))}
           </View>
@@ -459,11 +459,11 @@ export default function ContactSupportScreen() {
 
         {/* Contact Form */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Detalles de tu Consulta</Text>
+          <AppText style={styles.sectionTitle}>Detalles de tu Consulta</AppText>
 
           {/* Email */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email de Contacto</Text>
+            <AppText style={styles.inputLabel}>Email de Contacto</AppText>
             <View style={styles.inputContainer}>
               <Ionicons name="mail-outline" size={20} color="#A3B3CC" style={styles.inputIcon} />
               <TextInput
@@ -480,7 +480,7 @@ export default function ContactSupportScreen() {
 
           {/* Subject */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Asunto *</Text>
+            <AppText style={styles.inputLabel}>Asunto *</AppText>
             <View style={styles.inputContainer}>
               <Ionicons
                 name="document-text-outline"
@@ -505,7 +505,7 @@ export default function ContactSupportScreen() {
 
           {/* Message */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Mensaje *</Text>
+            <AppText style={styles.inputLabel}>Mensaje *</AppText>
             <View style={[styles.inputContainer, styles.textAreaContainer]}>
               <TextInput
                 style={[styles.input, styles.textArea]}
@@ -523,20 +523,20 @@ export default function ContactSupportScreen() {
                 maxLength={1000}
               />
             </View>
-            <Text style={styles.charCount}>{message.length} / 1000</Text>
+            <AppText style={styles.charCount}>{message.length} / 1000</AppText>
           </View>
         </View>
 
         {/* Quick Contact Options */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Otras Formas de Contacto</Text>
+          <AppText style={styles.sectionTitle}>Otras Formas de Contacto</AppText>
           <View style={styles.quickContactCard}>
             <Ionicons name="mail" size={20} color="#A3B3CC" />
-            <Text style={styles.quickContactText}>support@matchmap.com</Text>
+            <AppText style={styles.quickContactText}>support@matchmap.com</AppText>
           </View>
           <View style={styles.quickContactCard}>
             <Ionicons name="time-outline" size={20} color="#A3B3CC" />
-            <Text style={styles.quickContactText}>Lun - Vie: 9:00 - 18:00 CET</Text>
+            <AppText style={styles.quickContactText}>Lun - Vie: 9:00 - 18:00 CET</AppText>
           </View>
         </View>
       </ScrollView>
@@ -550,11 +550,11 @@ export default function ContactSupportScreen() {
           activeOpacity={0.8}
         >
           {loading ? (
-            <Text style={styles.submitButtonText}>Enviando...</Text>
+            <AppText style={styles.submitButtonText}>Enviando...</AppText>
           ) : (
             <>
               <Ionicons name="send" size={20} color="#FFFFFF" />
-              <Text style={styles.submitButtonText}>Enviar Mensaje</Text>
+              <AppText style={styles.submitButtonText}>Enviar Mensaje</AppText>
             </>
           )}
         </TouchableOpacity>
@@ -572,25 +572,25 @@ export default function ContactSupportScreen() {
           tickets.length > 0 ? (
             <View style={styles.ticketsHeader}>
               <Ionicons name="time-outline" size={18} color="#1976D2" />
-              <Text style={styles.ticketsHeaderText}>
+              <AppText style={styles.ticketsHeaderText}>
                 Respondemos en menos de 48 horas
-              </Text>
+              </AppText>
             </View>
           ) : null
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="chatbubble-ellipses-outline" size={64} color="#6B7280" />
-            <Text style={styles.emptyText}>No tienes tickets</Text>
-            <Text style={styles.emptySubtext}>
+            <AppText style={styles.emptyText}>No tienes tickets</AppText>
+            <AppText style={styles.emptySubtext}>
               ¿Necesitas ayuda? Crea tu primer ticket de soporte
-            </Text>
+            </AppText>
             <TouchableOpacity
               style={styles.createTicketButton}
               onPress={() => setActiveTab('new')}
             >
               <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.createTicketButtonText}>Crear Ticket</Text>
+              <AppText style={styles.createTicketButtonText}>Crear Ticket</AppText>
             </TouchableOpacity>
           </View>
         }
@@ -614,7 +614,7 @@ export default function ContactSupportScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Soporte</Text>
+        <AppText style={styles.headerTitle}>Soporte</AppText>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -629,9 +629,9 @@ export default function ContactSupportScreen() {
             size={20} 
             color={activeTab === 'my-tickets' ? '#1976D2' : '#A3B3CC'} 
           />
-          <Text style={[styles.tabText, activeTab === 'my-tickets' && styles.tabTextActive]}>
+          <AppText style={[styles.tabText, activeTab === 'my-tickets' && styles.tabTextActive]}>
             Mis Tickets
-          </Text>
+          </AppText>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -643,9 +643,9 @@ export default function ContactSupportScreen() {
             size={20} 
             color={activeTab === 'new' ? '#1976D2' : '#A3B3CC'} 
           />
-          <Text style={[styles.tabText, activeTab === 'new' && styles.tabTextActive]}>
+          <AppText style={[styles.tabText, activeTab === 'new' && styles.tabTextActive]}>
             Nuevo Ticket
-          </Text>
+          </AppText>
         </TouchableOpacity>
       </View>
 

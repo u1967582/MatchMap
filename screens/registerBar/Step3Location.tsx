@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -157,14 +158,14 @@ const Step3Location: React.FC = () => {
   // Create a single item for FlatList
   const renderContent = () => (
     <View style={styles.content}>
-      <Text style={styles.title}>¿Dónde está tu bar?</Text>
-      <Text style={styles.subtitle}>
+      <AppText style={styles.title}>¿Dónde está tu bar?</AppText>
+      <AppText style={styles.subtitle}>
         Busca tu dirección o introduce las coordenadas manualmente.
-      </Text>
+      </AppText>
 
       {/* Mapbox Search Autocomplete */}
       <View style={styles.searchSection}>
-        <Text style={styles.sectionTitle}>Buscar dirección</Text>
+        <AppText style={styles.sectionTitle}>Buscar dirección</AppText>
         <View style={styles.searchBoxContainer}>
           {process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ? (
             <AddressSearch
@@ -174,9 +175,9 @@ const Step3Location: React.FC = () => {
           ) : (
             <View style={styles.searchBoxFallback}>
               <Ionicons name="search" size={20} color="#8E8E93" />
-              <Text style={styles.searchBoxFallbackText}>
+              <AppText style={styles.searchBoxFallbackText}>
                 Configura EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN para usar búsqueda automática
-              </Text>
+              </AppText>
             </View>
           )}
         </View>
@@ -184,7 +185,7 @@ const Step3Location: React.FC = () => {
 
       {/* Manual Address Fields */}
       <View style={styles.manualSection}>
-        <Text style={styles.sectionTitle}>Información de dirección</Text>
+        <AppText style={styles.sectionTitle}>Información de dirección</AppText>
         
         <TextInputField
           label="Dirección"
@@ -228,14 +229,14 @@ const Step3Location: React.FC = () => {
       {/* Coordinates Section */}
       <View style={styles.coordinatesSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Coordenadas</Text>
+          <AppText style={styles.sectionTitle}>Coordenadas</AppText>
           <TouchableOpacity 
             onPress={() => setShowManualCoordinates(!showManualCoordinates)}
             style={styles.toggleButton}
           >
-            <Text style={styles.toggleButtonText}>
+            <AppText style={styles.toggleButtonText}>
               {showManualCoordinates ? 'Ocultar' : 'Mostrar'} coordenadas
-            </Text>
+            </AppText>
             <Ionicons 
               name={showManualCoordinates ? "chevron-up" : "chevron-down"} 
               size={16} 
@@ -247,15 +248,15 @@ const Step3Location: React.FC = () => {
         {(latitude !== 0 || longitude !== 0) && (
           <View style={styles.coordinatesStatus}>
             <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-            <Text style={styles.statusText}>Coordenadas establecidas</Text>
+            <AppText style={styles.statusText}>Coordenadas establecidas</AppText>
           </View>
         )}
 
         {showManualCoordinates && (
           <View style={styles.coordinatesContent}>
-            <Text style={styles.sectionSubtitle}>
+            <AppText style={styles.sectionSubtitle}>
               Introduce las coordenadas manualmente o usa tu ubicación actual
-            </Text>
+            </AppText>
             
             <View style={styles.coordinatesRow}>
               <View style={styles.coordinateInput}>
@@ -286,9 +287,9 @@ const Step3Location: React.FC = () => {
               disabled={loading}
             >
               <Ionicons name="location" size={20} color="#007AFF" />
-              <Text style={styles.locationButtonText}>
+              <AppText style={styles.locationButtonText}>
                 {loading ? 'Obteniendo ubicación...' : 'Usar ubicación actual'}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           </View>
         )}
@@ -304,7 +305,7 @@ const Step3Location: React.FC = () => {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Ubicación</Text>
+          <AppText style={styles.headerTitle}>Ubicación</AppText>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -315,7 +316,7 @@ const Step3Location: React.FC = () => {
             <View style={[styles.progressStep, styles.progressStepActive]} />
             <View style={styles.progressStep} />
           </View>
-          <Text style={styles.progressText}>Paso 3 de 4</Text>
+          <AppText style={styles.progressText}>Paso 3 de 4</AppText>
         </View>
 
         <FlatList

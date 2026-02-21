@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useState, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 
 interface AddressSearchProps {
@@ -23,7 +24,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   onAddressSelect, 
   placeholder = "Buscar dirección..." 
 }) => {
-  const [searchText, setSearchText] = useState('');
+  const [searchsetSearchText] = useState('');
   const [doorNumber, setDoorNumber] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -202,9 +203,9 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       onPress={() => handleSelectAddress(item)}
     >
       <Ionicons name="location" size={16} color="#007AFF" />
-      <Text style={styles.resultText} numberOfLines={2}>
+      <AppText style={styles.resultText} numberOfLines={2}>
         {item.place_name}
-      </Text>
+      </AppText>
     </TouchableOpacity>
   ), [handleSelectAddress]);
 
@@ -240,7 +241,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
 
       {selectedAddress && !showResults && (
         <View style={styles.doorNumberContainer}>
-          <Text style={styles.doorNumberLabel}>Número de puerta:</Text>
+          <AppText style={styles.doorNumberLabel}>Número de puerta:</AppText>
           <View style={styles.doorNumberInputContainer}>
             <TextInput
               style={styles.doorNumberInput}
@@ -259,17 +260,17 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
               {preciseSearchLoading ? (
                 <Ionicons name="ellipsis-horizontal" size={16} color="#FFFFFF" />
               ) : (
-                <Text style={styles.confirmButtonText}>Confirmar</Text>
+                <AppText style={styles.confirmButtonText}>Confirmar</AppText>
               )}
             </TouchableOpacity>
           </View>
-          <Text style={styles.addressPreview}>
+          <AppText style={styles.addressPreview}>
             Dirección: {selectedAddress.place_name} {doorNumber}
-          </Text>
+          </AppText>
           {preciseSearchLoading && (
-            <Text style={styles.loadingText}>
+            <AppText style={styles.loadingText}>
               Buscando coordenadas precisas...
-            </Text>
+            </AppText>
           )}
         </View>
       )}
