@@ -37,9 +37,10 @@ interface SearchBarWithResultsProps {
   onExpandChange?: (isExpanded: boolean) => void;
 }
 
-const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>(({ 
-  value, 
-  onChangeplaceholder = 'Buscar ciudad, lugar...', 
+const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>(({
+  value,
+  onChangeText,
+  placeholder = 'Buscar ciudad, lugar...',
   editable = true,
   searchResults,
   isSearching,
@@ -61,7 +62,7 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
       tension: 50,
       friction: 7,
     }).start();
-  }, [onChangewidthAnim, onExpandChange]);
+  }, [onChangeText, widthAnim, onExpandChange]);
   
   // Auto-colapsar desactivado - se controla manualmente desde el componente padre
   // useEffect(() => {
@@ -241,8 +242,6 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
 
 SearchBarWithResults.displayName = 'SearchBarWithResults';
 
-export default memo(SearchBarWithResults);
-
 const styles = StyleSheet.create({
   searchContainer: {
     width: '100%',
@@ -341,4 +340,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default memo(SearchBarWithResults); 
+export default memo(SearchBarWithResults);
