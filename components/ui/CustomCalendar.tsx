@@ -154,8 +154,12 @@ export default function CustomCalendar({
               onPress={() => handleDateSelect(day.date)}
               disabled={day.isDisabled}
             >
-              <                style={[
-                  styles.day                  day.isSelected && styles.selectedDay                  !day.isCurrentMonth && styles.otherMonthDay                  day.isDisabled && styles.disabledDay                ]}
+              <AppText style={[
+                  styles.dayText,
+                  day.isSelected && styles.selectedDayText,
+                  !day.isCurrentMonth && styles.otherMonthDayText,
+                  day.isDisabled && styles.disabledDayText,
+                ]}
               >
                 {day.date.getDate()}
               </AppText>

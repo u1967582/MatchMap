@@ -155,8 +155,9 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
                       <View style={styles.detailRow}>
                         <AppText style={styles.detailLabel}>Renovación automática</AppText>
                         <View style={styles.statusBadge}>
-                          <                            style={[
-                              styles.statusBadge                              subscriptionInfo.willRenew && styles.statusBadgeActive,
+                          <AppText style={[
+                              styles.statusBadgeText,
+                              subscriptionInfo.willRenew && styles.statusBadgeActive,
                             ]}
                           >
                             {subscriptionInfo.willRenew ? 'Activa' : 'Desactivada'}
