@@ -97,6 +97,8 @@ export default function SearchScreen() {
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
 
   // Load favorites functionality from store (optimistic updates)
+  // Suscribir a `favorites` para que el componente re-renderice al cambiar el Set
+  const favorites = useFavoritesStore(state => state.favorites);
   const isFavorite = useFavoritesStore(state => state.isFavorite);
   const toggleFavorite = useFavoritesStore(state => state.toggleFavorite);
 
@@ -753,7 +755,7 @@ export default function SearchScreen() {
       </AppCard>
     );
 
-  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable]);
+  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable, favorites]);
 
   // Load initial data
   useEffect(() => {
@@ -852,6 +854,7 @@ export default function SearchScreen() {
             data={bars}
             renderItem={renderBarCard}
             keyExtractor={(item) => item.id}
+            extraData={favorites}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.barsList}
             estimatedItemSize={300}

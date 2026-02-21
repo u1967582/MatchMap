@@ -68,23 +68,17 @@ export default function Dropdown({
       <AppText style={{ position: 'absolute', left: -1000, width: 1, height: 1, opacity: 0 }}>{String(label)}</AppText>
       <TouchableOpacity
         ref={buttonRef}
-        style={[
-          styles.dropdownButton,
-          selectedValue !== options[0]?.value && styles.dropdownButtonActive
-        ]}
+        style={styles.dropdownButton}
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        <AppText style={[
-          styles.dropdownButtonText,
-          selectedValue !== options[0]?.value && styles.dropdownButtonTextActive
-        ]}>
+        <AppText style={styles.dropdownButtonText}>
           {String(displayText)}
         </AppText>
-        <Ionicons 
-          name={isOpen ? "chevron-up" : "chevron-down"} 
-          size={12} 
-          color={selectedValue !== options[0]?.value ? '#FFFFFF' : '#A3B3CC'} 
+        <Ionicons
+          name={isOpen ? "chevron-up" : "chevron-down"}
+          size={12}
+          color="#A3B3CC"
         />
       </TouchableOpacity>
 
