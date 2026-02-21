@@ -674,7 +674,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchsearchLocked, searchLocations]);
+  }, [searchText, searchLocked, searchLocations]);
 
 
   // Handle location selection
