@@ -24,7 +24,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   onAddressSelect, 
   placeholder = "Buscar dirección..." 
 }) => {
-  const [searchsetSearchText] = useState('');
+  const [searchText, setSearchText] = useState('');
   const [doorNumber, setDoorNumber] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
