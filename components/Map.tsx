@@ -886,7 +886,8 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           <View style={styles.matchButtonContent}>
             <Ionicons name="options-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
             <AppText style={[
-              styles.matchButton(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+              styles.matchButtonText,
+              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 ||
                selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.matchButtonTextActive
             ]}>
               Filtros de bar
