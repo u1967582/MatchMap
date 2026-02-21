@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { updatePassword } from '~/utils/auth';
@@ -118,7 +118,7 @@ export default function ResetPasswordScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <SafeAreaView style={styles.container}>
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Verificando...</Text>
+            <AppText style={styles.loadingText}>Verificando...</AppText>
           </View>
         </SafeAreaView>
       </>
@@ -163,16 +163,16 @@ export default function ResetPasswordScreen() {
                 />
 
                 <View style={styles.requirements}>
-                  <Text style={styles.requirementsTitle}>Requisitos:</Text>
-                  <Text style={styles.requirementItem}>
+                  <AppText style={styles.requirementsTitle}>Requisitos:</AppText>
+                  <AppText style={styles.requirementItem}>
                     {password.length >= 6 ? '✅' : '⭕'} Mínimo 6 caracteres
-                  </Text>
-                  <Text style={styles.requirementItem}>
+                  </AppText>
+                  <AppText style={styles.requirementItem}>
                     {password === confirmPassword && password.length > 0
                       ? '✅'
                       : '⭕'}{' '}
                     Las contraseñas coinciden
-                  </Text>
+                  </AppText>
                 </View>
 
                 <CustomButton

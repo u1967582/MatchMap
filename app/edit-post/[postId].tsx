@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { 
   View, 
-  Text, 
   StyleSheet, 
   TextInput, 
   TouchableOpacity, 
@@ -16,7 +15,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
-import { toast } from '~/components/ds';
+import { toast, AppText } from '~/components/ds';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
 import { CAP_BY_TIER, type Capabilities, type Tier } from '~/lib/planCapabilities';
 
@@ -316,7 +315,7 @@ export default function EditPostScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top','bottom']}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Cargando...</Text>
+          <AppText style={styles.loadingText}>Cargando...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -326,7 +325,7 @@ export default function EditPostScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top','bottom']}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Post no encontrado</Text>
+          <AppText style={styles.loadingText}>Post no encontrado</AppText>
         </View>
       </SafeAreaView>
     );
@@ -339,24 +338,24 @@ export default function EditPostScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar Post</Text>
+        <AppText style={styles.headerTitle}>Editar Post</AppText>
         <TouchableOpacity onPress={handleSave} style={styles.saveButton} disabled={saving}>
-          <Text style={[styles.saveButtonText, saving && styles.saveButtonTextDisabled]}>
+          <AppText style={[styles.saveButtonText, saving && styles.saveButtonTextDisabled]}>
             {saving ? 'Guardando...' : 'Guardar'}
-          </Text>
+          </AppText>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Bar Info */}
         <View style={styles.barInfo}>
-          <Text style={styles.barName}>{bar.name}</Text>
-          <Text style={styles.barSubtitle}>Editando post</Text>
+          <AppText style={styles.barName}>{bar.name}</AppText>
+          <AppText style={styles.barSubtitle}>Editando post</AppText>
         </View>
 
         {/* Title Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Título *</Text>
+          <AppText style={styles.inputLabel}>Título *</AppText>
           <TextInput
             style={styles.textInput}
             value={title}
@@ -369,7 +368,7 @@ export default function EditPostScreen() {
 
         {/* Description Input */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Descripción *</Text>
+          <AppText style={styles.inputLabel}>Descripción *</AppText>
           <TextInput
             style={[styles.textInput, styles.textArea]}
             value={description}
@@ -384,7 +383,7 @@ export default function EditPostScreen() {
 
         {/* Post Type */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Tipo de Post</Text>
+          <AppText style={styles.inputLabel}>Tipo de Post</AppText>
           <View style={styles.typeContainer}>
             {(['noticia', 'evento', 'promocion', 'oferta'] as const).map((type) => (
               <TouchableOpacity
@@ -392,9 +391,9 @@ export default function EditPostScreen() {
                 style={[styles.typeButton, postType === type && styles.typeButtonActive]}
                 onPress={() => setPostType(type)}
               >
-                <Text style={[styles.typeButtonText, postType === type && styles.typeButtonTextActive]}>
+                <AppText style={[styles.typeButtonText, postType === type && styles.typeButtonTextActive]}>
                   {type.charAt(0).toUpperCase() + type.slice(1)}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
@@ -402,14 +401,14 @@ export default function EditPostScreen() {
 
         {/* Image Section */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Imagen (opcional)</Text>
+          <AppText style={styles.inputLabel}>Imagen (opcional)</AppText>
           <TouchableOpacity style={styles.imageContainer} onPress={handleImagePick}>
             {imageUrl ? (
               <Image source={{ uri: imageUrl }} style={styles.selectedImage} />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Ionicons name="image-outline" size={32} color="#A3B3CC" />
-                <Text style={styles.imagePlaceholderText}>Seleccionar imagen</Text>
+                <AppText style={styles.imagePlaceholderText}>Seleccionar imagen</AppText>
               </View>
             )}
           </TouchableOpacity>
@@ -417,10 +416,10 @@ export default function EditPostScreen() {
 
         {/* Date Range */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Fechas (opcional)</Text>
+          <AppText style={styles.inputLabel}>Fechas (opcional)</AppText>
           <View style={styles.dateContainer}>
             <View style={styles.dateInput}>
-              <Text style={styles.dateLabel}>Fecha inicio</Text>
+              <AppText style={styles.dateLabel}>Fecha inicio</AppText>
               <TextInput
                 style={styles.textInput}
                 value={startDate}
@@ -431,7 +430,7 @@ export default function EditPostScreen() {
               />
             </View>
             <View style={styles.dateInput}>
-              <Text style={styles.dateLabel}>Fecha fin</Text>
+              <AppText style={styles.dateLabel}>Fecha fin</AppText>
               <TextInput
                 style={styles.textInput}
                 value={endDate}
@@ -446,7 +445,7 @@ export default function EditPostScreen() {
 
         {/* Options */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Opciones</Text>
+          <AppText style={styles.inputLabel}>Opciones</AppText>
           <View style={styles.optionsContainer}>
             <TouchableOpacity
               style={styles.optionRow}
@@ -457,7 +456,7 @@ export default function EditPostScreen() {
                 size={20} 
                 color={isActive ? "#10B981" : "#A3B3CC"} 
               />
-              <Text style={styles.optionText}>Post activo</Text>
+              <AppText style={styles.optionText}>Post activo</AppText>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -469,7 +468,7 @@ export default function EditPostScreen() {
                 size={20} 
                 color={pinned ? "#10B981" : "#A3B3CC"} 
               />
-              <Text style={styles.optionText}>Destacar post</Text>
+              <AppText style={styles.optionText}>Destacar post</AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -477,7 +476,7 @@ export default function EditPostScreen() {
         {/* Delete Button */}
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
           <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-          <Text style={styles.deleteButtonText}>Eliminar Post</Text>
+          <AppText style={styles.deleteButtonText}>Eliminar Post</AppText>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

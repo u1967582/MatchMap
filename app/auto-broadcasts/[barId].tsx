@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { View, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -256,20 +257,20 @@ export default function AutoBroadcastsScreen() {
 					</TouchableOpacity>
 					<Image source={{ uri: compLogo }} style={styles.compLogo} defaultSource={require('~/assets/icon.png')} />
 					<TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.compTitleContainer}>
-						<Text style={styles.compTitle} numberOfLines={1}>{item.name}</Text>
+						<AppText maxScale={1.1} numberOfLines={1} style={styles.compTitle}>{item.name}</AppText>
 						<Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#A3B3CC" />
 					</TouchableOpacity>
 				</View>
 				{isOpen && (
 					<View style={styles.compBody}>
 						{compChecked ? (
-							<Text style={styles.badgeAll}>Liga completa seleccionada</Text>
+							<AppText style={styles.badgeAll}>Liga completa seleccionada</AppText>
 						) : cache?.loading ? (
 							<View style={styles.loadingRow}><ActivityIndicator color="#A3B3CC" /></View>
 						) : cache?.error ? (
-							<Text style={styles.errorText}>{cache.error}</Text>
+							<AppText style={styles.errorText}>{cache.error}</AppText>
 						) : cache && cache.teams.length === 0 ? (
-							<Text style={styles.emptyText}>No hay equipos disponibles</Text>
+							<AppText style={styles.emptyText}>No hay equipos disponibles</AppText>
 						) : (
 							<FlatList
 								data={cache?.teams ?? []}
@@ -281,7 +282,7 @@ export default function AutoBroadcastsScreen() {
 									return (
 										<View style={styles.teamRow}>
 											<Image source={{ uri: logo }} style={styles.teamLogo} defaultSource={require('~/assets/icon.png')} />
-											<Text style={styles.teamName}>{team.name}</Text>
+											<AppText style={styles.teamName}>{team.name}</AppText>
 											<TouchableOpacity onPress={() => toggleTeamSelected(item.id, team.id)} style={styles.checkboxBtn}>
 												<Ionicons name={isChecked ? 'checkbox' : 'square-outline'} size={20} color={isChecked ? '#4CAF50' : '#A3B3CC'} />
 											</TouchableOpacity>
@@ -302,7 +303,7 @@ export default function AutoBroadcastsScreen() {
 				<TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
 					<Ionicons name="arrow-back" size={24} color="#FFFFFF" />
 				</TouchableOpacity>
-				<Text style={styles.headerTitle}>Automatizar retransmisiones</Text>
+				<AppText style={styles.headerTitle}>Automatizar retransmisiones</AppText>
 				<View style={{ width: 40 }} />
 			</View>
 
@@ -326,7 +327,7 @@ export default function AutoBroadcastsScreen() {
 					onPress={onSave}
 				>
 					<Ionicons name="save-outline" size={20} color="#FFFFFF" />
-					<Text style={styles.primaryButtonText}>{saving ? 'Guardando…' : 'Guardar preferencias'}</Text>
+					<AppText style={styles.primaryButtonText}>{saving ? 'Guardando…' : 'Guardar preferencias'}</AppText>
 				</TouchableOpacity>
 			</View>
 		</SafeAreaView>

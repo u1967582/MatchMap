@@ -8,6 +8,14 @@ interface AppTextProps extends TextProps {
   variant?: TextVariant;
   color?: string;
   align?: TextStyle['textAlign'];
+  /**
+   * Límite de escala de fuente para accesibilidad.
+   * 1.0 = no crece nunca (chrome de UI: tabs, botones)
+   * 1.2 = crece hasta 20% (títulos de tarjetas)
+   * 1.3 = valor por defecto (texto de cuerpo)
+   * 1.5 = contenido largo (descripciones, reseñas)
+   */
+  maxScale?: number;
 }
 
 const variantStyles: Record<TextVariant, TextStyle> = {
@@ -60,12 +68,14 @@ export default function AppText({
   variant = 'body',
   color,
   align,
+  maxScale = 1.3,
   style,
   children,
   ...rest
 }: AppTextProps) {
   return (
     <Text
+      maxFontSizeMultiplier={maxScale}
       style={[
         variantStyles[variant],
         color !== undefined && { color },

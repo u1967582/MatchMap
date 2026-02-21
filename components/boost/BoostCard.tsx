@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import Gradient from '~/components/ui/Gradient';
 
@@ -32,34 +33,34 @@ const BoostCard: React.FC<BoostCardProps> = ({
       {isPopular && (
         <View style={styles.popularBadge}>
           <Ionicons name="star" size={14} color="#FFFFFF" />
-          <Text style={styles.popularText}>Más Popular</Text>
+          <AppText maxScale={1.0} style={styles.popularText}>Más Popular</AppText>
         </View>
       )}
       
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
           <Ionicons name={iconName} size={20} color={isPopular ? "#D4AF37" : "#60A5FA"} />
-          <Text style={styles.title}>{title}</Text>
+          <AppText maxScale={1.1} style={styles.title}>{title}</AppText>
         </View>
         {discountBadge && !isPopular ? (
-          <View style={styles.badge}><Text style={styles.badgeText}>{discountBadge}</Text></View>
+          <View style={styles.badge}><AppText maxScale={1.0} style={styles.badgeText}>{discountBadge}</AppText></View>
         ) : null}
       </View>
 
-      <Text style={[styles.price, isPopular && styles.pricePopular]}>{price}</Text>
-      <Text style={styles.duration}>{durationLabel}</Text>
+      <AppText maxScale={1.1} style={[styles.price, isPopular && styles.pricePopular]}>{price}</AppText>
+      <AppText style={styles.duration}>{durationLabel}</AppText>
 
       {/* Amortization info */}
       <View style={styles.amortizationBox}>
         <Ionicons name="trending-up-outline" size={16} color="#10B981" />
-        <Text style={styles.amortizationText}>{amortizationText}</Text>
+        <AppText style={styles.amortizationText}>{amortizationText}</AppText>
       </View>
 
       <View style={styles.valueInfo}>
         <Ionicons name="information-circle-outline" size={13} color="#60A5FA" />
-        <Text style={styles.valueText}>
+        <AppText maxScale={1.3} style={styles.valueText}>
           Cada nuevo cliente te genera ~13€ de beneficio medio
-        </Text>
+        </AppText>
       </View>
 
       <TouchableOpacity activeOpacity={0.9} onPress={onPay} style={styles.ctaWrapper}>
@@ -70,7 +71,7 @@ const BoostCard: React.FC<BoostCardProps> = ({
           style={styles.cta}
         >
           <Ionicons name="card-outline" size={17} color="#FFFFFF" />
-          <Text style={styles.ctaText}>Pagar con Tarjeta</Text>
+          <AppText maxScale={1.0} style={styles.ctaText}>Pagar con Tarjeta</AppText>
         </Gradient>
       </TouchableOpacity>
       {footer ? <View style={{ marginTop: 10, alignItems: 'center' }}>{footer}</View> : null}

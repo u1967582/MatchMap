@@ -10,6 +10,7 @@ import {
   Alert,
   Linking 
 } from 'react-native';
+import { AppText } from '~/components/ds';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
@@ -264,23 +265,23 @@ const SubscriptionPlansScreen: React.FC = () => {
       >
         {plan.popular && (
           <View style={styles.popularBadge}>
-            <Text style={styles.popularText}>MÁS POPULAR</Text>
+            <AppText style={styles.popularText}>MÁS POPULAR</AppText>
           </View>
         )}
 
         <View style={styles.planHeader}>
           <View style={styles.planTitleContainer}>
-            <Text style={styles.planSubtitle}>{plan.subtitle}</Text>
-            <Text style={styles.planName}>{plan.name}</Text>
+            <AppText style={styles.planSubtitle}>{plan.subtitle}</AppText>
+            <AppText style={styles.planName}>{plan.name}</AppText>
           </View>
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>{plan.price}</Text>
-            <Text style={styles.period}>/{plan.period}</Text>
+            <AppText style={styles.price}>{plan.price}</AppText>
+            <AppText style={styles.period}>/{plan.period}</AppText>
             {plan.originalPrice && (
-              <Text style={styles.originalPrice}>{plan.originalPrice}</Text>
+              <AppText style={styles.originalPrice}>{plan.originalPrice}</AppText>
             )}
             {plan.savings && (
-              <Text style={styles.savings}>{plan.savings}</Text>
+              <AppText style={styles.savings}>{plan.savings}</AppText>
             )}
           </View>
         </View>
@@ -291,7 +292,7 @@ const SubscriptionPlansScreen: React.FC = () => {
               <View style={[styles.featureIcon, { backgroundColor: plan.color }]}>
                 <Ionicons name="checkmark" size={12} color="#FFFFFF" />
               </View>
-              <Text style={styles.featureText}>{feature}</Text>
+              <AppText style={styles.featureText}>{feature}</AppText>
             </View>
           ))}
         </View>
@@ -308,9 +309,9 @@ const SubscriptionPlansScreen: React.FC = () => {
           {isLoading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.subscribeButtonText}>
+            <AppText style={styles.subscribeButtonText}>
               Suscribirse
-            </Text>
+            </AppText>
           )}
         </TouchableOpacity>
       </TouchableOpacity>
@@ -325,12 +326,12 @@ const SubscriptionPlansScreen: React.FC = () => {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Planes de Suscripción</Text>
+          <AppText style={styles.headerTitle}>Planes de Suscripción</AppText>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Cargando planes...</Text>
+          <AppText style={styles.loadingText}>Cargando planes...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -344,18 +345,18 @@ const SubscriptionPlansScreen: React.FC = () => {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Planes de Suscripción</Text>
+          <AppText style={styles.headerTitle}>Planes de Suscripción</AppText>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={64} color="#FF6B6B" />
-          <Text style={styles.errorTitle}>Error</Text>
-          <Text style={styles.errorText}>{error}</Text>
+          <AppText style={styles.errorTitle}>Error</AppText>
+          <AppText style={styles.errorText}>{error}</AppText>
           <TouchableOpacity style={styles.retryButton} onPress={fetchUserAndBar}>
-            <Text style={styles.retryButtonText}>Reintentar</Text>
+            <AppText style={styles.retryButtonText}>Reintentar</AppText>
           </TouchableOpacity>
           <TouchableOpacity style={styles.registerBarButton} onPress={() => router.push('/register-bar/step1')}>
-            <Text style={styles.registerBarButtonText}>Registrar Bar</Text>
+            <AppText style={styles.registerBarButtonText}>Registrar Bar</AppText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -370,15 +371,15 @@ const SubscriptionPlansScreen: React.FC = () => {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Planes de Suscripción</Text>
+        <AppText style={styles.headerTitle}>Planes de Suscripción</AppText>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.introSection}>
-          <Text style={styles.introSubtitle}>
+          <AppText style={styles.introSubtitle}>
             Elige el plan que mejor se adapte a tu bar
-          </Text>
+          </AppText>
         </View>
 
         {/* Period Selection */}
@@ -392,12 +393,11 @@ const SubscriptionPlansScreen: React.FC = () => {
               onPress={() => setSelectedPeriod('monthly')}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.periodButtonText,
-                selectedPeriod === 'monthly' && styles.periodButtonTextActive
+              <AppText style={[
+                styles.periodButton                selectedPeriod === 'monthly' && styles.periodButtonTextActive
               ]}>
                 Mensual
-              </Text>
+              </AppText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -407,14 +407,13 @@ const SubscriptionPlansScreen: React.FC = () => {
               onPress={() => setSelectedPeriod('yearly')}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.periodButtonText,
-                selectedPeriod === 'yearly' && styles.periodButtonTextActive
+              <AppText style={[
+                styles.periodButton                selectedPeriod === 'yearly' && styles.periodButtonTextActive
               ]}>
                 Anual
-              </Text>
+              </AppText>
               <View style={styles.savingsBadge}>
-                <Text style={styles.savingsBadgeText}>-33%</Text>
+                <AppText style={styles.savingsBadgeText}>-33%</AppText>
               </View>
             </TouchableOpacity>
           </View>
@@ -428,12 +427,12 @@ const SubscriptionPlansScreen: React.FC = () => {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
+          <AppText style={styles.footerText}>
             Todos los planes incluyen una prueba gratuita de 7 días
-          </Text>
-          <Text style={styles.footerSubtext}>
+          </AppText>
+          <AppText style={styles.footerSubtext}>
             Puedes cancelar en cualquier momento
-          </Text>
+          </AppText>
         </View>
       </ScrollView>
     </SafeAreaView>

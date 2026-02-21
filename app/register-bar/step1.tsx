@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { AppText } from '~/components/ds';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
@@ -39,7 +40,7 @@ export default function Step1() {
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <Ionicons name="refresh" size={48} color="#10B981" />
-          <Text style={styles.loadingText}>Verificando acceso...</Text>
+          <AppText style={styles.loadingText}>Verificando acceso...</AppText>
         </View>
       </View>
     );
@@ -55,7 +56,7 @@ export default function Step1() {
     <View style={styles.container}>
       <View style={styles.loadingContainer}>
         <Ionicons name="warning" size={48} color="#F59E0B" />
-        <Text style={styles.loadingText}>Error de acceso</Text>
+        <AppText style={styles.loadingText}>Error de acceso</AppText>
       </View>
     </View>
   );

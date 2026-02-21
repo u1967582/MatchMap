@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform, ActivityIndicator, Image, BackHandler, ToastAndroid } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, Animated, Easing, Platform, ActivityIndicator, Image, BackHandler, ToastAndroid } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +14,7 @@ import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
 import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
-import { MapSkeleton } from '~/components/ds';
+import { AppText, MapSkeleton } from '~/components/ds';
 
 // Use environment variable for Mapbox token
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
@@ -86,7 +86,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
   const [bars, setBars] = React.useState<Bar[]>([]);
   const [loadingBars, setLoadingBars] = React.useState(true);
-  const [searchText, setSearchText] = React.useState('');
+  const [searchsetSearchText] = React.useState('');
   const [selectedBar, setSelectedBar] = React.useState<Bar | null>(null);
   const [showBarCard, setShowBarCard] = React.useState(false);
   const [searchResults, setSearchResults] = React.useState<any[]>([]);
@@ -674,7 +674,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchText, searchLocked, searchLocations]);
+  }, [searchsearchLocked, searchLocations]);
 
 
   // Handle location selection
@@ -867,10 +867,10 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           onPress={() => setMatchPickerOpen(true)}
         >
           <View style={styles.matchButtonContent}>
-            <Text style={styles.matchButtonEmoji}>⚽</Text>
-            <Text style={styles.matchButtonText}>
+            <AppText style={styles.matchButtonEmoji}>⚽</AppText>
+            <AppText style={styles.matchButtonText}>
               Busca tu partido
-            </Text>
+            </AppText>
           </View>
         </TouchableOpacity>
       
@@ -885,13 +885,12 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
       >
           <View style={styles.matchButtonContent}>
             <Ionicons name="options-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={[
-              styles.matchButtonText,
-              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
+            <AppText style={[
+              styles.matchButton(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
                selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.matchButtonTextActive
             ]}>
               Filtros de bar
-            </Text>
+            </AppText>
           </View>
         {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
           selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
@@ -975,11 +974,11 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
               ) : (
                 <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
               )}
-              <Text style={styles.bannerTeamName} numberOfLines={1}>
+              <AppText style={styles.bannerTeamName} numberOfLines={1}>
                 {selectedMatch.home_team?.name || 'Local'}
-              </Text>
+              </AppText>
             </View>
-            <Text style={styles.bannerVs}>vs</Text>
+            <AppText style={styles.bannerVs}>vs</AppText>
             <View style={styles.bannerTeam}>
               {selectedMatch.away_team?.logo_url ? (
                 <Image
@@ -989,9 +988,9 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
               ) : (
                 <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
               )}
-              <Text style={styles.bannerTeamName} numberOfLines={1}>
+              <AppText style={styles.bannerTeamName} numberOfLines={1}>
                 {selectedMatch.away_team?.name || 'Visitante'}
-              </Text>
+              </AppText>
             </View>
           </View>
           <TouchableOpacity
@@ -1014,13 +1013,13 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             />
           </View>
           <View style={styles.instructionTextContainer}>
-            <Text style={styles.instructionText} numberOfLines={2}>
+            <AppText style={styles.instructionText} numberOfLines={2}>
               {routeData.steps[currentStepIndex].instruction}
-            </Text>
+            </AppText>
             {routeData.steps[currentStepIndex].distance > 0 && (
-              <Text style={styles.instructionDistance}>
+              <AppText style={styles.instructionDistance}>
                 en {formatDistance(routeData.steps[currentStepIndex].distance)}
-              </Text>
+              </AppText>
             )}
           </View>
         </View>
@@ -1034,7 +1033,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             <>
               {/* Header with title and close */}
               <View style={styles.navigationPanelHeader}>
-                <Text style={styles.navigationTitle}>{navigationDestination.name}</Text>
+                <AppText style={styles.navigationTitle}>{navigationDestination.name}</AppText>
                 <TouchableOpacity 
                   style={styles.cancelNavigationButton}
                   onPress={handleCancelNavigation}
@@ -1049,15 +1048,15 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                 <View style={styles.navigationStatsLeft}>
                   <View style={styles.navigationStat}>
                     <Ionicons name="time-outline" size={16} color="#10B981" />
-                    <Text style={styles.navigationStatText}>
+                    <AppText style={styles.navigationStatText}>
                       {Math.round(routeData.duration)} min
-                    </Text>
+                    </AppText>
                   </View>
                   <View style={styles.navigationStat}>
                     <Ionicons name="navigate-outline" size={16} color="#007AFF" />
-                    <Text style={styles.navigationStatText}>
+                    <AppText style={styles.navigationStatText}>
                       {routeData.distance.toFixed(1)} km
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
                 
@@ -1103,11 +1102,11 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                 onPress={handleBeginNavigation}
               >
                 <Ionicons name="play" size={20} color="#FFFFFF" />
-                <Text style={styles.startNavigationButtonText}>Iniciar</Text>
+                <AppText style={styles.startNavigationButtonText}>Iniciar</AppText>
               </TouchableOpacity>
               
               {directionsLoading && (
-                <Text style={styles.navigationLoading}>Calculando ruta...</Text>
+                <AppText style={styles.navigationLoading}>Calculando ruta...</AppText>
               )}
             </>
           ) : (
@@ -1118,12 +1117,12 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                 onPress={handleCancelNavigation}
               >
                 <Ionicons name="close-circle" size={20} color="#EF4444" />
-                <Text style={styles.endNavigationButtonText}>Finalizar</Text>
+                <AppText style={styles.endNavigationButtonText}>Finalizar</AppText>
               </TouchableOpacity>
               
               <View style={styles.activeNavStats}>
-                <Text style={styles.activeNavTime}>{Math.round(routeData.duration)} min</Text>
-                <Text style={styles.activeNavDistance}>{routeData.distance.toFixed(1)} km</Text>
+                <AppText style={styles.activeNavTime}>{Math.round(routeData.duration)} min</AppText>
+                <AppText style={styles.activeNavDistance}>{routeData.distance.toFixed(1)} km</AppText>
               </View>
             </View>
           )}

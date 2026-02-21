@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
@@ -17,7 +16,7 @@ import { supabase } from '~/utils/supabase';
 import CustomCalendar from '~/components/ui/CustomCalendar';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
 import { type Capabilities, CAP_BY_TIER, type Tier } from '~/lib/planCapabilities';
-import { toast } from '~/components/ds';
+import { toast, AppText } from '~/components/ds';
 
 interface Team {
   id: string;
@@ -302,13 +301,13 @@ export default function ManualMatchSelectionScreen() {
               style={styles.teamLogo}
               defaultSource={require('~/assets/icon.png')}
             />
-            <Text style={styles.teamName} numberOfLines={2}>
+            <AppText style={styles.teamName} numberOfLines={2}>
               {item.home_team?.name || 'Equipo Local'}
-            </Text>
+            </AppText>
           </View>
           
           <View style={styles.vsContainer}>
-            <Text style={styles.vsText}>VS</Text>
+            <AppText style={styles.vsText}>VS</AppText>
           </View>
           
           <View style={styles.teamContainer}>
@@ -319,23 +318,23 @@ export default function ManualMatchSelectionScreen() {
               style={styles.teamLogo}
               defaultSource={require('~/assets/icon.png')}
             />
-            <Text style={styles.teamName} numberOfLines={2}>
+            <AppText style={styles.teamName} numberOfLines={2}>
               {item.away_team?.name || 'Equipo Visitante'}
-            </Text>
+            </AppText>
           </View>
         </View>
       </View>
       
       <View style={styles.matchDetails}>
-        <Text style={styles.matchTime}>
+        <AppText style={styles.matchTime}>
           {new Date(`${item.date} ${item.time}`).toLocaleTimeString('es-ES', {
             hour: '2-digit',
             minute: '2-digit',
           })}
-        </Text>
-        <Text style={styles.competitionName}>
+        </AppText>
+        <AppText style={styles.competitionName}>
           {item.competition?.name || 'Competición'}
-        </Text>
+        </AppText>
       </View>
       
       <TouchableOpacity
@@ -347,9 +346,9 @@ export default function ManualMatchSelectionScreen() {
           size={24}
           color={selectedMatches.some(selected => selected.id === item.id) ? '#4CAF50' : '#A3B3CC'}
         />
-        <Text style={[styles.selectButtonText, selectedMatches.some(selected => selected.id === item.id) && styles.selectButtonTextActive]}>
+        <AppText style={[styles.selectButtonText, selectedMatches.some(selected => selected.id === item.id) && styles.selectButtonTextActive]}>
           {selectedMatches.some(selected => selected.id === item.id) ? 'Seleccionado' : 'Seleccionar'}
-        </Text>
+        </AppText>
       </TouchableOpacity>
     </View>
   );
@@ -366,7 +365,7 @@ export default function ManualMatchSelectionScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Seleccionar Partidos</Text>
+        <AppText style={styles.headerTitle}>Seleccionar Partidos</AppText>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -450,7 +449,7 @@ export default function ManualMatchSelectionScreen() {
                       defaultSource={require('~/assets/icon.png')}
                     />
                   )}
-                  <Text style={{ color: selected ? '#FFFFFF' : '#A3B3CC', fontWeight: '600' }}>{label}</Text>
+                  <AppText style={{ color: selected ? '#FFFFFF' : '#A3B3CC', fontWeight: '600' }}>{label}</AppText>
                 </TouchableOpacity>
               );
             }}
@@ -461,17 +460,17 @@ export default function ManualMatchSelectionScreen() {
       {/* Selected Matches Summary */}
       {selectedMatches.length > 0 && (
         <View style={styles.selectedMatchesSection}>
-          <Text style={styles.selectedMatchesTitle}>
+          <AppText style={styles.selectedMatchesTitle}>
             Partidos seleccionados
-          </Text>
+          </AppText>
                       <FlatList
               data={selectedMatches}
               renderItem={({ item }) => (
                 <View style={styles.selectedMatchItem}>
-                  <Text style={styles.selectedMatchText}>
+                  <AppText style={styles.selectedMatchText}>
                     {item.home_team?.name} vs {item.away_team?.name}
-                  </Text>
-                  <Text style={styles.selectedMatchDate}>
+                  </AppText>
+                  <AppText style={styles.selectedMatchDate}>
                     {new Date(`${item.date} ${item.time}`).toLocaleString('es-ES', {
                       weekday: 'short',
                       day: 'numeric',
@@ -479,7 +478,7 @@ export default function ManualMatchSelectionScreen() {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
-                  </Text>
+                  </AppText>
                   <TouchableOpacity
                     onPress={() => toggleMatchSelection(item)}
                     style={styles.removeButton}
@@ -497,14 +496,14 @@ export default function ManualMatchSelectionScreen() {
 
       {/* Matches List */}
       <View style={styles.matchesSection}>
-        <Text style={styles.sectionTitle}>
+        <AppText style={styles.sectionTitle}>
           Partidos disponibles
-        </Text>
+        </AppText>
         
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#4CAF50" />
-            <Text style={styles.loadingText}>Cargando partidos...</Text>
+            <AppText style={styles.loadingText}>Cargando partidos...</AppText>
           </View>
         ) : filteredMatches.length > 0 ? (
           <FlatList
@@ -519,7 +518,7 @@ export default function ManualMatchSelectionScreen() {
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="football-outline" size={64} color="#8E8E93" />
-            <Text style={styles.emptyText}>No hay partidos programados para esta fecha</Text>
+            <AppText style={styles.emptyText}>No hay partidos programados para esta fecha</AppText>
           </View>
         )}
       </View>
@@ -532,9 +531,9 @@ export default function ManualMatchSelectionScreen() {
           disabled={selectedMatchesCount === 0 || saving}
         >
           <Ionicons name="save" size={20} color="#FFFFFF" />
-          <Text style={styles.saveButtonText}>
+          <AppText style={styles.saveButtonText}>
             {saving ? 'Guardando...' : `Guardar ${selectedMatchesCount} partido(s)`}
-          </Text>
+          </AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -745,4 +744,4 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 4,
   },
-}); 
+});

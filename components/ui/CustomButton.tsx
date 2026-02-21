@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { AppText } from '~/components/ds';
 
 interface CustomButtonProps {
   text: string;
@@ -93,7 +94,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={getLoadingColor()} size="small" />
       ) : (
-        <Text style={getTextStyle()}>{text}</Text>
+        <AppText maxScale={1.0} style={getTextStyle()}>{text}</AppText>
       )}
     </TouchableOpacity>
   );

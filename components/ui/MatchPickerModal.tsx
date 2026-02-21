@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
@@ -9,6 +8,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import HorizontalDateScroller from './HorizontalDateScroller';
@@ -222,13 +222,13 @@ export default function MatchPickerModal({
                 }}
                 style={styles.teamLogo}
               />
-              <Text style={styles.teamName} numberOfLines={1}>
+              <AppText style={styles.teamName} numberOfLines={1}>
                 {item.home_team?.name || 'Equipo Local'}
-              </Text>
+              </AppText>
             </View>
 
             <View style={styles.vsContainer}>
-              <Text style={styles.vsText}>VS</Text>
+              <AppText style={styles.vsText}>VS</AppText>
             </View>
 
             <View style={styles.teamContainer}>
@@ -238,23 +238,23 @@ export default function MatchPickerModal({
                 }}
                 style={styles.teamLogo}
               />
-              <Text style={styles.teamName} numberOfLines={1}>
+              <AppText style={styles.teamName} numberOfLines={1}>
                 {item.away_team?.name || 'Equipo Visitante'}
-              </Text>
+              </AppText>
             </View>
           </View>
         </View>
 
         <View style={styles.matchDetails}>
-          <Text style={styles.matchTime}>
+          <AppText style={styles.matchTime}>
             {new Date(`${item.date} ${item.time}`).toLocaleTimeString('es-ES', {
               hour: '2-digit',
               minute: '2-digit',
             })}
-          </Text>
-          <Text style={styles.competitionName}>
+          </AppText>
+          <AppText style={styles.competitionName}>
             {item.competition?.name || 'Competición'}
-          </Text>
+          </AppText>
         </View>
 
         {isSelected && (
@@ -280,7 +280,7 @@ export default function MatchPickerModal({
       <View style={styles.modalBackdrop}>
         <View style={styles.modalContainer}>
           <View style={styles.header}>
-            <Text style={styles.modalTitle}>Seleccionar Partido</Text>
+            <AppText style={styles.modalTitle}>Seleccionar Partido</AppText>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#FFFFFF" />
             </TouchableOpacity>
@@ -326,12 +326,11 @@ export default function MatchPickerModal({
                           defaultSource={require('~/assets/icon.png')}
                         />
                       )}
-                      <Text style={[
-                        styles.competitionChipText,
-                        selected && styles.competitionChipTextSelected
+                      <AppText style={[
+                        styles.competitionChip                        selected && styles.competitionChipTextSelected
                       ]}>
                         {label}
-                      </Text>
+                      </AppText>
                     </TouchableOpacity>
                   );
                 }}
@@ -344,7 +343,7 @@ export default function MatchPickerModal({
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator color="#FFFFFF" size="large" />
-                <Text style={styles.loadingText}>Cargando partidos...</Text>
+                <AppText style={styles.loadingText}>Cargando partidos...</AppText>
               </View>
             ) : filteredMatches.length > 0 ? (
               <FlatList
@@ -357,9 +356,9 @@ export default function MatchPickerModal({
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="football-outline" size={80} color="rgba(255, 255, 255, 0.2)" />
-                <Text style={styles.emptyText}>
+                <AppText style={styles.emptyText}>
                   No hay partidos programados para esta fecha
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
@@ -370,14 +369,14 @@ export default function MatchPickerModal({
               style={[styles.modalButton, styles.modalButtonSecondary]}
               onPress={handleClearSelection}
             >
-              <Text style={styles.modalButtonText}>Quitar selección</Text>
+              <AppText style={styles.modalButtonText}>Quitar selección</AppText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonPrimary]}
               onPress={handleApply}
               disabled={loading}
             >
-              <Text style={styles.modalButtonText}>Aplicar</Text>
+              <AppText style={styles.modalButtonText}>Aplicar</AppText>
             </TouchableOpacity>
           </View>
         </View>

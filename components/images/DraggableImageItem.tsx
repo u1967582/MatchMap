@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -214,7 +215,7 @@ const DraggableImageItem: React.FC<DraggableImageItemProps> = ({
 
         {/* Order badge */}
         <View style={styles.orderBadge}>
-          <Text style={styles.orderText}>{image.image_order}</Text>
+          <AppText maxScale={1.0} style={styles.orderText}>{image.image_order}</AppText>
         </View>
 
         {/* Drag handle */}

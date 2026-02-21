@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
@@ -12,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
+import { AppText } from '~/components/ds';
 
 interface SupportTicket {
   id: string;
@@ -142,14 +142,14 @@ export default function SupportAdminScreen() {
             ]}
             onPress={() => handleUpdateStatus(ticket.id, status)}
           >
-            <Text
+            <AppText
               style={[
                 styles.statusOptionText,
                 ticket.status === status && { color: STATUS_COLORS[status] },
               ]}
             >
               {STATUS_LABELS[status]}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -185,17 +185,17 @@ export default function SupportAdminScreen() {
               color="#1976D2"
             />
             <View style={styles.ticketHeaderText}>
-              <Text style={styles.ticketSubject} numberOfLines={1}>
+              <AppText style={styles.ticketSubject} numberOfLines={1}>
                 {item.subject}
-              </Text>
-              <Text style={styles.ticketMeta}>
+              </AppText>
+              <AppText style={styles.ticketMeta}>
                 {CATEGORY_LABELS[item.category] || item.category} • {item.email}
-              </Text>
+              </AppText>
             </View>
           </View>
           <View style={styles.ticketHeaderRight}>
             <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] }]}>
-              <Text style={styles.statusBadgeText}>{STATUS_LABELS[item.status]}</Text>
+              <AppText style={styles.statusBadgeText}>{STATUS_LABELS[item.status]}</AppText>
             </View>
             <Ionicons
               name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -208,31 +208,31 @@ export default function SupportAdminScreen() {
         {isExpanded && (
           <View style={styles.ticketBody}>
             <View style={styles.ticketSection}>
-              <Text style={styles.ticketLabel}>Mensaje:</Text>
-              <Text style={styles.ticketMessage}>{item.message}</Text>
+              <AppText style={styles.ticketLabel}>Mensaje:</AppText>
+              <AppText style={styles.ticketMessage}>{item.message}</AppText>
             </View>
 
             <View style={styles.ticketSection}>
-              <Text style={styles.ticketLabel}>Fecha de Creación:</Text>
-              <Text style={styles.ticketValue}>
+              <AppText style={styles.ticketLabel}>Fecha de Creación:</AppText>
+              <AppText style={styles.ticketValue}>
                 {new Date(item.created_at).toLocaleString('es-ES', {
                   dateStyle: 'medium',
                   timeStyle: 'short',
                 })}
-              </Text>
+              </AppText>
             </View>
 
             {item.user_id && (
               <View style={styles.ticketSection}>
-                <Text style={styles.ticketLabel}>User ID:</Text>
-                <Text style={styles.ticketValue} numberOfLines={1}>
+                <AppText style={styles.ticketLabel}>User ID:</AppText>
+                <AppText style={styles.ticketValue} numberOfLines={1}>
                   {item.user_id}
-                </Text>
+                </AppText>
               </View>
             )}
 
             <View style={styles.ticketSection}>
-              <Text style={styles.ticketLabel}>Cambiar Estado:</Text>
+              <AppText style={styles.ticketLabel}>Cambiar Estado:</AppText>
               {renderStatusOptions(item)}
             </View>
           </View>
@@ -249,14 +249,14 @@ export default function SupportAdminScreen() {
           style={[styles.filterButton, filter === filterOption && styles.filterButtonActive]}
           onPress={() => setFilter(filterOption)}
         >
-          <Text
+          <AppText
             style={[
               styles.filterButtonText,
               filter === filterOption && styles.filterButtonTextActive,
             ]}
           >
             {filterOption === 'all' ? 'Todos' : STATUS_LABELS[filterOption]}
-          </Text>
+          </AppText>
         </TouchableOpacity>
       ))}
     </View>
@@ -271,7 +271,7 @@ export default function SupportAdminScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tickets de Soporte</Text>
+        <AppText style={styles.headerTitle}>Tickets de Soporte</AppText>
         <TouchableOpacity onPress={fetchTickets} style={styles.refreshButton}>
           <Ionicons name="reload" size={22} color="#1976D2" />
         </TouchableOpacity>
@@ -285,10 +285,10 @@ export default function SupportAdminScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="chatbubbles-outline" size={64} color="#6B7280" />
-            <Text style={styles.emptyText}>No hay tickets</Text>
-            <Text style={styles.emptySubtext}>
+            <AppText style={styles.emptyText}>No hay tickets</AppText>
+            <AppText style={styles.emptySubtext}>
               {filter !== 'all' ? 'Cambia el filtro para ver más' : 'No hay tickets de soporte'}
-            </Text>
+            </AppText>
           </View>
         }
         contentContainerStyle={styles.listContent}
@@ -462,4 +462,3 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
-

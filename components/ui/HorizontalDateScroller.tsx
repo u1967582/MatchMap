@@ -1,12 +1,12 @@
 import React, { useRef, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { AppText } from '~/components/ds';
 
 interface HorizontalDateScrollerProps {
   selectedDate: Date;
@@ -103,29 +103,29 @@ export default function HorizontalDateScroller({
               onPress={() => handleDatePress(date)}
               activeOpacity={0.7}
             >
-              <Text style={[
+              <AppText style={[
                 styles.dayOfWeek,
                 selected && styles.dayOfWeekSelected,
                 today && !selected && styles.dayOfWeekToday,
               ]}>
                 {formatDayOfWeek(date)}
-              </Text>
+              </AppText>
               
-              <Text style={[
+              <AppText style={[
                 styles.dayNumber,
                 selected && styles.dayNumberSelected,
                 today && !selected && styles.dayNumberToday,
               ]}>
                 {date.getDate()}
-              </Text>
+              </AppText>
               
-              <Text style={[
+              <AppText style={[
                 styles.month,
                 selected && styles.monthSelected,
                 today && !selected && styles.monthToday,
               ]}>
                 {formatMonth(date)}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           );
         })}

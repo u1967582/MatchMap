@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 
 interface CheckboxOption {
@@ -32,10 +33,10 @@ const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>
+      <AppText style={styles.label}>
         {label}
-        {required && <Text style={styles.required}> *</Text>}
-      </Text>
+        {required && <AppText style={styles.required}> *</AppText>}
+      </AppText>
       <View style={styles.optionsContainer}>
         {options.map((option) => (
           <TouchableOpacity
@@ -49,11 +50,11 @@ const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
                 <Ionicons name="checkmark" size={16} color="#FFFFFF" />
               )}
             </View>
-            <Text style={styles.optionText}>{option.label}</Text>
+            <AppText style={styles.optionText}>{option.label}</AppText>
           </TouchableOpacity>
         ))}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <AppText style={styles.errorText}>{error}</AppText>}
     </View>
   );
 };

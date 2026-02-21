@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,42 +25,42 @@ const SubscriptionCancelScreen: React.FC = () => {
           <Ionicons name="close-circle" size={80} color="#FF6B6B" />
         </View>
         
-        <Text style={styles.title}>Pago Cancelado</Text>
-        <Text style={styles.subtitle}>
+        <AppText maxScale={1.2} style={styles.title}>Pago Cancelado</AppText>
+        <AppText maxScale={1.3} style={styles.subtitle}>
           No se completó la suscripción. Puedes intentarlo de nuevo cuando quieras.
-        </Text>
-        
+        </AppText>
+
         <View style={styles.infoContainer}>
-          <Text style={styles.infoTitle}>¿Por qué actualizar?</Text>
-          
+          <AppText style={styles.infoTitle}>¿Por qué actualizar?</AppText>
+
           <View style={styles.infoRow}>
             <Ionicons name="images" size={20} color="#4CAF50" />
-            <Text style={styles.infoText}>Sube más fotos de tu bar</Text>
+            <AppText style={styles.infoText}>Sube más fotos de tu bar</AppText>
           </View>
-          
+
           <View style={styles.infoRow}>
             <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-            <Text style={styles.infoText}>Sin marca de agua</Text>
+            <AppText style={styles.infoText}>Sin marca de agua</AppText>
           </View>
-          
+
           <View style={styles.infoRow}>
             <Ionicons name="analytics" size={20} color="#4CAF50" />
-            <Text style={styles.infoText}>Estadísticas avanzadas</Text>
+            <AppText style={styles.infoText}>Estadísticas avanzadas</AppText>
           </View>
-          
+
           <View style={styles.infoRow}>
             <Ionicons name="headset" size={20} color="#4CAF50" />
-            <Text style={styles.infoText}>Soporte prioritario</Text>
+            <AppText style={styles.infoText}>Soporte prioritario</AppText>
           </View>
         </View>
-        
+
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.primaryButton} onPress={handleTryAgain}>
-            <Text style={styles.primaryButtonText}>Intentar de Nuevo</Text>
+            <AppText maxScale={1.0} style={styles.primaryButtonText}>Intentar de Nuevo</AppText>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.secondaryButton} onPress={handleGoToProfile}>
-            <Text style={styles.secondaryButtonText}>Ir al Perfil</Text>
+            <AppText maxScale={1.0} style={styles.secondaryButtonText}>Ir al Perfil</AppText>
           </TouchableOpacity>
         </View>
       </View>
