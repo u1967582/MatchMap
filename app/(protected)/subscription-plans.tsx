@@ -394,7 +394,8 @@ const SubscriptionPlansScreen: React.FC = () => {
               activeOpacity={0.7}
             >
               <AppText style={[
-                styles.periodButton                selectedPeriod === 'monthly' && styles.periodButtonTextActive
+                styles.periodButtonText,
+                selectedPeriod === 'monthly' && styles.periodButtonTextActive
               ]}>
                 Mensual
               </AppText>
@@ -408,7 +409,8 @@ const SubscriptionPlansScreen: React.FC = () => {
               activeOpacity={0.7}
             >
               <AppText style={[
-                styles.periodButton                selectedPeriod === 'yearly' && styles.periodButtonTextActive
+                styles.periodButtonText,
+                selectedPeriod === 'yearly' && styles.periodButtonTextActive
               ]}>
                 Anual
               </AppText>
