@@ -2,7 +2,7 @@ import { View, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import React from 'react';
 import Gradient from '~/components/ui/Gradient';
 import { supabase } from '~/utils/supabase';
@@ -83,6 +83,9 @@ export default function BarProfileScreen() {
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any }>({ title: '', content: null });
   const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
+
+  // Ref para scroll programático al FlatList
+  const flatListRef = useRef<FlatList>(null);
 
   // Get boost status for countdown
   const { boost, isLoading: boostLoading } = useBarBoost(barId);
@@ -208,6 +211,7 @@ export default function BarProfileScreen() {
   const sections = [
     { type: 'header', key: 'header' },
     { type: 'images', key: 'images' },
+    { type: 'nav', key: 'nav' },
     { type: 'matches', key: 'matches' },
     { type: 'upcoming-matches', key: 'upcoming-matches' },
     { type: 'info', key: 'info' },
@@ -352,6 +356,74 @@ export default function BarProfileScreen() {
             )}
           </View>
         );
+
+      case 'nav': {
+        const navItems = [
+          ...(isOwner ? [{
+            key: 'matches',
+            label: 'Gestión',
+            icon: '⚽',
+            color: colors.brand.link,
+          }] : []),
+          {
+            key: 'upcoming-matches',
+            label: 'Partidos',
+            icon: '📺',
+            color: colors.tags.tv,
+          },
+          {
+            key: 'info',
+            label: 'Info',
+            icon: '📝',
+            color: colors.tags.category,
+          },
+          ...(canShowMenuButton ? [{
+            key: 'menu',
+            label: 'Carta',
+            icon: '🍽️',
+            color: colors.tags.food,
+          }] : []),
+          {
+            key: 'posts',
+            label: 'Posts',
+            icon: '📰',
+            color: colors.tags.feature,
+          },
+          {
+            key: 'reviews',
+            label: 'Reseñas',
+            icon: '⭐',
+            color: '#C89B30',
+          },
+        ];
+
+        return (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.navScrollContent}
+            style={styles.navSection}
+          >
+            {navItems.map(navItem => (
+              <TouchableOpacity
+                key={navItem.key}
+                style={[styles.navChip, { backgroundColor: navItem.color }]}
+                onPress={() => {
+                  const target = sections.find(s => s.key === navItem.key);
+                  if (target) {
+                    flatListRef.current?.scrollToItem({ item: target, animated: true });
+                  }
+                }}
+                activeOpacity={0.75}
+              >
+                <AppText variant="label" color={colors.text.primary}>
+                  {navItem.icon} {navItem.label}
+                </AppText>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        );
+      }
 
       case 'info':
         return (
@@ -1299,11 +1371,13 @@ export default function BarProfileScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       <FlatList
+        ref={flatListRef}
         data={sections}
         renderItem={renderSection}
         keyExtractor={(item) => `${bar.id}-${item.key}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollViewContent}
+        onScrollToIndexFailed={() => {}}
       />
 
       {/* Info Modal */}
@@ -2218,5 +2292,24 @@ const styles = StyleSheet.create({
   },
   modalOkButtonTextBold: {
     fontWeight: '600',
+  },
+  // Section navigation mini-menu
+  navSection: {
+    paddingVertical: 4,
+  },
+  navScrollContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  navChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 }); 

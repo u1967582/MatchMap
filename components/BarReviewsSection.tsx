@@ -318,10 +318,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     minWidth: 120,
   },
-  avgRating: { 
+  avgRating: {
     fontSize: 36,
-    fontWeight: 'bold', 
-    color: '#FFFFFF' 
+    lineHeight: 46,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   starsRow: { 
     flexDirection: 'row', 
