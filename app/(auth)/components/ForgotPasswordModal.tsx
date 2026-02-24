@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ToastRoot from 'react-native-toast-message';
 import { sendPasswordResetEmail } from '~/utils/auth';
 import {
   AppText,
@@ -19,6 +20,7 @@ import {
   spacing,
   radius,
 } from '~/components/ds';
+import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 
 interface ForgotPasswordModalProps {
   visible: boolean;
@@ -48,11 +50,9 @@ export default function ForgotPasswordModal({
       // Siempre mostrar mensaje de éxito por seguridad
       // (no revelar si el email existe o no)
       setEmail('');
+      // Mostrar toast antes de cerrar para que se vea en la capa del modal
+      toast.success('Email enviado', 'Revisa tu bandeja de entrada');
       onClose();
-      toast.success(
-        'Email enviado',
-        'Revisa tu bandeja de entrada'
-      );
     } catch (error: any) {
       toast.error('No se pudo enviar el email', 'Inténtalo de nuevo');
     } finally {
@@ -134,6 +134,8 @@ export default function ForgotPasswordModal({
           </View>
         </View>
       </KeyboardAvoidingView>
+      {/* Toast dentro del modal para que sea visible sobre la capa nativa del Modal */}
+      <ToastRoot config={toastConfig} position="top" topOffset={60} />
     </Modal>
   );
 }
