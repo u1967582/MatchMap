@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
@@ -9,8 +9,9 @@ import PrimaryButton from '~/components/ui/PrimaryButton';
 import { supabase } from '~/utils/supabase';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { DraggableImageGrid } from '~/components/images';
+import type { DraggableImage } from '~/components/images';
 // Stripe helpers no longer used
 import { useFocusEffect } from '@react-navigation/native';
 // Plan capabilities removed; use fixed limits
@@ -23,9 +24,6 @@ interface ImageItem {
   order: number;
 }
 
-const { width } = Dimensions.get('window');
-const IMAGE_WIDTH = (width - 60) / 2; // 2 columns with padding
-
 // Fixed global limits
 const MAX_BAR_PHOTOS = 10;
 const MAX_MENU_PHOTOS = 15;
@@ -36,7 +34,7 @@ const getPlanColor = () => '#10B981';
 const Step4Photos: React.FC = () => {
   const router = useRouter();
   const { getFormData, resetForm } = useBarRegisterStore();
-  
+
   const [loading, setLoading] = useState(false);
   const [barImages, setBarImages] = useState<ImageItem[]>([]);
   const [menuImages, setMenuImages] = useState<ImageItem[]>([]);
@@ -72,10 +70,10 @@ const Step4Photos: React.FC = () => {
 
       // Método 1: Usando base64 (más confiable en simuladores iOS)
       let uploadData, uploadError;
-      
+
       try {
         console.log('🔄 Intentando método base64...');
-        
+
         const base64 = await FileSystem.readAsStringAsync(uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
@@ -89,7 +87,7 @@ const Step4Photos: React.FC = () => {
         // Convertir base64 a ArrayBuffer
         const binaryString = atob(base64);
         const arrayBuffer = new Uint8Array(binaryString.length);
-        
+
         for (let i = 0; i < binaryString.length; i++) {
           arrayBuffer[i] = binaryString.charCodeAt(i);
         }
@@ -112,7 +110,7 @@ const Step4Photos: React.FC = () => {
 
       } catch (base64Error) {
         console.warn('⚠️ Método base64 falló, intentando con fetch:', base64Error);
-        
+
         // Método 2: Usando fetch como fallback
         const response = await fetch(uri);
         console.log('🌐 Fetch response status:', response.status);
@@ -237,7 +235,7 @@ const Step4Photos: React.FC = () => {
       console.log(`   - Storage path: ${filePath}`);
       console.log(`   - Public URL: ${publicUrl}`);
       console.log(`=== FIN SUBIDA ===\n`);
-      
+
       return { filePath, publicUrl };
 
     } catch (error) {
@@ -267,7 +265,7 @@ const Step4Photos: React.FC = () => {
 
     try {
       console.log(`📱 Seleccionando imágenes para ${type}...`);
-      
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
@@ -284,7 +282,7 @@ const Step4Photos: React.FC = () => {
       if (!result.canceled && result.assets) {
         const currentImages = type === 'bar' ? barImages : menuImages;
         const maxImages = type === 'bar' ? MAX_BAR_PHOTOS : MAX_MENU_PHOTOS;
-        
+
         // Check if we can add more images based on user's plan
         const remainingSlots = maxImages - currentImages.length;
         if (remainingSlots <= 0) {
@@ -294,14 +292,14 @@ const Step4Photos: React.FC = () => {
 
         // Take only the images that fit
         const imagesToAdd = result.assets.slice(0, remainingSlots);
-        
+
         // Verificar cada imagen antes de agregar
         const validImages = [];
         for (const asset of imagesToAdd) {
           try {
             const fileInfo = await FileSystem.getInfoAsync(asset.uri);
             console.log(`📋 Verificando ${asset.uri}:`, fileInfo);
-            
+
             if (fileInfo.exists && fileInfo.size > 0) {
               validImages.push(asset);
             } else {
@@ -311,7 +309,7 @@ const Step4Photos: React.FC = () => {
             console.warn(`⚠️ Error verificando imagen ${asset.uri}:`, error);
           }
         }
-        
+
         const newImages = validImages.map((asset, index) => ({
           id: generateId(),
           uri: asset.uri,
@@ -333,71 +331,34 @@ const Step4Photos: React.FC = () => {
     }
   }, [barImages, menuImages, requestPermissions]);
 
-  // Remove image
-  const removeImage = useCallback((id: string, type: 'bar' | 'menu') => {
-    if (type === 'bar') {
-      setBarImages(prev => {
-        const filtered = prev.filter(img => img.id !== id);
-        // Reorder remaining images
-        return filtered.map((img, index) => ({ ...img, order: index + 1 }));
-      });
-    } else {
-      setMenuImages(prev => {
-        const filtered = prev.filter(img => img.id !== id);
-        // Reorder remaining images
-        return filtered.map((img, index) => ({ ...img, order: index + 1 }));
-      });
-    }
-  }, []);
-
-  // Handle drag end for reordering
-  const handleDragEnd = useCallback((data: ImageItem[], type: 'bar' | 'menu') => {
-    // Update order based on new positions
-    const reorderedImages = data.map((img, index) => ({
-      ...img,
-      order: index + 1,
+  // Convierte ImageItem[] → DraggableImage[] para el grid
+  const toGridImages = (images: ImageItem[]): DraggableImage[] =>
+    images.map(img => ({
+      id: img.id,
+      image_url: img.uri,
+      image_order: img.order,
     }));
 
-    if (type === 'bar') {
-      setBarImages(reorderedImages);
-    } else {
-      setMenuImages(reorderedImages);
-    }
+  // Callback onReorder: DraggableImageGrid devuelve array ya reordenado
+  const handleReorderImages = useCallback((reordered: DraggableImage[], type: 'bar' | 'menu') => {
+    const converted = reordered.map(img => ({
+      id: img.id,
+      uri: img.image_url,
+      uploading: false,
+      order: img.image_order,
+    }));
+    if (type === 'bar') setBarImages(converted);
+    else setMenuImages(converted);
   }, []);
 
-  // Render draggable image item
-  const renderImageItem = useCallback(({ item, drag, isActive }: RenderItemParams<ImageItem>, type: 'bar' | 'menu') => {
-    const imageStyle = type === 'bar' 
-      ? { width: IMAGE_WIDTH, height: IMAGE_WIDTH * 9 / 16 } // 16:9 ratio
-      : { width: IMAGE_WIDTH, height: IMAGE_WIDTH * 4 / 3 }; // 3:4 ratio
-
-    return (
-      <TouchableOpacity
-        style={[styles.imageContainer, isActive && styles.activeImageContainer]}
-        onLongPress={drag}
-        disabled={isActive}
-      >
-        <Image source={{ uri: item.uri }} style={[styles.image, imageStyle]} />
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={() => removeImage(item.id, type)}
-        >
-          <Ionicons name="close-circle" size={24} color="#FF6B6B" />
-        </TouchableOpacity>
-        <View style={styles.orderBadge}>
-          <AppText style={styles.orderText}>{item.order}</AppText>
-        </View>
-        <View style={styles.dragHandle}>
-          <Ionicons name="reorder-three" size={20} color="#666" />
-        </View>
-        {item.uploading && (
-          <View style={styles.uploadingOverlay}>
-            <AppText style={styles.uploadingText}>Subiendo...</AppText>
-          </View>
-        )}
-      </TouchableOpacity>
+  // Callback onDelete: elimina por id y recalcula order
+  const handleDeleteImage = useCallback((imageId: string, type: 'bar' | 'menu') => {
+    const setter = type === 'bar' ? setBarImages : setMenuImages;
+    setter(prev =>
+      prev.filter(img => img.id !== imageId)
+          .map((img, i) => ({ ...img, order: i + 1 }))
     );
-  }, [removeImage]);
+  }, []);
 
   // Insert relationships helper
   const insertRelationships = useCallback(async (barId: string, formData: any) => {
@@ -438,7 +399,7 @@ const Step4Photos: React.FC = () => {
   // Upload images and save to database with order
   const uploadImages = useCallback(async (barId: string, images: ImageItem[], type: 'bar' | 'menu') => {
     const table = type === 'bar' ? 'bar_images' : 'bar_menus';
-    
+
     try {
       console.log(`📤 Subiendo ${images.length} imágenes de ${type}...`);
 
@@ -453,7 +414,7 @@ const Step4Photos: React.FC = () => {
         try {
           // Subir imagen
           const imageUrl = await uploadSingleImage(image.uri, barId, type, image.order);
-          
+
           // Guardar en base de datos
           const insertData = {
             bar_id: barId,
@@ -470,7 +431,7 @@ const Step4Photos: React.FC = () => {
 
           console.log(`✅ ${type} image saved with order ${image.order}`);
           return { success: true, order: image.order };
-          
+
         } catch (error) {
           console.error(`❌ Error uploading ${type} image order ${image.order}:`, error);
           return { success: false, order: image.order, error };
@@ -503,11 +464,11 @@ const Step4Photos: React.FC = () => {
   // Main submit handler
   const handleSubmit = useCallback(async () => {
     setLoading(true);
-    
+
     try {
       const formData = getFormData();
       const isAutoPreRegister = formData.isAutoPreRegister || false;
-      
+
       // Get current user for plan validation
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
@@ -536,7 +497,7 @@ const Step4Photos: React.FC = () => {
         setLoading(false);
         return;
       }
-      
+
       // Validate precise coordinates
       if (formData.latitude === 0 || formData.longitude === 0) {
         Alert.alert('Error', 'Debes seleccionar una ubicación precisa para el bar');
@@ -554,7 +515,7 @@ const Step4Photos: React.FC = () => {
         longitude: formData.longitude,
         isPreciseLocation: formData.doorNumber ? 'Sí (con número de puerta)' : 'No (ubicación aproximada)'
       });
-      
+
       // User already validated above
 
       console.log('🏗️ Creando bar...');
@@ -564,7 +525,7 @@ const Step4Photos: React.FC = () => {
       // Check if this is auto pre-register mode (super user cold registration)
       if (isAutoPreRegister) {
         console.log('🔥 Modo registro en frío - guardando en auto_pre_register_bars');
-        
+
         // For auto pre-register, save to auto_pre_register_bars table
         barData = await createAutoPreRegisterBar({
           name: formData.name,
@@ -583,7 +544,7 @@ const Step4Photos: React.FC = () => {
         });
 
         console.log('✅ Bar pre-registrado:', barData.id);
-        
+
         // Upload images for auto pre-register
         let uploadSuccess = true;
         let imageCount = 0;
@@ -675,7 +636,7 @@ const Step4Photos: React.FC = () => {
             uploadSuccess = false;
           }
         }
-        
+
         // Show success message and redirect
         Alert.alert(
           'Bar Registrado en Frío',
@@ -690,9 +651,9 @@ const Step4Photos: React.FC = () => {
             }
           ]
         );
-        
+
         return; // Exit early for auto pre-register
-        
+
       } else {
         // Normal registration flow
         const { data: insertedBarData, error: barError } = await supabase
@@ -738,7 +699,7 @@ const Step4Photos: React.FC = () => {
           console.error('Error uploading bar images:', error);
         }
       }
-      
+
       if (menuImages.length > 0) {
         try {
           await uploadImages(barData.id, menuImages, 'menu');
@@ -752,7 +713,7 @@ const Step4Photos: React.FC = () => {
 
       // 5) Finalizar wizard: bar queda en verificación (pending) y aún no aparece públicamente
       console.log('✅ Bar creado. Estado: pendiente de verificación');
-      
+
       // Mostrar pantalla de "enviado para verificación" (mejor UX que un alert)
       router.replace(`/register-bar/submitted?barId=${barData.id}` as any);
 
@@ -789,7 +750,7 @@ const Step4Photos: React.FC = () => {
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaView style={styles.container} edges={['top','bottom']}>
         <Stack.Screen options={{ title: 'Fotos del Bar', headerShown: false }} />
-        
+
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -815,9 +776,9 @@ const Step4Photos: React.FC = () => {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <AppText style={styles.sectionTitle}>Fotos del Bar</AppText>
-                <AppText style={styles.sectionSubtitle}>Máximo {MAX_BAR_PHOTOS} imágenes (16:9) - Mantén presionado para reordenar</AppText>
+                <AppText style={styles.sectionSubtitle}>Máximo {MAX_BAR_PHOTOS} imágenes (16:9) - Mantén presionado y arrastra para reordenar</AppText>
               </View>
-              
+
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => pickImages('bar')}
@@ -830,18 +791,16 @@ const Step4Photos: React.FC = () => {
               </TouchableOpacity>
 
               {barImages.length > 0 && (
-                <View style={styles.imageGrid}>
-                  <DraggableFlatList
-                    data={barImages}
-                    renderItem={(params: any) => renderImageItem(params, 'bar')}
-                    keyExtractor={(item: ImageItem) => item.id}
-                    onDragEnd={({ data }: any) => handleDragEnd(data, 'bar')}
-                    numColumns={2}
-                    scrollEnabled={false}
-                  />
-                </View>
+                <DraggableImageGrid
+                  images={toGridImages(barImages)}
+                  onReorder={(reordered) => handleReorderImages(reordered, 'bar')}
+                  onDelete={(id) => handleDeleteImage(id, 'bar')}
+                  columns={4}
+                  itemSize={80}
+                  gap={8}
+                />
               )}
-              
+
               <AppText style={styles.counter}>{barImages.length}/{MAX_BAR_PHOTOS} fotos</AppText>
             </View>
 
@@ -850,9 +809,9 @@ const Step4Photos: React.FC = () => {
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <AppText style={styles.sectionTitle}>Fotos del Menú</AppText>
-                  <AppText style={styles.sectionSubtitle}>Máximo {MAX_MENU_PHOTOS} imágenes (3:4) - Mantén presionado para reordenar</AppText>
+                  <AppText style={styles.sectionSubtitle}>Máximo {MAX_MENU_PHOTOS} imágenes (3:4) - Mantén presionado y arrastra para reordenar</AppText>
                 </View>
-                
+
                 <TouchableOpacity
                   style={styles.addButton}
                   onPress={() => pickImages('menu')}
@@ -863,20 +822,18 @@ const Step4Photos: React.FC = () => {
                     {menuImages.length >= MAX_MENU_PHOTOS ? 'Máximo alcanzado' : 'Agregar fotos del menú'}
                   </AppText>
                 </TouchableOpacity>
-  
+
                 {menuImages.length > 0 && (
-                  <View style={styles.imageGrid}>
-                    <DraggableFlatList
-                      data={menuImages}
-                      renderItem={(params: any) => renderImageItem(params, 'menu')}
-                      keyExtractor={(item: ImageItem) => item.id}
-                      onDragEnd={({ data }: any) => handleDragEnd(data, 'menu')}
-                      numColumns={2}
-                      scrollEnabled={false}
-                    />
-                  </View>
+                  <DraggableImageGrid
+                    images={toGridImages(menuImages)}
+                    onReorder={(reordered) => handleReorderImages(reordered, 'menu')}
+                    onDelete={(id) => handleDeleteImage(id, 'menu')}
+                    columns={4}
+                    itemSize={80}
+                    gap={8}
+                  />
                 )}
-                
+
                 <AppText style={styles.counter}>{menuImages.length}/{MAX_MENU_PHOTOS} fotos</AppText>
               </View>
             )}
@@ -886,7 +843,7 @@ const Step4Photos: React.FC = () => {
               <Ionicons name="information-circle" size={20} color="#007AFF" />
               <AppText style={styles.infoText}>
                 Las imágenes son opcionales. El orden de las fotos importa - la primera será la imagen principal.
-                Mantén presionado para reordenar.
+                Mantén presionado y arrastra para reordenar.
               </AppText>
             </View>
           </View>
@@ -1004,74 +961,11 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '500',
   },
-  imageGrid: {
-    marginBottom: 12,
-  },
-  imageContainer: {
-    position: 'relative',
-    margin: 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  activeImageContainer: {
-    opacity: 0.8,
-    transform: [{ scale: 1.05 }],
-  },
-  image: {
-    borderRadius: 12,
-    backgroundColor: '#374151',
-  },
-  removeButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(30, 42, 56, 0.9)',
-    borderRadius: 12,
-  },
-  orderBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  orderText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  dragHandle: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: 'rgba(30, 42, 56, 0.9)',
-    borderRadius: 8,
-    padding: 4,
-  },
-  uploadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  uploadingText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
   counter: {
     fontSize: 14,
     color: '#8E8E93',
     textAlign: 'right',
+    marginTop: 8,
   },
   infoBox: {
     flexDirection: 'row',
@@ -1093,4 +987,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Step4Photos; 
+export default Step4Photos;
