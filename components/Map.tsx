@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, Animated, Easing, Platform, ActivityIndicator, Image, BackHandler, ToastAndroid } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing, Platform, ActivityIndicator, Image, BackHandler, ToastAndroid } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -850,54 +850,45 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
       </MapboxGL.MapView>
       </View>
 
-      {/* Search bar with adjusted right margin for filter button */}
-      {/* Top controls row - Search, Match Filter, and Bar Filter */}
+      {/* Top controls row */}
       <View style={styles.topControlsRow}>
-        {/* Search button */}
+        {/* Botón búsqueda - estilo distinto al de filtros */}
         <TouchableOpacity
-          style={styles.searchButton}
+          style={styles.searchIconBtn}
           onPress={() => searchBarRef.current?.expand()}
+          activeOpacity={0.8}
         >
           <Ionicons name="search" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Match filter button */}
+        {/* Botón pill central - ¿Qué partido quieres ver? */}
         <TouchableOpacity
           style={styles.matchFilterButton}
           onPress={() => setMatchPickerOpen(true)}
+          activeOpacity={0.85}
         >
           <View style={styles.matchButtonContent}>
-            <AppText style={styles.matchButtonEmoji}>⚽</AppText>
-            <AppText style={styles.matchButtonText}>
-              Busca tu partido
-            </AppText>
+            <Ionicons name="football-outline" size={19} color="rgba(255,255,255,0.75)" />
+            <Text style={styles.matchButtonText}>¿Qué partido quieres ver?</Text>
           </View>
         </TouchableOpacity>
-      
-        {/* Bar filter button - Now with text */}
-      <TouchableOpacity
-        style={[
-            styles.barFilterButton,
-          (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-           selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterButtonActive
-        ]}
-        onPress={() => setFilterModalVisible(true)}
-      >
-          <View style={styles.matchButtonContent}>
-            <Ionicons name="options-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <AppText style={[
-              styles.matchButtonText,
-              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 ||
-               selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.matchButtonTextActive
-            ]}>
-              Filtros de bar
-            </AppText>
-          </View>
-        {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-          selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
-          <View style={styles.filterDot} />
-        )}
-      </TouchableOpacity>
+
+        {/* Botón circular filtros */}
+        <TouchableOpacity
+          style={[
+            styles.circleBtn,
+            (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 ||
+             selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.circleBtnActive,
+          ]}
+          onPress={() => setFilterModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="menu-outline" size={22} color="#FFFFFF" />
+          {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 ||
+            selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
+            <View style={styles.filterDot} />
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Search bar - Opens below the controls */}
@@ -958,7 +949,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             }
           }}
         >
-          <Ionicons name="locate" size={28} color="#007AFF" />
+          <Ionicons name="locate" size={22} color="#FFFFFF" />
         </TouchableOpacity>
       )}
 
@@ -1209,113 +1200,72 @@ const styles = StyleSheet.create({
   },
   searchWrapper: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 140 : 120, // Below the top controls
-    left: 20,
-    right: 20,
+    top: Platform.OS === 'ios' ? 112 : 92,
+    left: 16,
+    right: 16,
     zIndex: 999,
   },
   topControlsRow: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 80 : 60,
-    left: 20,
-    right: 20,
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
     zIndex: 1000,
   },
-  searchButton: {
-    backgroundColor: '#3A4F68',
-    borderRadius: 12,
-    width: 50,
-    height: 50,
+  searchIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(8,15,40,0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 12,
+  },
+  circleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(8,15,40,0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  circleBtnActive: {
+    backgroundColor: 'rgba(25, 118, 210, 0.7)',
+    borderColor: 'rgba(25, 118, 210, 0.5)',
   },
   matchFilterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3A4F68',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minHeight: 50,
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  matchFilterButtonActive: {
-    backgroundColor: '#1976D2',
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-  },
-  barFilterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(29,78,216,0.40)',
+    borderWidth: 1,
+    borderColor: 'rgba(96,165,250,0.20)',
     justifyContent: 'center',
-    backgroundColor: '#3A4F68',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minHeight: 50,
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 12,
-    position: 'relative',
+    alignItems: 'center',
   },
   matchButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-  },
-  matchButtonEmoji: {
-    fontSize: 16,
+    gap: 7,
+    paddingHorizontal: 8,
   },
   matchButtonText: {
-    color: '#A3B3CC',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  matchButtonTextActive: {
     color: '#FFFFFF',
-  },
-  matchCloseButton: {
-    marginLeft: 8,
-    padding: 4,
-  },
-  filterButtonActive: {
-    backgroundColor: '#1976D2',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   filterDot: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     width: 8,
     height: 8,
     borderRadius: 4,
@@ -1387,22 +1337,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 120,
     right: 20,
-    backgroundColor: '#1C2A3A',
-    borderRadius: 28,
-    width: 56,
-    height: 56,
+    backgroundColor: 'rgba(8,15,40,0.82)',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#374151',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   teamButtonEmoji: {
     fontSize: 22,
@@ -1541,7 +1483,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#1565C0',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 24,
