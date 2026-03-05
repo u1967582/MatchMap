@@ -215,7 +215,7 @@ export default function ManualMatchSelectionScreen() {
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
-    // Keep selected matches from other dates, just load new matches for this date
+    setShowCalendar(false);
   };
 
   const toggleMatchSelection = (match: Match) => {

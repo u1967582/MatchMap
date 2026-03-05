@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,40 +13,70 @@ interface CustomCalendarProps {
   minimumDate?: Date;
 }
 
-const { width } = Dimensions.get('window');
+// Días de semana en español, empezando el lunes
+const DAYS_OF_WEEK = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-export default function CustomCalendar({ 
-  selectedDate, 
-  onDateChange, 
-  minimumDate = new Date() 
+function startOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+export default function CustomCalendar({
+  selectedDate,
+  onDateChange,
+  minimumDate = new Date(),
 }: CustomCalendarProps) {
-  const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
+  const today = startOfDay(new Date());
+  const minDate = startOfDay(minimumDate);
 
-  // Days of week in Spanish (Monday to Sunday)
-  const daysOfWeek = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  // El mes actual nunca puede ser menor al mes de hoy
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const d = new Date(selectedDate);
+    d.setDate(1);
+    return d;
+  });
 
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
+  const isCurrentOrFutureMonth = () => {
+    return (
+      currentMonth.getFullYear() > today.getFullYear() ||
+      (currentMonth.getFullYear() === today.getFullYear() &&
+        currentMonth.getMonth() >= today.getMonth())
+    );
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + (direction === 'next' ? 1 : -1));
+
+    // No permitir navegar a meses anteriores al de hoy
+    const todayFirstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    if (newMonth < todayFirstOfMonth) return;
+
+    setCurrentMonth(newMonth);
+  };
+
+  const getDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-    // For a Monday-based week: Monday = 0, Tuesday = 1, ..., Sunday = 6
-    const dayOfWeek = firstDay.getDay();
-    // Convert: getDay() returns 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
-    // We need: 0=Mon,1=Tue,2=Wed,3=Thu,4=Fri,5=Sat,6=Sun
-    // Apply +2 offset to shift grid to the right and maintain 7-column layout
-    const baseOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const firstDayOfWeek = (baseOffset + 2) % 7;
+    // getDay(): 0=Dom, 1=Lun, ..., 6=Sáb
+    // Convertir a base Lunes: 0=Lun, 1=Mar, ..., 6=Dom
+    const rawDay = firstDay.getDay();
+    const firstDayOffset = rawDay === 0 ? 6 : rawDay - 1;
 
-    const days = [];
+    const days: {
+      date: Date;
+      isCurrentMonth: boolean;
+      isSelected: boolean;
+      isDisabled: boolean;
+    }[] = [];
 
-    // Add days from previous month to fill the first week
-    const prevMonth = new Date(year, month, 0); // Last day of previous month
-    const daysInPrevMonth = prevMonth.getDate();
-    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+    // Rellenar con días del mes anterior
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    for (let i = firstDayOffset - 1; i >= 0; i--) {
       days.push({
         date: new Date(year, month - 1, daysInPrevMonth - i),
         isCurrentMonth: false,
@@ -56,45 +85,32 @@ export default function CustomCalendar({
       });
     }
 
-    // Add days from current month
+    // Días del mes actual
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
       days.push({
         date,
         isCurrentMonth: true,
         isSelected: date.toDateString() === selectedDate.toDateString(),
-        isDisabled: date < minimumDate,
+        isDisabled: date < minDate,
       });
     }
 
-    // Add days from next month to complete the grid
-    const remainingDays = 42 - days.length; // 6 rows * 7 days
-    for (let i = 1; i <= remainingDays; i++) {
-      days.push({
-        date: new Date(year, month + 1, i),
-        isCurrentMonth: false,
-        isSelected: false,
-        isDisabled: true,
-      });
+    // Rellenar solo la última fila incompleta
+    const remainder = days.length % 7;
+    if (remainder !== 0) {
+      const fill = 7 - remainder;
+      for (let i = 1; i <= fill; i++) {
+        days.push({
+          date: new Date(year, month + 1, i),
+          isCurrentMonth: false,
+          isSelected: false,
+          isDisabled: true,
+        });
+      }
     }
 
     return days;
-  };
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const newMonth = new Date(currentMonth);
-    if (direction === 'prev') {
-      newMonth.setMonth(newMonth.getMonth() - 1);
-    } else {
-      newMonth.setMonth(newMonth.getMonth() + 1);
-    }
-    setCurrentMonth(newMonth);
-  };
-
-  const handleDateSelect = (date: Date) => {
-    if (date >= minimumDate) {
-      onDateChange(date);
-    }
   };
 
   const formatMonthYear = (date: Date) => {
@@ -102,46 +118,46 @@ export default function CustomCalendar({
       month: 'long',
       year: 'numeric',
     });
-    // Capitalize first letter (español → Español)
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   };
 
-  const days = getDaysInMonth(currentMonth);
+  const days = getDays();
+  const canGoPrev = !isCurrentOrFutureMonth() || (() => {
+    const firstOfCurrent = new Date(today.getFullYear(), today.getMonth(), 1);
+    const firstOfShown = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    return firstOfShown > firstOfCurrent;
+  })();
 
   return (
     <View style={styles.container}>
       <View style={styles.calendarContainer}>
-        {/* Month/Year Navigation */}
+        {/* Navegación mes/año */}
         <View style={styles.navigationContainer}>
           <TouchableOpacity
-            style={styles.navButton}
+            style={[styles.navButton, !canGoPrev && styles.navButtonDisabled]}
             onPress={() => navigateMonth('prev')}
+            disabled={!canGoPrev}
           >
-            <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={20} color={canGoPrev ? '#FFFFFF' : '#4A5568'} />
           </TouchableOpacity>
-          
+
           <AppText style={styles.monthYearText}>
             {formatMonthYear(currentMonth)}
           </AppText>
-          
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() => navigateMonth('next')}
-          >
+
+          <TouchableOpacity style={styles.navButton} onPress={() => navigateMonth('next')}>
             <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
-        {/* Days of Week Header */}
+        {/* Cabecera días de semana */}
         <View style={styles.daysHeader}>
-          {daysOfWeek.map((day, index) => (
-            <AppText key={index} style={styles.dayHeaderText}>
-              {day}
-            </AppText>
+          {DAYS_OF_WEEK.map((day) => (
+            <AppText key={day} style={styles.dayHeaderText}>{day}</AppText>
           ))}
         </View>
 
-        {/* Calendar Grid */}
+        {/* Grid del calendario */}
         <View style={styles.calendarGrid}>
           {days.map((day, index) => (
             <TouchableOpacity
@@ -149,16 +165,16 @@ export default function CustomCalendar({
               style={[
                 styles.dayButton,
                 day.isSelected && styles.selectedDay,
-                day.isDisabled && styles.disabledDay,
               ]}
-              onPress={() => handleDateSelect(day.date)}
-              disabled={day.isDisabled}
+              onPress={() => onDateChange(day.date)}
+              disabled={day.isDisabled || !day.isCurrentMonth}
+              activeOpacity={0.7}
             >
-              <AppText style={[
+              <AppText
+                style={[
                   styles.dayText,
                   day.isSelected && styles.selectedDayText,
-                  !day.isCurrentMonth && styles.otherMonthDayText,
-                  day.isDisabled && styles.disabledDayText,
+                  (!day.isCurrentMonth || day.isDisabled) && styles.disabledDayText,
                 ]}
               >
                 {day.date.getDate()}
@@ -174,13 +190,10 @@ export default function CustomCalendar({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#1C2A3A',
-    borderRadius: 0,
-    padding: 16,
-    marginHorizontal: 0,
-    marginVertical: 0,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
-
   calendarContainer: {
     backgroundColor: '#1A2332',
     borderRadius: 12,
@@ -200,6 +213,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  navButtonDisabled: {
+    backgroundColor: '#1A2332',
+  },
   monthYearText: {
     color: '#FFFFFF',
     fontSize: 16,
@@ -207,32 +223,29 @@ const styles = StyleSheet.create({
   },
   daysHeader: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   dayHeaderText: {
     flex: 1,
     textAlign: 'center',
-    color: '#FFFFFF',
+    color: '#A3B3CC',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   dayButton: {
-    width: (width - 120) / 7,
+    width: `${100 / 7}%` as any,
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 1,
+    marginVertical: 2,
   },
   selectedDay: {
     backgroundColor: '#1D4ED8',
     borderRadius: 8,
-  },
-  disabledDay: {
-    opacity: 0.3,
   },
   dayText: {
     color: '#FFFFFF',
@@ -241,12 +254,9 @@ const styles = StyleSheet.create({
   },
   selectedDayText: {
     color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  otherMonthDayText: {
-    color: '#8E8E93',
+    fontWeight: '700',
   },
   disabledDayText: {
-    color: '#8E8E93',
+    color: '#2A3A4A',
   },
-}); 
+});
