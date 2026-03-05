@@ -50,14 +50,13 @@ interface MatchPickerModalProps {
 function getCompetitionLogoFilename(compName: string): string | null {
   const nameLower = compName.toLowerCase();
 
+  if (nameLower.includes('champions') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer'))) return 'champions_femen.png';
   if (nameLower.includes('champions')) return 'champions.png';
-  if (nameLower.includes('liga f')) return 'ligaf.png';
-  if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) {
-    return 'primera-division-ea.png';
-  }
-  if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) {
-    return 'segunda-division-hypermotion.png';
-  }
+  if (nameLower.includes('copa del rey')) return 'copa-del-rey.png';
+  if (nameLower.includes('europa league')) return 'europa-league.png';
+  if (nameLower.includes('liga f') || (nameLower.includes('primera') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))) return 'ligaf.png';
+  if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) return 'primera-division-ea.png';
+  if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) return 'segunda-division-hypermotion.png';
 
   return null;
 }
