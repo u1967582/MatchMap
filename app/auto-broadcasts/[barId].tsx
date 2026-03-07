@@ -165,6 +165,7 @@ export default function AutoBroadcastsScreen() {
 					.from('matches')
 					.select('home_team_id,away_team_id', { head: false })
 					.eq('competition_id', compId)
+					.eq('status', 'scheduled')
 					.limit(10000);
 				if (matchesError) throw matchesError;
 				const teamIds = Array.from(new Set((matchRows ?? []).flatMap(r => [r.home_team_id, r.away_team_id]).filter(Boolean)));
