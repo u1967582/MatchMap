@@ -187,17 +187,17 @@ export function MapSkeleton() {
 
       {/* Top Controls - Exact replica of Map.tsx */}
       <Animated.View style={styles.mapTopControls}>
-        {/* Search button - 50x50 */}
+        {/* Search button - círculo 40x40 */}
         <Animated.View style={styles.mapButton}>
-          <SkeletonBox width={50} height={50} borderRadius={12} />
+          <SkeletonBox width={40} height={40} borderRadius={20} />
         </Animated.View>
-        {/* Match filter button - flex: 1 */}
+        {/* Match filter pill - flex: 1, height 44 */}
         <Animated.View style={[styles.mapButton, styles.mapButtonFlex]}>
-          <SkeletonBox width="100%" height={50} borderRadius={12} />
+          <SkeletonBox width="100%" height={44} borderRadius={22} />
         </Animated.View>
-        {/* Bar filter button - flex: 1 */}
-        <Animated.View style={[styles.mapButton, styles.mapButtonFlex]}>
-          <SkeletonBox width="100%" height={50} borderRadius={12} />
+        {/* Filter button - círculo 40x40 */}
+        <Animated.View style={styles.mapButton}>
+          <SkeletonBox width={40} height={40} borderRadius={20} />
         </Animated.View>
       </Animated.View>
 
@@ -452,10 +452,11 @@ const styles = StyleSheet.create({
   },
   mapTopControls: {
     position: 'absolute',
-    top: 80, // Exactamente igual que Map.tsx (iOS)
-    left: 20,
-    right: 20,
+    top: 60, // Igual que Map.tsx: Platform.OS === 'ios' ? 60 : 40
+    left: 16,
+    right: 16,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
     zIndex: 10,
   },
