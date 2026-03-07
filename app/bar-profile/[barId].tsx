@@ -2158,7 +2158,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 12,
+    paddingVertical: 12,
+    paddingLeft: 16,
+    paddingRight: 12,
     borderRadius: 12,
   },
   benefitIcon: {
