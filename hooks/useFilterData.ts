@@ -16,15 +16,15 @@ const getCategoryEmoji = (name: string): string => {
 const getFoodEmoji = (name: string): string => {
   const foodMap: { [key: string]: string } = {
     'Americana': '🍔',
-    'China': '🥢',
-    'Griega': '🧀',
-    'India': '🍛',
+    'Asador / Parrilla': '🍖',
     'Italiana': '🍕',
-    'Japonesa': '🍣',
-    'Mediterránea': '🐟',
-    'Mexicana': '🌮',
-    'Vegana': '🥗',
-    'Vegetariana': '🥬',
+    'Japonesa': '🍱',
+    'Kebab': '🌮',
+    'Mediterránea': '🐠',
+    'Mexicana': '🌵',
+    'Tapas / Raciones': '🍷',
+    'Vegana': '🌱',
+    'Vegetariana': '🥦',
   };
   return foodMap[name] || '🍽️';
 };
@@ -82,12 +82,16 @@ const FALLBACK_CATEGORIES = [
 ];
 
 const FALLBACK_FOOD_TYPES = [
-  { id: 1, name: 'Pizza', emoji: '🍕' },
-  { id: 2, name: 'Hamburguesa', emoji: '🍔' },
-  { id: 3, name: 'Mexicana', emoji: '🌮' },
-  { id: 4, name: 'Sushi', emoji: '🍣' },
-  { id: 5, name: 'Italiana', emoji: '🍝' },
-  { id: 6, name: 'Vegana', emoji: '🥗' },
+  { id: 1, name: 'Americana', emoji: '🍔' },
+  { id: 2, name: 'Asador / Parrilla', emoji: '🍖' },
+  { id: 3, name: 'Italiana', emoji: '🍕' },
+  { id: 4, name: 'Japonesa', emoji: '🍱' },
+  { id: 5, name: 'Kebab', emoji: '🌮' },
+  { id: 6, name: 'Mediterránea', emoji: '🐠' },
+  { id: 7, name: 'Mexicana', emoji: '🌵' },
+  { id: 8, name: 'Tapas / Raciones', emoji: '🍷' },
+  { id: 9, name: 'Vegana', emoji: '🌱' },
+  { id: 10, name: 'Vegetariana', emoji: '🥦' },
 ];
 
 const FALLBACK_FEATURES = [
