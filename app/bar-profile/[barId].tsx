@@ -602,14 +602,22 @@ export default function BarProfileScreen() {
               </View>
 
               <View style={styles.matchesContainer}>
+                {/* Añadir partido manualmente */}
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
-                    style={styles.matchButton}
+                    style={styles.barActionButton}
                     onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="calendar-outline" size={20} color={colors.text.primary} />
-                    <AppText variant="label" color={colors.text.primary}>Añadir partido manualmente</AppText>
+                    <View style={[styles.barActionIcon, styles.barActionIconBlue]}>
+                      <Ionicons name="calendar-outline" size={18} color={colors.brand.primary} />
+                    </View>
+                    <View style={styles.barActionContent}>
+                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
+                        Añadir partido manualmente
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButton}
@@ -620,14 +628,22 @@ export default function BarProfileScreen() {
                   </TouchableOpacity>
                 </View>
 
+                {/* Automatizar retransmisiones */}
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
-                    style={styles.matchButtonOutline}
+                    style={styles.barActionButton}
                     onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="settings-outline" size={20} color={colors.text.primary} />
-                    <AppText variant="label" color={colors.text.primary}>Automatizar retransmisiones</AppText>
+                    <View style={[styles.barActionIcon, styles.barActionIconPurple]}>
+                      <Ionicons name="settings-outline" size={18} color={colors.brand.link} />
+                    </View>
+                    <View style={styles.barActionContent}>
+                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
+                        Automatizar retransmisiones
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButton}
@@ -638,15 +654,22 @@ export default function BarProfileScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Promote visibility button (boost style) */}
+                {/* Aumentar la visibilidad */}
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
-                    activeOpacity={0.8}
+                    style={styles.barActionButton}
                     onPress={() => router.push(`/boost?barId=${barId}` as any)}
-                    style={styles.promoteButton}
+                    activeOpacity={0.8}
                   >
-                    <Ionicons name="flash" size={20} color={colors.status.boost} />
-                    <AppText variant="label" color={colors.status.boost}>Aumenta la visibilidad de tu bar</AppText>
+                    <View style={[styles.barActionIcon, styles.barActionIconBoost]}>
+                      <Ionicons name="flash" size={18} color={colors.status.boost} />
+                    </View>
+                    <View style={styles.barActionContent}>
+                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
+                        Aumenta la visibilidad de tu bar
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButton}
@@ -1879,58 +1902,40 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 8,
   },
-  matchButton: {
+  barActionButton: {
     flex: 1,
-    backgroundColor: colors.brand.link,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: spacing.md,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.xl,
-    gap: spacing.sm,
-    minHeight: 50,
-  },
-  matchButtonOutline: {
-    flex: 1,
-    backgroundColor: colors.brand.link,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.xl,
-    gap: spacing.sm,
-    minHeight: 50,
-  },
-  promoteButton: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 215, 0, 0.12)',
-    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  barActionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: spacing.sm,
     justifyContent: 'center',
-    gap: spacing.sm,
-    minHeight: 50,
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
-  matchButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
+  barActionIconBlue: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
   },
-  matchButtonOutlineText: {
-    color: '#FFFFFF',  // Blanco para contraste con fondo azul
-    fontSize: 16,
-    fontWeight: '600',
+  barActionIconPurple: {
+    backgroundColor: 'rgba(88, 86, 214, 0.15)',
   },
-  promoteButtonText: {
-    color: '#FFD700',  // Dorado como el countdown
-    fontSize: 15,
+  barActionIconBoost: {
+    backgroundColor: 'rgba(255, 215, 0, 0.12)',
+  },
+  barActionContent: {
+    flex: 1,
+  },
+  barActionTitle: {
     fontWeight: '600',
+    fontSize: 13,
   },
   // Upcoming matches styles
   upcomingMatchesContainer: {
@@ -2058,8 +2063,8 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   buttonWithInfo: {
     flexDirection: 'row',
@@ -2068,10 +2073,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   infoButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.round,
+    width: 36,
+    height: 36,
+    borderRadius: spacing.md,
     backgroundColor: colors.bg.elevated,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
