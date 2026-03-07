@@ -81,7 +81,7 @@ export default function BarProfileScreen() {
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
   const [verificationNotes, setVerificationNotes] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
-  const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any }>({ title: '', content: null });
+  const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any; actionLabel?: string; onAction?: () => void }>({ title: '', content: null });
   const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
 
   // Ref para scroll programático al FlatList
@@ -127,54 +127,51 @@ export default function BarProfileScreen() {
 
   const showBoostInfo = () => {
     setInfoModalContent({
-      title: '✨ Beneficios del Boost',
+      title: '⚡ Boost de Visibilidad',
       content: (
         <View>
-          <AppText variant="body" color={colors.text.primary} align="center" style={styles.boostMainTextSpacing}>
-            Aumenta la visibilidad de tu bar y atrae más clientes
-          </AppText>
-
-          {/* Beneficios */}
           <View style={styles.benefitItem}>
-            <View style={styles.benefitIcon}>
-              <AppText style={styles.benefitEmoji}>⬆️</AppText>
+            <View style={[styles.benefitIcon, { backgroundColor: 'rgba(74,222,128,0.12)' }]}>
+              <Ionicons name="arrow-up-circle" size={22} color="#4ADE80" />
             </View>
             <View style={styles.benefitContent}>
-              <AppText variant="label" color={colors.text.primary}>Mayor visibilidad en listas</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Tu bar aparece primero en búsquedas y filtros</AppText>
+              <AppText variant="label" color={colors.text.primary}>Apareces primero</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Tu bar sale antes que la competencia en el mapa y búsquedas</AppText>
             </View>
           </View>
 
           <View style={styles.benefitItem}>
-            <View style={styles.benefitIcon}>
-              <AppText style={styles.benefitEmoji}>⭐</AppText>
+            <View style={[styles.benefitIcon, { backgroundColor: 'rgba(255,215,0,0.12)' }]}>
+              <Ionicons name="star" size={22} color={colors.status.boost} />
             </View>
             <View style={styles.benefitContent}>
-              <AppText variant="label" color={colors.text.primary}>Etiqueta destacado</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Badge especial que llama la atención</AppText>
+              <AppText variant="label" color={colors.text.primary}>Badge destacado</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Etiqueta visible que llama la atención de los usuarios</AppText>
             </View>
           </View>
 
           <View style={styles.benefitItem}>
-            <View style={styles.benefitIcon}>
-              <AppText style={styles.benefitEmoji}>📈</AppText>
+            <View style={[styles.benefitIcon, { backgroundColor: 'rgba(96,165,250,0.12)' }]}>
+              <Ionicons name="people" size={22} color="#60A5FA" />
             </View>
             <View style={styles.benefitContent}>
-              <AppText variant="label" color={colors.text.primary}>Prioridad en resultados</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Aparece antes que la competencia</AppText>
+              <AppText variant="label" color={colors.text.primary}>Más clientes los días de partido</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Capta aficionados que buscan bar en tiempo real</AppText>
             </View>
           </View>
 
-          {/* Call to action */}
-          <View style={styles.ctaContainer}>
-            <AppText variant="subtitle" color={colors.status.boost} align="center" style={styles.ctaTitleSpacing}>💰 ¡Llena tu bar!</AppText>
-            <AppText variant="label" color={colors.text.primary} align="center" style={styles.ctaSubtitleSpacing}>Cada cliente genera ~13€ de beneficio medio</AppText>
-            <AppText variant="caption" color={colors.text.light} align="center" style={styles.ctaDescriptionSpacing}>
-              Una inversión pequeña puede traerte muchos más clientes y aumentar significativamente tus ingresos
-            </AppText>
+          <View style={styles.boostRoiCard}>
+            <Ionicons name="trending-up" size={14} color="#4ADE80" />
+            <View style={styles.boostRoiText}>
+              <AppText variant="caption" color={colors.text.secondary}>Cada cliente gasta ~13€ de media</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Desde 19,99€</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Sin suscripción</AppText>
+            </View>
           </View>
         </View>
       ),
+      actionLabel: 'Ver planes y precios',
+      onAction: () => router.push(`/boost?barId=${barId}` as any),
     });
     setInfoModalVisible(true);
   };
@@ -1439,10 +1436,15 @@ export default function BarProfileScreen() {
               </View>
 
               <TouchableOpacity
-                style={styles.modalOkButton}
-                onPress={() => setInfoModalVisible(false)}
+                style={[styles.modalOkButton, infoModalContent.onAction && styles.modalOkButtonAccent]}
+                onPress={() => {
+                  setInfoModalVisible(false);
+                  infoModalContent.onAction?.();
+                }}
               >
-                <AppText variant="body" color={colors.text.primary} style={styles.modalOkButtonTextBold}>Entendido</AppText>
+                <AppText variant="body" color={colors.text.primary} style={styles.modalOkButtonTextBold}>
+                  {infoModalContent.actionLabel ?? 'Entendido'}
+                </AppText>
               </TouchableOpacity>
             </ScrollView>
           </TouchableOpacity>
@@ -2156,66 +2158,97 @@ const styles = StyleSheet.create({
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingVertical: 12,
-    paddingLeft: 16,
-    paddingRight: 12,
-    borderRadius: 12,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
   },
   benefitIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    flexShrink: 0,
   },
   benefitEmoji: {
-    fontSize: 24,
+    fontSize: 20,
   },
   benefitContent: {
     flex: 1,
+    gap: 3,
+    paddingTop: 2,
   },
-  benefitTitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  benefitDescription: {
-    color: '#A3B3CC',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  ctaContainer: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
-    padding: 16,
-    marginTop: 8,
-  },
-  ctaTitle: {
-    color: '#FFD700',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  ctaSubtitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  ctaDescription: {
-    color: '#E5E7EB',
-    fontSize: 13,
+  boostSubtitle: {
     lineHeight: 20,
-    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  boostStatsRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+  },
+  boostStatItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.xxs,
+  },
+  boostStatDivider: {
+    width: 1,
+    backgroundColor: colors.border.subtle,
+    marginVertical: spacing.sm,
+  },
+  boostStatValue: {
+    color: colors.status.boost,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  boostStatLabel: {
+    lineHeight: 14,
+  },
+  boostRoiCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(74,222,128,0.07)',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(74,222,128,0.2)',
+    padding: spacing.md,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  boostRoiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  boostRoiText: {
+    flex: 1,
+    gap: 2,
+  },
+  boostTrustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+    marginTop: spacing.xs,
+  },
+  boostTrustItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  boostTrustDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.border.medium,
   },
   modalOkButton: {
     backgroundColor: '#1976D2',
@@ -2223,6 +2256,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  modalOkButtonAccent: {
+    backgroundColor: '#1976D2',
   },
   modalOkButtonText: {
     color: '#FFFFFF',
