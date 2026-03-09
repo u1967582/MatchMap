@@ -8,9 +8,9 @@ import { Platform } from 'react-native';
 
 // RevenueCat API Keys - Use environment variable with fallback
 const REVENUECAT_API_KEY = Platform.select({
-  android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || 'goog_HcNKJszQnkNPgLUjQv0qgKsXjqj',
-  ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || 'test_sMBliApmNvBxEUAAIamKYkUFExu',
-  default: 'test_sMBliApmNvBxEUAAIamKYkUFExu',
+  android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || 'goog_HcNKJszQnkNPgLUjQvOqgkSxjqj',
+  ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || 'appl_CRtAAkRCMobOPrYXnEvjgHHLGZJ',
+  default: 'appl_CRtAAkRCMobOPrYXnEvjgHHLGZJ',
 }) as string;
 
 // Entitlement identifiers
@@ -32,16 +32,16 @@ export const PRODUCT_IDS = {
  */
 export async function initializeRevenueCat(userId?: string): Promise<void> {
   try {
+    // Set debug logs BEFORE configure to capture all initialization logs
+    if (__DEV__) {
+      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    }
+
     // Configure SDK
     Purchases.configure({
       apiKey: REVENUECAT_API_KEY,
       appUserID: userId, // Optional: pass user ID for identification
     });
-
-    // Set debug logs in development
-    if (__DEV__) {
-      await Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-    }
 
     console.log('✅ RevenueCat initialized successfully');
   } catch (error) {
