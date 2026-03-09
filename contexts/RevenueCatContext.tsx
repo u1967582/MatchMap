@@ -28,24 +28,19 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const initialize = async () => {
       try {
-        // ⚠️ TEMPORARILY DISABLED: RevenueCat initialization
-        // Reason: Invalid API key causing login failures in Android
-        // TODO: Re-enable when valid API key is obtained
-        console.log('⚠️ RevenueCat temporarily disabled');
-
         // Get current user
-        // const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
 
         // Initialize RevenueCat with user ID if available
-        // await RevenueCatService.initializeRevenueCat(user?.id);
+        await RevenueCatService.initializeRevenueCat(user?.id);
 
         // Fetch initial customer info
-        // const info = await RevenueCatService.getCustomerInfo();
-        // setCustomerInfo(info);
+        const info = await RevenueCatService.getCustomerInfo();
+        setCustomerInfo(info);
 
         // Check boost entitlement
-        // const boostActive = await RevenueCatService.hasActiveBoost();
-        // setHasActiveBoost(boostActive);
+        const boostActive = await RevenueCatService.hasActiveBoost();
+        setHasActiveBoost(boostActive);
       } catch (error) {
         console.error('Failed to initialize RevenueCat:', error);
         // ⚠️ IMPORTANT: Mark as initialized EVEN IF IT FAILS
