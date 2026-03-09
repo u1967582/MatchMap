@@ -178,7 +178,9 @@ export default function EditPostScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 9],
-        quality: 0.8,
+        quality: 0.75,
+        width: 1200,
+        height: 675,
       });
 
       if (!result.canceled && result.assets[0]) {

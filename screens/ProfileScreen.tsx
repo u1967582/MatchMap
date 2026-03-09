@@ -51,6 +51,7 @@ const SettingsRow: React.FC<SettingsRowProps> = ({ title, onPress, isLast = fals
   </TouchableOpacity>
 );
 
+
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [userBars, setUserBars] = useState<UserBar[]>([]);
@@ -529,6 +530,7 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
       <BottomTabBar />
+
     </SafeAreaView>
   );
 }

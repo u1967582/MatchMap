@@ -269,8 +269,10 @@ const Step4Photos: React.FC = () => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        quality: 0.8,
+        quality: 0.75,
         aspect: type === 'bar' ? [16, 9] : [3, 4],
+        width: type === 'bar' ? 1400 : 900,
+        height: type === 'bar' ? 788 : 1200,
         allowsEditing: false,
       });
 

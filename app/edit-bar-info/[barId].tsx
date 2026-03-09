@@ -339,7 +339,9 @@ export default function EditBarInfoScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 9],
-        quality: 0.8,
+        quality: 0.75,
+        width: 1400,
+        height: 788,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -373,7 +375,9 @@ export default function EditBarInfoScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [3, 4],
-        quality: 0.8,
+        quality: 0.75,
+        width: 900,
+        height: 1200,
       });
 
       if (!result.canceled && result.assets[0]) {
