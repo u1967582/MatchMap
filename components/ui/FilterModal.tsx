@@ -192,10 +192,26 @@ export default function FilterModal({
           {renderSection('Características', barFeatures, selectedFeatures, toggleFeature)}
         </ScrollView>
 
-        {/* Botón fijo al fondo */}
-        <TouchableOpacity style={styles.applyButton} onPress={handleApplyFilters}>
-          <AppText style={styles.applyButtonText}>Aplicar filtros ({getActiveFiltersCount()})</AppText>
-        </TouchableOpacity>
+        {/* Botones fijos al fondo */}
+        {getActiveFiltersCount() > 0 && (
+          <View style={styles.footerDivider} />
+        )}
+        <View style={styles.footerRow}>
+          {getActiveFiltersCount() > 0 && (
+            <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
+              <Ionicons name="trash-outline" size={15} color="#EF4444" />
+              <AppText style={styles.clearAllButtonText}>Limpiar</AppText>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.applyButton}
+            onPress={handleApplyFilters}
+          >
+            <AppText style={styles.applyButtonText}>
+              {getActiveFiltersCount() > 0 ? `Aplicar (${getActiveFiltersCount()})` : 'Aplicar filtros'}
+            </AppText>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   </Modal>
@@ -360,7 +376,35 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#2A3A4A',
   },
+  footerDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    marginBottom: 12,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    paddingBottom: 4,
+  },
+  clearAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.25)',
+  },
+  clearAllButtonText: {
+    color: '#EF4444',
+    fontSize: 15,
+    fontWeight: '600',
+  },
   applyButton: {
+    flex: 1,
     backgroundColor: '#1976D2',
     borderRadius: 12,
     paddingVertical: 16,
