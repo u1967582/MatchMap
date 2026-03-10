@@ -249,13 +249,13 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(8,15,40,0.88)',
-    borderRadius: 25,
+    backgroundColor: 'rgba(26,35,50,0.92)',
+    borderRadius: 22,
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    minHeight: 50,
+    paddingVertical: 10,
+    minHeight: 44,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
