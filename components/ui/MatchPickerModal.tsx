@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
@@ -67,6 +68,7 @@ export default function MatchPickerModal({
   onSelectMatch,
   selectedMatchId,
 }: MatchPickerModalProps) {
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [matches, setMatches] = useState<Match[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -276,7 +278,7 @@ export default function MatchPickerModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.modalBackdrop}>
+      <View style={[styles.modalBackdrop, { paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 20) }]}>
         <View style={styles.modalContainer}>
           <View style={styles.header}>
             <AppText style={styles.modalTitle}>Seleccionar Partido</AppText>
@@ -392,8 +394,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 20,
   },
   modalContainer: {
     width: '100%',

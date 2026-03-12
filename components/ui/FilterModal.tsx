@@ -10,6 +10,7 @@ import {
   GestureResponderEvent,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import SelectableChip from './SelectableChip';
 import { AppText, toast } from '~/components/ds';
@@ -59,6 +60,7 @@ export default function FilterModal({
   onApplyFilters,
   loading = false,
 }: FilterModalProps) {
+  const insets = useSafeAreaInsets();
   console.log('🔍 FilterModal - Props received:', {
     visible,
     barCategoriesLength: barCategories?.length || 0,
@@ -196,7 +198,7 @@ export default function FilterModal({
         {getActiveFiltersCount() > 0 && (
           <View style={styles.footerDivider} />
         )}
-        <View style={styles.footerRow}>
+        <View style={[styles.footerRow, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           {getActiveFiltersCount() > 0 && (
             <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
               <Ionicons name="trash-outline" size={15} color="#EF4444" />
@@ -232,7 +234,7 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 16,
     position: 'relative',
     ...(Platform.OS === 'android' && {
       overflow: 'hidden',
@@ -385,7 +387,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     alignItems: 'center',
-    paddingBottom: 4,
   },
   clearAllButton: {
     flexDirection: 'row',
