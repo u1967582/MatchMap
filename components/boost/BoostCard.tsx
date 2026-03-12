@@ -112,7 +112,6 @@ const styles = StyleSheet.create({
   },
   cardPopular: {
     borderColor: '#06B6D4',
-    backgroundColor: 'rgba(6, 182, 212, 0.06)',
     ...Platform.select({
       ios: {
         shadowColor: '#06B6D4',
