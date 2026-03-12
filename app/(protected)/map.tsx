@@ -1,7 +1,7 @@
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, StatusBar, Platform } from 'react-native';
+import { View, StyleSheet, StatusBar, Platform, BackHandler, ToastAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import Map from '~/components/Map';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 
@@ -21,6 +21,25 @@ export default function MapScreen() {
     if (Platform.OS === 'android' && StatusBar.setBackgroundColor) {
       StatusBar.setBackgroundColor('transparent', true);
     }
+  }, []);
+
+  // Double back to exit (Android only)
+  const lastBackPress = useRef<number>(0);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
+      const now = Date.now();
+      if (now - lastBackPress.current < 2000) {
+        BackHandler.exitApp();
+        return true;
+      }
+      lastBackPress.current = now;
+      ToastAndroid.show('Prem back una altra vegada per sortir', ToastAndroid.SHORT);
+      return true;
+    });
+
+    return () => handler.remove();
   }, []);
 
   return (

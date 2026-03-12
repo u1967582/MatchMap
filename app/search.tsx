@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -71,15 +71,19 @@ const SORT_OPTIONS: FilterOption[] = [
   { id: 'rating', label: '⭐ Mejor valorados', value: 'rating' },
 ];
 
+const PAGE_SIZE = 10;
+
 const { width } = Dimensions.get('window');
 
 export default function SearchScreen() {
   const router = useRouter();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [bars, setBars] = useState<Bar[]>([]);
+  const [allBars, setAllBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [regularPage, setRegularPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Filters state
   const [selectedSort, setSelectedSort] = useState('proximity'); // Default to "Proximidad"
@@ -110,6 +114,21 @@ export default function SearchScreen() {
     centerLatLng: userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null,
     enabled: !!userLocation,
   });
+
+  // Split bars: boosted (always shown) + regular (paginated)
+  const boostedDisplayBars = useMemo(
+    () => allBars.filter(b => selected3Stable.includes(b.id)),
+    [allBars, selected3Stable]
+  );
+  const regularDisplayBars = useMemo(
+    () => allBars.filter(b => !selected3Stable.includes(b.id)),
+    [allBars, selected3Stable]
+  );
+  const displayedBars = useMemo(
+    () => [...boostedDisplayBars, ...regularDisplayBars.slice(0, regularPage * PAGE_SIZE)],
+    [boostedDisplayBars, regularDisplayBars, regularPage]
+  );
+  const hasMoreBars = regularDisplayBars.length > regularPage * PAGE_SIZE;
 
   // Update context when selection changes - with stabilized reference
   useEffect(() => {
@@ -192,7 +211,7 @@ export default function SearchScreen() {
           barIdsFilter = [];
         }
         if (!barIdsFilter || barIdsFilter.length === 0) {
-          setBars([]);
+          setAllBars([]);
           return;
         }
       }
@@ -244,7 +263,7 @@ export default function SearchScreen() {
       console.log('📊 Initial bars fetched:', barsData?.length || 0);
 
       if (!barsData || barsData.length === 0) {
-        setBars([]);
+        setAllBars([]);
         return;
       }
 
@@ -514,7 +533,8 @@ export default function SearchScreen() {
       console.log('🚀 Boosted bars on top:', boostBarIds.length);
       console.log('📋 Bars found:', sortedBars.map(bar => bar.name));
 
-      setBars(sortedBars);
+      setAllBars(sortedBars);
+      setRegularPage(1);
     } catch (error) {
       console.error('❌ Error in searchBars:', error);
       toast.error('Error', 'Ocurrió un error al buscar bares');
@@ -526,12 +546,39 @@ export default function SearchScreen() {
   // Update highlighting when boost selection changes (for visual sync with map)
   // Note: Initial sorting is now handled inside searchBars()
   useEffect(() => {
-    if (bars.length === 0 || selected3Stable.length === 0) return;
+    if (allBars.length === 0 || selected3Stable.length === 0) return;
 
     // Just trigger a re-render to update golden borders
     // The bars are already sorted correctly from searchBars()
     console.log('✨ Boost selection updated for visual sync:', selected3Stable.length);
-  }, [selected3Stable, bars.length]);
+  }, [selected3Stable, allBars.length]);
+
+  // Load next page of bars
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMoreBars) return;
+    setLoadingMore(true);
+    setTimeout(() => {
+      setRegularPage(prev => prev + 1);
+      setLoadingMore(false);
+    }, 300);
+  }, [loadingMore, hasMoreBars]);
+
+  // Footer: loading skeleton or end message
+  const renderListFooter = useCallback(() => {
+    if (loadingMore) {
+      return <SkeletonList count={2} />;
+    }
+    if (!hasMoreBars && allBars.length > 0) {
+      return (
+        <View style={styles.footerEnd}>
+          <AppText variant="caption" color={colors.text.muted} align="center">
+            Ya has visto todos los bares
+          </AppText>
+        </View>
+      );
+    }
+    return null;
+  }, [loadingMore, hasMoreBars, allBars.length]);
 
   // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -849,15 +896,18 @@ export default function SearchScreen() {
 
         {loading ? (
           <SkeletonList count={3} />
-        ) : bars.length > 0 ? (
+        ) : allBars.length > 0 ? (
           <FlashList
-            data={bars}
+            data={displayedBars}
             renderItem={renderBarCard}
             keyExtractor={(item) => item.id}
             extraData={favorites}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.barsList}
             estimatedItemSize={300}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.4}
+            ListFooterComponent={renderListFooter}
           />
         ) : (
           <View style={styles.emptyWrapper}>
@@ -1185,6 +1235,10 @@ const styles = StyleSheet.create({
   },
   emptyWrapper: {
     flex: 1,
+  },
+  footerEnd: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
   },
   emptyActions: {
     paddingHorizontal: spacing.xl,
