@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import Gradient from '~/components/ui/Gradient';
@@ -34,13 +34,14 @@ const BoostCard: React.FC<BoostCardProps> = ({
   const accentColor = isPopular ? POPULAR_COLOR : '#60A5FA';
 
   return (
-    <View style={[styles.card, isPopular && styles.cardPopular]}>
+    <View style={[styles.cardOuter, isPopular && styles.cardOuterPopular]}>
       {isPopular && (
         <View style={styles.popularBadge}>
           <Ionicons name="star" size={11} color="#FFFFFF" />
           <AppText maxScale={1.0} style={styles.popularText}>MÁS POPULAR</AppText>
         </View>
       )}
+      <View style={[styles.card, isPopular && styles.cardPopular]}>
 
       {/* Título + badge descuento */}
       <View style={styles.headerRow}>
@@ -87,6 +88,7 @@ const BoostCard: React.FC<BoostCardProps> = ({
         </Gradient>
       </TouchableOpacity>
       {footer ? <View style={{ marginTop: 8, alignItems: 'center' }}>{footer}</View> : null}
+      </View>
     </View>
   );
 };
@@ -94,29 +96,40 @@ const BoostCard: React.FC<BoostCardProps> = ({
 export default BoostCard;
 
 const styles = StyleSheet.create({
+  cardOuter: {
+    marginBottom: 10,
+  },
+  cardOuterPopular: {
+    paddingTop: 13,
+    marginTop: 4,
+  },
   card: {
     backgroundColor: '#1A2332',
     borderRadius: 14,
     padding: 12,
-    marginBottom: 10,
     borderWidth: 1.5,
     borderColor: '#2A3A4A',
-    position: 'relative',
   },
   cardPopular: {
     borderColor: '#06B6D4',
     backgroundColor: 'rgba(6, 182, 212, 0.06)',
-    shadowColor: '#06B6D4',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 6,
-    marginTop: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#06B6D4',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
   popularBadge: {
     position: 'absolute',
-    top: -10,
+    top: 0,
     right: 12,
+    zIndex: 10,
     backgroundColor: '#06B6D4',
     flexDirection: 'row',
     alignItems: 'center',
