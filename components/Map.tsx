@@ -108,6 +108,9 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // Match filter states
   const [selectedMatch, setSelectedMatch] = React.useState<Match | null>(null);
   const [matchPickerOpen, setMatchPickerOpen] = React.useState(false);
+
+  // Search bar expanded state
+  const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   
   // Navigation states
   const [isNavigating, setIsNavigating] = React.useState(false);
@@ -900,13 +903,19 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           searchResults={searchResults}
           isSearching={isSearching}
           onLocationSelect={handleLocationSelect}
+          onExpandChange={setIsSearchExpanded}
         />
       </View>
 
       {/* Center on user location button */}
       {userLocation && (
         <TouchableOpacity
-          style={styles.centerButton}
+          style={[
+            styles.centerButton,
+            selectedMatch && !isSearchExpanded && !showBarCard && !isNavigating
+              ? { bottom: 216 }
+              : { bottom: 128 },
+          ]}
           onPress={async () => {
             try {
               // Ensure permission and get fresh position
@@ -951,47 +960,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
         >
           <Ionicons name="locate" size={22} color="#FFFFFF" />
         </TouchableOpacity>
-      )}
-
-      {/* Active Match Filter Banner */}
-      {selectedMatch && (
-        <View style={styles.activeMatchBanner}>
-          <View style={styles.bannerTeamsRow}>
-            <View style={styles.bannerTeam}>
-              {selectedMatch.home_team?.logo_url ? (
-                <Image
-                  source={{ uri: selectedMatch.home_team.logo_url }}
-                  style={styles.bannerTeamLogo}
-                />
-              ) : (
-                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
-              )}
-              <AppText style={styles.bannerTeamName} numberOfLines={1}>
-                {selectedMatch.home_team?.name || 'Local'}
-              </AppText>
-            </View>
-            <AppText style={styles.bannerVs}>vs</AppText>
-            <View style={styles.bannerTeam}>
-              {selectedMatch.away_team?.logo_url ? (
-                <Image
-                  source={{ uri: selectedMatch.away_team.logo_url }}
-                  style={styles.bannerTeamLogo}
-                />
-              ) : (
-                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
-              )}
-              <AppText style={styles.bannerTeamName} numberOfLines={1}>
-                {selectedMatch.away_team?.name || 'Visitante'}
-              </AppText>
-            </View>
-          </View>
-          <TouchableOpacity
-            onPress={() => setSelectedMatch(null)}
-            style={styles.bannerCloseButton}
-          >
-            <Ionicons name="close" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
       )}
 
       {/* Turn-by-Turn Navigation Instructions - Top (Only when navigation started) */}
@@ -1121,6 +1089,47 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
         </View>
       )}
       
+      {/* Active Match Filter Banner - Bottom (above nav) */}
+      {selectedMatch && !isSearchExpanded && !showBarCard && !isNavigating && (
+        <View style={styles.activeMatchBanner}>
+          <View style={styles.bannerTeamsRow}>
+            <View style={styles.bannerTeam}>
+              {selectedMatch.home_team?.logo_url ? (
+                <Image
+                  source={{ uri: selectedMatch.home_team.logo_url }}
+                  style={styles.bannerTeamLogo}
+                />
+              ) : (
+                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
+              )}
+              <AppText style={styles.bannerTeamName} numberOfLines={1}>
+                {selectedMatch.home_team?.name || 'Local'}
+              </AppText>
+            </View>
+            <AppText style={styles.bannerVs}>vs</AppText>
+            <View style={styles.bannerTeam}>
+              {selectedMatch.away_team?.logo_url ? (
+                <Image
+                  source={{ uri: selectedMatch.away_team.logo_url }}
+                  style={styles.bannerTeamLogo}
+                />
+              ) : (
+                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
+              )}
+              <AppText style={styles.bannerTeamName} numberOfLines={1}>
+                {selectedMatch.away_team?.name || 'Visitante'}
+              </AppText>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => setSelectedMatch(null)}
+            style={styles.bannerCloseButton}
+          >
+            <Ionicons name="close" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Bar Info Card */}
       <BarInfoCard
         bar={selectedBar}
@@ -1273,13 +1282,13 @@ const styles = StyleSheet.create({
   },
   activeMatchBanner: {
     position: 'absolute',
-    top: 160,
-    left: '5%',
-    right: '5%',
-    backgroundColor: 'rgba(25, 118, 210, 0.6)',
+    bottom: 120,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(25, 118, 210, 0.85)',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     flexDirection: 'column',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1287,9 +1296,9 @@ const styles = StyleSheet.create({
       width: 0,
       height: 3,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 6,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
     zIndex: 100,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -1335,7 +1344,6 @@ const styles = StyleSheet.create({
   },
   centerButton: {
     position: 'absolute',
-    bottom: 120,
     right: 20,
     backgroundColor: 'rgba(26,35,50,0.92)',
     borderRadius: 22,
