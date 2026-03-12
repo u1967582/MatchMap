@@ -10,10 +10,13 @@ import { toast } from '~/components/ds';
 type Competition = { id: number | string; name: string; gender?: string | null };
 type Team = { id: string; name: string; short_name?: string | null; logo_url?: string | null };
 
-// Helper function to get competition logo filename based on competition name
+// Clau per identificar un equip dins una competició: "teamId|competitionId"
+function teamKey(teamId: string, compId: string | number): string {
+	return `${teamId}|${String(compId)}`;
+}
+
 function getCompetitionLogoFilename(compName: string): string | null {
 	const nameLower = compName.toLowerCase();
-
 	if (nameLower.includes('champions') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer'))) return 'champions_femen.png';
 	if (nameLower.includes('champions')) return 'champions.png';
 	if (nameLower.includes('copa del rey')) return 'copa-del-rey.png';
@@ -21,7 +24,6 @@ function getCompetitionLogoFilename(compName: string): string | null {
 	if (nameLower.includes('liga f') || (nameLower.includes('primera') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))) return 'ligaf.png';
 	if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) return 'primera-division-ea.png';
 	if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) return 'segunda-division-hypermotion.png';
-
 	return null;
 }
 
@@ -34,89 +36,81 @@ export default function AutoBroadcastsScreen() {
 	const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 	const [teamsCache, setTeamsCache] = useState<Record<string, { loading: boolean; teams: Team[]; error?: string }>>({});
 	const [selectedCompetitions, setSelectedCompetitions] = useState<Record<string, boolean>>({});
+	// Cada entrada és "teamId|competitionId" — l'equip queda lligat a la competició on es va seleccionar
 	const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
 	const [origComps, setOrigComps] = useState<string[]>([]);
 	const [origTeams, setOrigTeams] = useState<string[]>([]);
 	const [saving, setSaving] = useState(false);
+	const [clearingAll, setClearingAll] = useState(false);
 	const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-	const selectedSummary = (() => {
-		const comps = Object.values(selectedCompetitions).filter(Boolean).length;
-		const teams = selectedTeams.size;
-		return { comps, teams, total: comps + teams };
-	})();
-	const hasSelection = selectedSummary.total > 0;
 
-	const dirty = React.useMemo(() => {
-		const currentComps = Object.entries(selectedCompetitions).filter(([, v]) => v).map(([k]) => String(k)).sort().join(',');
-		const origCompsStr = [...origComps].sort().join(',');
-		const currentTeams = [...selectedTeams].sort().join(',');
-		const origTeamsStr = [...origTeams].sort().join(',');
-		return currentComps !== origCompsStr || currentTeams !== origTeamsStr;
-	}, [selectedCompetitions, selectedTeams, origComps, origTeams]);
+	const hasAutomation = origComps.length > 0 || origTeams.length > 0;
+	const hasSelection = Object.values(selectedCompetitions).some(Boolean) || selectedTeams.size > 0;
 
-	const persistSelections = useCallback(async () => {
-		if (!barId) return;
-		const bar = String(barId);
-		try {
-			console.log('[AutoBroadcasts] Persist start', { bar, selectedCompetitions, selectedTeams: Array.from(selectedTeams) });
-			// Build payloads
-			const compIds = Object.entries(selectedCompetitions)
-				.filter(([, checked]) => checked)
-				.map(([id]) => ({ bar_id: bar, competition_id: /^\d+$/.test(id) ? Number(id) : id }));
+	// --------------------------------------------------------
+	// Eliminar totes les automatitzacions
+	// --------------------------------------------------------
+	const handleClearAll = useCallback(() => {
+		Alert.alert(
+			'Eliminar automatizaciones',
+			'Se borrarán todos los partidos automatizados y las preferencias guardadas.\n\nLos partidos añadidos manualmente no se verán afectados.',
+			[
+				{ text: 'Cancelar', style: 'cancel' },
+				{
+					text: 'Eliminar todo',
+					style: 'destructive',
+					onPress: async () => {
+						if (!barId) return;
+						try {
+							setClearingAll(true);
+							const bar = String(barId);
+							const { error: eventsError } = await supabase
+								.from('events')
+								.delete()
+								.eq('bar_id', bar)
+								.eq('is_auto', true);
+							if (eventsError) throw eventsError;
+							await Promise.all([
+								supabase.from('bar_selected_competitions').delete().eq('bar_id', bar),
+								supabase.from('bar_selected_teams').delete().eq('bar_id', bar),
+							]);
+							setSelectedCompetitions({});
+							setSelectedTeams(new Set());
+							setOrigComps([]);
+							setOrigTeams([]);
+							toast.success('Automatizaciones eliminadas');
+						} catch (e: any) {
+							console.error('[AutoBroadcasts] Clear all error:', e);
+							toast.error('No se pudieron eliminar las automatizaciones');
+						} finally {
+							setClearingAll(false);
+						}
+					},
+				},
+			]
+		);
+	}, [barId]);
 
-			const teamIds: { bar_id: string; team_id: string }[] = Array.from(selectedTeams).map(tid => ({ bar_id: bar, team_id: tid }));
-			console.log('[AutoBroadcasts] Payloads', { compIdsLen: compIds.length, teamIdsLen: teamIds.length });
-
-			// Competitions insert with fallback plural/singular
-			if (compIds.length > 0) {
-				const trySing = await supabase.from('bar_selected_competition').insert(compIds).select();
-				if (trySing.error) {
-					console.log('[AutoBroadcasts] competitions singular failed', trySing.error);
-					const tryPlural = await supabase.from('bar_selected_competitions').insert(compIds).select();
-					console.log('[AutoBroadcasts] competitions plural result', { count: tryPlural.data?.length, error: tryPlural.error });
-					if (tryPlural.error) throw tryPlural.error;
-				} else {
-					console.log('[AutoBroadcasts] competitions singular result', { count: trySing.data?.length });
-				}
-			}
-			if (teamIds.length > 0) {
-				const resTeams = await supabase.from('bar_selected_teams').insert(teamIds).select();
-				console.log('[AutoBroadcasts] teams insert result', { count: resTeams.data?.length, error: resTeams.error });
-				if (resTeams.error) {
-					const resTeamsSing = await supabase.from('bar_selected_team').insert(teamIds).select();
-					console.log('[AutoBroadcasts] teams singular insert result', { count: resTeamsSing.data?.length, error: resTeamsSing.error });
-					if (resTeamsSing.error) throw resTeamsSing.error;
-				}
-			}
-
-				// Volver al perfil con toast de éxito
-			toast.success('Automatización activada');
-			router.back();
-		} catch (e: any) {
-			console.error('Persist selections error:', e);
-			toast.error('No se pudieron guardar las selecciones');
-		}
-	}, [barId, selectedCompetitions, selectedTeams]);
-
-	// Check if user is super admin
+	// --------------------------------------------------------
+	// Check super admin
+	// --------------------------------------------------------
 	useEffect(() => {
 		const checkSuperAdmin = async () => {
 			const { data: { user } } = await supabase.auth.getUser();
 			if (!user) return;
-
 			const { data, error } = await supabase
 				.from('users')
 				.select('is_super_user')
 				.eq('id', user.id)
 				.single();
-
-			if (!error && data) {
-				setIsSuperAdmin(!!data.is_super_user);
-			}
+			if (!error && data) setIsSuperAdmin(!!data.is_super_user);
 		};
 		checkSuperAdmin();
 	}, []);
 
+	// --------------------------------------------------------
+	// Carregar competicions i seleccions existents
+	// --------------------------------------------------------
 	useEffect(() => {
 		const loadCompetitions = async () => {
 			setLoadingComps(true);
@@ -127,21 +121,32 @@ export default function AutoBroadcastsScreen() {
 					.order('name', { ascending: true });
 				if (error) throw error;
 				setCompetitions((data ?? []).map(c => ({ id: c.id, name: c.name, gender: (c as any).gender })));
-				// Cargar selecciones existentes
+
 				if (barId) {
 					const bar = String(barId);
 					const [compSel, teamSel] = await Promise.all([
 						supabase.from('bar_selected_competitions').select('competition_id').eq('bar_id', bar),
-						supabase.from('bar_selected_teams').select('team_id').eq('bar_id', bar),
+						// Ara seleccionem també competition_id de cada equip
+						supabase.from('bar_selected_teams').select('team_id,competition_id').eq('bar_id', bar),
 					]);
+
 					const compMap: Record<string, boolean> = {};
 					const compArr: string[] = [];
-					compSel.data?.forEach((row: any) => { const id = String(row.competition_id); compMap[id] = true; compArr.push(id); });
+					compSel.data?.forEach((row: any) => {
+						const id = String(row.competition_id);
+						compMap[id] = true;
+						compArr.push(id);
+					});
 					setSelectedCompetitions(compMap);
 					setOrigComps(compArr);
+
 					const teamSet = new Set<string>();
 					const teamArr: string[] = [];
-					teamSel.data?.forEach((row: any) => { const id = String(row.team_id); teamSet.add(id); teamArr.push(id); });
+					teamSel.data?.forEach((row: any) => {
+						const key = teamKey(row.team_id, row.competition_id);
+						teamSet.add(key);
+						teamArr.push(key);
+					});
 					setSelectedTeams(teamSet);
 					setOrigTeams(teamArr);
 				}
@@ -154,11 +159,13 @@ export default function AutoBroadcastsScreen() {
 		loadCompetitions();
 	}, []);
 
+	// --------------------------------------------------------
+	// Expandir competició i carregar equips
+	// --------------------------------------------------------
 	const toggleExpand = useCallback(async (compId: string | number) => {
 		const key = String(compId);
 		setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
 		if (!teamsCache[key]) {
-			// load teams participating in this competition from matches → teams
 			setTeamsCache(prev => ({ ...prev, [key]: { loading: true, teams: [] } }));
 			try {
 				const { data: matchRows, error: matchesError } = await supabase
@@ -186,39 +193,46 @@ export default function AutoBroadcastsScreen() {
 	}, [teamsCache]);
 
 	const toggleCompetitionSelected = useCallback((compId: string | number) => {
-		const key = String(compId);
-		setSelectedCompetitions(prev => ({ ...prev, [key]: !prev[key] }));
+		setSelectedCompetitions(prev => ({ ...prev, [String(compId)]: !prev[String(compId)] }));
 	}, []);
 
-	const toggleTeamSelected = useCallback((_compId: string | number, teamId: string) => {
+	// L'equip queda lligat a la competició on s'ha seleccionat
+	const toggleTeamSelected = useCallback((compId: string | number, teamId: string) => {
+		const key = teamKey(teamId, compId);
 		setSelectedTeams(prev => {
 			const updated = new Set(prev);
-			if (updated.has(teamId)) updated.delete(teamId); else updated.add(teamId);
+			if (updated.has(key)) updated.delete(key); else updated.add(key);
 			return updated;
 		});
 	}, []);
 
+	// --------------------------------------------------------
+	// Guardar preferències
+	// --------------------------------------------------------
 	const onSave = useCallback(async () => {
 		if (!barId) return;
 		try {
 			setSaving(true);
 			const bar = String(barId);
 
-			// For super admin, always use strings (UUIDs)
-			// For regular users, keep the original logic that converts to numbers if needed
-			const competition_ids = isSuperAdmin
-				? Object.entries(selectedCompetitions).filter(([, v]) => v).map(([k]) => k)
-				: Object.entries(selectedCompetitions).filter(([, v]) => v).map(([k]) => (/^\d+$/.test(k) ? Number(k) : k));
-			const team_ids = Array.from(selectedTeams);
+			const competition_ids = Object.entries(selectedCompetitions).filter(([, v]) => v).map(([k]) => k);
 
-			// Use admin RPC if super admin, otherwise use regular RPC
+			// Descompondre les claus "teamId|competitionId" en dos arrays paral·lels
+			const teamPairs = Array.from(selectedTeams).map(key => {
+				const [tid, cid] = key.split('|');
+				return { team_id: tid, competition_id: cid };
+			});
+			const team_ids             = teamPairs.map(p => p.team_id);
+			const team_competition_ids = teamPairs.map(p => p.competition_id);
+
 			const rpcFunction = isSuperAdmin ? 'fn_sync_bar_preferences_admin' : 'fn_sync_bar_preferences';
-			console.log(`[AutoBroadcasts] Using RPC: ${rpcFunction}`, { isSuperAdmin, bar, competition_ids, team_ids });
+			console.log(`[AutoBroadcasts] Using RPC: ${rpcFunction}`, { bar, competition_ids, team_ids, team_competition_ids });
 
 			const { error } = await supabase.rpc(rpcFunction, {
-				_bar_id: bar,
-				_competition_ids: competition_ids,
-				_team_ids: team_ids,
+				_bar_id:               bar,
+				_competition_ids:      competition_ids,
+				_team_ids:             team_ids,
+				_team_competition_ids: team_competition_ids,
 			});
 
 			if (error) {
@@ -226,9 +240,8 @@ export default function AutoBroadcastsScreen() {
 				throw error;
 			}
 
-			setOrigComps(competition_ids.map(String));
-			setOrigTeams(team_ids.map(String));
-			// Volver al perfil del bar tras guardar con toast de éxito
+			setOrigComps(competition_ids);
+			setOrigTeams(Array.from(selectedTeams));
 			toast.success('Automatización activada');
 			router.back();
 		} catch (e: any) {
@@ -239,13 +252,15 @@ export default function AutoBroadcastsScreen() {
 		}
 	}, [barId, selectedCompetitions, selectedTeams, isSuperAdmin]);
 
+	// --------------------------------------------------------
+	// Render
+	// --------------------------------------------------------
 	const renderCompetition = ({ item }: { item: Competition }) => {
 		const key = String(item.id);
 		const isOpen = !!expanded[key];
 		const cache = teamsCache[key];
 		const compChecked = !!selectedCompetitions[key];
 
-		// Exactamente igual que logo_teams
 		const logoFilename = getCompetitionLogoFilename(item.name) || 'default.png';
 		const compLogo = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo-teams/${logoFilename}`;
 
@@ -278,7 +293,8 @@ export default function AutoBroadcastsScreen() {
 								scrollEnabled={false}
 								renderItem={({ item: team }) => {
 									const logo = team.logo_url || `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${team.id}.png`;
-									const isChecked = selectedTeams.has(team.id);
+									// El checkbox verifica la clau "teamId|competitionId"
+									const isChecked = selectedTeams.has(teamKey(team.id, item.id));
 									return (
 										<View style={styles.teamRow}>
 											<Image source={{ uri: logo }} style={styles.teamLogo} defaultSource={require('~/assets/icon.png')} />
@@ -304,7 +320,16 @@ export default function AutoBroadcastsScreen() {
 					<Ionicons name="arrow-back" size={24} color="#FFFFFF" />
 				</TouchableOpacity>
 				<AppText style={styles.headerTitle}>Automatizar retransmisiones</AppText>
-				<View style={{ width: 40 }} />
+				{hasAutomation ? (
+					<TouchableOpacity onPress={handleClearAll} disabled={clearingAll} style={styles.clearButton}>
+						{clearingAll
+							? <ActivityIndicator size="small" color="#FFFFFF" />
+							: <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+						}
+					</TouchableOpacity>
+				) : (
+					<View style={{ width: 40 }} />
+				)}
 			</View>
 
 			{loadingComps ? (
@@ -346,6 +371,7 @@ const styles = StyleSheet.create({
 		borderBottomColor: '#1E3A5F',
 	},
 	backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#0F2A45', justifyContent: 'center', alignItems: 'center' },
+	clearButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#C0392B', justifyContent: 'center', alignItems: 'center' },
 	headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
 	loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 	compCard: { backgroundColor: '#15263A', borderRadius: 12, padding: 12, marginBottom: 12 },
@@ -376,14 +402,6 @@ const styles = StyleSheet.create({
 		borderRadius: 10,
 		gap: 10,
 	},
-	primaryButtonDisabled: {
-		backgroundColor: '#8E8E93',
-	},
-	primaryButtonText: {
-		color: '#FFFFFF',
-		fontSize: 15,
-		fontWeight: '600',
-	},
+	primaryButtonDisabled: { backgroundColor: '#8E8E93' },
+	primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
 });
-
-

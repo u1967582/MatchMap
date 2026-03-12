@@ -10,7 +10,7 @@ import BottomTabBar from '~/components/ui/BottomTabBar';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
 import { useBarBoost } from '~/hooks/useBoostBars';
-import { AppText, colors, spacing, radius, BarProfileSkeleton } from '~/components/ds';
+import { AppText, colors, spacing, radius, BarProfileSkeleton, toast } from '~/components/ds';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 // Plans removed: all bars are PRO
 
@@ -1350,17 +1350,17 @@ export default function BarProfileScreen() {
 
               if (error) {
                 console.error('Error deleting match:', error);
-                Alert.alert('Error', 'No se pudo eliminar el partido');
+                toast.error('No se pudo eliminar el partido');
                 return;
               }
 
               // Refresh upcoming matches
               await fetchUpcomingMatches(barId);
-              
-              Alert.alert('Éxito', 'Partido eliminado correctamente');
+
+              toast.success('Partido eliminado');
             } catch (error) {
               console.error('Error in handleDeleteMatch:', error);
-              Alert.alert('Error', 'Ocurrió un error al eliminar el partido');
+              toast.error('No se pudo eliminar el partido');
             }
           },
         },
