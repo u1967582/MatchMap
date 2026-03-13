@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,33 +16,29 @@ const PLANS: Array<{
   key: PlanKey;
   title: string;
   price: number; // euros
-  productId: string;
   durationLabel: string;
   amortizationText: string;
   isPopular?: boolean;
 }> = [
-  { 
-    key: '7d', 
-    title: 'Boost Semanal', 
-    price: 19.99, 
-    productId: 'prod_TJUB61j3RAbErD', 
+  {
+    key: '7d',
+    title: 'Boost Semanal',
+    price: 19.99,
     durationLabel: '7 días',
-    amortizationText: 'Se amortiza con solo 2 clientes nuevos' 
+    amortizationText: 'Se amortiza con solo 2 clientes nuevos'
   },
-  { 
-    key: '1m', 
-    title: 'Boost Mensual', 
-    price: 59.99, 
-    productId: 'prod_TJUCGsS0s0E8Ot', 
+  {
+    key: '1m',
+    title: 'Boost Mensual',
+    price: 59.99,
     durationLabel: '1 mes',
     amortizationText: 'Se amortiza con solo 5 clientes nuevos',
     isPopular: true
   },
-  { 
-    key: '1y', 
-    title: 'Boost de Temporada', 
-    price: 399.99, 
-    productId: 'prod_TJUCkXwWUBpGwD', 
+  {
+    key: '1y',
+    title: 'Boost de Temporada',
+    price: 399.99,
     durationLabel: '1 año',
     amortizationText: 'La opción de más valor (~44€/mes)'
   },
@@ -51,7 +47,6 @@ const PLANS: Array<{
 const BoostScreen: React.FC = () => {
   const { barId } = useLocalSearchParams<{ barId: string }>();
   const router = useRouter();
-  const [loadingKey, setLoadingKey] = useState<PlanKey | null>(null);
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [customerCenterVisible, setCustomerCenterVisible] = useState(false);
   const { hasActiveBoost, refreshCustomerInfo } = useRevenueCat();
@@ -68,6 +63,7 @@ const BoostScreen: React.FC = () => {
       return;
     }
 
+    console.log('[BoostScreen] Obrint Paywall, barId:', barId, 'pla:', plan);
     // Open RevenueCat paywall
     toast.info('Redirigiendo al pago…');
     setPaywallVisible(true);
@@ -119,13 +115,11 @@ const BoostScreen: React.FC = () => {
             iconName={p.key === '7d' ? 'flash' : p.key === '1m' ? 'trending-up' : 'sparkles'}
             title={p.title}
             price={`${p.price} €`}
-            productId={p.productId}
             durationLabel={p.durationLabel}
             amortizationText={p.amortizationText}
             isPopular={p.isPopular}
             discountBadge={p.key === '7d' ? undefined : discounts[p.key as '1m'|'1y']}
             onPay={() => onPay(p.key)}
-            footer={loadingKey === p.key ? <ActivityIndicator color="#FFFFFF" /> : undefined}
           />
         ))}
         <View style={styles.benefits}>
@@ -171,7 +165,11 @@ const BoostScreen: React.FC = () => {
 
       <Paywall
         visible={paywallVisible}
-        onClose={() => setPaywallVisible(false)}
+        barId={barId}
+        onClose={() => {
+          console.log('[BoostScreen] Paywall tancat');
+          setPaywallVisible(false);
+        }}
         onPurchaseComplete={handlePurchaseComplete}
       />
 

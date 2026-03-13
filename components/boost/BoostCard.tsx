@@ -7,7 +7,6 @@ import Gradient from '~/components/ui/Gradient';
 export interface BoostCardProps {
   title: string;
   price: string;
-  productId: string;
   durationLabel: string;
   amortizationText: string;
   isPopular?: boolean;
