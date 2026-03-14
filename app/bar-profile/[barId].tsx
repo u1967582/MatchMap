@@ -1897,11 +1897,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   matchesContainer: {
-    paddingHorizontal: 20,
     paddingVertical: 4,
     backgroundColor: 'transparent',
     borderRadius: 12,
-    marginHorizontal: 20,
     marginBottom: 8,
   },
   barActionButton: {
