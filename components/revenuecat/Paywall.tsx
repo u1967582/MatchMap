@@ -94,7 +94,7 @@ export default function Paywall({
 
     try {
       setPurchasing(true);
-      await RevenueCatService.purchasePackage(selectedPackage);
+      const { transaction } = await RevenueCatService.purchasePackage(selectedPackage);
 
       // Registrar boost en Supabase si tenemos barId
       if (barId) {
@@ -116,6 +116,7 @@ export default function Paywall({
               status: 'active',
               amount_cents: amountCents,
               currency,
+              revenuecat_transaction_id: transaction?.transactionIdentifier ?? null,
             });
 
           if (insertError) {
