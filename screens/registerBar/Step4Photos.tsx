@@ -12,9 +12,7 @@ import * as FileSystem from 'expo-file-system';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DraggableImageGrid } from '~/components/images';
 import type { DraggableImage } from '~/components/images';
-// Stripe helpers no longer used
 import { useFocusEffect } from '@react-navigation/native';
-// Plan capabilities removed; use fixed limits
 import { createAutoPreRegisterBar } from '~/services/bars';
 
 interface ImageItem {

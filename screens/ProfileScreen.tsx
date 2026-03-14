@@ -216,19 +216,6 @@ export default function ProfileScreen() {
     router.push('/support' as any);
   }, [router]);
 
-  const handleViewPlans = useCallback(() => {
-    // Si el usuario tiene bar, pasar barId para suscripción enlazada
-    if (userBars.length > 0) {
-      router.push({ 
-        pathname: '/subscription-plans', 
-        params: { barId: userBars[0].id } 
-      });
-    } else {
-      // Si no tiene bar, ir a la pantalla de planes sin barId
-      router.push('/subscription-plans');
-    }
-  }, [router, userBars]);
-
   const handleAddBar = useCallback(() => {
     router.push('/register-bar/step1' as any);
   }, [router]);

@@ -99,11 +99,11 @@ export async function getOfferings(): Promise<PurchasesOffering | null> {
  */
 export async function purchasePackage(
   packageToPurchase: PurchasesPackage
-): Promise<{ customerInfo: CustomerInfo; success: boolean }> {
+): Promise<{ customerInfo: CustomerInfo; transaction: any; success: boolean }> {
   try {
-    const { customerInfo } = await Purchases.purchasePackage(packageToPurchase);
+    const { customerInfo, transaction } = await Purchases.purchasePackage(packageToPurchase);
     console.log('✅ Purchase successful:', customerInfo);
-    return { customerInfo, success: true };
+    return { customerInfo, transaction, success: true };
   } catch (error: any) {
     if (error.userCancelled) {
       console.log('ℹ️ User cancelled purchase');
