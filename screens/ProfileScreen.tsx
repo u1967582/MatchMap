@@ -495,6 +495,25 @@ export default function ProfileScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/admin-gift-boost' as any)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.adminButtonIcon, styles.adminButtonIconBoost]}>
+                  <Ionicons name="flash-outline" size={24} color={colors.status.boost} />
+                </View>
+                <View style={styles.adminButtonContent}>
+                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                    Regalar Boost
+                  </AppText>
+                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                    Activar boost de visibilidad en el mapa para cualquier bar
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -891,6 +910,9 @@ const styles = StyleSheet.create({
   },
   adminButtonIconPurple: {
     backgroundColor: 'rgba(88, 86, 214, 0.15)',
+  },
+  adminButtonIconBoost: {
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
   },
   adminButtonContent: {
     flex: 1,
