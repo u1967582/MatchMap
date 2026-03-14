@@ -491,17 +491,18 @@ const styles = StyleSheet.create({
   },
   teamsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minHeight: 80,
   },
   teamContainer: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   teamLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
     marginBottom: 6,
     resizeMode: 'contain',
   },
@@ -521,6 +522,7 @@ const styles = StyleSheet.create({
   },
   matchDetails: {
     alignItems: 'center',
+    marginTop: 2,
   },
   matchTime: {
     color: '#4CAF50',
