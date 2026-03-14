@@ -1092,6 +1092,14 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
       {/* Active Match Filter Banner - Bottom (above nav) */}
       {selectedMatch && !isSearchExpanded && !showBarCard && !isNavigating && (
         <View style={styles.activeMatchBanner}>
+          {/* Competition header */}
+          {selectedMatch.competition?.name && (
+            <AppText style={styles.bannerCompetition} numberOfLines={1}>
+              {selectedMatch.competition.name}
+            </AppText>
+          )}
+
+          {/* Teams row */}
           <View style={styles.bannerTeamsRow}>
             <View style={styles.bannerTeam}>
               {selectedMatch.home_team?.logo_url ? (
@@ -1100,13 +1108,22 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                   style={styles.bannerTeamLogo}
                 />
               ) : (
-                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
+                <Ionicons name="shield-outline" size={20} color="#FFFFFF" />
               )}
-              <AppText style={styles.bannerTeamName} numberOfLines={1}>
+              <AppText style={styles.bannerTeamName} numberOfLines={2}>
                 {selectedMatch.home_team?.name || 'Local'}
               </AppText>
             </View>
-            <AppText style={styles.bannerVs}>vs</AppText>
+
+            <View style={styles.bannerVsContainer}>
+              <AppText style={styles.bannerVs}>VS</AppText>
+              {selectedMatch.time && (
+                <AppText style={styles.bannerTime}>
+                  {selectedMatch.time.slice(0, 5)}
+                </AppText>
+              )}
+            </View>
+
             <View style={styles.bannerTeam}>
               {selectedMatch.away_team?.logo_url ? (
                 <Image
@@ -1114,13 +1131,14 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                   style={styles.bannerTeamLogo}
                 />
               ) : (
-                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
+                <Ionicons name="shield-outline" size={20} color="#FFFFFF" />
               )}
-              <AppText style={styles.bannerTeamName} numberOfLines={1}>
+              <AppText style={styles.bannerTeamName} numberOfLines={2}>
                 {selectedMatch.away_team?.name || 'Visitante'}
               </AppText>
             </View>
           </View>
+
           <TouchableOpacity
             onPress={() => setSelectedMatch(null)}
             style={styles.bannerCloseButton}
@@ -1287,8 +1305,8 @@ const styles = StyleSheet.create({
     right: 16,
     backgroundColor: 'rgba(25, 118, 210, 0.85)',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
     flexDirection: 'column',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1303,36 +1321,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
+  bannerCompetition: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 8,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   bannerTeamsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    gap: 12,
+    gap: 4,
   },
   bannerTeam: {
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 6,
+    gap: 1,
   },
   bannerTeamLogo: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 7,
     resizeMode: 'contain',
   },
   bannerTeamName: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '600',
     textAlign: 'center',
   },
+  bannerVsContainer: {
+    alignItems: 'center',
+    gap: 1,
+    paddingHorizontal: 4,
+  },
   bannerVs: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
-    fontWeight: '600',
-    paddingHorizontal: 8,
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  bannerTime: {
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 11,
+    fontWeight: '700',
   },
   bannerCloseButton: {
     position: 'absolute',
