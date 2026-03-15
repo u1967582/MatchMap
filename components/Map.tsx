@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import SearchBarWithResults, { SearchBarRef } from '~/components/SearchBarWithResults';
 import BarInfoCard from '~/components/BarInfoCard';
+import BoostedBarsPopup from '~/components/BoostedBarsPopup';
 import BarMapMarker from '~/components/BarMapMarker';
 import FilterModal from '~/components/ui/FilterModal';
 import MatchPickerModal, { type Match } from '~/components/ui/MatchPickerModal';
@@ -81,6 +82,9 @@ interface MapProps {
   initialSelectedBarName?: string;
 }
 
+// Module-level flag: persists while the JS bundle is loaded (i.e., the whole app session)
+let boostedPopupShownThisSession = false;
+
 const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoords, initialSelectedBarName }) => {
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
@@ -112,6 +116,9 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // Search bar expanded state
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   
+  // Boosted bars popup state — only show once per app session
+  const [showBoostedPopup, setShowBoostedPopup] = React.useState(!boostedPopupShownThisSession);
+
   // Navigation states
   const [isNavigating, setIsNavigating] = React.useState(false);
   const [navigationStarted, setNavigationStarted] = React.useState(false); // New: started full navigation mode
@@ -1117,6 +1124,15 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Boosted Bars Popup */}
+      <BoostedBarsPopup
+        visible={showBoostedPopup}
+        onClose={() => {
+          boostedPopupShownThisSession = true;
+          setShowBoostedPopup(false);
+        }}
+      />
 
       {/* Bar Info Card */}
       <BarInfoCard
