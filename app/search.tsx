@@ -9,6 +9,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
@@ -495,11 +496,8 @@ export default function SearchScreen() {
       });
     };
 
-    return (
-      <AppCard
-        style={isBoosted ? styles.barCardBoosted : undefined}
-        onPress={() => handleBarPress(item.id)}
-      >
+    const cardInner = (
+      <>
         <View style={styles.imageContainer}>
           {item.image_url ? (
             <Image
@@ -515,17 +513,12 @@ export default function SearchScreen() {
             </View>
           )}
 
-          {/* Top Sticker for Boosted Bars */}
-          {isBoosted && (
-            <View style={styles.topSticker}>
-              <Ionicons name="flash" size={14} color={colors.status.boost} />
-              <AppText variant="caption" color={colors.status.boost} style={styles.topStickerText}>DESTACADO</AppText>
-            </View>
-          )}
-
-          {/* Favorites Button */}
+          {/* Favorites Button — top-left for boosted, top-right for normal */}
           <TouchableOpacity
-            style={[styles.favoritesButton, isFavorite(item.id) && styles.favoritesButtonActive]}
+            style={[
+              isBoosted ? styles.favoritesButtonLeft : styles.favoritesButton,
+              isFavorite(item.id) && styles.favoritesButtonActive,
+            ]}
             onPress={handleFavoriteToggle}
           >
             <Ionicons
@@ -581,6 +574,47 @@ export default function SearchScreen() {
             <AppText variant="label" color={colors.brand.link}>Ver en el Mapa</AppText>
           </TouchableOpacity>
         </View>
+      </>
+    );
+
+    if (isBoosted) {
+      return (
+        <TouchableOpacity
+          style={styles.boostCardInner}
+          onPress={() => handleBarPress(item.id)}
+          activeOpacity={0.92}
+        >
+          {/* Amber top line */}
+          <LinearGradient
+            colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.boostLineTop}
+          />
+          {/* Amber left line */}
+          <LinearGradient
+            colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.boostLineLeft}
+          />
+          {cardInner}
+          {/* TOP BAR Sticker — posición absoluta dentro de la card */}
+          <View style={styles.topBarSticker}>
+            <View style={styles.topBarStickerBorder} />
+            <View style={styles.topBarStickerContent}>
+              <AppText style={styles.topBarStickerTop}>TOP</AppText>
+              <AppText style={styles.topBarStickerBar}>BAR</AppText>
+              <AppText style={styles.topBarStickerStars}>★ ★ ★</AppText>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <AppCard onPress={() => handleBarPress(item.id)}>
+        {cardInner}
       </AppCard>
     );
 
@@ -896,14 +930,98 @@ const styles = StyleSheet.create({
   barsList: {
     paddingBottom: Platform.OS === 'ios' ? 100 : 80,
   },
-  barCardBoosted: {
-    borderWidth: 2,
-    borderColor: colors.status.boost,
-    shadowColor: colors.status.boost,
+  // Boosted card — mismo aspecto que AppCard, sticker dentro con position absolute
+  boostCardInner: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.bg.card,
+    marginBottom: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  // Amber top decorative line
+  boostLineTop: {
+    position: 'absolute',
+    top: 0,
+    left: 14,
+    right: 14,
+    height: 2,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+    zIndex: 4,
+  },
+  // Amber left decorative line
+  boostLineLeft: {
+    position: 'absolute',
+    top: 14,
+    bottom: 14,
+    left: 0,
+    width: 2.5,
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+    zIndex: 4,
+  },
+  // TOP BAR sticker — sello circular dentro de la card
+  topBarSticker: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 20,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#080d16',
+    borderWidth: 2.5,
+    borderColor: '#f0c030',
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ rotate: '8deg' }],
+    shadowColor: '#f0c030',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 14,
+  },
+  topBarStickerBorder: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(240,192,48,0.5)',
+  },
+  topBarStickerContent: {
+    alignItems: 'center',
+    gap: 1,
+  },
+  topBarStickerTop: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#f0c030',
+    textTransform: 'uppercase',
+    lineHeight: 14,
+    letterSpacing: 1.5,
+  },
+  topBarStickerBar: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#f0c030',
+    textTransform: 'uppercase',
+    lineHeight: 14,
+    letterSpacing: 1.5,
+  },
+  topBarStickerStars: {
+    fontSize: 7,
+    color: '#f0c030',
+    letterSpacing: 3,
+    lineHeight: 10,
+    marginTop: 2,
   },
   imageContainer: {
     position: 'relative',
@@ -923,34 +1041,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  topSticker: {
-    position: 'absolute',
-    top: spacing.lg - 6,
-    left: spacing.lg - 6,
-    backgroundColor: 'rgba(26, 35, 50, 0.95)',
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.status.boost,
-    shadowColor: colors.status.boost,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 2,
-  },
-  topStickerText: {
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
   favoritesButton: {
     position: 'absolute',
     top: spacing.lg - 6,
     right: spacing.lg - 6,
+    backgroundColor: colors.overlay.dark,
+    borderRadius: radius.round,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  favoritesButtonLeft: {
+    position: 'absolute',
+    top: spacing.lg - 6,
+    left: spacing.lg - 6,
     backgroundColor: colors.overlay.dark,
     borderRadius: radius.round,
     width: 30,
