@@ -29,7 +29,7 @@ const C = {
   closeBtnBorder: 'rgba(255,255,255,0.07)',
   separator: 'rgba(255,255,255,0.12)',
   dotInactive: 'rgba(255,255,255,0.08)',
-  dotActive: '#2563eb',
+  dotActive: '#1976D2',
 };
 
 interface BoostedBarsPopupProps {
@@ -109,7 +109,7 @@ export default function BoostedBarsPopup({ visible, onClose, bars, isLoading: lo
           <>
             <Image source={{ uri: item.image_url }} style={styles.barImage} />
             <LinearGradient
-              colors={['rgba(29,78,216,0.18)', 'rgba(29,78,216,0.06)', 'transparent']}
+              colors={['rgba(25,118,210,0.22)', 'rgba(25,118,210,0.08)', 'transparent']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
@@ -165,7 +165,7 @@ export default function BoostedBarsPopup({ visible, onClose, bars, isLoading: lo
       >
         {/* Gradient de fondo del card — siempre visible */}
         <LinearGradient
-          colors={['rgba(29,78,216,0.12)', C.bg, C.bg]}
+          colors={['rgba(25,118,210,0.18)', C.bg, C.bg]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0.6 }}
           style={StyleSheet.absoluteFill}
