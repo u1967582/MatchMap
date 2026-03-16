@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
 import { AppText, colors, spacing, radius } from '~/components/ds';
-import { supabase } from '~/utils/supabase';
+import type { BoostBar } from '~/hooks/useBoostBars';
 
 const C = {
   bg: '#0e1219',
@@ -32,94 +32,20 @@ const C = {
   dotActive: '#2563eb',
 };
 
-interface BoostedBar {
-  id: string;
-  name: string;
-  image_url?: string;
-  rating?: number;
-  review_count?: number;
-}
-
 interface BoostedBarsPopupProps {
   visible: boolean;
   onClose: () => void;
+  bars: BoostBar[];
+  isLoading?: boolean;
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_WIDTH = SCREEN_WIDTH * 0.85;
 
-export default function BoostedBarsPopup({ visible, onClose }: BoostedBarsPopupProps) {
-  const [bars, setBars] = useState<BoostedBar[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function BoostedBarsPopup({ visible, onClose, bars, isLoading: loading = false }: BoostedBarsPopupProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchBoostedBars() {
-      try {
-        setLoading(true);
-        const now = new Date().toISOString();
-
-        const { data, error } = await supabase
-          .from('bar_boosts')
-          .select(`
-            end_at,
-            bars (
-              id,
-              name,
-              rating,
-              review_count,
-              bar_images (image_url, image_order)
-            )
-          `)
-          .eq('status', 'active')
-          .gt('end_at', now)
-          .order('end_at', { ascending: false })
-          .limit(3);
-
-        if (error) throw error;
-        if (!isMounted) return;
-
-        const boostedBars: BoostedBar[] = (data || [])
-          .filter((item) => item.bars && !Array.isArray(item.bars))
-          .map((item) => {
-            const bar = item.bars as unknown as {
-              id: string;
-              name: string;
-              rating?: number;
-              review_count?: number;
-              bar_images?: { image_url: string; image_order: number }[];
-            };
-            const images = bar.bar_images || [];
-            const mainImage =
-              images.find((img) => img.image_order === 1)?.image_url ||
-              images[0]?.image_url ||
-              null;
-            return {
-              id: bar.id,
-              name: bar.name,
-              rating: bar.rating,
-              review_count: bar.review_count,
-              image_url: mainImage ?? undefined,
-            };
-          });
-
-        setBars(boostedBars);
-      } catch (err) {
-        console.error('❌ BoostedBarsPopup: Error fetching bars:', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    fetchBoostedBars();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (visible && (bars.length > 0 || loading)) {
@@ -160,7 +86,7 @@ export default function BoostedBarsPopup({ visible, onClose }: BoostedBarsPopupP
     ));
   };
 
-  const renderCard = ({ item }: { item: BoostedBar }) => (
+  const renderCard = ({ item }: { item: BoostBar }) => (
     <View style={styles.slide}>
       {/* Header */}
       <View style={styles.cardHeader}>

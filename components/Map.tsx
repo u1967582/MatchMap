@@ -139,23 +139,18 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   const { selectedBoostBarIds, setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
 
   // Fetch active boost bars using the hook
-  const { boostBars, isLoading: isLoadingBoost, error: boostError } = useBoostBars({
-    centerLatLng: userLocation ? { 
-      lat: userLocation.coords.latitude, 
-      lng: userLocation.coords.longitude 
+  const { selected3Stable, selected3Bars, isLoading: isLoadingBoost, error: boostError } = useBoostBars({
+    centerLatLng: userLocation ? {
+      lat: userLocation.coords.latitude,
+      lng: userLocation.coords.longitude
     } : null,
     enabled: !!userLocation,
   });
 
-  // Update context when boost bars are loaded
+  // Update context with only the 3 selected bars — same ones shown in popup and search
   React.useEffect(() => {
-    if (boostBars.length > 0) {
-      const boostIds = boostBars.map(bar => bar.id);
-      console.log('🟡 BOOST: Loaded boost bars:', boostIds.length, 'bars with boost');
-      console.log('🟡 BOOST: Bar IDs with boost:', boostIds);
-      setSelectedBoostBarIds(boostIds);
-    }
-  }, [boostBars, setSelectedBoostBarIds]);
+    setSelectedBoostBarIds(selected3Stable);
+  }, [selected3Stable, setSelectedBoostBarIds]);
 
 
   // Update center when user location changes
@@ -170,51 +165,10 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
   // Handle marker press
   const handleMarkerPress = React.useCallback((bar: Bar) => {
-    console.log('📍 Marker pressed for bar:', bar.name);
-    console.log('📍 Setting selected bar and showing card');
-    console.log('📍 Bar data:', {
-      id: bar.id,
-      name: bar.name,
-      address: bar.address,
-      image_url: bar.image_url
-    });
     setSelectedBar(bar);
     setSelectedMarkerId(bar.id);
     setShowBarCard(true);
   }, []);
-
-  // Debug effect for state changes
-  React.useEffect(() => {
-    console.log('═══════════════════════════════════════');
-    console.log('📍 STATE: Selected bar:', selectedBar?.name || 'NONE');
-    console.log('📍 STATE: Show card:', showBarCard);
-    console.log('📍 STATE: Selected marker ID:', selectedMarkerId || 'NONE');
-    console.log('═══════════════════════════════════════');
-  }, [selectedBar, showBarCard, selectedMarkerId]);
-
-  // Debug effect for bars loading
-  React.useEffect(() => {
-    console.log('📊 BARS: Total bars loaded:', bars.length);
-    if (bars.length > 0) {
-      console.log('📊 BARS: Sample bar:', {
-        name: bars[0].name,
-        id: bars[0].id,
-        coords: [bars[0].longitude, bars[0].latitude]
-      });
-    }
-  }, [bars]);
-
-  // Debug effect for boost bars
-  React.useEffect(() => {
-    console.log('═══════════════════════════════════════');
-    console.log('🟡 BOOST STATE: Total boost IDs:', selectedBoostBarIds.length);
-    console.log('🟡 BOOST STATE: IDs:', selectedBoostBarIds);
-    console.log('🟡 BOOST STATE: Loading:', isLoadingBoost);
-    if (boostError) {
-      console.error('🟡 BOOST ERROR:', boostError);
-    }
-    console.log('═══════════════════════════════════════');
-  }, [selectedBoostBarIds, isLoadingBoost, boostError]);
 
   // Handle close bar card
   const handleCloseBarCard = React.useCallback(() => {
@@ -258,19 +212,16 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
       });
     }
 
-    console.log('🎯 FILTERS: Applied filters, showing', filtered.length, 'of', bars.length, 'bars');
     return filtered;
   }, [bars, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures]);
 
   // Handle apply filters
   const handleApplyFilters = React.useCallback(() => {
-    console.log('🎉 Applying filters...');
     setFilterModalVisible(false);
   }, []);
 
   // Handle navigate to bar
   const handleNavigateToBar = React.useCallback((barId: string) => {
-    console.log('🧭 Navigating to bar:', barId);
     // TODO: Implement navigation functionality
     // This could open Google Maps or Apple Maps with directions
   }, []);
@@ -281,8 +232,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
     longitude: number;
     name: string;
   }) => {
-    console.log('🚶 Starting navigation to:', destination.name);
-    
     if (!userLocation) {
       Alert.alert('Error', 'No se pudo obtener tu ubicación actual');
       return;
@@ -363,7 +312,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
   // Handle start navigation button
   const handleBeginNavigation = React.useCallback(() => {
-    console.log('🎬 Beginning full navigation mode');
     setNavigationStarted(true);
     
     // Zoom to follow user location with navigation view
@@ -385,8 +333,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
     if (!userLocation || !navigationDestination) return;
     
     const newMode = travelMode === 'walking' ? 'driving' : 'walking';
-    console.log(`🔄 Changing travel mode to: ${newMode}`);
-    
     // Recalculate route with new mode (no zoom change)
     await getDirections(
       {
@@ -423,7 +369,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // Handle initial bar selection from navigation params
   React.useEffect(() => {
     if (initialSelectedBarId && bars.length > 0) {
-      console.log('🎯 Opening bar from search:', initialSelectedBarId);
       
       // Find the bar in the loaded bars
       const bar = bars.find(b => b.id === initialSelectedBarId);
@@ -478,13 +423,11 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   React.useEffect(() => {
     const fetchBars = async () => {
       try {
-        console.log('📍 Fetching bars from Supabase...');
         setLoadingBars(true);
 
         // Step 1: If match filter is active, get bar IDs that have events for that match
         let barIdsFilter: string[] | null = null;
         if (selectedMatch) {
-          console.log('⚽ Filtering by match:', selectedMatch.home_team?.name, 'vs', selectedMatch.away_team?.name);
           try {
             barIdsFilter = await fetchBarIdsByMatch(selectedMatch.id);
           } catch (e) {
@@ -492,12 +435,10 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             barIdsFilter = [];
           }
           if (!barIdsFilter || barIdsFilter.length === 0) {
-            console.log('⚽ No bars found with events for this match');
             setBars([]);
             setLoadingBars(false);
             return;
           }
-          console.log('⚽ Found', barIdsFilter.length, 'bars broadcasting this match');
         }
 
         // Step 2: Build query
@@ -592,7 +533,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             };
           }));
 
-          console.log('✅ Bars fetched successfully:', processedBars.length);
           setBars(processedBars);
         }
       } catch (error) {
@@ -623,8 +563,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
       if (data.features) {
         setSearchResults(data.features);
-        console.log('📍 Search results:', data.features.length, 'locations found');
-        console.log('📍 Sample results:', data.features.slice(0, 3).map((f: any) => f.place_name));
       } else {
         setSearchResults([]);
       }
@@ -660,10 +598,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // Handle location selection
   const handleLocationSelect = React.useCallback((location: any) => {
     const [longitude, latitude] = location.center;
-    
-    console.log('📍 Selected location:', location.place_name);
-    console.log('📍 Coordinates:', latitude, longitude);
-    console.log('📍 Place type:', location.place_type);
     
     // Determine appropriate zoom level based on place type
     let zoomLevel = 16; // Default for specific addresses/POIs
@@ -764,30 +698,19 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             markerType = 'destination';
           }
 
-          // Log marker type for debugging (only first 3 bars to avoid spam)
-          if (filteredBars.indexOf(bar) < 3) {
-            console.log(`🎨 MARKER[${bar.name}]: type=${markerType}, boosted=${isBoosted}, selected=${isSelected}, destination=${isDestination}`);
-          }
-
           return (
             <MapboxGL.PointAnnotation
               key={`bar-${bar.id}-${markerType}`}
               id={`bar-annotation-${bar.id}`}
               coordinate={[bar.longitude, bar.latitude]}
-              onSelected={() => {
-                console.log('🔴 MARKER TOUCHED (onSelected):', bar.name);
-                handleMarkerPress(bar);
-              }}
+              onSelected={() => handleMarkerPress(bar)}
               anchor={{ x: 0.5, y: 1.0 }}
             >
-              <BarMapMarker 
+              <BarMapMarker
                 key={`marker-${markerType}-${bar.id}`}
-                type={markerType} 
+                type={markerType}
                 animated={(isBoosted || isDestination) && !isSelected}
-                onPress={() => {
-                  console.log('🟢 MARKER TOUCHED (custom onPress):', bar.name);
-                  handleMarkerPress(bar);
-                }}
+                onPress={() => handleMarkerPress(bar)}
               />
             </MapboxGL.PointAnnotation>
           );
@@ -906,7 +829,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
               const fresh = await Location.getCurrentPositionAsync({});
               const { latitude, longitude } = fresh.coords;
-              console.log('Center location button pressed:', { latitude, longitude });
 
               // Update state similarly to initial load
               setUserLocation(fresh);
@@ -1132,6 +1054,8 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           boostedPopupShownThisSession = true;
           setShowBoostedPopup(false);
         }}
+        bars={selected3Bars}
+        isLoading={isLoadingBoost}
       />
 
       {/* Bar Info Card */}
