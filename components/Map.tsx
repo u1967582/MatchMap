@@ -59,6 +59,26 @@ const formatDistance = (meters: number): string => {
   return `${(meters / 1000).toFixed(1)} km`;
 };
 
+// Find the index of the closest route point to the user's position
+const findClosestPointIndex = (
+  routeCoords: [number, number][],
+  userLng: number,
+  userLat: number
+): number => {
+  let minDist = Infinity;
+  let closestIdx = 0;
+  for (let i = 0; i < routeCoords.length; i++) {
+    const dx = routeCoords[i][0] - userLng;
+    const dy = routeCoords[i][1] - userLat;
+    const dist = dx * dx + dy * dy;
+    if (dist < minDist) {
+      minDist = dist;
+      closestIdx = i;
+    }
+  }
+  return closestIdx;
+};
+
 interface Bar {
   id: string;
   name: string;
@@ -123,17 +143,25 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   const [isNavigating, setIsNavigating] = React.useState(false);
   const [navigationStarted, setNavigationStarted] = React.useState(false); // New: started full navigation mode
   const [currentStepIndex, setCurrentStepIndex] = React.useState(0); // Track which step we're on
+  const [routeProgressIndex, setRouteProgressIndex] = React.useState(0); // Index in route coords closest to user
   const [navigationDestination, setNavigationDestination] = React.useState<{
     latitude: number;
     longitude: number;
     name: string;
   } | null>(null);
+
+  // Ref to hold location subscription during active navigation
+  const locationSubscriptionRef = React.useRef<Location.LocationSubscription | null>(null);
   
   // Load filter data
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
 
   // MapBox Directions hook
   const { loading: directionsLoading, error: directionsError, routeData, travelMode, getDirections, clearRoute } = useMapboxDirections();
+
+  // Ref to always access latest routeData inside async callbacks (avoids stale closure in watchPositionAsync)
+  const routeDataRef = React.useRef(routeData);
+  React.useEffect(() => { routeDataRef.current = routeData; }, [routeData]);
 
   // Get boost context and functions
   const { selectedBoostBarIds, setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
@@ -291,19 +319,28 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
   // Handle cancel navigation
   const handleCancelNavigation = React.useCallback(() => {
+    // Stop real-time location subscription
+    if (locationSubscriptionRef.current) {
+      locationSubscriptionRef.current.remove();
+      locationSubscriptionRef.current = null;
+    }
+
     setIsNavigating(false);
     setNavigationStarted(false);
     setNavigationDestination(null);
     setCurrentStepIndex(0);
+    setRouteProgressIndex(0);
     clearRoute();
-    
-    // Return camera to user location
+
+    // Return camera to user location, reset tilt and bearing
     if (userLocation && cameraRef.current) {
       const cam: any = cameraRef.current as any;
       if (cam?.setCamera) {
         cam.setCamera({
           centerCoordinate: [userLocation.coords.longitude, userLocation.coords.latitude],
           zoomLevel: 15,
+          pitch: 0,
+          bearing: 0,
           animationDuration: 1000,
         } as any);
       }
@@ -313,27 +350,82 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // Handle start navigation button
   const handleBeginNavigation = React.useCallback(() => {
     setNavigationStarted(true);
-    
-    // Zoom to follow user location with navigation view
+    setRouteProgressIndex(0);
+
+    // Initial camera: follow user with navigation tilt
     if (userLocation && cameraRef.current) {
       const cam: any = cameraRef.current as any;
       if (cam?.setCamera) {
         cam.setCamera({
           centerCoordinate: [userLocation.coords.longitude, userLocation.coords.latitude],
           zoomLevel: 17,
-          pitch: 45, // Tilt the camera for navigation view
+          pitch: 45,
+          bearing: userLocation.coords.heading ?? 0,
           animationDuration: 1000,
         } as any);
       }
     }
+
+    // Start watching location for real-time navigation updates
+    Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 1000,
+        distanceInterval: 5,
+      },
+      (location) => {
+        setUserLocation(location);
+
+        const { latitude, longitude, heading } = location.coords;
+        const currentRouteData = routeDataRef.current;
+
+        if (currentRouteData && cameraRef.current) {
+          // Find closest point on route to show traveled path
+          const closestIdx = findClosestPointIndex(
+            currentRouteData.coordinates,
+            longitude,
+            latitude
+          );
+          setRouteProgressIndex(closestIdx);
+
+          // Update current navigation step based on progress
+          let cumulativeDist = 0;
+          const progressDist = (closestIdx / currentRouteData.coordinates.length) * currentRouteData.distance * 1000;
+          let newStepIdx = 0;
+          for (let i = 0; i < currentRouteData.steps.length; i++) {
+            cumulativeDist += currentRouteData.steps[i].distance;
+            if (progressDist < cumulativeDist) {
+              newStepIdx = i;
+              break;
+            }
+            newStepIdx = i;
+          }
+          setCurrentStepIndex(Math.min(newStepIdx, currentRouteData.steps.length - 1));
+
+          // Move camera to follow user with heading
+          const cam: any = cameraRef.current as any;
+          if (cam?.setCamera) {
+            cam.setCamera({
+              centerCoordinate: [longitude, latitude],
+              zoomLevel: 17,
+              pitch: 45,
+              bearing: heading ?? 0,
+              animationDuration: 500,
+            } as any);
+          }
+        }
+      }
+    ).then((subscription) => {
+      locationSubscriptionRef.current = subscription;
+    });
   }, [userLocation]);
 
   // Handle change travel mode
   const handleChangeTravelMode = React.useCallback(async () => {
     if (!userLocation || !navigationDestination) return;
-    
+
+    setRouteProgressIndex(0);
     const newMode = travelMode === 'walking' ? 'driving' : 'walking';
-    // Recalculate route with new mode (no zoom change)
     await getDirections(
       {
         latitude: userLocation.coords.latitude,
@@ -352,7 +444,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         setHasPermission(status === 'granted');
-        
+
         if (status === 'granted') {
           const location = await Location.getCurrentPositionAsync({});
           setUserLocation(location);
@@ -364,6 +456,16 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
     };
 
     requestLocationPermission();
+  }, []);
+
+  // Cleanup location subscription on unmount
+  React.useEffect(() => {
+    return () => {
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+        locationSubscriptionRef.current = null;
+      }
+    };
   }, []);
 
   // Handle initial bar selection from navigation params
@@ -716,7 +818,44 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           );
         })}
 
-        {/* Navigation Route Line */}
+        {/* Navigation Route - Traveled portion (gray) */}
+        {isNavigating && routeData && navigationStarted && routeProgressIndex > 0 && (
+          <MapboxGL.ShapeSource
+            id="traveledRouteSource"
+            shape={{
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: routeData.coordinates.slice(0, routeProgressIndex + 1)
+              }
+            }}
+          >
+            <MapboxGL.LineLayer
+              id="traveledRouteOutline"
+              style={{
+                lineColor: '#FFFFFF',
+                lineWidth: 7,
+                lineCap: 'round',
+                lineJoin: 'round',
+                lineOpacity: 0.3,
+              }}
+            />
+            <MapboxGL.LineLayer
+              id="traveledRouteLine"
+              style={{
+                lineColor: '#6B7280',
+                lineWidth: 5,
+                lineCap: 'round',
+                lineJoin: 'round',
+                lineOpacity: 0.6,
+              }}
+              aboveLayerID="traveledRouteOutline"
+            />
+          </MapboxGL.ShapeSource>
+        )}
+
+        {/* Navigation Route - Remaining portion (blue) */}
         {isNavigating && routeData && (
           <MapboxGL.ShapeSource
             id="routeSource"
@@ -725,19 +864,12 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
               properties: {},
               geometry: {
                 type: 'LineString',
-                coordinates: routeData.coordinates
+                coordinates: navigationStarted
+                  ? routeData.coordinates.slice(routeProgressIndex)
+                  : routeData.coordinates
               }
             }}
           >
-            <MapboxGL.LineLayer
-              id="routeLine"
-              style={{
-                lineColor: '#007AFF',
-                lineWidth: 5,
-                lineCap: 'round',
-                lineJoin: 'round',
-              }}
-            />
             <MapboxGL.LineLayer
               id="routeOutline"
               style={{
@@ -746,7 +878,16 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                 lineCap: 'round',
                 lineJoin: 'round',
               }}
-              belowLayerID="routeLine"
+            />
+            <MapboxGL.LineLayer
+              id="routeLine"
+              style={{
+                lineColor: '#007AFF',
+                lineWidth: 5,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+              aboveLayerID="routeOutline"
             />
           </MapboxGL.ShapeSource>
         )}
