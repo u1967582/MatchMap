@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Image } from 'react-native';
 import { supabase } from '~/utils/supabase';
 import { haversineDistance, type LatLng } from '~/utils/geo';
 
@@ -110,6 +111,11 @@ export function useBoostBars({
           });
 
         setBoostBars(bars);
+
+        // Prefetch images so they están listas cuando aparezca el popup
+        bars.forEach((bar) => {
+          if (bar.image_url) Image.prefetch(bar.image_url);
+        });
       } catch (err) {
         if (isMounted) {
           console.error('Error fetching boost bars:', err);
