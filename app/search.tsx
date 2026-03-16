@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -110,10 +110,14 @@ export default function SearchScreen() {
   const { setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
 
   // Get boost bars based on current user location
-  const { selected3Stable } = useBoostBars({
+  const { selected3Stable, allBoostBarIds } = useBoostBars({
     centerLatLng: userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null,
     enabled: !!userLocation,
   });
+
+  // Ref for allBoostBarIds so searchBars can read the latest value without being recreated
+  const allBoostBarIdsRef = useRef<string[]>([]);
+  useEffect(() => { allBoostBarIdsRef.current = allBoostBarIds; }, [allBoostBarIds]);
 
   // Split bars: boosted (always shown) + regular (paginated)
   const boostedDisplayBars = useMemo(
@@ -150,15 +154,6 @@ export default function SearchScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation?.latitude, userLocation?.longitude, setCenterLatLng]); // Only depend on coordinates
 
-  // Debug logs
-  console.log('Filter data loaded:', {
-    barCategories: barCategories.length,
-    foodTypes: foodTypes.length,
-    barFeatures: barFeatures.length,
-    tvFeatures: tvFeatures.length,
-    loading: filtersLoading
-  });
-
   // Get user location
   const getUserLocation = useCallback(async () => {
     try {
@@ -192,15 +187,6 @@ export default function SearchScreen() {
     setLoading(true);
 
     try {
-      console.log('🔍 Starting bar search with filters:', {
-        searchQuery,
-        selectedBarCategories,
-        selectedFoodTypes,
-        selectedFeatures,
-        selectedTvFeatures,
-        selectedSort
-      });
-
       // Paso 1. Si hay filtro por partido, obtener barIds con eventos de ese partido
       let barIdsFilter: string[] | null = null;
       if (selectedMatch) {
@@ -237,19 +223,16 @@ export default function SearchScreen() {
       // Aplicar filtro de búsqueda
       if (searchQuery.trim()) {
         barsQuery = barsQuery.ilike('name', `%${searchQuery.trim()}%`);
-        console.log('🔍 Applied search filter:', searchQuery.trim());
       }
 
       // Aplicar filtro por partido (IDs)
       if (barIdsFilter) {
         barsQuery = barsQuery.in('id', barIdsFilter);
-        console.log('🔍 Applied match filter (bar ids):', barIdsFilter.length);
       }
 
       // Aplicar filtro de categorías (esto se puede hacer a nivel de DB)
       if (selectedBarCategories.length > 0) {
         barsQuery = barsQuery.in('category_id', selectedBarCategories);
-        console.log('🔍 Applied category filter at DB level:', selectedBarCategories);
       }
 
       const { data: barsData, error } = await barsQuery;
@@ -260,8 +243,6 @@ export default function SearchScreen() {
         return;
       }
 
-      console.log('📊 Initial bars fetched:', barsData?.length || 0);
-
       if (!barsData || barsData.length === 0) {
         setAllBars([]);
         return;
@@ -269,7 +250,6 @@ export default function SearchScreen() {
 
       // Paso 2. Cargar relaciones N:N por separado
       const barIds = barsData.map(bar => bar.id);
-      console.log('🔍 Loading N:N relationships for bar IDs:', barIds);
 
       // Cargar todos los datos N:N
       const { data: foodTypes } = await supabase
@@ -286,12 +266,6 @@ export default function SearchScreen() {
         .from('bar_selected_tv_features')
         .select('*')
         .in('bar_id', barIds);
-
-      console.log('📊 N:N relationships loaded:', {
-        foodTypes: foodTypes?.length || 0,
-        features: features?.length || 0,
-        tvFeatures: tvFeatures?.length || 0
-      });
 
       // Paso 3. Crear mapas para todos los tipos de datos
       const foodTypesMap = new Map();
@@ -312,45 +286,13 @@ export default function SearchScreen() {
         tvFeaturesMap.get(bar_id).push({ tv_feature_id });
       });
 
-      console.log('🗺️ Maps created:', {
-        foodTypesMapSize: foodTypesMap.size,
-        featuresMapSize: featuresMap.size,
-        tvFeaturesMapSize: tvFeaturesMap.size
-      });
-
       // Paso 4. Fusionar la información por bar
-      const enrichedBars = barsData.map(bar => {
-        const enrichedBar = {
-          ...bar,
-          bar_food_types: foodTypesMap.get(bar.id) || [],
-          bar_selected_features: featuresMap.get(bar.id) || [],
-          bar_selected_tv_features: tvFeaturesMap.get(bar.id) || [],
-        };
-
-        // Log explícito para verificar que los datos se asignan correctamente
-        console.log('✅ Bar enriched:', bar.name, {
-          foods: enrichedBar.bar_food_types,
-          features: enrichedBar.bar_selected_features,
-          tvFeatures: enrichedBar.bar_selected_tv_features
-        });
-
-        return enrichedBar;
-      });
-
-      console.log('🔍 Enriched bars data:');
-      enrichedBars.forEach(bar => {
-        console.log(`📋 ${bar.name}:`, {
-          category_id: bar.category_id,
-          foodTypes: bar.bar_food_types,
-          features: bar.bar_selected_features,
-          tvFeatures: bar.bar_selected_tv_features
-        });
-      });
-
-      // Debug: Log complete example bar
-      if (enrichedBars.length > 0) {
-        console.log('🧪 Bar ejemplo completo:', JSON.stringify(enrichedBars[0], null, 2));
-      }
+      const enrichedBars = barsData.map(bar => ({
+        ...bar,
+        bar_food_types: foodTypesMap.get(bar.id) || [],
+        bar_selected_features: featuresMap.get(bar.id) || [],
+        bar_selected_tv_features: tvFeaturesMap.get(bar.id) || [],
+      }));
 
       // Calculate distances and add next match info
       const barsWithDistance = await Promise.all(
@@ -382,13 +324,6 @@ export default function SearchScreen() {
             ?.find((img: any) => img.image_order === 1)?.image_url || 
             bar.bar_images?.[0]?.image_url || null;
 
-          console.log(`🖼️ Bar "${bar.name}":`, {
-            totalImages: bar.bar_images?.length || 0,
-            imageOrder1: bar.bar_images?.find((img: any) => img.image_order === 1)?.image_url,
-            fallbackImage: bar.bar_images?.[0]?.image_url,
-            selectedImage: mainImage
-          });
-
           return {
             ...bar,
             distance_km: distance,
@@ -406,107 +341,34 @@ export default function SearchScreen() {
       // Apply client-side filtering for N:N relationships
       let filteredBars = barsWithDistance;
 
-      // Apply food types filter (client-side)
+      // Apply food types filter (client-side, ALL selected must match)
       if (selectedFoodTypes.length > 0) {
-        const beforeCount = filteredBars.length;
-        console.log('🍕 Starting food types filter with:', selectedFoodTypes);
-        
         filteredBars = filteredBars.filter(bar => {
           const foodIds = bar.bar_food_types?.map((ft: { food_type_id: number }) => ft.food_type_id) || [];
-          
-          // Check if bar has ALL selected food types (AND logic)
-          const matchesFood = selectedFoodTypes.every(selectedId => {
-            const hasFoodType = foodIds.includes(selectedId);
-            console.log(`  🍕 Bar "${bar.name}": checking food_type_id ${selectedId} -> ${hasFoodType ? '✅' : '❌'}`);
-            return hasFoodType;
-          });
-          
-          console.log(`🧪 Bar "${bar.name}":`, {
-            foodIds,
-            selectedFoodTypes,
-            matchesFood: matchesFood ? '✅' : '❌'
-          });
-          
-          return matchesFood;
+          return selectedFoodTypes.every(id => foodIds.includes(id));
         });
-        console.log('🍕 Applied food types filter (client-side):', selectedFoodTypes, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Apply features filter (client-side)
+      // Apply features filter (client-side, ALL selected must match)
       if (selectedFeatures.length > 0) {
-        const beforeCount = filteredBars.length;
-        console.log('✨ Starting features filter with:', selectedFeatures);
-        
         filteredBars = filteredBars.filter(bar => {
           const featureIds = bar.bar_selected_features?.map((f: { feature_id: number }) => f.feature_id) || [];
-          
-          // Check if bar has ALL selected features (AND logic)
-          const matchesFeatures = selectedFeatures.every(selectedId => {
-            const hasFeature = featureIds.includes(selectedId);
-            console.log(`  ✨ Bar "${bar.name}": checking feature_id ${selectedId} -> ${hasFeature ? '✅' : '❌'}`);
-            return hasFeature;
-          });
-          
-          console.log(`🧪 Bar "${bar.name}":`, {
-            featureIds,
-            selectedFeatures,
-            matchesFeatures: matchesFeatures ? '✅' : '❌'
-          });
-          
-          return matchesFeatures;
+          return selectedFeatures.every(id => featureIds.includes(id));
         });
-        console.log('✨ Applied features filter (client-side):', selectedFeatures, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Apply TV features filter (client-side)
+      // Apply TV features filter (client-side, ALL selected must match)
       if (selectedTvFeatures.length > 0) {
-        const beforeCount = filteredBars.length;
-        console.log('📺 Starting TV features filter with:', selectedTvFeatures);
-        
         filteredBars = filteredBars.filter(bar => {
           const tvFeatureIds = bar.bar_selected_tv_features?.map((tf: { tv_feature_id: number }) => tf.tv_feature_id) || [];
-          
-          // Check if bar has ALL selected TV features (AND logic)
-          const matchesTvFeatures = selectedTvFeatures.every(selectedId => {
-            const hasTvFeature = tvFeatureIds.includes(selectedId);
-            console.log(`  📺 Bar "${bar.name}": checking tv_feature_id ${selectedId} -> ${hasTvFeature ? '✅' : '❌'}`);
-            return hasTvFeature;
-          });
-          
-          console.log(`🧪 Bar "${bar.name}":`, {
-            tvFeatureIds,
-            selectedTvFeatures,
-            matchesTvFeatures: matchesTvFeatures ? '✅' : '❌'
-          });
-          
-          return matchesTvFeatures;
+          return selectedTvFeatures.every(id => tvFeatureIds.includes(id));
         });
-        console.log('📺 Applied TV features filter (client-side):', selectedTvFeatures, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Fetch active boost bars directly for immediate sorting
-      let boostBarIds: string[] = [];
-      try {
-        const now = new Date().toISOString();
-        const { data: boostData } = await supabase
-          .from('bar_boosts')
-          .select('bar_id, end_at')
-          .eq('status', 'active')
-          .gt('end_at', now);
-
-        if (boostData && boostData.length > 0) {
-          // Get unique bar IDs that have active boosts
-          boostBarIds = [...new Set(boostData.map(b => b.bar_id))];
-          console.log('🚀 Found active boost bars:', boostBarIds.length);
-        }
-      } catch (error) {
-        console.error('❌ Error fetching boost bars:', error);
-      }
-
-      // Apply sorting with BOOST PRIORITY
+      // Apply sorting with BOOST PRIORITY using cached allBoostBarIds from hook
+      const boostBarIds = allBoostBarIdsRef.current;
       let sortedBars = [...filteredBars];
 
-      // Primary sort: Boosted bars always come first
       sortedBars.sort((a, b) => {
         const aIsBoosted = boostBarIds.includes(a.id);
         const bIsBoosted = boostBarIds.includes(b.id);
@@ -529,10 +391,6 @@ export default function SearchScreen() {
         }
       });
 
-      console.log('✅ Final bars after filtering and sorting:', sortedBars.length);
-      console.log('🚀 Boosted bars on top:', boostBarIds.length);
-      console.log('📋 Bars found:', sortedBars.map(bar => bar.name));
-
       setAllBars(sortedBars);
       setRegularPage(1);
     } catch (error) {
@@ -542,16 +400,6 @@ export default function SearchScreen() {
       setLoading(false);
     }
   }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch]);
-
-  // Update highlighting when boost selection changes (for visual sync with map)
-  // Note: Initial sorting is now handled inside searchBars()
-  useEffect(() => {
-    if (allBars.length === 0 || selected3Stable.length === 0) return;
-
-    // Just trigger a re-render to update golden borders
-    // The bars are already sorted correctly from searchBars()
-    console.log('✨ Boost selection updated for visual sync:', selected3Stable.length);
-  }, [selected3Stable, allBars.length]);
 
   // Load next page of bars
   const loadMore = useCallback(() => {
@@ -600,81 +448,18 @@ export default function SearchScreen() {
 
   // Handle apply filters
   const handleApplyFilters = useCallback(() => {
-    console.log('🎉 Applying filters and searching bars...');
     searchBars();
     setFilterModalVisible(false);
   }, [searchBars]);
 
   // Handle clear all filters
   const handleClearAllFilters = useCallback(() => {
-    console.log('🧹 Clearing all filters...');
     setSelectedBarCategories([]);
     setSelectedFoodTypes([]);
     setSelectedFeatures([]);
     setSelectedTvFeatures([]);
     setSearchQuery('');
     // The search will be triggered automatically by the useEffect
-  }, []);
-
-  // Check and create sample data for N:N relationships
-  const checkAndCreateSampleData = useCallback(async () => {
-    try {
-      console.log('🔍 Checking N:N relationship data...');
-      
-      // Check if we have any data in the N:N tables
-      const { data: foodTypesData } = await supabase
-        .from('bar_food_types')
-        .select('*')
-        .limit(5);
-      
-      const { data: featuresData } = await supabase
-        .from('bar_selected_features')
-        .select('*')
-        .limit(5);
-      
-      const { data: languagesData } = await supabase
-        .from('bar_languages')
-        .select('*')
-        .limit(5);
-      
-      console.log('📊 N:N data check:', {
-        hasFoodTypes: foodTypesData && foodTypesData.length > 0,
-        hasFeatures: featuresData && featuresData.length > 0,
-        hasLanguages: languagesData && languagesData.length > 0,
-        foodTypesCount: foodTypesData?.length || 0,
-        featuresCount: featuresData?.length || 0,
-        languagesCount: languagesData?.length || 0
-      });
-      
-      // Show sample data if available
-      if (foodTypesData && foodTypesData.length > 0) {
-        console.log('🍕 Sample food types data:', foodTypesData);
-      }
-      
-      if (featuresData && featuresData.length > 0) {
-        console.log('✨ Sample features data:', featuresData);
-      }
-      
-      if (languagesData && languagesData.length > 0) {
-        console.log('🌍 Sample languages data:', languagesData);
-      }
-      
-      // If no data exists, we might need to create some sample data
-      if (!foodTypesData || foodTypesData.length === 0) {
-        console.log('⚠️ No food types data found in bar_food_types table');
-      }
-      
-      if (!featuresData || featuresData.length === 0) {
-        console.log('⚠️ No features data found in bar_selected_features table');
-      }
-      
-      if (!languagesData || languagesData.length === 0) {
-        console.log('⚠️ No languages data found in bar_languages table');
-      }
-      
-    } catch (error) {
-      console.error('❌ Error checking N:N data:', error);
-    }
   }, []);
 
   // Handle bar selection
@@ -684,15 +469,12 @@ export default function SearchScreen() {
 
   // Render bar card
   const renderBarCard = useCallback(({ item }: { item: Bar }) => {
-    console.log("Rendering bar card for:", item.name);
-
     const handleFavoriteToggle = async (e: any) => {
       e.stopPropagation(); // Prevent triggering the card press
       const wasFavorite = isFavorite(item.id);
       const success = await toggleFavorite(item.id);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        console.log(wasFavorite ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', item.name);
       }
     };
 
@@ -807,13 +589,11 @@ export default function SearchScreen() {
   // Load initial data
   useEffect(() => {
     getUserLocation();
-    checkAndCreateSampleData(); // Check N:N relationship data
-  }, [getUserLocation, checkAndCreateSampleData]);
+  }, [getUserLocation]);
 
   // Search when filters change
   useEffect(() => {
     if (userLocation) {
-      console.log('🔄 Filters changed, triggering search...');
       searchBars();
     }
   }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, selectedMatch, userLocation, searchBars]);
