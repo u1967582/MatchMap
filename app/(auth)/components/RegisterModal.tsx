@@ -125,7 +125,7 @@ export default function RegisterModal({
       });
 
       // Mostrar toast antes de cerrar para que se vea en la capa del modal
-      toast.success('¡Cuenta creada!', 'Revisa tu correo para verificar la cuenta');
+      toast.success('¡Cuenta creada!', 'Revisa tu correo para verificar · mira también en SPAM');
       onClose();
       onRegisterSuccess();
     } catch (error: any) {
