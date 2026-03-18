@@ -1,6 +1,6 @@
 {
   "name": "MatchMap",
-  "version": "1.0.0",
+  "version": "1.0.11",
   "main": "expo-router/entry",
   "scripts": {
     "android": "expo run:android",
