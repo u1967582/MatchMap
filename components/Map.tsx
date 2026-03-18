@@ -802,7 +802,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
           return (
             <MapboxGL.PointAnnotation
-              key={`bar-${bar.id}-${markerType}`}
+              key={`bar-${bar.id}`}
               id={`bar-annotation-${bar.id}`}
               coordinate={[bar.longitude, bar.latitude]}
               onSelected={() => handleMarkerPress(bar)}
