@@ -51,7 +51,7 @@ export default function ForgotPasswordModal({
       // (no revelar si el email existe o no)
       setEmail('');
       // Mostrar toast antes de cerrar para que se vea en la capa del modal
-      toast.success('Email enviado', 'Revisa tu bandeja de entrada');
+      toast.success('Email enviado', 'Revisa tu correo · mira también en SPAM');
       onClose();
     } catch (error: any) {
       toast.error('No se pudo enviar el email', 'Inténtalo de nuevo');
