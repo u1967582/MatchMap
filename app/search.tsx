@@ -579,11 +579,7 @@ export default function SearchScreen() {
 
     if (isBoosted) {
       return (
-        <TouchableOpacity
-          style={styles.boostCardInner}
-          onPress={() => handleBarPress(item.id)}
-          activeOpacity={0.92}
-        >
+        <AppCard onPress={() => handleBarPress(item.id)} style={styles.boostCardInner}>
           {/* Amber top line */}
           <LinearGradient
             colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
@@ -608,7 +604,7 @@ export default function SearchScreen() {
               <AppText style={styles.topBarStickerStars}>★ ★ ★</AppText>
             </View>
           </View>
-        </TouchableOpacity>
+        </AppCard>
       );
     }
 
