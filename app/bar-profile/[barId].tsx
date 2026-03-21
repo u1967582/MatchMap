@@ -77,7 +77,6 @@ export default function BarProfileScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(true);
-  const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
   const [verificationNotes, setVerificationNotes] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
@@ -788,28 +787,35 @@ export default function BarProfileScreen() {
     if (!barId) return;
 
     try {
-      // Get current user
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      setUser(authUser); // This line was removed as per the new_code, as user state is no longer managed here.
+      // Round 1: auth + bar data con joins anidados en paralelo
+      const [
+        { data: { user: authUser } },
+        { data: barData, error: barError },
+      ] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase
+          .from('bars')
+          .select(`
+            id,
+            name,
+            description,
+            address,
+            city,
+            phone,
+            website,
+            bar_images(image_url, image_order),
+            bar_categories(id, name),
+            bar_food_types(food_type_id, food_types(name)),
+            bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
+            bar_selected_features(feature_id, bar_features(name)),
+            verification_status,
+            verification_notes
+          `)
+          .eq('id', barId)
+          .single(),
+      ]);
 
-      // Fetch bar data
-      const { data: barData, error: barError } = await supabase
-        .from('bars')
-        .select(`
-          id,
-          name,
-          description,
-          address,
-          city,
-          phone,
-          website,
-          bar_images(image_url, image_order),
-          category_id,
-          verification_status,
-          verification_notes
-        `)
-        .eq('id', barId)
-        .single();
+      setUser(authUser);
 
       if (barError) {
         console.error('Error fetching bar:', barError);
@@ -820,85 +826,15 @@ export default function BarProfileScreen() {
       if (barData) {
         setVerificationStatus((barData as any).verification_status || null);
         setVerificationNotes((barData as any).verification_notes || null);
-        // Check if bar has at least one active subscription (supports multiple rows)
-        // All bars can show menu button now
         setCanShowMenuButton(true);
 
-        // Load N:N relationships separately (only IDs first)
-        const { data: foodTypes } = await supabase
-          .from('bar_food_types')
-          .select('food_type_id')
-          .eq('bar_id', barId);
-
-        const { data: tvFeatures } = await supabase
-          .from('bar_selected_tv_features')
-          .select('tv_feature_id')
-          .eq('bar_id', barId);
-
-        const { data: features } = await supabase
-          .from('bar_selected_features')
-          .select('feature_id')
-          .eq('bar_id', barId);
-
-        console.log('🔍 Bar profile N:N data loaded:', {
-          foodTypes: foodTypes?.length || 0,
-          tvFeatures: tvFeatures?.length || 0,
-          features: features?.length || 0,
-          foodTypeIds: foodTypes?.map(item => item.food_type_id) || [],
-          tvFeatureIds: tvFeatures?.map(item => item.tv_feature_id) || [],
-          featureIds: features?.map(item => item.feature_id) || []
-        });
-
-        // Load category name
-        let categoryName = '';
-        if (barData.category_id) {
-          const { data: categoryData } = await supabase
-            .from('bar_categories')
-            .select('name')
-            .eq('id', barData.category_id)
-            .single();
-          categoryName = categoryData?.name || '';
-        }
-
-        // Load food type names
-        const foodTypeIds = foodTypes?.map(item => item.food_type_id) || [];
-        const { data: foodTypeNames } = await supabase
-          .from('food_types')
-          .select('id, name')
-          .in('id', foodTypeIds);
-
-        // Load TV feature names
-        const tvFeatureIds = tvFeatures?.map(item => item.tv_feature_id) || [];
-        const { data: tvFeatureNames } = await supabase
-          .from('bar_tv_features')
-          .select('id, name')
-          .in('id', tvFeatureIds);
-
-        // Load feature names
-        const featureIds = features?.map(item => item.feature_id) || [];
-        const { data: featureNames } = await supabase
-          .from('bar_features')
-          .select('id, name')
-          .in('id', featureIds);
-
-        // Create maps for quick lookup
-        const foodTypeMap = new Map();
-        foodTypeNames?.forEach(item => foodTypeMap.set(item.id, item.name));
-
-        const tvFeatureMap = new Map();
-        tvFeatureNames?.forEach(item => tvFeatureMap.set(item.id, item.name));
-
-        const featureMap = new Map();
-        featureNames?.forEach(item => featureMap.set(item.id, item.name));
-
-        console.log('🔍 Bar profile names loaded:', {
-          foodTypeNames: foodTypeNames?.length || 0,
-          tvFeatureNames: tvFeatureNames?.length || 0,
-          featureNames: featureNames?.length || 0,
-          foodTypeMap: Object.fromEntries(foodTypeMap),
-          tvFeatureMap: Object.fromEntries(tvFeatureMap),
-          featureMap: Object.fromEntries(featureMap)
-        });
+        // Procesar joins directos (patrón Map.tsx)
+        const categoryRaw = Array.isArray((barData as any).bar_categories)
+          ? (barData as any).bar_categories[0]
+          : (barData as any).bar_categories;
+        const category = categoryRaw
+          ? { id: categoryRaw.id, name: categoryRaw.name }
+          : undefined;
 
         setBar({
           id: barData.id,
@@ -908,67 +844,36 @@ export default function BarProfileScreen() {
           city: barData.city,
           phone: barData.phone,
           website: barData.website,
-          images: barData.bar_images
+          images: (barData as any).bar_images
             ?.sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))
             .map((img: any) => img.image_url) || [],
-          category: barData.category_id ? { id: barData.category_id, name: categoryName } : undefined,
-          bar_food_types: foodTypes?.map(item => ({
+          category,
+          bar_food_types: ((barData as any).bar_food_types || []).map((item: any) => ({
             food_type_id: item.food_type_id,
-            food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
-          })) || [],
-          bar_selected_tv_features: tvFeatures?.map(item => ({
+            food_type: { name: item.food_types?.name || 'Unknown' },
+          })),
+          bar_selected_tv_features: ((barData as any).bar_selected_tv_features || []).map((item: any) => ({
             tv_feature_id: item.tv_feature_id,
-            tv_feature: { name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown' }
-          })) || [],
-          bar_selected_features: features?.map(item => ({
+            tv_feature: { name: item.bar_tv_features?.name || 'Unknown' },
+          })),
+          bar_selected_features: ((barData as any).bar_selected_features || []).map((item: any) => ({
             feature_id: item.feature_id,
-            feature: { name: featureMap.get(item.feature_id) || 'Unknown' }
-          })) || [],
+            feature: { name: item.bar_features?.name || 'Unknown' },
+          })),
         });
 
-        console.log('✅ Bar profile set:', {
-          name: barData.name,
-          category: barData.category_id ? { id: barData.category_id, name: categoryName } : undefined,
-          foodTypes: foodTypes?.map(item => ({
-            food_type_id: item.food_type_id,
-            food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
-          })) || [],
-          tvFeatures: tvFeatures?.map(item => ({
-            tv_feature_id: item.tv_feature_id,
-            tv_feature: { name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown' }
-          })) || [],
-          features: features?.map(item => ({
-            feature_id: item.feature_id,
-            feature: { name: featureMap.get(item.feature_id) || 'Unknown' }
-          })) || []
-        });
+        // Round 2: ownership primer, després posts + matches
+        const ownerResult = authUser
+          ? await supabase.from('users').select('bar_id').eq('id', authUser.id).single()
+          : { data: null, error: null };
 
-        // Check if current user is the owner by checking if their bar_id matches this bar's id
-        if (authUser) {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('bar_id')
-            .eq('id', authUser.id)
-            .single();
+        const ownerCheck = !!(authUser && ownerResult.data && (ownerResult.data as any).bar_id === barData.id);
+        setIsOwner(ownerCheck);
 
-          if (!userError && userData) {
-            setIsOwner(userData.bar_id === barData.id);
-          }
-        }
-
-        // Fetch posts for this bar
-        await fetchBarPosts(barData.id, authUser);
-        
-        // Fetch upcoming matches for this bar
-        await fetchUpcomingMatches(barData.id);
-
-        // Fetch public reviews for this bar (for quick zero-state)
-        const { data: reviewsData } = await supabase
-          .from('reviews')
-          .select('id, rating, comment, created_at')
-          .eq('bar_id', barData.id)
-          .order('created_at', { ascending: false });
-        setPublicReviews((reviewsData as any) || []);
+        await Promise.all([
+          fetchBarPosts(barData.id, authUser, ownerCheck),
+          fetchUpcomingMatches(barData.id),
+        ]);
       }
 
     } catch (error) {
@@ -977,9 +882,9 @@ export default function BarProfileScreen() {
     } finally {
       setLoading(false);
     }
-  }, [barId]);
+  }, [barId, fetchBarPosts, fetchUpcomingMatches]);
 
-  const fetchBarPosts = useCallback(async (barId: string, authUser: any) => {
+  const fetchBarPosts = useCallback(async (barId: string, authUser: any, isOwnerCheck: boolean) => {
     try {
       let query = supabase
         .from('bar_posts')
@@ -987,7 +892,7 @@ export default function BarProfileScreen() {
         .eq('bar_id', barId);
 
       // If not the owner, only show active posts within valid date range
-      if (!authUser || authUser.id !== user?.id) {
+      if (!authUser || !isOwnerCheck) {
         const today = new Date().toISOString().split('T')[0];
         query = query
           .eq('is_active', true)
@@ -1009,12 +914,10 @@ export default function BarProfileScreen() {
     } catch (error) {
       console.error('Error in fetchBarPosts:', error);
     }
-  }, [user]);
+  }, []);
 
   const fetchUpcomingMatches = useCallback(async (barId: string) => {
     try {
-      console.log('📺 Fetching upcoming matches for bar:', barId);
-      
       const { data: matchesData, error: matchesError } = await supabase
         .from('events')
         .select(`
@@ -1058,10 +961,8 @@ export default function BarProfileScreen() {
         }));
 
         setUpcomingMatches(upcomingMatches);
-        console.log('📺 Upcoming matches loaded:', upcomingMatches.length);
       } else {
         setUpcomingMatches([]);
-        console.log('📺 No upcoming matches found for bar:', barId);
       }
     } catch (error) {
       console.error('Error in fetchUpcomingMatches:', error);
@@ -1296,7 +1197,7 @@ export default function BarProfileScreen() {
 
               // Refresh posts
               if (bar) {
-                await fetchBarPosts(bar.id, user);
+                await fetchBarPosts(bar.id, user, isOwner);
               }
             } catch (error) {
               console.error('Error in handleDeletePost:', error);
@@ -1311,8 +1212,7 @@ export default function BarProfileScreen() {
   // Load bar profile on initial mount and when screen comes back into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 Loading bar profile...');
-      fetchBarProfile(); // Loads bar profile including images, posts, reviews, and matches
+      fetchBarProfile();
     }, [fetchBarProfile])
   );
 
@@ -1323,8 +1223,8 @@ export default function BarProfileScreen() {
 
     const wasFavorite = isFavorite(barId);
     const success = await toggleFavorite(barId);
-    if (success) {
-      console.log(wasFavorite ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', bar?.name);
+    if (!success) {
+      toast.error('No se pudo actualizar favorito');
     }
   };
 

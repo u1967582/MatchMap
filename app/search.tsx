@@ -3,12 +3,13 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Image,
+  Image as RNImage,
   TextInput,
   Alert,
   Dimensions,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -252,21 +253,16 @@ export default function SearchScreen() {
       // Paso 2. Cargar relaciones N:N por separado
       const barIds = barsData.map(bar => bar.id);
 
-      // Cargar todos los datos N:N
-      const { data: foodTypes } = await supabase
-        .from('bar_food_types')
-        .select('*')
-        .in('bar_id', barIds);
-
-      const { data: features } = await supabase
-        .from('bar_selected_features')
-        .select('*')
-        .in('bar_id', barIds);
-
-      const { data: tvFeatures } = await supabase
-        .from('bar_selected_tv_features')
-        .select('*')
-        .in('bar_id', barIds);
+      // Cargar todos los datos N:N en paralelo
+      const [
+        { data: foodTypes },
+        { data: features },
+        { data: tvFeatures },
+      ] = await Promise.all([
+        supabase.from('bar_food_types').select('bar_id, food_type_id').in('bar_id', barIds),
+        supabase.from('bar_selected_features').select('bar_id, feature_id').in('bar_id', barIds),
+        supabase.from('bar_selected_tv_features').select('bar_id, tv_feature_id').in('bar_id', barIds),
+      ]);
 
       // Paso 3. Crear mapas para todos los tipos de datos
       const foodTypesMap = new Map();
@@ -295,9 +291,23 @@ export default function SearchScreen() {
         bar_selected_tv_features: tvFeaturesMap.get(bar.id) || [],
       }));
 
+      // Batch query para eventos próximos (evita N+1)
+      const { data: allPosts } = await supabase
+        .from('bar_posts')
+        .select('bar_id, title, description, post_type, start_date, end_date, is_active')
+        .in('bar_id', barIds)
+        .eq('is_active', true)
+        .eq('post_type', 'evento')
+        .gte('start_date', new Date().toISOString().split('T')[0])
+        .order('start_date', { ascending: true });
+
+      const postsMap = new Map<string, any>();
+      (allPosts || []).forEach(post => {
+        if (!postsMap.has(post.bar_id)) postsMap.set(post.bar_id, post);
+      });
+
       // Calculate distances and add next match info
-      const barsWithDistance = await Promise.all(
-        (enrichedBars || []).map(async (bar) => {
+      const barsWithDistance = (enrichedBars || []).map((bar) => {
           let distance = null;
           if (bar.latitude && bar.longitude) {
             distance = calculateDistance(
@@ -308,22 +318,15 @@ export default function SearchScreen() {
             );
           }
 
-          // Get next match for this bar
-          const { data: nextMatch } = await supabase
-            .from('bar_posts')
-            .select('start_date, end_date')
-            .eq('bar_id', bar.id)
-            .eq('post_type', 'evento')
-            .eq('is_active', true)
-            .gte('start_date', new Date().toISOString().split('T')[0])
-            .order('start_date', { ascending: true })
-            .limit(1)
-            .single();
+          const nextMatch = postsMap.get(bar.id) || null;
 
           // Find image with image_order = 1
-          const mainImage = bar.bar_images
-            ?.find((img: any) => img.image_order === 1)?.image_url || 
+          const rawImage = bar.bar_images
+            ?.find((img: any) => img.image_order === 1)?.image_url ||
             bar.bar_images?.[0]?.image_url || null;
+          const mainImage = rawImage
+            ? `${rawImage}?width=600&quality=75`
+            : null;
 
           return {
             ...bar,
@@ -336,8 +339,7 @@ export default function SearchScreen() {
               time: '18:00', // Default time, you might want to store this in your posts
             } : undefined,
           };
-        })
-      );
+        });
 
       // Apply client-side filtering for N:N relationships
       let filteredBars = barsWithDistance;
@@ -502,7 +504,11 @@ export default function SearchScreen() {
           {item.image_url ? (
             <Image
               source={{ uri: item.image_url }}
-              style={styles.barImage}
+              style={[styles.barImage, { backgroundColor: '#1A2332' }]}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              recyclingKey={item.id}
             />
           ) : (
             <View style={styles.placeholderContainer}>
@@ -755,7 +761,7 @@ export default function SearchScreen() {
           <View style={styles.matchBannerContent}>
             <View style={styles.matchTeam}>
               {selectedMatch.home_team?.logo_url ? (
-                <Image
+                <RNImage
                   source={{ uri: selectedMatch.home_team.logo_url }}
                   style={styles.matchTeamLogo}
                 />
@@ -769,7 +775,7 @@ export default function SearchScreen() {
             <AppText variant="caption" color="rgba(255,255,255,0.7)" style={styles.matchVsBanner}>vs</AppText>
             <View style={styles.matchTeam}>
               {selectedMatch.away_team?.logo_url ? (
-                <Image
+                <RNImage
                   source={{ uri: selectedMatch.away_team.logo_url }}
                   style={styles.matchTeamLogo}
                 />
