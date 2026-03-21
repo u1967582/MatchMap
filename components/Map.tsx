@@ -166,13 +166,15 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // Get boost context and functions
   const { selectedBoostBarIds, setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
 
-  // Fetch active boost bars using the hook
+  // Fetch active boost bars using the hook.
+  // enabled:true so the fetch starts immediately on mount without waiting for GPS.
+  // centerLatLng is null until GPS resolves; the hook handles that by returning random bars.
   const { selected3Stable, selected3Bars, isLoading: isLoadingBoost, error: boostError } = useBoostBars({
     centerLatLng: userLocation ? {
       lat: userLocation.coords.latitude,
       lng: userLocation.coords.longitude
     } : null,
-    enabled: !!userLocation,
+    enabled: true,
   });
 
   // Update context with only the 3 selected bars — same ones shown in popup and search
@@ -543,7 +545,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           }
         }
 
-        // Step 2: Build query
+        // Step 2: Build query — single request with all joins
         let barsQuery = supabase
           .from('bars')
           .select(`
@@ -556,10 +558,11 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             rating,
             review_count,
             category_id,
-            bar_images(
-              image_url,
-              image_order
-            )
+            bar_images(image_url, image_order),
+            bar_categories(id, name),
+            bar_food_types(food_type_id, food_types(name)),
+            bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
+            bar_selected_features(feature_id, bar_features(name))
           `)
           .eq('is_active', true);
 
@@ -576,64 +579,39 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
         }
 
         if (data) {
-          // Process each bar to load its characteristics
-          const processedBars = await Promise.all(data.map(async (bar: any) => {
-            // Load category name
-            let category = undefined;
-            if (bar.category_id) {
-              const { data: categoryData } = await supabase
-                .from('bar_categories')
-                .select('id, name')
-                .eq('id', bar.category_id)
-                .single();
-              if (categoryData) {
-                category = { id: categoryData.id, name: categoryData.name };
-              }
-            }
+          const processedBars = data.map((bar: any) => {
+            const mainImage =
+              bar.bar_images?.find((img: any) => img.image_order === 1)?.image_url ||
+              bar.bar_images?.[0]?.image_url ||
+              null;
 
-            // Load food types
-            const { data: foodTypes } = await supabase
-              .from('bar_food_types')
-              .select('food_type_id, food_types(name)')
-              .eq('bar_id', bar.id);
-
-            // Load TV features
-            const { data: tvFeatures } = await supabase
-              .from('bar_selected_tv_features')
-              .select('tv_feature_id, bar_tv_features(name)')
-              .eq('bar_id', bar.id);
-
-            // Load features
-            const { data: features } = await supabase
-              .from('bar_selected_features')
-              .select('feature_id, bar_features(name)')
-              .eq('bar_id', bar.id);
-
-            // Find image with image_order = 1, fallback to first image or null
-            const mainImage = bar.bar_images
-              ?.find((img: any) => img.image_order === 1)?.image_url || 
-              bar.bar_images?.[0]?.image_url || null;
+            const categoryRaw = Array.isArray(bar.bar_categories)
+              ? bar.bar_categories[0]
+              : bar.bar_categories;
+            const category = categoryRaw
+              ? { id: categoryRaw.id, name: categoryRaw.name }
+              : undefined;
 
             return {
               ...bar,
               image_url: mainImage,
               category,
-              bar_food_types: foodTypes?.map((item: any) => ({
+              bar_food_types: (bar.bar_food_types || []).map((item: any) => ({
                 food_type_id: item.food_type_id,
-                food_type: { name: item.food_types?.name || 'Unknown' }
-              })) || [],
-              bar_selected_tv_features: tvFeatures?.map((item: any) => ({
+                food_type: { name: item.food_types?.name || 'Unknown' },
+              })),
+              bar_selected_tv_features: (bar.bar_selected_tv_features || []).map((item: any) => ({
                 tv_feature_id: item.tv_feature_id,
-                tv_feature: { name: item.bar_tv_features?.name || 'Unknown' }
-              })) || [],
-              bar_selected_features: features?.map((item: any) => ({
+                tv_feature: { name: item.bar_tv_features?.name || 'Unknown' },
+              })),
+              bar_selected_features: (bar.bar_selected_features || []).map((item: any) => ({
                 feature_id: item.feature_id,
-                feature: { name: item.bar_features?.name || 'Unknown' }
-              })) || [],
-              // Remove the nested bar_images object
-              bar_images: undefined
+                feature: { name: item.bar_features?.name || 'Unknown' },
+              })),
+              bar_images: undefined,
+              bar_categories: undefined,
             };
-          }));
+          });
 
           setBars(processedBars);
         }
@@ -809,7 +787,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
               anchor={{ x: 0.5, y: 1.0 }}
             >
               <BarMapMarker
-                key={`marker-${markerType}-${bar.id}`}
+                key={`marker-${bar.id}`}
                 type={markerType}
                 animated={(isBoosted || isDestination) && !isSelected}
                 onPress={() => handleMarkerPress(bar)}

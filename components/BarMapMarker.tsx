@@ -34,7 +34,7 @@ const MARKER_SIZES = {
  * - selected: Azul claro (#60A5FA) - Bar con card visible
  * - default: Azul (#007AFF) - Bar predeterminado
  */
-const BarMapMarker: React.FC<BarMapMarkerProps> = ({ type, animated = false, onPress }) => {
+const BarMapMarker: React.FC<BarMapMarkerProps> = React.memo(({ type, animated = false, onPress }) => {
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
   // Animación de pulso para marcadores boosted y destination
@@ -89,7 +89,7 @@ const BarMapMarker: React.FC<BarMapMarkerProps> = ({ type, animated = false, onP
   }
 
   return markerView;
-};
+});
 
 const styles = StyleSheet.create({
   touchableContainer: {
