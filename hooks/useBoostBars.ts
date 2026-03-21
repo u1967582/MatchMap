@@ -141,10 +141,22 @@ export function useBoostBars({
   const centerLat = centerLatLng?.lat ?? null;
   const centerLng = centerLatLng?.lng ?? null;
 
-  // Calculate top 5 nearest and select 3 randomly
+  // Calculate top 5 nearest and select 3 randomly.
+  // When location is not yet available, fall back to up to 3 random bars so the
+  // popup can show immediately after the fetch completes instead of waiting for GPS.
   const { top5NearestActive, selected3Stable, selected3Bars } = useMemo(() => {
-    if (centerLat === null || centerLng === null || boostBars.length === 0) {
+    if (boostBars.length === 0) {
       return { top5NearestActive: [], selected3Stable: [], selected3Bars: [] };
+    }
+
+    // No location yet — return up to 3 random bars as a temporary selection
+    if (centerLat === null || centerLng === null) {
+      const randomized = [...boostBars].sort(() => Math.random() - 0.5).slice(0, 3);
+      return {
+        top5NearestActive: randomized,
+        selected3Stable: randomized.map((bar) => bar.id),
+        selected3Bars: randomized,
+      };
     }
 
     const center = { lat: centerLat, lng: centerLng };
