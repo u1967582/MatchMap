@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, Dimensions, Alert, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Alert, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -180,9 +181,11 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
         <View style={styles.imageContainer}>
           {bar.image_url ? (
             <Image
-              source={{ uri: bar.image_url }}
-              style={styles.barImage}
-              resizeMode="cover"
+              source={{ uri: `${bar.image_url}?width=600&quality=75` }}
+              style={[styles.barImage, { backgroundColor: '#1A2332' }]}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
             />
           ) : (
             <View style={styles.noImageContainer}>
