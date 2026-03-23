@@ -68,7 +68,7 @@ export default function AppChip({
       <AppText
         variant="label"
         color={selected ? colors.text.primary : colors.text.secondary}
-        style={selected ? styles.labelSelected : undefined}
+        style={styles.label}
       >
         {label}
       </AppText>
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginRight: spacing.sm,
   },
-  labelSelected: {
+  label: {
     fontWeight: '700',
   },
 });

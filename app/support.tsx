@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, LayoutAnimation, UIManager, Platform, StyleSheet } from 'react-native';
+import { View, Pressable, ScrollView, LayoutAnimation, UIManager, Platform, StyleSheet } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,24 +50,24 @@ export default function SupportScreen() {
         <Pressable onPress={() => router.back()} style={styles.headerBack} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={styles.headerTitle}>Preguntas Frecuentes</Text>
+        <AppText maxScale={1.0} style={styles.headerTitle}>Preguntas Frecuentes</AppText>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.lead}>
+        <AppText style={styles.lead}>
           Encuentra respuestas a las preguntas más comunes sobre MatchMap.
-        </Text>
+        </AppText>
 
         {FAQS.map((item, i) => (
           <View key={i} style={styles.card}>
             <Pressable onPress={() => toggle(i)} style={styles.cardHeader} android_ripple={{ color: '#0D1A2B' }}>
-              <Text style={styles.cardTitle}>{item.q}</Text>
+              <AppText maxScale={1.2} style={styles.cardTitle}>{item.q}</AppText>
               <Ionicons name={openIndex === i ? 'chevron-up' : 'chevron-down'} size={22} color="#007AFF" />
             </Pressable>
             {openIndex === i && (
               <View style={styles.cardBody}>
-                <Text style={styles.cardText}>{item.a}</Text>
+                <AppText maxScale={1.5} style={styles.cardText}>{item.a}</AppText>
               </View>
             )}
           </View>

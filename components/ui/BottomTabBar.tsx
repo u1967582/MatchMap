@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
+import { AppText } from '~/components/ds';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
@@ -103,7 +104,7 @@ const BottomTabBar = () => {
           <View style={styles.iconContainer}>
             <Ionicons name={icon} size={18} color={iconColor} />
           </View>
-          <Text style={[styles.tabLabel, { color: textColor }]}>{label}</Text>
+          <AppText maxScale={1.0} style={[styles.tabLabel, { color: textColor }]}>{label}</AppText>
         </TouchableOpacity>
       </Animated.View>
     );

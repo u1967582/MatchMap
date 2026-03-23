@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Text } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -10,7 +10,7 @@ export default function Step0() {
   }, [router]);
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#1C2A3A', justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ color: '#FFFFFF' }}>Redirigiendo…</Text>
+      <AppText style={{ color: '#FFFFFF' }}>Redirigiendo…</AppText>
     </SafeAreaView>
   );
 } 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -138,7 +139,7 @@ export default function SubscriptionPlans() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Cargando...</Text>
+          <AppText style={styles.loadingText}>Cargando...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -148,7 +149,7 @@ export default function SubscriptionPlans() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Usuario no autenticado</Text>
+          <AppText style={styles.errorText}>Usuario no autenticado</AppText>
         </View>
       </SafeAreaView>
     );
@@ -161,22 +162,22 @@ export default function SubscriptionPlans() {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Planes de Suscripción</Text>
+        <AppText style={styles.headerTitle}>Planes de Suscripción</AppText>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Info Section */}
         <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>
+          <AppText style={styles.infoTitle}>
             {barId ? 'Actualizar Plan' : 'Elegir Plan'}
-          </Text>
-          <Text style={styles.infoDescription}>
+          </AppText>
+          <AppText style={styles.infoDescription}>
             {barId 
               ? 'Actualiza tu plan actual para acceder a más funcionalidades'
               : 'Elige el plan que mejor se adapte a tus necesidades'
             }
-          </Text>
+          </AppText>
         </View>
 
         {/* Plans */}
@@ -185,13 +186,13 @@ export default function SubscriptionPlans() {
             <View key={key} style={styles.planCard}>
               <View style={styles.planHeader}>
                 <View>
-                  <Text style={styles.planName}>{plan.name}</Text>
-                  <Text style={styles.planPrice}>{formatPrice(plan)}</Text>
+                  <AppText style={styles.planName}>{plan.name}</AppText>
+                  <AppText style={styles.planPrice}>{formatPrice(plan)}</AppText>
                 </View>
                 <View style={styles.planBadge}>
-                  <Text style={styles.planBadgeText}>
+                  <AppText style={styles.planBadgeText}>
                     {plan.interval === 'year' ? 'AÑO' : 'MES'}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
               
@@ -199,9 +200,9 @@ export default function SubscriptionPlans() {
               <View style={styles.planFeatures}>
                 <View style={styles.featureItem}>
                   <Ionicons name="images" size={20} color="#10B981" />
-                  <Text style={styles.featureText}>
+                  <AppText style={styles.featureText}>
                     Hasta {plan.features.maxPhotos} fotos
-                  </Text>
+                  </AppText>
                 </View>
                 <View style={styles.featureItem}>
                   <Ionicons 
@@ -209,33 +210,33 @@ export default function SubscriptionPlans() {
                     size={20} 
                     color={plan.features.watermark ? "#EF4444" : "#10B981"} 
                   />
-                  <Text style={styles.featureText}>
+                  <AppText style={styles.featureText}>
                     {plan.features.watermark ? 'Con marca de agua' : 'Sin marca de agua'}
-                  </Text>
+                  </AppText>
                 </View>
                 <View style={styles.featureItem}>
                   <Ionicons name="analytics" size={20} color="#10B981" />
-                  <Text style={styles.featureText}>
+                  <AppText style={styles.featureText}>
                     {plan.features.analytics === 'advanced' ? 'Analytics avanzados' : 'Analytics básicos'}
-                  </Text>
+                  </AppText>
                 </View>
                 <View style={styles.featureItem}>
                   <Ionicons name="people" size={20} color="#10B981" />
-                  <Text style={styles.featureText}>
+                  <AppText style={styles.featureText}>
                     Soporte {plan.features.support}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
               {/* Yearly savings */}
               {plan.interval === 'year' && (
                 <View style={styles.savingsContainer}>
-                  <Text style={styles.savingsText}>
+                  <AppText style={styles.savingsText}>
                     💰 Ahorras {getYearlySavings(
                       SUBSCRIPTION_PLANS[plan.name.includes('Pro') ? 'pro_monthly' : 'elite_monthly'],
                       plan
                     )}€ al año
-                  </Text>
+                  </AppText>
                 </View>
               )}
 
@@ -248,9 +249,9 @@ export default function SubscriptionPlans() {
                 onPress={() => startSubscription(plan)}
                 disabled={isProcessing}
               >
-                <Text style={styles.subscribeButtonText}>
+                <AppText style={styles.subscribeButtonText}>
                   {isProcessing ? 'Procesando...' : 'Suscribirse'}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             </View>
           ))}
@@ -258,10 +259,10 @@ export default function SubscriptionPlans() {
 
         {/* Additional Info */}
         <View style={styles.additionalInfo}>
-          <Text style={styles.additionalInfoTitle}>¿Necesitas ayuda?</Text>
-          <Text style={styles.additionalInfoText}>
+          <AppText style={styles.additionalInfoTitle}>¿Necesitas ayuda?</AppText>
+          <AppText style={styles.additionalInfoText}>
             Si tienes alguna pregunta sobre nuestros planes, no dudes en contactarnos.
-          </Text>
+          </AppText>
         </View>
       </ScrollView>
     </SafeAreaView>

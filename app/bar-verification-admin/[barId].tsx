@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
@@ -11,6 +10,7 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -218,7 +218,7 @@ export default function BarVerificationDetailScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loading}>
           <ActivityIndicator color="#FFD700" />
-          <Text style={styles.loadingText}>Cargando…</Text>
+          <AppText style={styles.loadingText}>Cargando…</AppText>
         </View>
       </SafeAreaView>
     );
@@ -232,13 +232,13 @@ export default function BarVerificationDetailScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Verificación</Text>
+          <AppText style={styles.headerTitle}>Verificación</AppText>
           <View style={{ width: 28 }} />
         </View>
         <View style={styles.emptyWrap}>
           <Ionicons name="alert-circle-outline" size={34} color="#A3B3CC" />
-          <Text style={styles.emptyTitle}>No encontrado</Text>
-          <Text style={styles.emptySub}>No se pudo cargar este bar.</Text>
+          <AppText style={styles.emptyTitle}>No encontrado</AppText>
+          <AppText style={styles.emptySub}>No se pudo cargar este bar.</AppText>
         </View>
       </SafeAreaView>
     );
@@ -255,9 +255,9 @@ export default function BarVerificationDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+        <AppText style={styles.headerTitle} numberOfLines={1}>
           {bar.name}
-        </Text>
+        </AppText>
         <TouchableOpacity onPress={load} style={styles.iconBtn} disabled={actionLoading !== null}>
           <Ionicons name="refresh" size={20} color="#A3B3CC" />
         </TouchableOpacity>
@@ -276,8 +276,8 @@ export default function BarVerificationDetailScreen() {
 
         <View style={styles.gallerySection}>
           <View style={styles.galleryHeader}>
-            <Text style={styles.galleryTitle}>Imágenes del bar</Text>
-            <Text style={styles.galleryCount}>{barImages.length}</Text>
+            <AppText style={styles.galleryTitle}>Imágenes del bar</AppText>
+            <AppText style={styles.galleryCount}>{barImages.length}</AppText>
           </View>
           {barImages.length > 0 ? (
             <FlatList
@@ -293,14 +293,14 @@ export default function BarVerificationDetailScreen() {
               )}
             />
           ) : (
-            <Text style={styles.galleryEmpty}>Sin imágenes del bar</Text>
+            <AppText style={styles.galleryEmpty}>Sin imágenes del bar</AppText>
           )}
         </View>
 
         <View style={styles.gallerySection}>
           <View style={styles.galleryHeader}>
-            <Text style={styles.galleryTitle}>Imágenes de la carta</Text>
-            <Text style={styles.galleryCount}>{menuImages.length}</Text>
+            <AppText style={styles.galleryTitle}>Imágenes de la carta</AppText>
+            <AppText style={styles.galleryCount}>{menuImages.length}</AppText>
           </View>
           {menuImages.length > 0 ? (
             <FlatList
@@ -316,7 +316,7 @@ export default function BarVerificationDetailScreen() {
               )}
             />
           ) : (
-            <Text style={styles.galleryEmpty}>Sin imágenes de la carta</Text>
+            <AppText style={styles.galleryEmpty}>Sin imágenes de la carta</AppText>
           )}
         </View>
 
@@ -341,7 +341,7 @@ export default function BarVerificationDetailScreen() {
           <TouchableOpacity activeOpacity={0.85} style={[styles.approveBtn, actionLoading && styles.btnDisabled]} disabled={!!actionLoading} onPress={approve}>
             {actionLoading === 'approve' ? <ActivityIndicator color="#FFFFFF" /> : <>
               <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-              <Text style={styles.approveText}>Aprobar</Text>
+              <AppText style={styles.approveText}>Aprobar</AppText>
             </>}
           </TouchableOpacity>
           <TouchableOpacity
@@ -351,17 +351,17 @@ export default function BarVerificationDetailScreen() {
             onPress={() => setShowReject((v) => !v)}
           >
             <Ionicons name="close" size={18} color="#FFFFFF" />
-            <Text style={styles.rejectText}>Rechazar</Text>
+            <AppText style={styles.rejectText}>Rechazar</AppText>
           </TouchableOpacity>
         </View>
 
         {showReject ? (
           <View style={styles.rejectCard}>
-            <Text style={styles.rejectTitle}>Motivo de rechazo</Text>
+            <AppText style={styles.rejectTitle}>Motivo de rechazo</AppText>
             <View style={styles.presetRow}>
               {quickRejectPresets.map((p) => (
                 <TouchableOpacity key={p} activeOpacity={0.85} style={styles.presetChip} onPress={() => setRejectNotes(p)}>
-                  <Text style={styles.presetChipText}>{p}</Text>
+                  <AppText style={styles.presetChipText}>{p}</AppText>
                 </TouchableOpacity>
               ))}
             </View>
@@ -381,7 +381,7 @@ export default function BarVerificationDetailScreen() {
             >
               {actionLoading === 'reject' ? <ActivityIndicator color="#FFFFFF" /> : <>
                 <Ionicons name="close-circle-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.rejectConfirmText}>Confirmar rechazo</Text>
+                <AppText style={styles.rejectConfirmText}>Confirmar rechazo</AppText>
               </>}
             </TouchableOpacity>
           </View>
@@ -404,8 +404,8 @@ function InfoRow(props: { label: string; value: string; onCopy: () => void; disa
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoTextWrap}>
-        <Text style={styles.infoLabel}>{props.label}</Text>
-        <Text style={styles.infoValue}>{props.value}</Text>
+        <AppText style={styles.infoLabel}>{props.label}</AppText>
+        <AppText style={styles.infoValue}>{props.value}</AppText>
       </View>
       <TouchableOpacity style={[styles.copyBtn, props.disabled && { opacity: 0.4 }]} onPress={props.onCopy} disabled={props.disabled}>
         <Ionicons name="copy-outline" size={18} color="#A3B3CC" />

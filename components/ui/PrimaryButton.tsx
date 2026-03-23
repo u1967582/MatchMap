@@ -1,4 +1,5 @@
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { AppText } from '~/components/ds';
 
 interface PrimaryButtonProps {
   title: string;
@@ -37,7 +38,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? '#FFFFFF' : '#007AFF'} />
       ) : (
-        <Text style={textStyle}>{title}</Text>
+        <AppText maxScale={1.0} style={textStyle}>{title}</AppText>
       )}
     </TouchableOpacity>
   );

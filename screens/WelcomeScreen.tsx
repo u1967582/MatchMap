@@ -1,4 +1,5 @@
-import { View, StyleSheet, Text, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import BackgroundImage from '~/components/ui/BackgroundImage';
@@ -47,8 +48,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       <View style={styles.illustration}>
         <Ionicons name={item.icon as any} size={120} color="#7FB3FF" />
       </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.description}>{item.description}</Text>
+      <AppText maxScale={1.2} style={styles.title}>{item.title}</AppText>
+      <AppText maxScale={1.3} style={styles.description}>{item.description}</AppText>
     </View>
   );
 
@@ -100,7 +101,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>o</Text>
+              <AppText maxScale={1.0} style={styles.dividerText}>o</AppText>
               <View style={styles.dividerLine} />
             </View>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Image } from 'react-native';
 import { supabase } from '~/utils/supabase';
-import { haversineDistance, coordsToKey, type LatLng } from '~/utils/geo';
-import { createSeededRandom } from '~/utils/random';
+import { haversineDistance, type LatLng } from '~/utils/geo';
 
 export interface BoostBar {
   id: string;
@@ -10,6 +10,9 @@ export interface BoostBar {
   lng: number;
   boost_end_at: string;
   distance?: number;
+  rating?: number;
+  review_count?: number;
+  image_url?: string;
 }
 
 interface UseBoostBarsOptions {
@@ -19,8 +22,10 @@ interface UseBoostBarsOptions {
 
 interface UseBoostBarsResult {
   boostBars: BoostBar[];
+  allBoostBarIds: string[];
   top5NearestActive: BoostBar[];
   selected3Stable: string[];
+  selected3Bars: BoostBar[];
   isLoading: boolean;
   error: Error | null;
 }
@@ -63,7 +68,10 @@ export function useBoostBars({
               id,
               name,
               latitude,
-              longitude
+              longitude,
+              rating,
+              review_count,
+              bar_images (image_url, image_order)
             )
           `)
           .eq('status', 'active')
@@ -77,17 +85,37 @@ export function useBoostBars({
         const bars: BoostBar[] = (data || [])
           .filter((item) => item.bars && !Array.isArray(item.bars))
           .map((item) => {
-            const bar = item.bars as unknown as { id: string; name: string; latitude: number; longitude: number };
+            const bar = item.bars as unknown as {
+              id: string;
+              name: string;
+              latitude: number;
+              longitude: number;
+              rating?: number;
+              review_count?: number;
+              bar_images?: { image_url: string; image_order: number }[];
+            };
+            const images = bar.bar_images || [];
+            const mainImage =
+              images.find((img) => img.image_order === 1)?.image_url ||
+              images[0]?.image_url;
             return {
               id: bar.id,
               name: bar.name,
               lat: bar.latitude,
               lng: bar.longitude,
               boost_end_at: item.end_at,
+              rating: bar.rating,
+              review_count: bar.review_count,
+              image_url: mainImage,
             };
           });
 
         setBoostBars(bars);
+
+        // Prefetch images so they están listas cuando aparezca el popup
+        bars.forEach((bar) => {
+          if (bar.image_url) Image.prefetch(bar.image_url);
+        });
       } catch (err) {
         if (isMounted) {
           console.error('Error fetching boost bars:', err);
@@ -107,16 +135,36 @@ export function useBoostBars({
     };
   }, [enabled]);
 
-  // Calculate top 5 nearest and select 3 stable
-  const { top5NearestActive, selected3Stable } = useMemo(() => {
-    if (!centerLatLng || boostBars.length === 0) {
-      return { top5NearestActive: [], selected3Stable: [] };
+  const allBoostBarIds = useMemo(() => boostBars.map((b) => b.id), [boostBars]);
+
+  // Extract primitives to avoid re-running the memo when a new object with same coords is passed
+  const centerLat = centerLatLng?.lat ?? null;
+  const centerLng = centerLatLng?.lng ?? null;
+
+  // Calculate top 5 nearest and select 3 randomly.
+  // When location is not yet available, fall back to up to 3 random bars so the
+  // popup can show immediately after the fetch completes instead of waiting for GPS.
+  const { top5NearestActive, selected3Stable, selected3Bars } = useMemo(() => {
+    if (boostBars.length === 0) {
+      return { top5NearestActive: [], selected3Stable: [], selected3Bars: [] };
     }
+
+    // No location yet — return up to 3 random bars as a temporary selection
+    if (centerLat === null || centerLng === null) {
+      const randomized = [...boostBars].sort(() => Math.random() - 0.5).slice(0, 3);
+      return {
+        top5NearestActive: randomized,
+        selected3Stable: randomized.map((bar) => bar.id),
+        selected3Bars: randomized,
+      };
+    }
+
+    const center = { lat: centerLat, lng: centerLng };
 
     // Calculate distances
     const barsWithDistance = boostBars.map((bar) => ({
       ...bar,
-      distance: haversineDistance(centerLatLng, { lat: bar.lat, lng: bar.lng }),
+      distance: haversineDistance(center, { lat: bar.lat, lng: bar.lng }),
     }));
 
     // Sort by distance and take top 5
@@ -124,25 +172,24 @@ export function useBoostBars({
       .sort((a, b) => a.distance! - b.distance!)
       .slice(0, 5);
 
-    // Create deterministic seed from center coordinates
-    const seed = coordsToKey(centerLatLng, 3);
-    const rng = createSeededRandom(seed);
-
-    // Pick 3 from top 5 (or all if less than 3)
+    // Pick 3 randomly from top 5
     const countToSelect = Math.min(3, top5.length);
-    const selected = rng.pick(top5, countToSelect);
-    const selectedIds = selected.map((bar) => bar.id);
+    const shuffled = [...top5].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, countToSelect);
 
     return {
       top5NearestActive: top5,
-      selected3Stable: selectedIds,
+      selected3Stable: selected.map((bar) => bar.id),
+      selected3Bars: selected,
     };
-  }, [boostBars, centerLatLng]);
+  }, [boostBars, centerLat, centerLng]);
 
   return {
     boostBars,
+    allBoostBarIds,
     top5NearestActive,
     selected3Stable,
+    selected3Bars,
     isLoading,
     error,
   };

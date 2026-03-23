@@ -1,14 +1,16 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Image,
+  Image as RNImage,
   TextInput,
   Alert,
   Dimensions,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
@@ -71,15 +73,19 @@ const SORT_OPTIONS: FilterOption[] = [
   { id: 'rating', label: '⭐ Mejor valorados', value: 'rating' },
 ];
 
+const PAGE_SIZE = 10;
+
 const { width } = Dimensions.get('window');
 
 export default function SearchScreen() {
   const router = useRouter();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [bars, setBars] = useState<Bar[]>([]);
+  const [allBars, setAllBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [regularPage, setRegularPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Filters state
   const [selectedSort, setSelectedSort] = useState('proximity'); // Default to "Proximidad"
@@ -97,6 +103,8 @@ export default function SearchScreen() {
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
 
   // Load favorites functionality from store (optimistic updates)
+  // Suscribir a `favorites` para que el componente re-renderice al cambiar el Set
+  const favorites = useFavoritesStore(state => state.favorites);
   const isFavorite = useFavoritesStore(state => state.isFavorite);
   const toggleFavorite = useFavoritesStore(state => state.toggleFavorite);
 
@@ -104,10 +112,29 @@ export default function SearchScreen() {
   const { setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
 
   // Get boost bars based on current user location
-  const { selected3Stable } = useBoostBars({
+  const { selected3Stable, allBoostBarIds } = useBoostBars({
     centerLatLng: userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null,
     enabled: !!userLocation,
   });
+
+  // Ref for allBoostBarIds so searchBars can read the latest value without being recreated
+  const allBoostBarIdsRef = useRef<string[]>([]);
+  useEffect(() => { allBoostBarIdsRef.current = allBoostBarIds; }, [allBoostBarIds]);
+
+  // Split bars: boosted (always shown) + regular (paginated)
+  const boostedDisplayBars = useMemo(
+    () => allBars.filter(b => selected3Stable.includes(b.id)),
+    [allBars, selected3Stable]
+  );
+  const regularDisplayBars = useMemo(
+    () => allBars.filter(b => !selected3Stable.includes(b.id)),
+    [allBars, selected3Stable]
+  );
+  const displayedBars = useMemo(
+    () => [...boostedDisplayBars, ...regularDisplayBars.slice(0, regularPage * PAGE_SIZE)],
+    [boostedDisplayBars, regularDisplayBars, regularPage]
+  );
+  const hasMoreBars = regularDisplayBars.length > regularPage * PAGE_SIZE;
 
   // Update context when selection changes - with stabilized reference
   useEffect(() => {
@@ -128,15 +155,6 @@ export default function SearchScreen() {
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation?.latitude, userLocation?.longitude, setCenterLatLng]); // Only depend on coordinates
-
-  // Debug logs
-  console.log('Filter data loaded:', {
-    barCategories: barCategories.length,
-    foodTypes: foodTypes.length,
-    barFeatures: barFeatures.length,
-    tvFeatures: tvFeatures.length,
-    loading: filtersLoading
-  });
 
   // Get user location
   const getUserLocation = useCallback(async () => {
@@ -171,15 +189,6 @@ export default function SearchScreen() {
     setLoading(true);
 
     try {
-      console.log('🔍 Starting bar search with filters:', {
-        searchQuery,
-        selectedBarCategories,
-        selectedFoodTypes,
-        selectedFeatures,
-        selectedTvFeatures,
-        selectedSort
-      });
-
       // Paso 1. Si hay filtro por partido, obtener barIds con eventos de ese partido
       let barIdsFilter: string[] | null = null;
       if (selectedMatch) {
@@ -190,7 +199,7 @@ export default function SearchScreen() {
           barIdsFilter = [];
         }
         if (!barIdsFilter || barIdsFilter.length === 0) {
-          setBars([]);
+          setAllBars([]);
           return;
         }
       }
@@ -216,19 +225,16 @@ export default function SearchScreen() {
       // Aplicar filtro de búsqueda
       if (searchQuery.trim()) {
         barsQuery = barsQuery.ilike('name', `%${searchQuery.trim()}%`);
-        console.log('🔍 Applied search filter:', searchQuery.trim());
       }
 
       // Aplicar filtro por partido (IDs)
       if (barIdsFilter) {
         barsQuery = barsQuery.in('id', barIdsFilter);
-        console.log('🔍 Applied match filter (bar ids):', barIdsFilter.length);
       }
 
       // Aplicar filtro de categorías (esto se puede hacer a nivel de DB)
       if (selectedBarCategories.length > 0) {
         barsQuery = barsQuery.in('category_id', selectedBarCategories);
-        console.log('🔍 Applied category filter at DB level:', selectedBarCategories);
       }
 
       const { data: barsData, error } = await barsQuery;
@@ -239,38 +245,24 @@ export default function SearchScreen() {
         return;
       }
 
-      console.log('📊 Initial bars fetched:', barsData?.length || 0);
-
       if (!barsData || barsData.length === 0) {
-        setBars([]);
+        setAllBars([]);
         return;
       }
 
       // Paso 2. Cargar relaciones N:N por separado
       const barIds = barsData.map(bar => bar.id);
-      console.log('🔍 Loading N:N relationships for bar IDs:', barIds);
 
-      // Cargar todos los datos N:N
-      const { data: foodTypes } = await supabase
-        .from('bar_food_types')
-        .select('*')
-        .in('bar_id', barIds);
-
-      const { data: features } = await supabase
-        .from('bar_selected_features')
-        .select('*')
-        .in('bar_id', barIds);
-
-      const { data: tvFeatures } = await supabase
-        .from('bar_selected_tv_features')
-        .select('*')
-        .in('bar_id', barIds);
-
-      console.log('📊 N:N relationships loaded:', {
-        foodTypes: foodTypes?.length || 0,
-        features: features?.length || 0,
-        tvFeatures: tvFeatures?.length || 0
-      });
+      // Cargar todos los datos N:N en paralelo
+      const [
+        { data: foodTypes },
+        { data: features },
+        { data: tvFeatures },
+      ] = await Promise.all([
+        supabase.from('bar_food_types').select('bar_id, food_type_id').in('bar_id', barIds),
+        supabase.from('bar_selected_features').select('bar_id, feature_id').in('bar_id', barIds),
+        supabase.from('bar_selected_tv_features').select('bar_id, tv_feature_id').in('bar_id', barIds),
+      ]);
 
       // Paso 3. Crear mapas para todos los tipos de datos
       const foodTypesMap = new Map();
@@ -291,49 +283,31 @@ export default function SearchScreen() {
         tvFeaturesMap.get(bar_id).push({ tv_feature_id });
       });
 
-      console.log('🗺️ Maps created:', {
-        foodTypesMapSize: foodTypesMap.size,
-        featuresMapSize: featuresMap.size,
-        tvFeaturesMapSize: tvFeaturesMap.size
-      });
-
       // Paso 4. Fusionar la información por bar
-      const enrichedBars = barsData.map(bar => {
-        const enrichedBar = {
-          ...bar,
-          bar_food_types: foodTypesMap.get(bar.id) || [],
-          bar_selected_features: featuresMap.get(bar.id) || [],
-          bar_selected_tv_features: tvFeaturesMap.get(bar.id) || [],
-        };
+      const enrichedBars = barsData.map(bar => ({
+        ...bar,
+        bar_food_types: foodTypesMap.get(bar.id) || [],
+        bar_selected_features: featuresMap.get(bar.id) || [],
+        bar_selected_tv_features: tvFeaturesMap.get(bar.id) || [],
+      }));
 
-        // Log explícito para verificar que los datos se asignan correctamente
-        console.log('✅ Bar enriched:', bar.name, {
-          foods: enrichedBar.bar_food_types,
-          features: enrichedBar.bar_selected_features,
-          tvFeatures: enrichedBar.bar_selected_tv_features
-        });
+      // Batch query para eventos próximos (evita N+1)
+      const { data: allPosts } = await supabase
+        .from('bar_posts')
+        .select('bar_id, title, description, post_type, start_date, end_date, is_active')
+        .in('bar_id', barIds)
+        .eq('is_active', true)
+        .eq('post_type', 'evento')
+        .gte('start_date', new Date().toISOString().split('T')[0])
+        .order('start_date', { ascending: true });
 
-        return enrichedBar;
+      const postsMap = new Map<string, any>();
+      (allPosts || []).forEach(post => {
+        if (!postsMap.has(post.bar_id)) postsMap.set(post.bar_id, post);
       });
-
-      console.log('🔍 Enriched bars data:');
-      enrichedBars.forEach(bar => {
-        console.log(`📋 ${bar.name}:`, {
-          category_id: bar.category_id,
-          foodTypes: bar.bar_food_types,
-          features: bar.bar_selected_features,
-          tvFeatures: bar.bar_selected_tv_features
-        });
-      });
-
-      // Debug: Log complete example bar
-      if (enrichedBars.length > 0) {
-        console.log('🧪 Bar ejemplo completo:', JSON.stringify(enrichedBars[0], null, 2));
-      }
 
       // Calculate distances and add next match info
-      const barsWithDistance = await Promise.all(
-        (enrichedBars || []).map(async (bar) => {
+      const barsWithDistance = (enrichedBars || []).map((bar) => {
           let distance = null;
           if (bar.latitude && bar.longitude) {
             distance = calculateDistance(
@@ -344,29 +318,15 @@ export default function SearchScreen() {
             );
           }
 
-          // Get next match for this bar
-          const { data: nextMatch } = await supabase
-            .from('bar_posts')
-            .select('start_date, end_date')
-            .eq('bar_id', bar.id)
-            .eq('post_type', 'evento')
-            .eq('is_active', true)
-            .gte('start_date', new Date().toISOString().split('T')[0])
-            .order('start_date', { ascending: true })
-            .limit(1)
-            .single();
+          const nextMatch = postsMap.get(bar.id) || null;
 
           // Find image with image_order = 1
-          const mainImage = bar.bar_images
-            ?.find((img: any) => img.image_order === 1)?.image_url || 
+          const rawImage = bar.bar_images
+            ?.find((img: any) => img.image_order === 1)?.image_url ||
             bar.bar_images?.[0]?.image_url || null;
-
-          console.log(`🖼️ Bar "${bar.name}":`, {
-            totalImages: bar.bar_images?.length || 0,
-            imageOrder1: bar.bar_images?.find((img: any) => img.image_order === 1)?.image_url,
-            fallbackImage: bar.bar_images?.[0]?.image_url,
-            selectedImage: mainImage
-          });
+          const mainImage = rawImage
+            ? `${rawImage}?width=600&quality=75`
+            : null;
 
           return {
             ...bar,
@@ -379,113 +339,39 @@ export default function SearchScreen() {
               time: '18:00', // Default time, you might want to store this in your posts
             } : undefined,
           };
-        })
-      );
+        });
 
       // Apply client-side filtering for N:N relationships
       let filteredBars = barsWithDistance;
 
-      // Apply food types filter (client-side)
+      // Apply food types filter (client-side, ALL selected must match)
       if (selectedFoodTypes.length > 0) {
-        const beforeCount = filteredBars.length;
-        console.log('🍕 Starting food types filter with:', selectedFoodTypes);
-        
         filteredBars = filteredBars.filter(bar => {
           const foodIds = bar.bar_food_types?.map((ft: { food_type_id: number }) => ft.food_type_id) || [];
-          
-          // Check if bar has ALL selected food types (AND logic)
-          const matchesFood = selectedFoodTypes.every(selectedId => {
-            const hasFoodType = foodIds.includes(selectedId);
-            console.log(`  🍕 Bar "${bar.name}": checking food_type_id ${selectedId} -> ${hasFoodType ? '✅' : '❌'}`);
-            return hasFoodType;
-          });
-          
-          console.log(`🧪 Bar "${bar.name}":`, {
-            foodIds,
-            selectedFoodTypes,
-            matchesFood: matchesFood ? '✅' : '❌'
-          });
-          
-          return matchesFood;
+          return selectedFoodTypes.every(id => foodIds.includes(id));
         });
-        console.log('🍕 Applied food types filter (client-side):', selectedFoodTypes, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Apply features filter (client-side)
+      // Apply features filter (client-side, ALL selected must match)
       if (selectedFeatures.length > 0) {
-        const beforeCount = filteredBars.length;
-        console.log('✨ Starting features filter with:', selectedFeatures);
-        
         filteredBars = filteredBars.filter(bar => {
           const featureIds = bar.bar_selected_features?.map((f: { feature_id: number }) => f.feature_id) || [];
-          
-          // Check if bar has ALL selected features (AND logic)
-          const matchesFeatures = selectedFeatures.every(selectedId => {
-            const hasFeature = featureIds.includes(selectedId);
-            console.log(`  ✨ Bar "${bar.name}": checking feature_id ${selectedId} -> ${hasFeature ? '✅' : '❌'}`);
-            return hasFeature;
-          });
-          
-          console.log(`🧪 Bar "${bar.name}":`, {
-            featureIds,
-            selectedFeatures,
-            matchesFeatures: matchesFeatures ? '✅' : '❌'
-          });
-          
-          return matchesFeatures;
+          return selectedFeatures.every(id => featureIds.includes(id));
         });
-        console.log('✨ Applied features filter (client-side):', selectedFeatures, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Apply TV features filter (client-side)
+      // Apply TV features filter (client-side, ALL selected must match)
       if (selectedTvFeatures.length > 0) {
-        const beforeCount = filteredBars.length;
-        console.log('📺 Starting TV features filter with:', selectedTvFeatures);
-        
         filteredBars = filteredBars.filter(bar => {
           const tvFeatureIds = bar.bar_selected_tv_features?.map((tf: { tv_feature_id: number }) => tf.tv_feature_id) || [];
-          
-          // Check if bar has ALL selected TV features (AND logic)
-          const matchesTvFeatures = selectedTvFeatures.every(selectedId => {
-            const hasTvFeature = tvFeatureIds.includes(selectedId);
-            console.log(`  📺 Bar "${bar.name}": checking tv_feature_id ${selectedId} -> ${hasTvFeature ? '✅' : '❌'}`);
-            return hasTvFeature;
-          });
-          
-          console.log(`🧪 Bar "${bar.name}":`, {
-            tvFeatureIds,
-            selectedTvFeatures,
-            matchesTvFeatures: matchesTvFeatures ? '✅' : '❌'
-          });
-          
-          return matchesTvFeatures;
+          return selectedTvFeatures.every(id => tvFeatureIds.includes(id));
         });
-        console.log('📺 Applied TV features filter (client-side):', selectedTvFeatures, `(${beforeCount} -> ${filteredBars.length} bars)`);
       }
 
-      // Fetch active boost bars directly for immediate sorting
-      let boostBarIds: string[] = [];
-      try {
-        const now = new Date().toISOString();
-        const { data: boostData } = await supabase
-          .from('bar_boosts')
-          .select('bar_id, end_at')
-          .eq('status', 'active')
-          .gt('end_at', now);
-
-        if (boostData && boostData.length > 0) {
-          // Get unique bar IDs that have active boosts
-          boostBarIds = [...new Set(boostData.map(b => b.bar_id))];
-          console.log('🚀 Found active boost bars:', boostBarIds.length);
-        }
-      } catch (error) {
-        console.error('❌ Error fetching boost bars:', error);
-      }
-
-      // Apply sorting with BOOST PRIORITY
+      // Apply sorting with BOOST PRIORITY using cached allBoostBarIds from hook
+      const boostBarIds = allBoostBarIdsRef.current;
       let sortedBars = [...filteredBars];
 
-      // Primary sort: Boosted bars always come first
       sortedBars.sort((a, b) => {
         const aIsBoosted = boostBarIds.includes(a.id);
         const bIsBoosted = boostBarIds.includes(b.id);
@@ -508,11 +394,8 @@ export default function SearchScreen() {
         }
       });
 
-      console.log('✅ Final bars after filtering and sorting:', sortedBars.length);
-      console.log('🚀 Boosted bars on top:', boostBarIds.length);
-      console.log('📋 Bars found:', sortedBars.map(bar => bar.name));
-
-      setBars(sortedBars);
+      setAllBars(sortedBars);
+      setRegularPage(1);
     } catch (error) {
       console.error('❌ Error in searchBars:', error);
       toast.error('Error', 'Ocurrió un error al buscar bares');
@@ -521,15 +404,32 @@ export default function SearchScreen() {
     }
   }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch]);
 
-  // Update highlighting when boost selection changes (for visual sync with map)
-  // Note: Initial sorting is now handled inside searchBars()
-  useEffect(() => {
-    if (bars.length === 0 || selected3Stable.length === 0) return;
+  // Load next page of bars
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMoreBars) return;
+    setLoadingMore(true);
+    setTimeout(() => {
+      setRegularPage(prev => prev + 1);
+      setLoadingMore(false);
+    }, 300);
+  }, [loadingMore, hasMoreBars]);
 
-    // Just trigger a re-render to update golden borders
-    // The bars are already sorted correctly from searchBars()
-    console.log('✨ Boost selection updated for visual sync:', selected3Stable.length);
-  }, [selected3Stable, bars.length]);
+  // Footer: loading skeleton or end message
+  const renderListFooter = useCallback(() => {
+    if (loadingMore) {
+      return <SkeletonList count={2} />;
+    }
+    if (!hasMoreBars && allBars.length > 0) {
+      return (
+        <View style={styles.footerEnd}>
+          <AppText variant="caption" color={colors.text.muted} align="center">
+            Ya has visto todos los bares
+          </AppText>
+        </View>
+      );
+    }
+    return null;
+  }, [loadingMore, hasMoreBars, allBars.length]);
 
   // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -551,81 +451,18 @@ export default function SearchScreen() {
 
   // Handle apply filters
   const handleApplyFilters = useCallback(() => {
-    console.log('🎉 Applying filters and searching bars...');
     searchBars();
     setFilterModalVisible(false);
   }, [searchBars]);
 
   // Handle clear all filters
   const handleClearAllFilters = useCallback(() => {
-    console.log('🧹 Clearing all filters...');
     setSelectedBarCategories([]);
     setSelectedFoodTypes([]);
     setSelectedFeatures([]);
     setSelectedTvFeatures([]);
     setSearchQuery('');
     // The search will be triggered automatically by the useEffect
-  }, []);
-
-  // Check and create sample data for N:N relationships
-  const checkAndCreateSampleData = useCallback(async () => {
-    try {
-      console.log('🔍 Checking N:N relationship data...');
-      
-      // Check if we have any data in the N:N tables
-      const { data: foodTypesData } = await supabase
-        .from('bar_food_types')
-        .select('*')
-        .limit(5);
-      
-      const { data: featuresData } = await supabase
-        .from('bar_selected_features')
-        .select('*')
-        .limit(5);
-      
-      const { data: languagesData } = await supabase
-        .from('bar_languages')
-        .select('*')
-        .limit(5);
-      
-      console.log('📊 N:N data check:', {
-        hasFoodTypes: foodTypesData && foodTypesData.length > 0,
-        hasFeatures: featuresData && featuresData.length > 0,
-        hasLanguages: languagesData && languagesData.length > 0,
-        foodTypesCount: foodTypesData?.length || 0,
-        featuresCount: featuresData?.length || 0,
-        languagesCount: languagesData?.length || 0
-      });
-      
-      // Show sample data if available
-      if (foodTypesData && foodTypesData.length > 0) {
-        console.log('🍕 Sample food types data:', foodTypesData);
-      }
-      
-      if (featuresData && featuresData.length > 0) {
-        console.log('✨ Sample features data:', featuresData);
-      }
-      
-      if (languagesData && languagesData.length > 0) {
-        console.log('🌍 Sample languages data:', languagesData);
-      }
-      
-      // If no data exists, we might need to create some sample data
-      if (!foodTypesData || foodTypesData.length === 0) {
-        console.log('⚠️ No food types data found in bar_food_types table');
-      }
-      
-      if (!featuresData || featuresData.length === 0) {
-        console.log('⚠️ No features data found in bar_selected_features table');
-      }
-      
-      if (!languagesData || languagesData.length === 0) {
-        console.log('⚠️ No languages data found in bar_languages table');
-      }
-      
-    } catch (error) {
-      console.error('❌ Error checking N:N data:', error);
-    }
   }, []);
 
   // Handle bar selection
@@ -635,15 +472,12 @@ export default function SearchScreen() {
 
   // Render bar card
   const renderBarCard = useCallback(({ item }: { item: Bar }) => {
-    console.log("Rendering bar card for:", item.name);
-
     const handleFavoriteToggle = async (e: any) => {
       e.stopPropagation(); // Prevent triggering the card press
       const wasFavorite = isFavorite(item.id);
       const success = await toggleFavorite(item.id);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        console.log(wasFavorite ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', item.name);
       }
     };
 
@@ -664,16 +498,17 @@ export default function SearchScreen() {
       });
     };
 
-    return (
-      <AppCard
-        style={isBoosted ? styles.barCardBoosted : undefined}
-        onPress={() => handleBarPress(item.id)}
-      >
+    const cardInner = (
+      <>
         <View style={styles.imageContainer}>
           {item.image_url ? (
             <Image
               source={{ uri: item.image_url }}
-              style={styles.barImage}
+              style={[styles.barImage, { backgroundColor: '#1A2332' }]}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              recyclingKey={item.id}
             />
           ) : (
             <View style={styles.placeholderContainer}>
@@ -684,17 +519,12 @@ export default function SearchScreen() {
             </View>
           )}
 
-          {/* Top Sticker for Boosted Bars */}
-          {isBoosted && (
-            <View style={styles.topSticker}>
-              <Ionicons name="flash" size={14} color={colors.status.boost} />
-              <AppText variant="caption" color={colors.status.boost} style={styles.topStickerText}>DESTACADO</AppText>
-            </View>
-          )}
-
-          {/* Favorites Button */}
+          {/* Favorites Button — top-left for boosted, top-right for normal */}
           <TouchableOpacity
-            style={[styles.favoritesButton, isFavorite(item.id) && styles.favoritesButtonActive]}
+            style={[
+              isBoosted ? styles.favoritesButtonLeft : styles.favoritesButton,
+              isFavorite(item.id) && styles.favoritesButtonActive,
+            ]}
             onPress={handleFavoriteToggle}
           >
             <Ionicons
@@ -750,21 +580,56 @@ export default function SearchScreen() {
             <AppText variant="label" color={colors.brand.link}>Ver en el Mapa</AppText>
           </TouchableOpacity>
         </View>
+      </>
+    );
+
+    if (isBoosted) {
+      return (
+        <AppCard onPress={() => handleBarPress(item.id)} style={styles.boostCardInner}>
+          {/* Amber top line */}
+          <LinearGradient
+            colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.boostLineTop}
+          />
+          {/* Amber left line */}
+          <LinearGradient
+            colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.boostLineLeft}
+          />
+          {cardInner}
+          {/* TOP BAR Sticker — posición absoluta dentro de la card */}
+          <View style={styles.topBarSticker}>
+            <View style={styles.topBarStickerBorder} />
+            <View style={styles.topBarStickerContent}>
+              <AppText style={styles.topBarStickerTop}>TOP</AppText>
+              <AppText style={styles.topBarStickerBar}>BAR</AppText>
+              <AppText style={styles.topBarStickerStars}>★ ★ ★</AppText>
+            </View>
+          </View>
+        </AppCard>
+      );
+    }
+
+    return (
+      <AppCard onPress={() => handleBarPress(item.id)}>
+        {cardInner}
       </AppCard>
     );
 
-  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable]);
+  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable, favorites]);
 
   // Load initial data
   useEffect(() => {
     getUserLocation();
-    checkAndCreateSampleData(); // Check N:N relationship data
-  }, [getUserLocation, checkAndCreateSampleData]);
+  }, [getUserLocation]);
 
   // Search when filters change
   useEffect(() => {
     if (userLocation) {
-      console.log('🔄 Filters changed, triggering search...');
       searchBars();
     }
   }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, selectedMatch, userLocation, searchBars]);
@@ -847,14 +712,18 @@ export default function SearchScreen() {
 
         {loading ? (
           <SkeletonList count={3} />
-        ) : bars.length > 0 ? (
+        ) : allBars.length > 0 ? (
           <FlashList
-            data={bars}
+            data={displayedBars}
             renderItem={renderBarCard}
             keyExtractor={(item) => item.id}
+            extraData={favorites}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.barsList}
             estimatedItemSize={300}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.4}
+            ListFooterComponent={renderListFooter}
           />
         ) : (
           <View style={styles.emptyWrapper}>
@@ -892,7 +761,7 @@ export default function SearchScreen() {
           <View style={styles.matchBannerContent}>
             <View style={styles.matchTeam}>
               {selectedMatch.home_team?.logo_url ? (
-                <Image
+                <RNImage
                   source={{ uri: selectedMatch.home_team.logo_url }}
                   style={styles.matchTeamLogo}
                 />
@@ -906,7 +775,7 @@ export default function SearchScreen() {
             <AppText variant="caption" color="rgba(255,255,255,0.7)" style={styles.matchVsBanner}>vs</AppText>
             <View style={styles.matchTeam}>
               {selectedMatch.away_team?.logo_url ? (
-                <Image
+                <RNImage
                   source={{ uri: selectedMatch.away_team.logo_url }}
                   style={styles.matchTeamLogo}
                 />
@@ -1063,14 +932,98 @@ const styles = StyleSheet.create({
   barsList: {
     paddingBottom: Platform.OS === 'ios' ? 100 : 80,
   },
-  barCardBoosted: {
-    borderWidth: 2,
-    borderColor: colors.status.boost,
-    shadowColor: colors.status.boost,
+  // Boosted card — mismo aspecto que AppCard, sticker dentro con position absolute
+  boostCardInner: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.bg.card,
+    marginBottom: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  // Amber top decorative line
+  boostLineTop: {
+    position: 'absolute',
+    top: 0,
+    left: 14,
+    right: 14,
+    height: 2,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+    zIndex: 4,
+  },
+  // Amber left decorative line
+  boostLineLeft: {
+    position: 'absolute',
+    top: 14,
+    bottom: 14,
+    left: 0,
+    width: 2.5,
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+    zIndex: 4,
+  },
+  // TOP BAR sticker — sello circular dentro de la card
+  topBarSticker: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 20,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#080d16',
+    borderWidth: 2.5,
+    borderColor: '#f0c030',
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ rotate: '8deg' }],
+    shadowColor: '#f0c030',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 14,
+  },
+  topBarStickerBorder: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(240,192,48,0.5)',
+  },
+  topBarStickerContent: {
+    alignItems: 'center',
+    gap: 1,
+  },
+  topBarStickerTop: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#f0c030',
+    textTransform: 'uppercase',
+    lineHeight: 14,
+    letterSpacing: 1.5,
+  },
+  topBarStickerBar: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#f0c030',
+    textTransform: 'uppercase',
+    lineHeight: 14,
+    letterSpacing: 1.5,
+  },
+  topBarStickerStars: {
+    fontSize: 7,
+    color: '#f0c030',
+    letterSpacing: 3,
+    lineHeight: 10,
+    marginTop: 2,
   },
   imageContainer: {
     position: 'relative',
@@ -1090,34 +1043,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  topSticker: {
-    position: 'absolute',
-    top: spacing.lg - 6,
-    left: spacing.lg - 6,
-    backgroundColor: 'rgba(26, 35, 50, 0.95)',
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.status.boost,
-    shadowColor: colors.status.boost,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 2,
-  },
-  topStickerText: {
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
   favoritesButton: {
     position: 'absolute',
     top: spacing.lg - 6,
     right: spacing.lg - 6,
+    backgroundColor: colors.overlay.dark,
+    borderRadius: radius.round,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  favoritesButtonLeft: {
+    position: 'absolute',
+    top: spacing.lg - 6,
+    left: spacing.lg - 6,
     backgroundColor: colors.overlay.dark,
     borderRadius: radius.round,
     width: 30,
@@ -1182,6 +1123,10 @@ const styles = StyleSheet.create({
   },
   emptyWrapper: {
     flex: 1,
+  },
+  footerEnd: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
   },
   emptyActions: {
     paddingHorizontal: spacing.xl,

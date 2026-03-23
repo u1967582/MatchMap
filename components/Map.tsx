@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Alert, Animated, Easing, Platform, ActivityIndicator, Image, BackHandler, ToastAndroid } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing, Platform, ActivityIndicator, Image } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import SearchBarWithResults, { SearchBarRef } from '~/components/SearchBarWithResults';
 import BarInfoCard from '~/components/BarInfoCard';
+import BoostedBarsPopup from '~/components/BoostedBarsPopup';
 import BarMapMarker from '~/components/BarMapMarker';
 import FilterModal from '~/components/ui/FilterModal';
 import MatchPickerModal, { type Match } from '~/components/ui/MatchPickerModal';
@@ -14,7 +15,7 @@ import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
 import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
-import { MapSkeleton } from '~/components/ds';
+import { AppText, MapSkeleton } from '~/components/ds';
 
 // Use environment variable for Mapbox token
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
@@ -58,6 +59,26 @@ const formatDistance = (meters: number): string => {
   return `${(meters / 1000).toFixed(1)} km`;
 };
 
+// Find the index of the closest route point to the user's position
+const findClosestPointIndex = (
+  routeCoords: [number, number][],
+  userLng: number,
+  userLat: number
+): number => {
+  let minDist = Infinity;
+  let closestIdx = 0;
+  for (let i = 0; i < routeCoords.length; i++) {
+    const dx = routeCoords[i][0] - userLng;
+    const dy = routeCoords[i][1] - userLat;
+    const dist = dx * dx + dy * dy;
+    if (dist < minDist) {
+      minDist = dist;
+      closestIdx = i;
+    }
+  }
+  return closestIdx;
+};
+
 interface Bar {
   id: string;
   name: string;
@@ -80,6 +101,9 @@ interface MapProps {
   initialSelectedBarCoords?: { latitude: number; longitude: number };
   initialSelectedBarName?: string;
 }
+
+// Module-level flag: persists while the JS bundle is loaded (i.e., the whole app session)
+let boostedPopupShownThisSession = false;
 
 const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoords, initialSelectedBarName }) => {
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
@@ -108,16 +132,26 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // Match filter states
   const [selectedMatch, setSelectedMatch] = React.useState<Match | null>(null);
   const [matchPickerOpen, setMatchPickerOpen] = React.useState(false);
+
+  // Search bar expanded state
+  const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   
+  // Boosted bars popup state — only show once per app session
+  const [showBoostedPopup, setShowBoostedPopup] = React.useState(!boostedPopupShownThisSession);
+
   // Navigation states
   const [isNavigating, setIsNavigating] = React.useState(false);
   const [navigationStarted, setNavigationStarted] = React.useState(false); // New: started full navigation mode
   const [currentStepIndex, setCurrentStepIndex] = React.useState(0); // Track which step we're on
+  const [routeProgressIndex, setRouteProgressIndex] = React.useState(0); // Index in route coords closest to user
   const [navigationDestination, setNavigationDestination] = React.useState<{
     latitude: number;
     longitude: number;
     name: string;
   } | null>(null);
+
+  // Ref to hold location subscription during active navigation
+  const locationSubscriptionRef = React.useRef<Location.LocationSubscription | null>(null);
   
   // Load filter data
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
@@ -125,58 +159,29 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // MapBox Directions hook
   const { loading: directionsLoading, error: directionsError, routeData, travelMode, getDirections, clearRoute } = useMapboxDirections();
 
+  // Ref to always access latest routeData inside async callbacks (avoids stale closure in watchPositionAsync)
+  const routeDataRef = React.useRef(routeData);
+  React.useEffect(() => { routeDataRef.current = routeData; }, [routeData]);
+
   // Get boost context and functions
   const { selectedBoostBarIds, setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
 
-  // Fetch active boost bars using the hook
-  const { boostBars, isLoading: isLoadingBoost, error: boostError } = useBoostBars({
-    centerLatLng: userLocation ? { 
-      lat: userLocation.coords.latitude, 
-      lng: userLocation.coords.longitude 
+  // Fetch active boost bars using the hook.
+  // enabled:true so the fetch starts immediately on mount without waiting for GPS.
+  // centerLatLng is null until GPS resolves; the hook handles that by returning random bars.
+  const { selected3Stable, selected3Bars, isLoading: isLoadingBoost, error: boostError } = useBoostBars({
+    centerLatLng: userLocation ? {
+      lat: userLocation.coords.latitude,
+      lng: userLocation.coords.longitude
     } : null,
-    enabled: !!userLocation,
+    enabled: true,
   });
 
-  // Update context when boost bars are loaded
+  // Update context with only the 3 selected bars — same ones shown in popup and search
   React.useEffect(() => {
-    if (boostBars.length > 0) {
-      const boostIds = boostBars.map(bar => bar.id);
-      console.log('🟡 BOOST: Loaded boost bars:', boostIds.length, 'bars with boost');
-      console.log('🟡 BOOST: Bar IDs with boost:', boostIds);
-      setSelectedBoostBarIds(boostIds);
-    }
-  }, [boostBars, setSelectedBoostBarIds]);
+    setSelectedBoostBarIds(selected3Stable);
+  }, [selected3Stable, setSelectedBoostBarIds]);
 
-  // Handle Android back button - double tap to exit
-  React.useEffect(() => {
-    let backPressCount = 0;
-    let timeout: NodeJS.Timeout;
-
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (backPressCount === 0) {
-        backPressCount++;
-
-        if (Platform.OS === 'android') {
-          ToastAndroid.show('Presiona de nuevo para salir', ToastAndroid.SHORT);
-        }
-
-        timeout = setTimeout(() => {
-          backPressCount = 0;
-        }, 2000);
-
-        return true; // Prevent default behavior
-      } else {
-        // Second press within 2 seconds - exit app
-        BackHandler.exitApp();
-        return false;
-      }
-    });
-
-    return () => {
-      backHandler.remove();
-      if (timeout) clearTimeout(timeout);
-    };
-  }, []);
 
   // Update center when user location changes
   React.useEffect(() => {
@@ -190,51 +195,10 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
   // Handle marker press
   const handleMarkerPress = React.useCallback((bar: Bar) => {
-    console.log('📍 Marker pressed for bar:', bar.name);
-    console.log('📍 Setting selected bar and showing card');
-    console.log('📍 Bar data:', {
-      id: bar.id,
-      name: bar.name,
-      address: bar.address,
-      image_url: bar.image_url
-    });
     setSelectedBar(bar);
     setSelectedMarkerId(bar.id);
     setShowBarCard(true);
   }, []);
-
-  // Debug effect for state changes
-  React.useEffect(() => {
-    console.log('═══════════════════════════════════════');
-    console.log('📍 STATE: Selected bar:', selectedBar?.name || 'NONE');
-    console.log('📍 STATE: Show card:', showBarCard);
-    console.log('📍 STATE: Selected marker ID:', selectedMarkerId || 'NONE');
-    console.log('═══════════════════════════════════════');
-  }, [selectedBar, showBarCard, selectedMarkerId]);
-
-  // Debug effect for bars loading
-  React.useEffect(() => {
-    console.log('📊 BARS: Total bars loaded:', bars.length);
-    if (bars.length > 0) {
-      console.log('📊 BARS: Sample bar:', {
-        name: bars[0].name,
-        id: bars[0].id,
-        coords: [bars[0].longitude, bars[0].latitude]
-      });
-    }
-  }, [bars]);
-
-  // Debug effect for boost bars
-  React.useEffect(() => {
-    console.log('═══════════════════════════════════════');
-    console.log('🟡 BOOST STATE: Total boost IDs:', selectedBoostBarIds.length);
-    console.log('🟡 BOOST STATE: IDs:', selectedBoostBarIds);
-    console.log('🟡 BOOST STATE: Loading:', isLoadingBoost);
-    if (boostError) {
-      console.error('🟡 BOOST ERROR:', boostError);
-    }
-    console.log('═══════════════════════════════════════');
-  }, [selectedBoostBarIds, isLoadingBoost, boostError]);
 
   // Handle close bar card
   const handleCloseBarCard = React.useCallback(() => {
@@ -278,19 +242,16 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
       });
     }
 
-    console.log('🎯 FILTERS: Applied filters, showing', filtered.length, 'of', bars.length, 'bars');
     return filtered;
   }, [bars, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures]);
 
   // Handle apply filters
   const handleApplyFilters = React.useCallback(() => {
-    console.log('🎉 Applying filters...');
     setFilterModalVisible(false);
   }, []);
 
   // Handle navigate to bar
   const handleNavigateToBar = React.useCallback((barId: string) => {
-    console.log('🧭 Navigating to bar:', barId);
     // TODO: Implement navigation functionality
     // This could open Google Maps or Apple Maps with directions
   }, []);
@@ -301,8 +262,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
     longitude: number;
     name: string;
   }) => {
-    console.log('🚶 Starting navigation to:', destination.name);
-    
     if (!userLocation) {
       Alert.alert('Error', 'No se pudo obtener tu ubicación actual');
       return;
@@ -362,19 +321,28 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
   // Handle cancel navigation
   const handleCancelNavigation = React.useCallback(() => {
+    // Stop real-time location subscription
+    if (locationSubscriptionRef.current) {
+      locationSubscriptionRef.current.remove();
+      locationSubscriptionRef.current = null;
+    }
+
     setIsNavigating(false);
     setNavigationStarted(false);
     setNavigationDestination(null);
     setCurrentStepIndex(0);
+    setRouteProgressIndex(0);
     clearRoute();
-    
-    // Return camera to user location
+
+    // Return camera to user location, reset tilt and bearing
     if (userLocation && cameraRef.current) {
       const cam: any = cameraRef.current as any;
       if (cam?.setCamera) {
         cam.setCamera({
           centerCoordinate: [userLocation.coords.longitude, userLocation.coords.latitude],
           zoomLevel: 15,
+          pitch: 0,
+          bearing: 0,
           animationDuration: 1000,
         } as any);
       }
@@ -383,31 +351,83 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
   // Handle start navigation button
   const handleBeginNavigation = React.useCallback(() => {
-    console.log('🎬 Beginning full navigation mode');
     setNavigationStarted(true);
-    
-    // Zoom to follow user location with navigation view
+    setRouteProgressIndex(0);
+
+    // Initial camera: follow user with navigation tilt
     if (userLocation && cameraRef.current) {
       const cam: any = cameraRef.current as any;
       if (cam?.setCamera) {
         cam.setCamera({
           centerCoordinate: [userLocation.coords.longitude, userLocation.coords.latitude],
           zoomLevel: 17,
-          pitch: 45, // Tilt the camera for navigation view
+          pitch: 45,
+          bearing: userLocation.coords.heading ?? 0,
           animationDuration: 1000,
         } as any);
       }
     }
+
+    // Start watching location for real-time navigation updates
+    Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 1000,
+        distanceInterval: 5,
+      },
+      (location) => {
+        setUserLocation(location);
+
+        const { latitude, longitude, heading } = location.coords;
+        const currentRouteData = routeDataRef.current;
+
+        if (currentRouteData && cameraRef.current) {
+          // Find closest point on route to show traveled path
+          const closestIdx = findClosestPointIndex(
+            currentRouteData.coordinates,
+            longitude,
+            latitude
+          );
+          setRouteProgressIndex(closestIdx);
+
+          // Update current navigation step based on progress
+          let cumulativeDist = 0;
+          const progressDist = (closestIdx / currentRouteData.coordinates.length) * currentRouteData.distance * 1000;
+          let newStepIdx = 0;
+          for (let i = 0; i < currentRouteData.steps.length; i++) {
+            cumulativeDist += currentRouteData.steps[i].distance;
+            if (progressDist < cumulativeDist) {
+              newStepIdx = i;
+              break;
+            }
+            newStepIdx = i;
+          }
+          setCurrentStepIndex(Math.min(newStepIdx, currentRouteData.steps.length - 1));
+
+          // Move camera to follow user with heading
+          const cam: any = cameraRef.current as any;
+          if (cam?.setCamera) {
+            cam.setCamera({
+              centerCoordinate: [longitude, latitude],
+              zoomLevel: 17,
+              pitch: 45,
+              bearing: heading ?? 0,
+              animationDuration: 500,
+            } as any);
+          }
+        }
+      }
+    ).then((subscription) => {
+      locationSubscriptionRef.current = subscription;
+    });
   }, [userLocation]);
 
   // Handle change travel mode
   const handleChangeTravelMode = React.useCallback(async () => {
     if (!userLocation || !navigationDestination) return;
-    
+
+    setRouteProgressIndex(0);
     const newMode = travelMode === 'walking' ? 'driving' : 'walking';
-    console.log(`🔄 Changing travel mode to: ${newMode}`);
-    
-    // Recalculate route with new mode (no zoom change)
     await getDirections(
       {
         latitude: userLocation.coords.latitude,
@@ -426,7 +446,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         setHasPermission(status === 'granted');
-        
+
         if (status === 'granted') {
           const location = await Location.getCurrentPositionAsync({});
           setUserLocation(location);
@@ -440,10 +460,19 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
     requestLocationPermission();
   }, []);
 
+  // Cleanup location subscription on unmount
+  React.useEffect(() => {
+    return () => {
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+        locationSubscriptionRef.current = null;
+      }
+    };
+  }, []);
+
   // Handle initial bar selection from navigation params
   React.useEffect(() => {
     if (initialSelectedBarId && bars.length > 0) {
-      console.log('🎯 Opening bar from search:', initialSelectedBarId);
       
       // Find the bar in the loaded bars
       const bar = bars.find(b => b.id === initialSelectedBarId);
@@ -498,13 +527,11 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   React.useEffect(() => {
     const fetchBars = async () => {
       try {
-        console.log('📍 Fetching bars from Supabase...');
         setLoadingBars(true);
 
         // Step 1: If match filter is active, get bar IDs that have events for that match
         let barIdsFilter: string[] | null = null;
         if (selectedMatch) {
-          console.log('⚽ Filtering by match:', selectedMatch.home_team?.name, 'vs', selectedMatch.away_team?.name);
           try {
             barIdsFilter = await fetchBarIdsByMatch(selectedMatch.id);
           } catch (e) {
@@ -512,15 +539,13 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             barIdsFilter = [];
           }
           if (!barIdsFilter || barIdsFilter.length === 0) {
-            console.log('⚽ No bars found with events for this match');
             setBars([]);
             setLoadingBars(false);
             return;
           }
-          console.log('⚽ Found', barIdsFilter.length, 'bars broadcasting this match');
         }
 
-        // Step 2: Build query
+        // Step 2: Build query — single request with all joins
         let barsQuery = supabase
           .from('bars')
           .select(`
@@ -533,10 +558,11 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             rating,
             review_count,
             category_id,
-            bar_images(
-              image_url,
-              image_order
-            )
+            bar_images(image_url, image_order),
+            bar_categories(id, name),
+            bar_food_types(food_type_id, food_types(name)),
+            bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
+            bar_selected_features(feature_id, bar_features(name))
           `)
           .eq('is_active', true);
 
@@ -553,66 +579,40 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
         }
 
         if (data) {
-          // Process each bar to load its characteristics
-          const processedBars = await Promise.all(data.map(async (bar: any) => {
-            // Load category name
-            let category = undefined;
-            if (bar.category_id) {
-              const { data: categoryData } = await supabase
-                .from('bar_categories')
-                .select('id, name')
-                .eq('id', bar.category_id)
-                .single();
-              if (categoryData) {
-                category = { id: categoryData.id, name: categoryData.name };
-              }
-            }
+          const processedBars = data.map((bar: any) => {
+            const mainImage =
+              bar.bar_images?.find((img: any) => img.image_order === 1)?.image_url ||
+              bar.bar_images?.[0]?.image_url ||
+              null;
 
-            // Load food types
-            const { data: foodTypes } = await supabase
-              .from('bar_food_types')
-              .select('food_type_id, food_types(name)')
-              .eq('bar_id', bar.id);
-
-            // Load TV features
-            const { data: tvFeatures } = await supabase
-              .from('bar_selected_tv_features')
-              .select('tv_feature_id, bar_tv_features(name)')
-              .eq('bar_id', bar.id);
-
-            // Load features
-            const { data: features } = await supabase
-              .from('bar_selected_features')
-              .select('feature_id, bar_features(name)')
-              .eq('bar_id', bar.id);
-
-            // Find image with image_order = 1, fallback to first image or null
-            const mainImage = bar.bar_images
-              ?.find((img: any) => img.image_order === 1)?.image_url || 
-              bar.bar_images?.[0]?.image_url || null;
+            const categoryRaw = Array.isArray(bar.bar_categories)
+              ? bar.bar_categories[0]
+              : bar.bar_categories;
+            const category = categoryRaw
+              ? { id: categoryRaw.id, name: categoryRaw.name }
+              : undefined;
 
             return {
               ...bar,
               image_url: mainImage,
               category,
-              bar_food_types: foodTypes?.map((item: any) => ({
+              bar_food_types: (bar.bar_food_types || []).map((item: any) => ({
                 food_type_id: item.food_type_id,
-                food_type: { name: item.food_types?.name || 'Unknown' }
-              })) || [],
-              bar_selected_tv_features: tvFeatures?.map((item: any) => ({
+                food_type: { name: item.food_types?.name || 'Unknown' },
+              })),
+              bar_selected_tv_features: (bar.bar_selected_tv_features || []).map((item: any) => ({
                 tv_feature_id: item.tv_feature_id,
-                tv_feature: { name: item.bar_tv_features?.name || 'Unknown' }
-              })) || [],
-              bar_selected_features: features?.map((item: any) => ({
+                tv_feature: { name: item.bar_tv_features?.name || 'Unknown' },
+              })),
+              bar_selected_features: (bar.bar_selected_features || []).map((item: any) => ({
                 feature_id: item.feature_id,
-                feature: { name: item.bar_features?.name || 'Unknown' }
-              })) || [],
-              // Remove the nested bar_images object
-              bar_images: undefined
+                feature: { name: item.bar_features?.name || 'Unknown' },
+              })),
+              bar_images: undefined,
+              bar_categories: undefined,
             };
-          }));
+          });
 
-          console.log('✅ Bars fetched successfully:', processedBars.length);
           setBars(processedBars);
         }
       } catch (error) {
@@ -643,8 +643,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
       if (data.features) {
         setSearchResults(data.features);
-        console.log('📍 Search results:', data.features.length, 'locations found');
-        console.log('📍 Sample results:', data.features.slice(0, 3).map((f: any) => f.place_name));
       } else {
         setSearchResults([]);
       }
@@ -680,10 +678,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // Handle location selection
   const handleLocationSelect = React.useCallback((location: any) => {
     const [longitude, latitude] = location.center;
-    
-    console.log('📍 Selected location:', location.place_name);
-    console.log('📍 Coordinates:', latitude, longitude);
-    console.log('📍 Place type:', location.place_type);
     
     // Determine appropriate zoom level based on place type
     let zoomLevel = 16; // Default for specific addresses/POIs
@@ -784,36 +778,62 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             markerType = 'destination';
           }
 
-          // Log marker type for debugging (only first 3 bars to avoid spam)
-          if (filteredBars.indexOf(bar) < 3) {
-            console.log(`🎨 MARKER[${bar.name}]: type=${markerType}, boosted=${isBoosted}, selected=${isSelected}, destination=${isDestination}`);
-          }
-
           return (
             <MapboxGL.PointAnnotation
-              key={`bar-${bar.id}-${markerType}`}
+              key={`bar-${bar.id}`}
               id={`bar-annotation-${bar.id}`}
               coordinate={[bar.longitude, bar.latitude]}
-              onSelected={() => {
-                console.log('🔴 MARKER TOUCHED (onSelected):', bar.name);
-                handleMarkerPress(bar);
-              }}
+              onSelected={() => handleMarkerPress(bar)}
               anchor={{ x: 0.5, y: 1.0 }}
             >
-              <BarMapMarker 
-                key={`marker-${markerType}-${bar.id}`}
-                type={markerType} 
+              <BarMapMarker
+                key={`marker-${bar.id}`}
+                type={markerType}
                 animated={(isBoosted || isDestination) && !isSelected}
-                onPress={() => {
-                  console.log('🟢 MARKER TOUCHED (custom onPress):', bar.name);
-                  handleMarkerPress(bar);
-                }}
+                onPress={() => handleMarkerPress(bar)}
               />
             </MapboxGL.PointAnnotation>
           );
         })}
 
-        {/* Navigation Route Line */}
+        {/* Navigation Route - Traveled portion (gray) */}
+        {isNavigating && routeData && navigationStarted && routeProgressIndex > 0 && (
+          <MapboxGL.ShapeSource
+            id="traveledRouteSource"
+            shape={{
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: routeData.coordinates.slice(0, routeProgressIndex + 1)
+              }
+            }}
+          >
+            <MapboxGL.LineLayer
+              id="traveledRouteOutline"
+              style={{
+                lineColor: '#FFFFFF',
+                lineWidth: 7,
+                lineCap: 'round',
+                lineJoin: 'round',
+                lineOpacity: 0.3,
+              }}
+            />
+            <MapboxGL.LineLayer
+              id="traveledRouteLine"
+              style={{
+                lineColor: '#6B7280',
+                lineWidth: 5,
+                lineCap: 'round',
+                lineJoin: 'round',
+                lineOpacity: 0.6,
+              }}
+              aboveLayerID="traveledRouteOutline"
+            />
+          </MapboxGL.ShapeSource>
+        )}
+
+        {/* Navigation Route - Remaining portion (blue) */}
         {isNavigating && routeData && (
           <MapboxGL.ShapeSource
             id="routeSource"
@@ -822,19 +842,12 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
               properties: {},
               geometry: {
                 type: 'LineString',
-                coordinates: routeData.coordinates
+                coordinates: navigationStarted
+                  ? routeData.coordinates.slice(routeProgressIndex)
+                  : routeData.coordinates
               }
             }}
           >
-            <MapboxGL.LineLayer
-              id="routeLine"
-              style={{
-                lineColor: '#007AFF',
-                lineWidth: 5,
-                lineCap: 'round',
-                lineJoin: 'round',
-              }}
-            />
             <MapboxGL.LineLayer
               id="routeOutline"
               style={{
@@ -843,61 +856,61 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                 lineCap: 'round',
                 lineJoin: 'round',
               }}
-              belowLayerID="routeLine"
+            />
+            <MapboxGL.LineLayer
+              id="routeLine"
+              style={{
+                lineColor: '#007AFF',
+                lineWidth: 5,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+              aboveLayerID="routeOutline"
             />
           </MapboxGL.ShapeSource>
         )}
       </MapboxGL.MapView>
       </View>
 
-      {/* Search bar with adjusted right margin for filter button */}
-      {/* Top controls row - Search, Match Filter, and Bar Filter */}
+      {/* Top controls row */}
       <View style={styles.topControlsRow}>
-        {/* Search button */}
+        {/* Botón búsqueda - estilo distinto al de filtros */}
         <TouchableOpacity
-          style={styles.searchButton}
+          style={styles.searchIconBtn}
           onPress={() => searchBarRef.current?.expand()}
+          activeOpacity={0.8}
         >
           <Ionicons name="search" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Match filter button */}
+        {/* Botón pill central - ¿Qué partido quieres ver? */}
         <TouchableOpacity
           style={styles.matchFilterButton}
           onPress={() => setMatchPickerOpen(true)}
+          activeOpacity={0.85}
         >
           <View style={styles.matchButtonContent}>
-            <Text style={styles.matchButtonEmoji}>⚽</Text>
-            <Text style={styles.matchButtonText}>
-              Busca tu partido
-            </Text>
+            <Ionicons name="football-outline" size={19} color="rgba(255,255,255,0.75)" />
+            <Text style={styles.matchButtonText}>¿Qué partido quieres ver?</Text>
           </View>
         </TouchableOpacity>
-      
-        {/* Bar filter button - Now with text */}
-      <TouchableOpacity
-        style={[
-            styles.barFilterButton,
-          (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-           selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterButtonActive
-        ]}
-        onPress={() => setFilterModalVisible(true)}
-      >
-          <View style={styles.matchButtonContent}>
-            <Ionicons name="options-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={[
-              styles.matchButtonText,
-              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-               selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.matchButtonTextActive
-            ]}>
-              Filtros de bar
-            </Text>
-          </View>
-        {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || 
-          selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
-          <View style={styles.filterDot} />
-        )}
-      </TouchableOpacity>
+
+        {/* Botón circular filtros */}
+        <TouchableOpacity
+          style={[
+            styles.circleBtn,
+            (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 ||
+             selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.circleBtnActive,
+          ]}
+          onPress={() => setFilterModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="menu-outline" size={22} color="#FFFFFF" />
+          {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 ||
+            selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
+            <View style={styles.filterDot} />
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Search bar - Opens below the controls */}
@@ -909,13 +922,19 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
           searchResults={searchResults}
           isSearching={isSearching}
           onLocationSelect={handleLocationSelect}
+          onExpandChange={setIsSearchExpanded}
         />
       </View>
 
       {/* Center on user location button */}
       {userLocation && (
         <TouchableOpacity
-          style={styles.centerButton}
+          style={[
+            styles.centerButton,
+            selectedMatch && !isSearchExpanded && !showBarCard && !isNavigating
+              ? { bottom: 216 }
+              : { bottom: 128 },
+          ]}
           onPress={async () => {
             try {
               // Ensure permission and get fresh position
@@ -929,7 +948,6 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
 
               const fresh = await Location.getCurrentPositionAsync({});
               const { latitude, longitude } = fresh.coords;
-              console.log('Center location button pressed:', { latitude, longitude });
 
               // Update state similarly to initial load
               setUserLocation(fresh);
@@ -958,49 +976,8 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             }
           }}
         >
-          <Ionicons name="locate" size={28} color="#007AFF" />
+          <Ionicons name="locate" size={22} color="#FFFFFF" />
         </TouchableOpacity>
-      )}
-
-      {/* Active Match Filter Banner */}
-      {selectedMatch && (
-        <View style={styles.activeMatchBanner}>
-          <View style={styles.bannerTeamsRow}>
-            <View style={styles.bannerTeam}>
-              {selectedMatch.home_team?.logo_url ? (
-                <Image
-                  source={{ uri: selectedMatch.home_team.logo_url }}
-                  style={styles.bannerTeamLogo}
-                />
-              ) : (
-                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
-              )}
-              <Text style={styles.bannerTeamName} numberOfLines={1}>
-                {selectedMatch.home_team?.name || 'Local'}
-              </Text>
-            </View>
-            <Text style={styles.bannerVs}>vs</Text>
-            <View style={styles.bannerTeam}>
-              {selectedMatch.away_team?.logo_url ? (
-                <Image
-                  source={{ uri: selectedMatch.away_team.logo_url }}
-                  style={styles.bannerTeamLogo}
-                />
-              ) : (
-                <Ionicons name="shield-outline" size={16} color="#FFFFFF" />
-              )}
-              <Text style={styles.bannerTeamName} numberOfLines={1}>
-                {selectedMatch.away_team?.name || 'Visitante'}
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            onPress={() => setSelectedMatch(null)}
-            style={styles.bannerCloseButton}
-          >
-            <Ionicons name="close" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
       )}
 
       {/* Turn-by-Turn Navigation Instructions - Top (Only when navigation started) */}
@@ -1014,13 +991,13 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             />
           </View>
           <View style={styles.instructionTextContainer}>
-            <Text style={styles.instructionText} numberOfLines={2}>
+            <AppText style={styles.instructionText} numberOfLines={2}>
               {routeData.steps[currentStepIndex].instruction}
-            </Text>
+            </AppText>
             {routeData.steps[currentStepIndex].distance > 0 && (
-              <Text style={styles.instructionDistance}>
+              <AppText style={styles.instructionDistance}>
                 en {formatDistance(routeData.steps[currentStepIndex].distance)}
-              </Text>
+              </AppText>
             )}
           </View>
         </View>
@@ -1034,7 +1011,7 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
             <>
               {/* Header with title and close */}
               <View style={styles.navigationPanelHeader}>
-                <Text style={styles.navigationTitle}>{navigationDestination.name}</Text>
+                <AppText style={styles.navigationTitle}>{navigationDestination.name}</AppText>
                 <TouchableOpacity 
                   style={styles.cancelNavigationButton}
                   onPress={handleCancelNavigation}
@@ -1049,15 +1026,15 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                 <View style={styles.navigationStatsLeft}>
                   <View style={styles.navigationStat}>
                     <Ionicons name="time-outline" size={16} color="#10B981" />
-                    <Text style={styles.navigationStatText}>
+                    <AppText style={styles.navigationStatText}>
                       {Math.round(routeData.duration)} min
-                    </Text>
+                    </AppText>
                   </View>
                   <View style={styles.navigationStat}>
                     <Ionicons name="navigate-outline" size={16} color="#007AFF" />
-                    <Text style={styles.navigationStatText}>
+                    <AppText style={styles.navigationStatText}>
                       {routeData.distance.toFixed(1)} km
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
                 
@@ -1103,11 +1080,11 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                 onPress={handleBeginNavigation}
               >
                 <Ionicons name="play" size={20} color="#FFFFFF" />
-                <Text style={styles.startNavigationButtonText}>Iniciar</Text>
+                <AppText style={styles.startNavigationButtonText}>Iniciar</AppText>
               </TouchableOpacity>
               
               {directionsLoading && (
-                <Text style={styles.navigationLoading}>Calculando ruta...</Text>
+                <AppText style={styles.navigationLoading}>Calculando ruta...</AppText>
               )}
             </>
           ) : (
@@ -1118,18 +1095,88 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
                 onPress={handleCancelNavigation}
               >
                 <Ionicons name="close-circle" size={20} color="#EF4444" />
-                <Text style={styles.endNavigationButtonText}>Finalizar</Text>
+                <AppText style={styles.endNavigationButtonText}>Finalizar</AppText>
               </TouchableOpacity>
               
               <View style={styles.activeNavStats}>
-                <Text style={styles.activeNavTime}>{Math.round(routeData.duration)} min</Text>
-                <Text style={styles.activeNavDistance}>{routeData.distance.toFixed(1)} km</Text>
+                <AppText style={styles.activeNavTime}>{Math.round(routeData.duration)} min</AppText>
+                <AppText style={styles.activeNavDistance}>{routeData.distance.toFixed(1)} km</AppText>
               </View>
             </View>
           )}
         </View>
       )}
       
+      {/* Active Match Filter Banner - Bottom (above nav) */}
+      {selectedMatch && !isSearchExpanded && !showBarCard && !isNavigating && (
+        <View style={styles.activeMatchBanner}>
+          {/* Competition header */}
+          {selectedMatch.competition?.name && (
+            <AppText style={styles.bannerCompetition} numberOfLines={1}>
+              {selectedMatch.competition.name}
+            </AppText>
+          )}
+
+          {/* Teams row */}
+          <View style={styles.bannerTeamsRow}>
+            <View style={styles.bannerTeam}>
+              {selectedMatch.home_team?.logo_url ? (
+                <Image
+                  source={{ uri: selectedMatch.home_team.logo_url }}
+                  style={styles.bannerTeamLogo}
+                />
+              ) : (
+                <Ionicons name="shield-outline" size={20} color="#FFFFFF" />
+              )}
+              <AppText style={styles.bannerTeamName} numberOfLines={2}>
+                {selectedMatch.home_team?.name || 'Local'}
+              </AppText>
+            </View>
+
+            <View style={styles.bannerVsContainer}>
+              <AppText style={styles.bannerVs}>VS</AppText>
+              {selectedMatch.time && (
+                <AppText style={styles.bannerTime}>
+                  {selectedMatch.time.slice(0, 5)}
+                </AppText>
+              )}
+            </View>
+
+            <View style={styles.bannerTeam}>
+              {selectedMatch.away_team?.logo_url ? (
+                <Image
+                  source={{ uri: selectedMatch.away_team.logo_url }}
+                  style={styles.bannerTeamLogo}
+                />
+              ) : (
+                <Ionicons name="shield-outline" size={20} color="#FFFFFF" />
+              )}
+              <AppText style={styles.bannerTeamName} numberOfLines={2}>
+                {selectedMatch.away_team?.name || 'Visitante'}
+              </AppText>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => setSelectedMatch(null)}
+            style={styles.bannerCloseButton}
+          >
+            <Ionicons name="close" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Boosted Bars Popup */}
+      <BoostedBarsPopup
+        visible={showBoostedPopup}
+        onClose={() => {
+          boostedPopupShownThisSession = true;
+          setShowBoostedPopup(false);
+        }}
+        bars={selected3Bars}
+        isLoading={isLoadingBoost}
+      />
+
       {/* Bar Info Card */}
       <BarInfoCard
         bar={selectedBar}
@@ -1209,113 +1256,72 @@ const styles = StyleSheet.create({
   },
   searchWrapper: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 140 : 120, // Below the top controls
-    left: 20,
-    right: 20,
+    top: Platform.OS === 'ios' ? 116 : 96,
+    left: 16,
+    right: 16,
     zIndex: 999,
   },
   topControlsRow: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 80 : 60,
-    left: 20,
-    right: 20,
+    top: Platform.OS === 'ios' ? 68 : 48,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
     zIndex: 1000,
   },
-  searchButton: {
-    backgroundColor: '#3A4F68',
-    borderRadius: 12,
-    width: 50,
-    height: 50,
+  searchIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(26,35,50,0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 12,
+  },
+  circleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(26,35,50,0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  circleBtnActive: {
+    backgroundColor: 'rgba(25, 118, 210, 0.85)',
+    borderColor: 'rgba(25, 118, 210, 0.5)',
   },
   matchFilterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3A4F68',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minHeight: 50,
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  matchFilterButtonActive: {
-    backgroundColor: '#1976D2',
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-  },
-  barFilterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(25,118,210,0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(25,118,210,0.5)',
     justifyContent: 'center',
-    backgroundColor: '#3A4F68',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minHeight: 50,
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 12,
-    position: 'relative',
+    alignItems: 'center',
   },
   matchButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-  },
-  matchButtonEmoji: {
-    fontSize: 16,
+    gap: 7,
+    paddingHorizontal: 8,
   },
   matchButtonText: {
-    color: '#A3B3CC',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  matchButtonTextActive: {
     color: '#FFFFFF',
-  },
-  matchCloseButton: {
-    marginLeft: 8,
-    padding: 4,
-  },
-  filterButtonActive: {
-    backgroundColor: '#1976D2',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   filterDot: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     width: 8,
     height: 8,
     borderRadius: 4,
@@ -1323,13 +1329,13 @@ const styles = StyleSheet.create({
   },
   activeMatchBanner: {
     position: 'absolute',
-    top: 160,
-    left: '5%',
-    right: '5%',
-    backgroundColor: 'rgba(25, 118, 210, 0.6)',
+    bottom: 120,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(25, 118, 210, 0.85)',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
     flexDirection: 'column',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1337,43 +1343,61 @@ const styles = StyleSheet.create({
       width: 0,
       height: 3,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 6,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
     zIndex: 100,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  bannerCompetition: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 8,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   bannerTeamsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    gap: 12,
+    gap: 4,
   },
   bannerTeam: {
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 6,
+    gap: 1,
   },
   bannerTeamLogo: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 7,
     resizeMode: 'contain',
   },
   bannerTeamName: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '600',
     textAlign: 'center',
   },
+  bannerVsContainer: {
+    alignItems: 'center',
+    gap: 1,
+    paddingHorizontal: 4,
+  },
   bannerVs: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
-    fontWeight: '600',
-    paddingHorizontal: 8,
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  bannerTime: {
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 11,
+    fontWeight: '700',
   },
   bannerCloseButton: {
     position: 'absolute',
@@ -1385,24 +1409,15 @@ const styles = StyleSheet.create({
   },
   centerButton: {
     position: 'absolute',
-    bottom: 120,
     right: 20,
-    backgroundColor: '#1C2A3A',
-    borderRadius: 28,
-    width: 56,
-    height: 56,
+    backgroundColor: 'rgba(26,35,50,0.92)',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#374151',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   teamButtonEmoji: {
     fontSize: 22,
@@ -1541,7 +1556,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#1565C0',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 24,

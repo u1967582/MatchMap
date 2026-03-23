@@ -34,7 +34,7 @@ const MARKER_SIZES = {
  * - selected: Azul claro (#60A5FA) - Bar con card visible
  * - default: Azul (#007AFF) - Bar predeterminado
  */
-const BarMapMarker: React.FC<BarMapMarkerProps> = ({ type, animated = false, onPress }) => {
+const BarMapMarker: React.FC<BarMapMarkerProps> = React.memo(({ type, animated = false, onPress }) => {
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
   // Animación de pulso para marcadores boosted y destination
@@ -66,7 +66,7 @@ const BarMapMarker: React.FC<BarMapMarkerProps> = ({ type, animated = false, onP
     ? { transform: [{ scale: pulseAnim }] }
     : {};
 
-  const MarkerContent = () => (
+  const markerView = (
     <Animated.View style={[styles.markerContainer, containerStyle]}>
       <Ionicons name="location" size={size} color={color} />
     </Animated.View>
@@ -75,7 +75,7 @@ const BarMapMarker: React.FC<BarMapMarkerProps> = ({ type, animated = false, onP
   // Si tiene onPress, envolver en TouchableOpacity
   if (onPress) {
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         onPress={() => {
           console.log('🎯 BarMapMarker pressed, type:', type);
           onPress();
@@ -83,13 +83,13 @@ const BarMapMarker: React.FC<BarMapMarkerProps> = ({ type, animated = false, onP
         activeOpacity={0.7}
         style={styles.touchableContainer}
       >
-        <MarkerContent />
+        {markerView}
       </TouchableOpacity>
     );
   }
 
-  return <MarkerContent />;
-};
+  return markerView;
+});
 
 const styles = StyleSheet.create({
   touchableContainer: {

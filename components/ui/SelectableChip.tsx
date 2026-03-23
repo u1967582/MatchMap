@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
 import {
   TouchableOpacity,
-  Text,
   StyleSheet,
 } from 'react-native';
+import { AppText } from '~/components/ds';
 
 interface SelectableChipProps {
   icon: string;
@@ -29,13 +29,13 @@ export default function SelectableChip({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={styles.icon}>{icon}</Text>
-      <Text style={[
+      <AppText style={styles.icon}>{icon}</AppText>
+      <AppText style={[
         styles.label,
         selected && styles.labelSelected
       ]}>
         {label}
-      </Text>
+      </AppText>
     </TouchableOpacity>
   );
 }

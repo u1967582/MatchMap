@@ -16,15 +16,15 @@ const getCategoryEmoji = (name: string): string => {
 const getFoodEmoji = (name: string): string => {
   const foodMap: { [key: string]: string } = {
     'Americana': '🍔',
-    'China': '🥢',
-    'Griega': '🧀',
-    'India': '🍛',
+    'Asador / Parrilla': '🍖',
     'Italiana': '🍕',
-    'Japonesa': '🍣',
-    'Mediterránea': '🐟',
-    'Mexicana': '🌮',
-    'Vegana': '🥗',
-    'Vegetariana': '🥬',
+    'Japonesa': '🍱',
+    'Kebab': '🌮',
+    'Mediterránea': '🐠',
+    'Mexicana': '🌵',
+    'Tapas / Raciones': '🍷',
+    'Vegana': '🌱',
+    'Vegetariana': '🥦',
   };
   return foodMap[name] || '🍽️';
 };
@@ -82,12 +82,16 @@ const FALLBACK_CATEGORIES = [
 ];
 
 const FALLBACK_FOOD_TYPES = [
-  { id: 1, name: 'Pizza', emoji: '🍕' },
-  { id: 2, name: 'Hamburguesa', emoji: '🍔' },
-  { id: 3, name: 'Mexicana', emoji: '🌮' },
-  { id: 4, name: 'Sushi', emoji: '🍣' },
-  { id: 5, name: 'Italiana', emoji: '🍝' },
-  { id: 6, name: 'Vegana', emoji: '🥗' },
+  { id: 1, name: 'Americana', emoji: '🍔' },
+  { id: 2, name: 'Asador / Parrilla', emoji: '🍖' },
+  { id: 3, name: 'Italiana', emoji: '🍕' },
+  { id: 4, name: 'Japonesa', emoji: '🍱' },
+  { id: 5, name: 'Kebab', emoji: '🌮' },
+  { id: 6, name: 'Mediterránea', emoji: '🐠' },
+  { id: 7, name: 'Mexicana', emoji: '🌵' },
+  { id: 8, name: 'Tapas / Raciones', emoji: '🍷' },
+  { id: 9, name: 'Vegana', emoji: '🌱' },
+  { id: 10, name: 'Vegetariana', emoji: '🥦' },
 ];
 
 const FALLBACK_FEATURES = [
@@ -124,43 +128,18 @@ export function useFilterData(): FilterData {
         setLoading(true);
         setError(null);
 
-        console.log('🔄 Loading filter data from Supabase...');
-
-        // Load bar categories
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('bar_categories')
-          .select('id, name')
-          .order('name');
-
-        console.log('📊 Categories data:', categoriesData);
-        console.log('❌ Categories error:', categoriesError);
-
-        // Load food types
-        const { data: foodData, error: foodError } = await supabase
-          .from('food_types')
-          .select('id, name')
-          .order('name');
-
-        console.log('🍕 Food types data:', foodData);
-        console.log('❌ Food types error:', foodError);
-
-        // Load bar features
-        const { data: featuresData, error: featuresError } = await supabase
-          .from('bar_features')
-          .select('id, name')
-          .order('name');
-
-        console.log('✨ Features data:', featuresData);
-        console.log('❌ Features error:', featuresError);
-
-        // Load TV features
-        const { data: tvFeaturesData, error: tvFeaturesError } = await supabase
-          .from('bar_tv_features')
-          .select('id, name')
-          .order('name');
-
-        console.log('📺 TV Features data:', tvFeaturesData);
-        console.log('❌ TV Features error:', tvFeaturesError);
+        // Load all filter data in parallel
+        const [
+          { data: categoriesData, error: categoriesError },
+          { data: foodData, error: foodError },
+          { data: featuresData, error: featuresError },
+          { data: tvFeaturesData, error: tvFeaturesError },
+        ] = await Promise.all([
+          supabase.from('bar_categories').select('id, name').order('name'),
+          supabase.from('food_types').select('id, name').order('name'),
+          supabase.from('bar_features').select('id, name').order('name'),
+          supabase.from('bar_tv_features').select('id, name').order('name'),
+        ]);
 
         // Use fallback data if any table doesn't exist or has errors
         const useFallback = categoriesError || foodError || featuresError || tvFeaturesError ||
@@ -169,13 +148,11 @@ export function useFilterData(): FilterData {
                            featuresData.length === 0 || tvFeaturesData.length === 0;
 
         if (useFallback) {
-          console.log('⚠️ Using fallback data due to errors or empty tables');
           setBarCategories(FALLBACK_CATEGORIES);
           setFoodTypes(FALLBACK_FOOD_TYPES);
           setBarFeatures(FALLBACK_FEATURES);
           setTvFeatures(FALLBACK_TV_FEATURES);
         } else {
-          console.log('✅ Using data from Supabase');
           // Add emojis to categories
           const categoriesWithEmojis = categoriesData.map(category => ({
             ...category,
@@ -210,14 +187,12 @@ export function useFilterData(): FilterData {
         console.error('💥 Error loading filter data:', err);
         setError('Error al cargar los filtros');
         
-        console.log('🔄 Setting fallback data due to error');
         setBarCategories(FALLBACK_CATEGORIES);
         setFoodTypes(FALLBACK_FOOD_TYPES);
         setBarFeatures(FALLBACK_FEATURES);
         setTvFeatures(FALLBACK_TV_FEATURES);
       } finally {
         setLoading(false);
-        console.log('✅ Filter data loading completed');
       }
     };
 

@@ -1,23 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   Modal,
   ActivityIndicator,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PurchasesPackage, PurchasesOffering } from 'react-native-purchases';
 import * as RevenueCatService from '~/utils/revenuecat';
-import { toast } from '~/components/ds';
+import { AppText, toast } from '~/components/ds';
+import { supabase } from '~/utils/supabase';
+
+function getPlanFromProductId(productId: string): '7d' | '1m' | '1y' | null {
+  if (productId.includes('boost_7d')) return '7d';
+  if (productId.includes('boost_1m')) return '1m';
+  if (productId.includes('boost_1y')) return '1y';
+  return null;
+}
+
+function getEndAt(plan: '7d' | '1m' | '1y'): Date {
+  const end = new Date();
+  if (plan === '7d') end.setDate(end.getDate() + 7);
+  else if (plan === '1m') end.setMonth(end.getMonth() + 1);
+  else end.setFullYear(end.getFullYear() + 1);
+  return end;
+}
 
 interface PaywallProps {
   visible: boolean;
   onClose: () => void;
   onPurchaseComplete?: () => void;
+  barId?: string;
   title?: string;
   subtitle?: string;
 }
@@ -26,6 +43,7 @@ export default function Paywall({
   visible,
   onClose,
   onPurchaseComplete,
+  barId,
   title = 'Impulsa tu bar',
   subtitle = 'Aumenta la visibilidad y atrae más clientes',
 }: PaywallProps) {
@@ -33,17 +51,24 @@ export default function Paywall({
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
+  // Evita que onRequestClose tanci el modal automàticament a Android mentre carrega
+  const isReadyToCloseRef = useRef(false);
 
   useEffect(() => {
     if (visible) {
+      isReadyToCloseRef.current = false;
       loadOffering();
+    } else {
+      isReadyToCloseRef.current = false;
     }
   }, [visible]);
 
   const loadOffering = async () => {
     try {
       setLoading(true);
+      console.log('[Paywall] Iniciant getOfferings...');
       const currentOffering = await RevenueCatService.getOfferings();
+      console.log('[Paywall] getOfferings resposta:', currentOffering ? `${currentOffering.availablePackages.length} paquets` : 'null');
       setOffering(currentOffering);
 
       // Auto-select the first package if available
@@ -51,10 +76,13 @@ export default function Paywall({
         setSelectedPackage(currentOffering.availablePackages[0]);
       }
     } catch (error) {
-      console.error('Failed to load offering:', error);
+      console.error('[Paywall] Error getOfferings:', error);
       toast.error('No se pudieron cargar los productos', 'Inténtalo de nuevo');
     } finally {
       setLoading(false);
+      // Ara sí es pot tancar manualment
+      isReadyToCloseRef.current = true;
+      console.log('[Paywall] Carregat, ara onRequestClose està habilitat');
     }
   };
 
@@ -66,7 +94,37 @@ export default function Paywall({
 
     try {
       setPurchasing(true);
-      await RevenueCatService.purchasePackage(selectedPackage);
+      const { transaction } = await RevenueCatService.purchasePackage(selectedPackage);
+
+      // Registrar boost en Supabase si tenemos barId
+      if (barId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const plan = getPlanFromProductId(selectedPackage.product.identifier);
+        if (plan && user) {
+          const endAt = getEndAt(plan);
+          const amountCents = Math.round(selectedPackage.product.price * 100);
+          const currency = (selectedPackage.product.currencyCode ?? 'eur').toLowerCase();
+
+          const { error: insertError } = await supabase
+            .from('bar_boosts')
+            .insert({
+              bar_id: barId,
+              user_id: user.id,
+              plan,
+              start_at: new Date().toISOString(),
+              end_at: endAt.toISOString(),
+              status: 'active',
+              amount_cents: amountCents,
+              currency,
+              revenuecat_transaction_id: transaction?.transactionIdentifier ?? null,
+            });
+
+          if (insertError) {
+            console.error('[Paywall] Error inserting bar_boost:', insertError);
+            toast.warning('Boost comprado, pero no se pudo registrar. Contacta con soporte.');
+          }
+        }
+      }
 
       onPurchaseComplete?.();
       onClose();
@@ -119,15 +177,26 @@ export default function Paywall({
       visible={visible}
       animationType="slide"
       transparent={true}
-      onRequestClose={onClose}
+      // statusBarTranslucent necessari a Android per evitar tancament automàtic
+      statusBarTranslucent={Platform.OS === 'android'}
+      onRequestClose={() => {
+        // A Android, onRequestClose es pot disparar sol (back gesture, focus change)
+        // Només tanquem si la càrrega ha acabat i l'usuari prem back conscientment
+        if (isReadyToCloseRef.current) {
+          console.log('[Paywall] onRequestClose cridat (Android back button)');
+          onClose();
+        } else {
+          console.log('[Paywall] onRequestClose ignorat (encara carregant)');
+        }
+      }}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
+              <AppText style={styles.title}>{title}</AppText>
+              <AppText style={styles.subtitle}>{subtitle}</AppText>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#A3B3CC" />
@@ -137,7 +206,21 @@ export default function Paywall({
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#1976D2" />
-              <Text style={styles.loadingText}>Cargando productos...</Text>
+              <AppText style={styles.loadingText}>Cargando productos...</AppText>
+            </View>
+          ) : !offering || offering.availablePackages.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="cloud-offline-outline" size={48} color="#A3B3CC" />
+              <AppText style={styles.emptyTitle}>No se pudieron cargar los planes</AppText>
+              <AppText style={styles.emptyDescription}>
+                Verifica tu conexión e inténtalo de nuevo
+              </AppText>
+              <TouchableOpacity style={styles.retryButton} onPress={loadOffering}>
+                <AppText style={styles.retryButtonText}>Reintentar</AppText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.closeLinkButton} onPress={onClose}>
+                <AppText style={styles.closeLinkText}>Cerrar</AppText>
+              </TouchableOpacity>
             </View>
           ) : (
             <ScrollView
@@ -152,10 +235,10 @@ export default function Paywall({
                     <Ionicons name="arrow-up-circle" size={20} color="#10B981" />
                   </View>
                   <View style={styles.benefitTextContainer}>
-                    <Text style={styles.benefitTitle}>Mayor visibilidad</Text>
-                    <Text style={styles.benefitDescription}>
+                    <AppText style={styles.benefitTitle}>Mayor visibilidad</AppText>
+                    <AppText style={styles.benefitDescription}>
                       Tu bar aparece primero en búsquedas
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
 
@@ -164,10 +247,10 @@ export default function Paywall({
                     <Ionicons name="star" size={20} color="#FFD700" />
                   </View>
                   <View style={styles.benefitTextContainer}>
-                    <Text style={styles.benefitTitle}>Etiqueta destacado</Text>
-                    <Text style={styles.benefitDescription}>
+                    <AppText style={styles.benefitTitle}>Etiqueta destacado</AppText>
+                    <AppText style={styles.benefitDescription}>
                       Badge especial que llama la atención
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
 
@@ -176,16 +259,16 @@ export default function Paywall({
                     <Ionicons name="trending-up" size={20} color="#60A5FA" />
                   </View>
                   <View style={styles.benefitTextContainer}>
-                    <Text style={styles.benefitTitle}>Prioridad en resultados</Text>
-                    <Text style={styles.benefitDescription}>
+                    <AppText style={styles.benefitTitle}>Prioridad en resultados</AppText>
+                    <AppText style={styles.benefitDescription}>
                       Aparece antes que la competencia
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               </View>
 
               {/* Packages */}
-              {offering?.availablePackages.map((pkg) => (
+              {offering.availablePackages.map((pkg) => (
                 <TouchableOpacity
                   key={pkg.identifier}
                   style={[
@@ -197,15 +280,15 @@ export default function Paywall({
                 >
                   <View style={styles.packageHeader}>
                     <View style={styles.packageInfo}>
-                      <Text style={styles.packageTitle}>
+                      <AppText style={styles.packageTitle}>
                         {getPackageTitle(pkg)}
-                      </Text>
-                      <Text style={styles.packageDescription}>
+                      </AppText>
+                      <AppText style={styles.packageDescription}>
                         {getPackageDescription(pkg)}
-                      </Text>
+                      </AppText>
                     </View>
                     <View style={styles.packagePriceContainer}>
-                      <Text style={styles.packagePrice}>{formatPrice(pkg)}</Text>
+                      <AppText style={styles.packagePrice}>{formatPrice(pkg)}</AppText>
                       {selectedPackage?.identifier === pkg.identifier && (
                         <Ionicons name="checkmark-circle" size={24} color="#10B981" />
                       )}
@@ -223,7 +306,7 @@ export default function Paywall({
                 {purchasing ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.purchaseButtonText}>Comprar Ahora</Text>
+                  <AppText style={styles.purchaseButtonText}>Comprar Ahora</AppText>
                 )}
               </TouchableOpacity>
 
@@ -233,13 +316,13 @@ export default function Paywall({
                 onPress={handleRestore}
                 disabled={purchasing}
               >
-                <Text style={styles.restoreButtonText}>Restaurar Compras</Text>
+                <AppText style={styles.restoreButtonText}>Restaurar Compras</AppText>
               </TouchableOpacity>
 
               {/* Footer Info */}
-              <Text style={styles.footerText}>
+              <AppText style={styles.footerText}>
                 La compra se cargará a tu cuenta de Apple/Google. Puedes cancelar en cualquier momento.
-              </Text>
+              </AppText>
             </ScrollView>
           )}
         </View>
@@ -294,6 +377,43 @@ const styles = StyleSheet.create({
     color: '#A3B3CC',
     fontSize: 14,
     marginTop: 16,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  emptyDescription: {
+    color: '#A3B3CC',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  retryButton: {
+    backgroundColor: '#1976D2',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginTop: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  closeLinkButton: {
+    paddingVertical: 8,
+  },
+  closeLinkText: {
+    color: '#A3B3CC',
+    fontSize: 14,
   },
   scrollView: {
     flex: 1,

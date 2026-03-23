@@ -2,7 +2,7 @@ import { View, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import React from 'react';
 import Gradient from '~/components/ui/Gradient';
 import { supabase } from '~/utils/supabase';
@@ -10,7 +10,7 @@ import BottomTabBar from '~/components/ui/BottomTabBar';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
 import { useBarBoost } from '~/hooks/useBoostBars';
-import { AppText, colors, spacing, radius, BarProfileSkeleton } from '~/components/ds';
+import { AppText, colors, spacing, radius, BarProfileSkeleton, toast } from '~/components/ds';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 // Plans removed: all bars are PRO
 
@@ -77,12 +77,14 @@ export default function BarProfileScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(true);
-  const [publicReviews, setPublicReviews] = useState<Array<{ id: string; rating: number; comment: string; created_at: string; user?: { username?: string; profile_image_url?: string } }>>([]);
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
   const [verificationNotes, setVerificationNotes] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
-  const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any }>({ title: '', content: null });
+  const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any; actionLabel?: string; onAction?: () => void }>({ title: '', content: null });
   const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
+
+  // Ref para scroll programático al FlatList
+  const flatListRef = useRef<FlatList>(null);
 
   // Get boost status for countdown
   const { boost, isLoading: boostLoading } = useBarBoost(barId);
@@ -124,54 +126,51 @@ export default function BarProfileScreen() {
 
   const showBoostInfo = () => {
     setInfoModalContent({
-      title: '✨ Beneficios del Boost',
+      title: '⚡ Boost de Visibilidad',
       content: (
         <View>
-          <AppText variant="body" color={colors.text.primary} align="center" style={styles.boostMainTextSpacing}>
-            Aumenta la visibilidad de tu bar y atrae más clientes
-          </AppText>
-
-          {/* Beneficios */}
           <View style={styles.benefitItem}>
-            <View style={styles.benefitIcon}>
-              <AppText style={styles.benefitEmoji}>⬆️</AppText>
+            <View style={[styles.benefitIcon, { backgroundColor: 'rgba(74,222,128,0.12)' }]}>
+              <Ionicons name="arrow-up-circle" size={22} color="#4ADE80" />
             </View>
             <View style={styles.benefitContent}>
-              <AppText variant="label" color={colors.text.primary}>Mayor visibilidad en listas</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Tu bar aparece primero en búsquedas y filtros</AppText>
+              <AppText variant="label" color={colors.text.primary}>Apareces primero</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Tu bar sale antes que la competencia en el mapa y búsquedas</AppText>
             </View>
           </View>
 
           <View style={styles.benefitItem}>
-            <View style={styles.benefitIcon}>
-              <AppText style={styles.benefitEmoji}>⭐</AppText>
+            <View style={[styles.benefitIcon, { backgroundColor: 'rgba(255,215,0,0.12)' }]}>
+              <Ionicons name="star" size={22} color={colors.status.boost} />
             </View>
             <View style={styles.benefitContent}>
-              <AppText variant="label" color={colors.text.primary}>Etiqueta destacado</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Badge especial que llama la atención</AppText>
+              <AppText variant="label" color={colors.text.primary}>Badge destacado</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Etiqueta visible que llama la atención de los usuarios</AppText>
             </View>
           </View>
 
           <View style={styles.benefitItem}>
-            <View style={styles.benefitIcon}>
-              <AppText style={styles.benefitEmoji}>📈</AppText>
+            <View style={[styles.benefitIcon, { backgroundColor: 'rgba(96,165,250,0.12)' }]}>
+              <Ionicons name="people" size={22} color="#60A5FA" />
             </View>
             <View style={styles.benefitContent}>
-              <AppText variant="label" color={colors.text.primary}>Prioridad en resultados</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Aparece antes que la competencia</AppText>
+              <AppText variant="label" color={colors.text.primary}>Más clientes los días de partido</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Capta aficionados que buscan bar en tiempo real</AppText>
             </View>
           </View>
 
-          {/* Call to action */}
-          <View style={styles.ctaContainer}>
-            <AppText variant="subtitle" color={colors.status.boost} align="center" style={styles.ctaTitleSpacing}>💰 ¡Llena tu bar!</AppText>
-            <AppText variant="label" color={colors.text.primary} align="center" style={styles.ctaSubtitleSpacing}>Cada cliente genera ~13€ de beneficio medio</AppText>
-            <AppText variant="caption" color={colors.text.light} align="center" style={styles.ctaDescriptionSpacing}>
-              Una inversión pequeña puede traerte muchos más clientes y aumentar significativamente tus ingresos
-            </AppText>
+          <View style={styles.boostRoiCard}>
+            <Ionicons name="trending-up" size={14} color="#4ADE80" />
+            <View style={styles.boostRoiText}>
+              <AppText variant="caption" color={colors.text.secondary}>Cada cliente gasta ~13€ de media</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Desde 19,99€</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Sin suscripción</AppText>
+            </View>
           </View>
         </View>
       ),
+      actionLabel: 'Ver planes y precios',
+      onAction: () => router.push(`/boost?barId=${barId}` as any),
     });
     setInfoModalVisible(true);
   };
@@ -208,6 +207,7 @@ export default function BarProfileScreen() {
   const sections = [
     { type: 'header', key: 'header' },
     { type: 'images', key: 'images' },
+    { type: 'nav', key: 'nav' },
     { type: 'matches', key: 'matches' },
     { type: 'upcoming-matches', key: 'upcoming-matches' },
     { type: 'info', key: 'info' },
@@ -352,6 +352,74 @@ export default function BarProfileScreen() {
             )}
           </View>
         );
+
+      case 'nav': {
+        const navItems = [
+          ...(isOwner ? [{
+            key: 'matches',
+            label: 'Gestión',
+            icon: '⚽',
+            color: colors.brand.link,
+          }] : []),
+          {
+            key: 'upcoming-matches',
+            label: 'Partidos',
+            icon: '📺',
+            color: colors.tags.tv,
+          },
+          {
+            key: 'info',
+            label: 'Info',
+            icon: '📝',
+            color: colors.tags.category,
+          },
+          ...(canShowMenuButton ? [{
+            key: 'menu',
+            label: 'Carta',
+            icon: '🍽️',
+            color: colors.tags.food,
+          }] : []),
+          {
+            key: 'posts',
+            label: 'Posts',
+            icon: '📰',
+            color: colors.tags.feature,
+          },
+          {
+            key: 'reviews',
+            label: 'Reseñas',
+            icon: '⭐',
+            color: '#C89B30',
+          },
+        ];
+
+        return (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.navScrollContent}
+            style={styles.navSection}
+          >
+            {navItems.map(navItem => (
+              <TouchableOpacity
+                key={navItem.key}
+                style={[styles.navChip, { backgroundColor: navItem.color }]}
+                onPress={() => {
+                  const target = sections.find(s => s.key === navItem.key);
+                  if (target) {
+                    flatListRef.current?.scrollToItem({ item: target, animated: true });
+                  }
+                }}
+                activeOpacity={0.75}
+              >
+                <AppText variant="label" color={colors.text.primary}>
+                  {navItem.icon} {navItem.label}
+                </AppText>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        );
+      }
 
       case 'info':
         return (
@@ -530,14 +598,22 @@ export default function BarProfileScreen() {
               </View>
 
               <View style={styles.matchesContainer}>
+                {/* Añadir partido manualmente */}
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
-                    style={styles.matchButton}
+                    style={styles.barActionButton}
                     onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="calendar-outline" size={20} color={colors.text.primary} />
-                    <AppText variant="label" color={colors.text.primary}>Añadir partido manualmente</AppText>
+                    <View style={[styles.barActionIcon, styles.barActionIconBlue]}>
+                      <Ionicons name="calendar-outline" size={18} color={colors.brand.primary} />
+                    </View>
+                    <View style={styles.barActionContent}>
+                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
+                        Añadir partido manualmente
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButton}
@@ -548,14 +624,22 @@ export default function BarProfileScreen() {
                   </TouchableOpacity>
                 </View>
 
+                {/* Automatizar retransmisiones */}
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
-                    style={styles.matchButtonOutline}
+                    style={styles.barActionButton}
                     onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="settings-outline" size={20} color={colors.text.primary} />
-                    <AppText variant="label" color={colors.text.primary}>Automatizar retransmisiones</AppText>
+                    <View style={[styles.barActionIcon, styles.barActionIconPurple]}>
+                      <Ionicons name="settings-outline" size={18} color={colors.brand.link} />
+                    </View>
+                    <View style={styles.barActionContent}>
+                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
+                        Automatizar retransmisiones
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButton}
@@ -566,15 +650,22 @@ export default function BarProfileScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Promote visibility button (boost style) */}
+                {/* Aumentar la visibilidad */}
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
-                    activeOpacity={0.8}
+                    style={styles.barActionButton}
                     onPress={() => router.push(`/boost?barId=${barId}` as any)}
-                    style={styles.promoteButton}
+                    activeOpacity={0.8}
                   >
-                    <Ionicons name="flash" size={20} color={colors.status.boost} />
-                    <AppText variant="label" color={colors.status.boost}>Aumenta la visibilidad de tu bar</AppText>
+                    <View style={[styles.barActionIcon, styles.barActionIconBoost]}>
+                      <Ionicons name="flash" size={18} color={colors.status.boost} />
+                    </View>
+                    <View style={styles.barActionContent}>
+                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
+                        Aumenta la visibilidad de tu bar
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.infoButton}
@@ -696,28 +787,35 @@ export default function BarProfileScreen() {
     if (!barId) return;
 
     try {
-      // Get current user
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      setUser(authUser); // This line was removed as per the new_code, as user state is no longer managed here.
+      // Round 1: auth + bar data con joins anidados en paralelo
+      const [
+        { data: { user: authUser } },
+        { data: barData, error: barError },
+      ] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase
+          .from('bars')
+          .select(`
+            id,
+            name,
+            description,
+            address,
+            city,
+            phone,
+            website,
+            bar_images(image_url, image_order),
+            bar_categories(id, name),
+            bar_food_types(food_type_id, food_types(name)),
+            bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
+            bar_selected_features(feature_id, bar_features(name)),
+            verification_status,
+            verification_notes
+          `)
+          .eq('id', barId)
+          .single(),
+      ]);
 
-      // Fetch bar data
-      const { data: barData, error: barError } = await supabase
-        .from('bars')
-        .select(`
-          id,
-          name,
-          description,
-          address,
-          city,
-          phone,
-          website,
-          bar_images(image_url, image_order),
-          category_id,
-          verification_status,
-          verification_notes
-        `)
-        .eq('id', barId)
-        .single();
+      setUser(authUser);
 
       if (barError) {
         console.error('Error fetching bar:', barError);
@@ -728,85 +826,15 @@ export default function BarProfileScreen() {
       if (barData) {
         setVerificationStatus((barData as any).verification_status || null);
         setVerificationNotes((barData as any).verification_notes || null);
-        // Check if bar has at least one active subscription (supports multiple rows)
-        // All bars can show menu button now
         setCanShowMenuButton(true);
 
-        // Load N:N relationships separately (only IDs first)
-        const { data: foodTypes } = await supabase
-          .from('bar_food_types')
-          .select('food_type_id')
-          .eq('bar_id', barId);
-
-        const { data: tvFeatures } = await supabase
-          .from('bar_selected_tv_features')
-          .select('tv_feature_id')
-          .eq('bar_id', barId);
-
-        const { data: features } = await supabase
-          .from('bar_selected_features')
-          .select('feature_id')
-          .eq('bar_id', barId);
-
-        console.log('🔍 Bar profile N:N data loaded:', {
-          foodTypes: foodTypes?.length || 0,
-          tvFeatures: tvFeatures?.length || 0,
-          features: features?.length || 0,
-          foodTypeIds: foodTypes?.map(item => item.food_type_id) || [],
-          tvFeatureIds: tvFeatures?.map(item => item.tv_feature_id) || [],
-          featureIds: features?.map(item => item.feature_id) || []
-        });
-
-        // Load category name
-        let categoryName = '';
-        if (barData.category_id) {
-          const { data: categoryData } = await supabase
-            .from('bar_categories')
-            .select('name')
-            .eq('id', barData.category_id)
-            .single();
-          categoryName = categoryData?.name || '';
-        }
-
-        // Load food type names
-        const foodTypeIds = foodTypes?.map(item => item.food_type_id) || [];
-        const { data: foodTypeNames } = await supabase
-          .from('food_types')
-          .select('id, name')
-          .in('id', foodTypeIds);
-
-        // Load TV feature names
-        const tvFeatureIds = tvFeatures?.map(item => item.tv_feature_id) || [];
-        const { data: tvFeatureNames } = await supabase
-          .from('bar_tv_features')
-          .select('id, name')
-          .in('id', tvFeatureIds);
-
-        // Load feature names
-        const featureIds = features?.map(item => item.feature_id) || [];
-        const { data: featureNames } = await supabase
-          .from('bar_features')
-          .select('id, name')
-          .in('id', featureIds);
-
-        // Create maps for quick lookup
-        const foodTypeMap = new Map();
-        foodTypeNames?.forEach(item => foodTypeMap.set(item.id, item.name));
-
-        const tvFeatureMap = new Map();
-        tvFeatureNames?.forEach(item => tvFeatureMap.set(item.id, item.name));
-
-        const featureMap = new Map();
-        featureNames?.forEach(item => featureMap.set(item.id, item.name));
-
-        console.log('🔍 Bar profile names loaded:', {
-          foodTypeNames: foodTypeNames?.length || 0,
-          tvFeatureNames: tvFeatureNames?.length || 0,
-          featureNames: featureNames?.length || 0,
-          foodTypeMap: Object.fromEntries(foodTypeMap),
-          tvFeatureMap: Object.fromEntries(tvFeatureMap),
-          featureMap: Object.fromEntries(featureMap)
-        });
+        // Procesar joins directos (patrón Map.tsx)
+        const categoryRaw = Array.isArray((barData as any).bar_categories)
+          ? (barData as any).bar_categories[0]
+          : (barData as any).bar_categories;
+        const category = categoryRaw
+          ? { id: categoryRaw.id, name: categoryRaw.name }
+          : undefined;
 
         setBar({
           id: barData.id,
@@ -816,67 +844,36 @@ export default function BarProfileScreen() {
           city: barData.city,
           phone: barData.phone,
           website: barData.website,
-          images: barData.bar_images
+          images: (barData as any).bar_images
             ?.sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))
             .map((img: any) => img.image_url) || [],
-          category: barData.category_id ? { id: barData.category_id, name: categoryName } : undefined,
-          bar_food_types: foodTypes?.map(item => ({
+          category,
+          bar_food_types: ((barData as any).bar_food_types || []).map((item: any) => ({
             food_type_id: item.food_type_id,
-            food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
-          })) || [],
-          bar_selected_tv_features: tvFeatures?.map(item => ({
+            food_type: { name: item.food_types?.name || 'Unknown' },
+          })),
+          bar_selected_tv_features: ((barData as any).bar_selected_tv_features || []).map((item: any) => ({
             tv_feature_id: item.tv_feature_id,
-            tv_feature: { name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown' }
-          })) || [],
-          bar_selected_features: features?.map(item => ({
+            tv_feature: { name: item.bar_tv_features?.name || 'Unknown' },
+          })),
+          bar_selected_features: ((barData as any).bar_selected_features || []).map((item: any) => ({
             feature_id: item.feature_id,
-            feature: { name: featureMap.get(item.feature_id) || 'Unknown' }
-          })) || [],
+            feature: { name: item.bar_features?.name || 'Unknown' },
+          })),
         });
 
-        console.log('✅ Bar profile set:', {
-          name: barData.name,
-          category: barData.category_id ? { id: barData.category_id, name: categoryName } : undefined,
-          foodTypes: foodTypes?.map(item => ({
-            food_type_id: item.food_type_id,
-            food_type: { name: foodTypeMap.get(item.food_type_id) || 'Unknown' }
-          })) || [],
-          tvFeatures: tvFeatures?.map(item => ({
-            tv_feature_id: item.tv_feature_id,
-            tv_feature: { name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown' }
-          })) || [],
-          features: features?.map(item => ({
-            feature_id: item.feature_id,
-            feature: { name: featureMap.get(item.feature_id) || 'Unknown' }
-          })) || []
-        });
+        // Round 2: ownership primer, després posts + matches
+        const ownerResult = authUser
+          ? await supabase.from('users').select('bar_id').eq('id', authUser.id).single()
+          : { data: null, error: null };
 
-        // Check if current user is the owner by checking if their bar_id matches this bar's id
-        if (authUser) {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('bar_id')
-            .eq('id', authUser.id)
-            .single();
+        const ownerCheck = !!(authUser && ownerResult.data && (ownerResult.data as any).bar_id === barData.id);
+        setIsOwner(ownerCheck);
 
-          if (!userError && userData) {
-            setIsOwner(userData.bar_id === barData.id);
-          }
-        }
-
-        // Fetch posts for this bar
-        await fetchBarPosts(barData.id, authUser);
-        
-        // Fetch upcoming matches for this bar
-        await fetchUpcomingMatches(barData.id);
-
-        // Fetch public reviews for this bar (for quick zero-state)
-        const { data: reviewsData } = await supabase
-          .from('reviews')
-          .select('id, rating, comment, created_at')
-          .eq('bar_id', barData.id)
-          .order('created_at', { ascending: false });
-        setPublicReviews((reviewsData as any) || []);
+        await Promise.all([
+          fetchBarPosts(barData.id, authUser, ownerCheck),
+          fetchUpcomingMatches(barData.id),
+        ]);
       }
 
     } catch (error) {
@@ -885,9 +882,9 @@ export default function BarProfileScreen() {
     } finally {
       setLoading(false);
     }
-  }, [barId]);
+  }, [barId, fetchBarPosts, fetchUpcomingMatches]);
 
-  const fetchBarPosts = useCallback(async (barId: string, authUser: any) => {
+  const fetchBarPosts = useCallback(async (barId: string, authUser: any, isOwnerCheck: boolean) => {
     try {
       let query = supabase
         .from('bar_posts')
@@ -895,7 +892,7 @@ export default function BarProfileScreen() {
         .eq('bar_id', barId);
 
       // If not the owner, only show active posts within valid date range
-      if (!authUser || authUser.id !== user?.id) {
+      if (!authUser || !isOwnerCheck) {
         const today = new Date().toISOString().split('T')[0];
         query = query
           .eq('is_active', true)
@@ -917,12 +914,10 @@ export default function BarProfileScreen() {
     } catch (error) {
       console.error('Error in fetchBarPosts:', error);
     }
-  }, [user]);
+  }, []);
 
   const fetchUpcomingMatches = useCallback(async (barId: string) => {
     try {
-      console.log('📺 Fetching upcoming matches for bar:', barId);
-      
       const { data: matchesData, error: matchesError } = await supabase
         .from('events')
         .select(`
@@ -966,10 +961,8 @@ export default function BarProfileScreen() {
         }));
 
         setUpcomingMatches(upcomingMatches);
-        console.log('📺 Upcoming matches loaded:', upcomingMatches.length);
       } else {
         setUpcomingMatches([]);
-        console.log('📺 No upcoming matches found for bar:', barId);
       }
     } catch (error) {
       console.error('Error in fetchUpcomingMatches:', error);
@@ -1204,7 +1197,7 @@ export default function BarProfileScreen() {
 
               // Refresh posts
               if (bar) {
-                await fetchBarPosts(bar.id, user);
+                await fetchBarPosts(bar.id, user, isOwner);
               }
             } catch (error) {
               console.error('Error in handleDeletePost:', error);
@@ -1219,8 +1212,7 @@ export default function BarProfileScreen() {
   // Load bar profile on initial mount and when screen comes back into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 Loading bar profile...');
-      fetchBarProfile(); // Loads bar profile including images, posts, reviews, and matches
+      fetchBarProfile();
     }, [fetchBarProfile])
   );
 
@@ -1231,8 +1223,8 @@ export default function BarProfileScreen() {
 
     const wasFavorite = isFavorite(barId);
     const success = await toggleFavorite(barId);
-    if (success) {
-      console.log(wasFavorite ? '🗑️ Removed from favorites:' : '❤️ Added to favorites:', bar?.name);
+    if (!success) {
+      toast.error('No se pudo actualizar favorito');
     }
   };
 
@@ -1258,17 +1250,17 @@ export default function BarProfileScreen() {
 
               if (error) {
                 console.error('Error deleting match:', error);
-                Alert.alert('Error', 'No se pudo eliminar el partido');
+                toast.error('No se pudo eliminar el partido');
                 return;
               }
 
               // Refresh upcoming matches
               await fetchUpcomingMatches(barId);
-              
-              Alert.alert('Éxito', 'Partido eliminado correctamente');
+
+              toast.success('Partido eliminado');
             } catch (error) {
               console.error('Error in handleDeleteMatch:', error);
-              Alert.alert('Error', 'Ocurrió un error al eliminar el partido');
+              toast.error('No se pudo eliminar el partido');
             }
           },
         },
@@ -1299,11 +1291,13 @@ export default function BarProfileScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       <FlatList
+        ref={flatListRef}
         data={sections}
         renderItem={renderSection}
         keyExtractor={(item) => `${bar.id}-${item.key}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollViewContent}
+        onScrollToIndexFailed={() => {}}
       />
 
       {/* Info Modal */}
@@ -1342,10 +1336,15 @@ export default function BarProfileScreen() {
               </View>
 
               <TouchableOpacity
-                style={styles.modalOkButton}
-                onPress={() => setInfoModalVisible(false)}
+                style={[styles.modalOkButton, infoModalContent.onAction && styles.modalOkButtonAccent]}
+                onPress={() => {
+                  setInfoModalVisible(false);
+                  infoModalContent.onAction?.();
+                }}
               >
-                <AppText variant="body" color={colors.text.primary} style={styles.modalOkButtonTextBold}>Entendido</AppText>
+                <AppText variant="body" color={colors.text.primary} style={styles.modalOkButtonTextBold}>
+                  {infoModalContent.actionLabel ?? 'Entendido'}
+                </AppText>
               </TouchableOpacity>
             </ScrollView>
           </TouchableOpacity>
@@ -1798,65 +1797,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   matchesContainer: {
-    paddingHorizontal: 20,
     paddingVertical: 4,
     backgroundColor: 'transparent',
     borderRadius: 12,
-    marginHorizontal: 20,
     marginBottom: 8,
   },
-  matchButton: {
+  barActionButton: {
     flex: 1,
-    backgroundColor: colors.brand.link,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: spacing.md,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.xl,
-    gap: spacing.sm,
-    minHeight: 50,
-  },
-  matchButtonOutline: {
-    flex: 1,
-    backgroundColor: colors.brand.link,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.xl,
-    gap: spacing.sm,
-    minHeight: 50,
-  },
-  promoteButton: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 215, 0, 0.12)',
-    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  barActionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: spacing.sm,
     justifyContent: 'center',
-    gap: spacing.sm,
-    minHeight: 50,
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
-  matchButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
+  barActionIconBlue: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
   },
-  matchButtonOutlineText: {
-    color: '#FFFFFF',  // Blanco para contraste con fondo azul
-    fontSize: 16,
-    fontWeight: '600',
+  barActionIconPurple: {
+    backgroundColor: 'rgba(88, 86, 214, 0.15)',
   },
-  promoteButtonText: {
-    color: '#FFD700',  // Dorado como el countdown
-    fontSize: 15,
+  barActionIconBoost: {
+    backgroundColor: 'rgba(255, 215, 0, 0.12)',
+  },
+  barActionContent: {
+    flex: 1,
+  },
+  barActionTitle: {
     fontWeight: '600',
+    fontSize: 13,
   },
   // Upcoming matches styles
   upcomingMatchesContainer: {
@@ -1984,8 +1963,8 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   buttonWithInfo: {
     flexDirection: 'row',
@@ -1994,10 +1973,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   infoButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.round,
+    width: 36,
+    height: 36,
+    borderRadius: spacing.md,
     backgroundColor: colors.bg.elevated,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2075,64 +2056,97 @@ const styles = StyleSheet.create({
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 12,
-    borderRadius: 12,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
   },
   benefitIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    flexShrink: 0,
   },
   benefitEmoji: {
-    fontSize: 24,
+    fontSize: 20,
   },
   benefitContent: {
     flex: 1,
+    gap: 3,
+    paddingTop: 2,
   },
-  benefitTitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  benefitDescription: {
-    color: '#A3B3CC',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  ctaContainer: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
-    padding: 16,
-    marginTop: 8,
-  },
-  ctaTitle: {
-    color: '#FFD700',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  ctaSubtitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  ctaDescription: {
-    color: '#E5E7EB',
-    fontSize: 13,
+  boostSubtitle: {
     lineHeight: 20,
-    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  boostStatsRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+  },
+  boostStatItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.xxs,
+  },
+  boostStatDivider: {
+    width: 1,
+    backgroundColor: colors.border.subtle,
+    marginVertical: spacing.sm,
+  },
+  boostStatValue: {
+    color: colors.status.boost,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  boostStatLabel: {
+    lineHeight: 14,
+  },
+  boostRoiCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(74,222,128,0.07)',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(74,222,128,0.2)',
+    padding: spacing.md,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  boostRoiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  boostRoiText: {
+    flex: 1,
+    gap: 2,
+  },
+  boostTrustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+    marginTop: spacing.xs,
+  },
+  boostTrustItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  boostTrustDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.border.medium,
   },
   modalOkButton: {
     backgroundColor: '#1976D2',
@@ -2140,6 +2154,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  modalOkButtonAccent: {
+    backgroundColor: '#1976D2',
   },
   modalOkButtonText: {
     color: '#FFFFFF',
@@ -2218,5 +2235,24 @@ const styles = StyleSheet.create({
   },
   modalOkButtonTextBold: {
     fontWeight: '600',
+  },
+  // Section navigation mini-menu
+  navSection: {
+    paddingVertical: 4,
+  },
+  navScrollContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  navChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 }); 

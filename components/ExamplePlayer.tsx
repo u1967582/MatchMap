@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -109,12 +110,12 @@ const ExamplePlayer: React.FC = () => {
             color={isActive ? '#FFFFFF' : '#666666'} 
           />
           {label && (
-            <Text style={[
+            <AppText style={[
               styles.buttonLabel,
               { color: isActive ? '#FFFFFF' : '#666666' }
             ]}>
               {label}
-            </Text>
+            </AppText>
           )}
         </Animated.View>
       </TouchableOpacity>
@@ -159,8 +160,8 @@ const ExamplePlayer: React.FC = () => {
         </TouchableOpacity>
 
         <View style={styles.timeContainer}>
-          <Text style={styles.timeText}>0:0{currentTime}</Text>
-          <Text style={styles.timeText}>0:0{totalTime}</Text>
+          <AppText style={styles.timeText}>0:0{currentTime}</AppText>
+          <AppText style={styles.timeText}>0:0{totalTime}</AppText>
         </View>
 
         <View style={styles.progressContainer}>

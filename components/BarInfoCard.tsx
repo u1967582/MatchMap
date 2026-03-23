@@ -1,5 +1,7 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Alert, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Alert, Platform } from 'react-native';
+import { Image } from 'expo-image';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
@@ -179,14 +181,16 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
         <View style={styles.imageContainer}>
           {bar.image_url ? (
             <Image
-              source={{ uri: bar.image_url }}
-              style={styles.barImage}
-              resizeMode="cover"
+              source={{ uri: `${bar.image_url}?width=600&quality=75` }}
+              style={[styles.barImage, { backgroundColor: '#1A2332' }]}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
             />
           ) : (
             <View style={styles.noImageContainer}>
               <Ionicons name="image-outline" size={64} color="#A3B3CC" />
-              <Text style={styles.noImageText}>Sin fotos disponibles</Text>
+              <AppText style={styles.noImageText}>Sin fotos disponibles</AppText>
             </View>
           )}
 
@@ -221,20 +225,20 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
 
         {/* Bar Info */}
         <View style={styles.barInfo}>
-          <Text style={styles.barName}>{typeof bar.name === 'string' ? bar.name : 'Bar sin nombre'}</Text>
+          <AppText maxScale={1.2} numberOfLines={1} ellipsizeMode="tail" style={styles.barName}>{typeof bar.name === 'string' ? bar.name : 'Bar sin nombre'}</AppText>
 
           <View style={styles.barMeta}>
             <View style={styles.ratingContainer}>
               <Ionicons name="star" size={16} color="#F59E0B" />
-              <Text style={styles.ratingText}>
+              <AppText style={styles.ratingText}>
                 {(typeof bar.rating === 'number' ? bar.rating.toFixed(1) : 'N/A')} ({bar.review_count || 0} reseñas)
-              </Text>
+              </AppText>
             </View>
 
             {typeof bar.distance_km === 'number' && !isNaN(bar.distance_km) && (
-              <Text style={styles.distanceText}>
+              <AppText style={styles.distanceText}>
                 {bar.distance_km.toFixed(1)} km
-              </Text>
+              </AppText>
             )}
           </View>
 
@@ -242,9 +246,9 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
           {nextMatch && (
             <View style={styles.nextMatchContainer}>
               <Ionicons name="calendar" size={14} color="#10B981" />
-              <Text style={styles.nextMatchText}>
+              <AppText numberOfLines={1} style={styles.nextMatchText}>
                 Próximo partido: {new Date(nextMatch.date).toLocaleDateString('es-ES')} {nextMatch.time}
-              </Text>
+              </AppText>
             </View>
           )}
 
@@ -253,7 +257,7 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
             <View>
               <View style={styles.addressRow}>
                 <Ionicons name="location-outline" size={14} color="#A3B3CC" />
-                <Text style={styles.barAddress}>{bar.address}, {bar.city}</Text>
+                <AppText numberOfLines={1} ellipsizeMode="tail" style={styles.barAddress}>{bar.address}, {bar.city}</AppText>
               </View>
 
               {/* Navigate Button */}
@@ -266,7 +270,7 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
                   }}
                 >
                   <Ionicons name="navigate" size={18} color="#FFFFFF" />
-                  <Text style={styles.navigateButtonText}>Cómo llegar</Text>
+                  <AppText maxScale={1.0} style={styles.navigateButtonText}>Cómo llegar</AppText>
                 </TouchableOpacity>
               )}
             </View>

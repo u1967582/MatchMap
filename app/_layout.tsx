@@ -191,6 +191,7 @@ export default function Layout() {
             headerShown: false,
             presentation: 'card',
             animation: 'slide_from_right',
+            gestureEnabled: true,
             contentStyle: { backgroundColor: '#1C2A3A' }
           }}
         />

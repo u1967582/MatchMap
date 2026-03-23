@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
+import { AppText } from '~/components/ds';
 import { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
 import * as RevenueCatService from '~/utils/revenuecat';
 import { supabase } from '~/utils/supabase';
@@ -27,24 +28,19 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const initialize = async () => {
       try {
-        // ⚠️ TEMPORARILY DISABLED: RevenueCat initialization
-        // Reason: Invalid API key causing login failures in Android
-        // TODO: Re-enable when valid API key is obtained
-        console.log('⚠️ RevenueCat temporarily disabled');
-
         // Get current user
-        // const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
 
         // Initialize RevenueCat with user ID if available
-        // await RevenueCatService.initializeRevenueCat(user?.id);
+        await RevenueCatService.initializeRevenueCat(user?.id);
 
         // Fetch initial customer info
-        // const info = await RevenueCatService.getCustomerInfo();
-        // setCustomerInfo(info);
+        const info = await RevenueCatService.getCustomerInfo();
+        setCustomerInfo(info);
 
         // Check boost entitlement
-        // const boostActive = await RevenueCatService.hasActiveBoost();
-        // setHasActiveBoost(boostActive);
+        const boostActive = await RevenueCatService.hasActiveBoost();
+        setHasActiveBoost(boostActive);
       } catch (error) {
         console.error('Failed to initialize RevenueCat:', error);
         // ⚠️ IMPORTANT: Mark as initialized EVEN IF IT FAILS
@@ -130,7 +126,7 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1C2A3A' }}>
         <ActivityIndicator size="large" color="#1976D2" />
-        <Text style={{ color: '#FFFFFF', marginTop: 16, fontSize: 16 }}>Iniciando MatchMap...</Text>
+        <AppText style={{ color: '#FFFFFF', marginTop: 16, fontSize: 16 }}>Iniciando MatchMap...</AppText>
       </View>
     );
   }

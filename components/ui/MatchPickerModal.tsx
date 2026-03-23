@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
@@ -9,6 +8,8 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import HorizontalDateScroller from './HorizontalDateScroller';
@@ -50,14 +51,13 @@ interface MatchPickerModalProps {
 function getCompetitionLogoFilename(compName: string): string | null {
   const nameLower = compName.toLowerCase();
 
+  if (nameLower.includes('champions') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer'))) return 'champions_femen.png';
   if (nameLower.includes('champions')) return 'champions.png';
-  if (nameLower.includes('liga f')) return 'ligaf.png';
-  if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) {
-    return 'primera-division-ea.png';
-  }
-  if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) {
-    return 'segunda-division-hypermotion.png';
-  }
+  if (nameLower.includes('copa del rey')) return 'copa-del-rey.png';
+  if (nameLower.includes('europa league')) return 'europa-league.png';
+  if (nameLower.includes('liga f') || (nameLower.includes('primera') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))) return 'ligaf.png';
+  if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) return 'primera-division-ea.png';
+  if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) return 'segunda-division-hypermotion.png';
 
   return null;
 }
@@ -68,6 +68,7 @@ export default function MatchPickerModal({
   onSelectMatch,
   selectedMatchId,
 }: MatchPickerModalProps) {
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [matches, setMatches] = useState<Match[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -222,13 +223,13 @@ export default function MatchPickerModal({
                 }}
                 style={styles.teamLogo}
               />
-              <Text style={styles.teamName} numberOfLines={1}>
+              <AppText style={styles.teamName} numberOfLines={1}>
                 {item.home_team?.name || 'Equipo Local'}
-              </Text>
+              </AppText>
             </View>
 
             <View style={styles.vsContainer}>
-              <Text style={styles.vsText}>VS</Text>
+              <AppText style={styles.vsText}>VS</AppText>
             </View>
 
             <View style={styles.teamContainer}>
@@ -238,23 +239,23 @@ export default function MatchPickerModal({
                 }}
                 style={styles.teamLogo}
               />
-              <Text style={styles.teamName} numberOfLines={1}>
+              <AppText style={styles.teamName} numberOfLines={1}>
                 {item.away_team?.name || 'Equipo Visitante'}
-              </Text>
+              </AppText>
             </View>
           </View>
         </View>
 
         <View style={styles.matchDetails}>
-          <Text style={styles.matchTime}>
+          <AppText style={styles.matchTime}>
             {new Date(`${item.date} ${item.time}`).toLocaleTimeString('es-ES', {
               hour: '2-digit',
               minute: '2-digit',
             })}
-          </Text>
-          <Text style={styles.competitionName}>
+          </AppText>
+          <AppText style={styles.competitionName}>
             {item.competition?.name || 'Competición'}
-          </Text>
+          </AppText>
         </View>
 
         {isSelected && (
@@ -277,10 +278,10 @@ export default function MatchPickerModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.modalBackdrop}>
+      <View style={[styles.modalBackdrop, { paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 20) }]}>
         <View style={styles.modalContainer}>
           <View style={styles.header}>
-            <Text style={styles.modalTitle}>Seleccionar Partido</Text>
+            <AppText style={styles.modalTitle}>Seleccionar Partido</AppText>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#FFFFFF" />
             </TouchableOpacity>
@@ -326,12 +327,12 @@ export default function MatchPickerModal({
                           defaultSource={require('~/assets/icon.png')}
                         />
                       )}
-                      <Text style={[
+                      <AppText style={[
                         styles.competitionChipText,
-                        selected && styles.competitionChipTextSelected
+                        selected && styles.competitionChipTextSelected,
                       ]}>
                         {label}
-                      </Text>
+                      </AppText>
                     </TouchableOpacity>
                   );
                 }}
@@ -344,7 +345,7 @@ export default function MatchPickerModal({
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator color="#FFFFFF" size="large" />
-                <Text style={styles.loadingText}>Cargando partidos...</Text>
+                <AppText style={styles.loadingText}>Cargando partidos...</AppText>
               </View>
             ) : filteredMatches.length > 0 ? (
               <FlatList
@@ -357,9 +358,9 @@ export default function MatchPickerModal({
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="football-outline" size={80} color="rgba(255, 255, 255, 0.2)" />
-                <Text style={styles.emptyText}>
+                <AppText style={styles.emptyText}>
                   No hay partidos programados para esta fecha
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
@@ -370,14 +371,14 @@ export default function MatchPickerModal({
               style={[styles.modalButton, styles.modalButtonSecondary]}
               onPress={handleClearSelection}
             >
-              <Text style={styles.modalButtonText}>Quitar selección</Text>
+              <AppText style={styles.modalButtonText}>Quitar selección</AppText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonPrimary]}
               onPress={handleApply}
               disabled={loading}
             >
-              <Text style={styles.modalButtonText}>Aplicar</Text>
+              <AppText style={styles.modalButtonText}>Aplicar</AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -393,8 +394,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 20,
   },
   modalContainer: {
     width: '100%',
@@ -492,17 +491,18 @@ const styles = StyleSheet.create({
   },
   teamsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minHeight: 80,
   },
   teamContainer: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   teamLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
     marginBottom: 6,
     resizeMode: 'contain',
   },
@@ -522,6 +522,7 @@ const styles = StyleSheet.create({
   },
   matchDetails: {
     alignItems: 'center',
+    marginTop: 2,
   },
   matchTime: {
     color: '#4CAF50',

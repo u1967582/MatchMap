@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,7 +91,7 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Información General</Text>
+          <AppText style={styles.headerTitle}>Información General</AppText>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -101,15 +102,15 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
             <View style={styles.progressStep} />
             <View style={styles.progressStep} />
           </View>
-          <Text style={styles.progressText}>Paso 1 de 4</Text>
+          <AppText style={styles.progressText}>Paso 1 de 4</AppText>
         </View>
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
-            <Text style={styles.title}>Cuéntanos sobre tu bar</Text>
-            <Text style={styles.subtitle}>
+            <AppText style={styles.title}>Cuéntanos sobre tu bar</AppText>
+            <AppText style={styles.subtitle}>
               Información básica que ayudará a los usuarios a encontrar y conocer tu establecimiento.
-            </Text>
+            </AppText>
 
             <TextInputField
               label="Nombre del Bar"
@@ -174,7 +175,7 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
 
             {loading ? (
               <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Cargando categorías...</Text>
+                <AppText style={styles.loadingText}>Cargando categorías...</AppText>
               </View>
             ) : (
               <View>
@@ -188,11 +189,11 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
                 />
                 {usingFallback ? (
                   <View style={styles.fallbackContainer}>
-                    <Text style={styles.fallbackText}>
+                    <AppText style={styles.fallbackText}>
                       ⚠️ Usando categorías por defecto
-                    </Text>
+                    </AppText>
                     <TouchableOpacity onPress={refetch} style={styles.retryButton}>
-                      <Text style={styles.retryButtonText}>Reintentar</Text>
+                      <AppText style={styles.retryButtonText}>Reintentar</AppText>
                     </TouchableOpacity>
                   </View>
                 ) : null}

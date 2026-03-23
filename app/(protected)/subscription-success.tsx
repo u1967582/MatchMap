@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,37 +31,37 @@ const SubscriptionSuccessScreen: React.FC = () => {
           <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
         </View>
         
-        <Text style={styles.title}>¡Suscripción Exitosa!</Text>
-        <Text style={styles.subtitle}>
+        <AppText maxScale={1.2} style={styles.title}>¡Suscripción Exitosa!</AppText>
+        <AppText maxScale={1.3} style={styles.subtitle}>
           Tu suscripción ha sido activada correctamente
-        </Text>
-        
+        </AppText>
+
         <View style={styles.featuresContainer}>
-          <Text style={styles.featuresTitle}>Ahora tienes acceso a:</Text>
-          
+          <AppText style={styles.featuresTitle}>Ahora tienes acceso a:</AppText>
+
           <View style={styles.featureRow}>
             <Ionicons name="images" size={20} color="#4CAF50" />
-            <Text style={styles.featureText}>Más fotos para tu bar</Text>
+            <AppText style={styles.featureText}>Más fotos para tu bar</AppText>
           </View>
-          
+
           <View style={styles.featureRow}>
             <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-            <Text style={styles.featureText}>Sin marca de agua</Text>
+            <AppText style={styles.featureText}>Sin marca de agua</AppText>
           </View>
-          
+
           <View style={styles.featureRow}>
             <Ionicons name="analytics" size={20} color="#4CAF50" />
-            <Text style={styles.featureText}>Estadísticas avanzadas</Text>
+            <AppText style={styles.featureText}>Estadísticas avanzadas</AppText>
           </View>
-          
+
           <View style={styles.featureRow}>
             <Ionicons name="headset" size={20} color="#4CAF50" />
-            <Text style={styles.featureText}>Soporte prioritario</Text>
+            <AppText style={styles.featureText}>Soporte prioritario</AppText>
           </View>
         </View>
-        
+
         <TouchableOpacity style={styles.button} onPress={handleGoToProfile}>
-          <Text style={styles.buttonText}>Ir al Perfil</Text>
+          <AppText maxScale={1.0} style={styles.buttonText}>Ir al Perfil</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
