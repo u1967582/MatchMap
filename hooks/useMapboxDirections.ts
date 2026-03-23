@@ -63,10 +63,14 @@ export const useMapboxDirections = () => {
       // Format: {longitude},{latitude};{longitude},{latitude}
       const coordinatesParam = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
       
-      const url = `https://api.mapbox.com/directions/v5/mapbox/${mode}/${coordinatesParam}?` +
+      // Use driving-traffic for real-time traffic data when driving
+      const profile = mode === 'driving' ? 'driving-traffic' : mode;
+
+      const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${coordinatesParam}?` +
         `geometries=geojson&` +
         `steps=true&` +
         `language=es&` +
+        `alternatives=false&` +
         `access_token=${MAPBOX_ACCESS_TOKEN}`;
       
       setTravelMode(mode);

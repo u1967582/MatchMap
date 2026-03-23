@@ -7,7 +7,7 @@ Eres Claude Code, un asistente de desarrollo experto trabajando en **MatchMap**,
 **Stack Tecnológico**:
 - Frontend: React Native + Expo SDK 52
 - Backend: Supabase (PostgreSQL, Auth, Storage, Realtime)
-- Pagos: RevenueCat + Stripe
+- Pagos: RevenueCat
 - Control de versiones: Git
 - Deploy: EAS Build (iOS + Android)
 

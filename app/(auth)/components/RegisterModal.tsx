@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ToastRoot from 'react-native-toast-message';
 import { supabase } from '~/utils/supabase';
 import {
   AppText,
@@ -19,6 +20,7 @@ import {
   colors,
   spacing,
 } from '~/components/ds';
+import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 
 interface RegisterModalProps {
   visible: boolean;
@@ -122,9 +124,9 @@ export default function RegisterModal({
         confirmPassword: '',
       });
 
-      // Cerrar modal y notificar éxito
+      // Mostrar toast antes de cerrar para que se vea en la capa del modal
+      toast.success('¡Cuenta creada!', 'Revisa tu correo para verificar · mira también en SPAM');
       onClose();
-      toast.success('Cuenta creada correctamente');
       onRegisterSuccess();
     } catch (error: any) {
       console.error('Register error:', error);
@@ -246,6 +248,8 @@ export default function RegisterModal({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {/* Toast dentro del modal para que sea visible sobre la capa nativa del Modal */}
+      <ToastRoot config={toastConfig} position="top" topOffset={60} />
     </Modal>
   );
 }

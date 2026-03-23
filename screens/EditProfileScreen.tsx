@@ -210,7 +210,9 @@ export default function EditProfileScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.75,
+        width: 400,
+        height: 400,
         base64: false, // No necesitamos base64 aquí
       });
 
@@ -278,7 +280,9 @@ export default function EditProfileScreen() {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.75,
+        width: 400,
+        height: 400,
       });
 
       console.log('📷 Resultado de la cámara:', {

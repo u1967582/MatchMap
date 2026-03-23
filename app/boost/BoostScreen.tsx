@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ import { calculateDiscountBadge } from '~/lib/boost/discount';
 import Paywall from '~/components/revenuecat/Paywall';
 import CustomerCenter from '~/components/revenuecat/CustomerCenter';
 import { useRevenueCat } from '~/contexts/RevenueCatContext';
-import { toast } from '~/components/ds';
+import { toast, AppText } from '~/components/ds';
 
 type PlanKey = '7d' | '1m' | '1y';
 
@@ -16,33 +16,29 @@ const PLANS: Array<{
   key: PlanKey;
   title: string;
   price: number; // euros
-  productId: string;
   durationLabel: string;
   amortizationText: string;
   isPopular?: boolean;
 }> = [
-  { 
-    key: '7d', 
-    title: 'Boost Semanal', 
-    price: 19.99, 
-    productId: 'prod_TJUB61j3RAbErD', 
+  {
+    key: '7d',
+    title: 'Boost Semanal',
+    price: 19.99,
     durationLabel: '7 días',
-    amortizationText: 'Se amortiza con solo 2 clientes nuevos' 
+    amortizationText: 'Se amortiza con solo 2 clientes nuevos'
   },
-  { 
-    key: '1m', 
-    title: 'Boost Mensual', 
-    price: 59.99, 
-    productId: 'prod_TJUCGsS0s0E8Ot', 
+  {
+    key: '1m',
+    title: 'Boost Mensual',
+    price: 59.99,
     durationLabel: '1 mes',
     amortizationText: 'Se amortiza con solo 5 clientes nuevos',
     isPopular: true
   },
-  { 
-    key: '1y', 
-    title: 'Boost de Temporada', 
-    price: 399.99, 
-    productId: 'prod_TJUCkXwWUBpGwD', 
+  {
+    key: '1y',
+    title: 'Boost de Temporada',
+    price: 399.99,
     durationLabel: '1 año',
     amortizationText: 'La opción de más valor (~44€/mes)'
   },
@@ -51,7 +47,6 @@ const PLANS: Array<{
 const BoostScreen: React.FC = () => {
   const { barId } = useLocalSearchParams<{ barId: string }>();
   const router = useRouter();
-  const [loadingKey, setLoadingKey] = useState<PlanKey | null>(null);
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [customerCenterVisible, setCustomerCenterVisible] = useState(false);
   const { hasActiveBoost, refreshCustomerInfo } = useRevenueCat();
@@ -68,6 +63,7 @@ const BoostScreen: React.FC = () => {
       return;
     }
 
+    console.log('[BoostScreen] Obrint Paywall, barId:', barId, 'pla:', plan);
     // Open RevenueCat paywall
     toast.info('Redirigiendo al pago…');
     setPaywallVisible(true);
@@ -89,10 +85,10 @@ const BoostScreen: React.FC = () => {
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>Impulsa tu bar</Text>
-            <Text style={styles.subtitle}>
+            <AppText style={styles.title}>Impulsa tu bar</AppText>
+            <AppText style={styles.subtitle}>
               Invierte en visibilidad y recupera tu inversión rápidamente
-            </Text>
+            </AppText>
           </View>
           {hasActiveBoost && (
             <TouchableOpacity 
@@ -109,7 +105,7 @@ const BoostScreen: React.FC = () => {
         {hasActiveBoost && (
           <View style={styles.activeBoostBanner}>
             <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-            <Text style={styles.activeBoostText}>Boost Activo</Text>
+            <AppText style={styles.activeBoostText}>Boost Activo</AppText>
           </View>
         )}
 
@@ -119,29 +115,27 @@ const BoostScreen: React.FC = () => {
             iconName={p.key === '7d' ? 'flash' : p.key === '1m' ? 'trending-up' : 'sparkles'}
             title={p.title}
             price={`${p.price} €`}
-            productId={p.productId}
             durationLabel={p.durationLabel}
             amortizationText={p.amortizationText}
             isPopular={p.isPopular}
             discountBadge={p.key === '7d' ? undefined : discounts[p.key as '1m'|'1y']}
             onPay={() => onPay(p.key)}
-            footer={loadingKey === p.key ? <ActivityIndicator color="#FFFFFF" /> : undefined}
           />
         ))}
         <View style={styles.benefits}>
-          <Text style={styles.benefitTitle}>✨ Beneficios del Boost</Text>
-          <Text style={styles.benefitSubtitle}>
+          <AppText style={styles.benefitTitle}>✨ Beneficios del Boost</AppText>
+          <AppText style={styles.benefitSubtitle}>
             Aumenta la visibilidad de tu bar y atrae más clientes
-          </Text>
+          </AppText>
           <View style={styles.benefitItem}>
             <View style={styles.benefitIconContainer}>
               <Ionicons name="arrow-up-circle" size={20} color="#10B981" />
             </View>
             <View style={styles.benefitTextContainer}>
-              <Text style={styles.benefitText}>Mayor visibilidad en listas</Text>
-              <Text style={styles.benefitDescription}>
+              <AppText style={styles.benefitText}>Mayor visibilidad en listas</AppText>
+              <AppText style={styles.benefitDescription}>
                 Tu bar aparece primero en búsquedas y filtros
-              </Text>
+              </AppText>
             </View>
           </View>
           <View style={styles.benefitItem}>
@@ -149,10 +143,10 @@ const BoostScreen: React.FC = () => {
               <Ionicons name="star" size={20} color="#FFD700" />
             </View>
             <View style={styles.benefitTextContainer}>
-              <Text style={styles.benefitText}>Etiqueta destacado</Text>
-              <Text style={styles.benefitDescription}>
+              <AppText style={styles.benefitText}>Etiqueta destacado</AppText>
+              <AppText style={styles.benefitDescription}>
                 Badge especial que llama la atención
-              </Text>
+              </AppText>
             </View>
           </View>
           <View style={styles.benefitItem}>
@@ -160,10 +154,10 @@ const BoostScreen: React.FC = () => {
               <Ionicons name="trending-up" size={20} color="#60A5FA" />
             </View>
             <View style={styles.benefitTextContainer}>
-              <Text style={styles.benefitText}>Prioridad en resultados</Text>
-              <Text style={styles.benefitDescription}>
+              <AppText style={styles.benefitText}>Prioridad en resultados</AppText>
+              <AppText style={styles.benefitDescription}>
                 Aparece antes que la competencia
-              </Text>
+              </AppText>
             </View>
           </View>
         </View>
@@ -171,7 +165,11 @@ const BoostScreen: React.FC = () => {
 
       <Paywall
         visible={paywallVisible}
-        onClose={() => setPaywallVisible(false)}
+        barId={barId}
+        onClose={() => {
+          console.log('[BoostScreen] Paywall tancat');
+          setPaywallVisible(false);
+        }}
         onPurchaseComplete={handlePurchaseComplete}
       />
 
@@ -290,5 +288,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
-

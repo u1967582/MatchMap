@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ToastRoot from 'react-native-toast-message';
 import { supabase } from '~/utils/supabase';
 import { checkAndPromotePreRegisteredBar } from '~/utils/auth';
 import ForgotPasswordModal from './ForgotPasswordModal';
@@ -22,6 +23,7 @@ import {
   spacing,
   radius,
 } from '~/components/ds';
+import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 
 interface LoginModalProps {
   visible: boolean;
@@ -74,9 +76,9 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
       setEmail('');
       setPassword('');
 
-      // Cerrar modal y notificar éxito
-      onClose();
+      // Mostrar toast antes de cerrar para que se vea en la capa del modal
       toast.success('¡Bienvenido! 👋');
+      onClose();
       onLoginSuccess();
     } catch (error: any) {
       console.error('Login error:', error);
@@ -174,6 +176,8 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {/* Toast dentro del modal para que sea visible sobre la capa nativa del Modal */}
+      <ToastRoot config={toastConfig} position="top" topOffset={60} />
     </Modal>
 
     {/* Modal de recuperación de contraseña */}

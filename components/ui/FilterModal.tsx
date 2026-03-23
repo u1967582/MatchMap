@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -11,9 +10,10 @@ import {
   GestureResponderEvent,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import SelectableChip from './SelectableChip';
-import { toast } from '~/components/ds';
+import { AppText, toast } from '~/components/ds';
 
 interface FilterItem {
   id: number;
@@ -60,6 +60,7 @@ export default function FilterModal({
   onApplyFilters,
   loading = false,
 }: FilterModalProps) {
+  const insets = useSafeAreaInsets();
   console.log('🔍 FilterModal - Props received:', {
     visible,
     barCategoriesLength: barCategories?.length || 0,
@@ -120,12 +121,12 @@ export default function FilterModal({
   ) => {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <AppText style={styles.sectionTitle}>{title}</AppText>
   
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#1976D2" />
-            <Text style={styles.loadingText}>Cargando opciones...</Text>
+            <AppText style={styles.loadingText}>Cargando opciones...</AppText>
           </View>
         ) : items && items.length > 0 ? (
           <View style={styles.chipsWrapContainer}>
@@ -140,7 +141,7 @@ export default function FilterModal({
             ))}
           </View>
         ) : (
-          <Text style={styles.emptyText}>No hay opciones disponibles</Text>
+          <AppText style={styles.emptyText}>No hay opciones disponibles</AppText>
         )}
       </View>
     );
@@ -185,7 +186,7 @@ export default function FilterModal({
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>🎯 Filtros disponibles</Text>
+          <AppText style={styles.title}>🎯 Filtros disponibles</AppText>
 
           {renderSection('Tipo de bar', barCategories, selectedBarCategories, toggleCategory)}
           {renderSection('Características de TV', tvFeatures, selectedTvFeatures, toggleTvFeature)}
@@ -193,10 +194,26 @@ export default function FilterModal({
           {renderSection('Características', barFeatures, selectedFeatures, toggleFeature)}
         </ScrollView>
 
-        {/* Botón fijo al fondo */}
-        <TouchableOpacity style={styles.applyButton} onPress={handleApplyFilters}>
-          <Text style={styles.applyButtonText}>Aplicar filtros ({getActiveFiltersCount()})</Text>
-        </TouchableOpacity>
+        {/* Botones fijos al fondo */}
+        {getActiveFiltersCount() > 0 && (
+          <View style={styles.footerDivider} />
+        )}
+        <View style={[styles.footerRow, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+          {getActiveFiltersCount() > 0 && (
+            <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
+              <Ionicons name="trash-outline" size={15} color="#EF4444" />
+              <AppText style={styles.clearAllButtonText}>Limpiar</AppText>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.applyButton}
+            onPress={handleApplyFilters}
+          >
+            <AppText style={styles.applyButtonText}>
+              {getActiveFiltersCount() > 0 ? `Aplicar (${getActiveFiltersCount()})` : 'Aplicar filtros'}
+            </AppText>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   </Modal>
@@ -217,7 +234,7 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 16,
     position: 'relative',
     ...(Platform.OS === 'android' && {
       overflow: 'hidden',
@@ -361,7 +378,34 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#2A3A4A',
   },
+  footerDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    marginBottom: 12,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  clearAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.25)',
+  },
+  clearAllButtonText: {
+    color: '#EF4444',
+    fontSize: 15,
+    fontWeight: '600',
+  },
   applyButton: {
+    flex: 1,
     backgroundColor: '#1976D2',
     borderRadius: 12,
     paddingVertical: 16,

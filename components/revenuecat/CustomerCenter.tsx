@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   Modal,
@@ -9,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerInfo } from 'react-native-purchases';
 import * as RevenueCatService from '~/utils/revenuecat';
@@ -88,7 +88,7 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Centro de Cliente</Text>
+            <AppText style={styles.title}>Centro de Cliente</AppText>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#A3B3CC" />
             </TouchableOpacity>
@@ -107,7 +107,7 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
               <>
                 {/* Subscription Status */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Estado de Suscripción</Text>
+                  <AppText style={styles.sectionTitle}>Estado de Suscripción</AppText>
                   <View style={styles.statusCard}>
                     <View style={styles.statusIconContainer}>
                       <Ionicons
@@ -117,14 +117,14 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
                       />
                     </View>
                     <View style={styles.statusInfo}>
-                      <Text style={styles.statusTitle}>
+                      <AppText style={styles.statusTitle}>
                         {hasActiveSubscription ? 'Suscripción Activa' : 'Sin Suscripción'}
-                      </Text>
-                      <Text style={styles.statusDescription}>
+                      </AppText>
+                      <AppText style={styles.statusDescription}>
                         {hasActiveSubscription
                           ? 'Tu boost está activo y funcionando'
                           : 'No tienes ningún boost activo'}
-                      </Text>
+                      </AppText>
                     </View>
                   </View>
                 </View>
@@ -132,37 +132,36 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
                 {/* Subscription Details */}
                 {hasActiveSubscription && subscriptionInfo && (
                   <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Detalles</Text>
+                    <AppText style={styles.sectionTitle}>Detalles</AppText>
                     <View style={styles.detailsCard}>
                       {subscriptionInfo.productIdentifier && (
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Producto</Text>
-                          <Text style={styles.detailValue}>
+                          <AppText style={styles.detailLabel}>Producto</AppText>
+                          <AppText style={styles.detailValue}>
                             {subscriptionInfo.productIdentifier}
-                          </Text>
+                          </AppText>
                         </View>
                       )}
 
                       {subscriptionInfo.expirationDate && (
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Expira</Text>
-                          <Text style={styles.detailValue}>
+                          <AppText style={styles.detailLabel}>Expira</AppText>
+                          <AppText style={styles.detailValue}>
                             {formatDate(subscriptionInfo.expirationDate)}
-                          </Text>
+                          </AppText>
                         </View>
                       )}
 
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Renovación automática</Text>
+                        <AppText style={styles.detailLabel}>Renovación automática</AppText>
                         <View style={styles.statusBadge}>
-                          <Text
-                            style={[
+                          <AppText style={[
                               styles.statusBadgeText,
                               subscriptionInfo.willRenew && styles.statusBadgeActive,
                             ]}
                           >
                             {subscriptionInfo.willRenew ? 'Activa' : 'Desactivada'}
-                          </Text>
+                          </AppText>
                         </View>
                       </View>
                     </View>
@@ -172,13 +171,13 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
                 {/* Active Entitlements */}
                 {customerInfo && Object.keys(customerInfo.entitlements.active).length > 0 && (
                   <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Funciones Activas</Text>
+                    <AppText style={styles.sectionTitle}>Funciones Activas</AppText>
                     <View style={styles.entitlementsCard}>
                       {Object.entries(customerInfo.entitlements.active).map(
                         ([key, entitlement]: [string, any]) => (
                           <View key={key} style={styles.entitlementItem}>
                             <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                            <Text style={styles.entitlementText}>{key}</Text>
+                            <AppText style={styles.entitlementText}>{key}</AppText>
                           </View>
                         )
                       )}
@@ -188,7 +187,7 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
 
                 {/* Actions */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Acciones</Text>
+                  <AppText style={styles.sectionTitle}>Acciones</AppText>
 
                   <TouchableOpacity
                     style={styles.actionButton}
@@ -196,7 +195,7 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
                     disabled={loading}
                   >
                     <Ionicons name="refresh-circle-outline" size={24} color="#1976D2" />
-                    <Text style={styles.actionButtonText}>Restaurar Compras</Text>
+                    <AppText style={styles.actionButtonText}>Restaurar Compras</AppText>
                     <Ionicons name="chevron-forward" size={20} color="#A3B3CC" />
                   </TouchableOpacity>
 
@@ -211,17 +210,17 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
                     }}
                   >
                     <Ionicons name="settings-outline" size={24} color="#1976D2" />
-                    <Text style={styles.actionButtonText}>Gestionar Suscripción</Text>
+                    <AppText style={styles.actionButtonText}>Gestionar Suscripción</AppText>
                     <Ionicons name="chevron-forward" size={20} color="#A3B3CC" />
                   </TouchableOpacity>
                 </View>
 
                 {/* Help Section */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Ayuda</Text>
-                  <Text style={styles.helpText}>
+                  <AppText style={styles.sectionTitle}>Ayuda</AppText>
+                  <AppText style={styles.helpText}>
                     ¿Necesitas ayuda con tu suscripción? Contacta con nuestro equipo de soporte.
-                  </Text>
+                  </AppText>
                   <TouchableOpacity
                     style={styles.supportButton}
                     onPress={() => {
@@ -232,7 +231,7 @@ export default function CustomerCenter({ visible, onClose }: CustomerCenterProps
                       );
                     }}
                   >
-                    <Text style={styles.supportButtonText}>Contactar Soporte</Text>
+                    <AppText style={styles.supportButtonText}>Contactar Soporte</AppText>
                   </TouchableOpacity>
                 </View>
               </>

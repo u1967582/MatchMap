@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -110,7 +111,7 @@ const Step2ExtraInfo: React.FC = () => {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Información Extra</Text>
+          <AppText style={styles.headerTitle}>Información Extra</AppText>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -121,15 +122,15 @@ const Step2ExtraInfo: React.FC = () => {
             <View style={styles.progressStep} />
             <View style={styles.progressStep} />
           </View>
-          <Text style={styles.progressText}>Paso 2 de 4</Text>
+          <AppText style={styles.progressText}>Paso 2 de 4</AppText>
         </View>
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
-            <Text style={styles.title}>Detalles adicionales</Text>
-            <Text style={styles.subtitle}>
+            <AppText style={styles.title}>Detalles adicionales</AppText>
+            <AppText style={styles.subtitle}>
               Información que ayudará a los usuarios a encontrar exactamente lo que buscan.
-            </Text>
+            </AppText>
 
             <CheckboxGroup
               label="Características de TV"

@@ -1,5 +1,6 @@
 // components/SearchBarWithResults.tsx
-import { View, TextInput, StyleSheet, Platform, FlatList, TouchableOpacity, Text, Animated } from 'react-native';
+import { View, TextInput, StyleSheet, Platform, FlatList, TouchableOpacity, Animated } from 'react-native';
+import { AppText } from '~/components/ds';
 import { useCallback, useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
@@ -36,10 +37,10 @@ interface SearchBarWithResultsProps {
   onExpandChange?: (isExpanded: boolean) => void;
 }
 
-const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>(({ 
-  value, 
-  onChangeText, 
-  placeholder = 'Buscar ciudad, lugar...', 
+const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>(({
+  value,
+  onChangeText,
+  placeholder = 'Buscar ciudad, lugar...',
   editable = true,
   searchResults,
   isSearching,
@@ -148,12 +149,12 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
       >
         <Ionicons name={iconName as any} size={16} color="#A3B3CC" style={styles.resultIcon} />
         <View style={styles.resultTextContainer}>
-          <Text style={styles.resultTitle} numberOfLines={1}>
+          <AppText style={styles.resultTitle} numberOfLines={1}>
             {item.text}
-          </Text>
-          <Text style={styles.resultSubtitle} numberOfLines={1}>
+          </AppText>
+          <AppText style={styles.resultSubtitle} numberOfLines={1}>
             {subtitle}
-          </Text>
+          </AppText>
         </View>
       </TouchableOpacity>
     );
@@ -221,7 +222,7 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
         <View style={styles.resultsContainer}>
           {isSearching ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Buscando...</Text>
+              <AppText style={styles.loadingText}>Buscando...</AppText>
             </View>
           ) : (
             <FlatList
@@ -241,8 +242,6 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
 
 SearchBarWithResults.displayName = 'SearchBarWithResults';
 
-export default memo(SearchBarWithResults);
-
 const styles = StyleSheet.create({
   searchContainer: {
     width: '100%',
@@ -250,21 +249,21 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3A4F68',
-    borderRadius: 25,
+    backgroundColor: 'rgba(26,35,50,0.92)',
+    borderRadius: 22,
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    minHeight: 50,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    paddingVertical: 10,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 6,
+      height: 4,
     },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 12,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
   },
   collapsedButton: {
     width: '100%',
@@ -287,21 +286,21 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   resultsContainer: {
-    backgroundColor: '#3A4F68',
+    backgroundColor: 'rgba(8,15,40,0.92)',
     borderRadius: 12,
     marginTop: 8,
     maxHeight: 300,
-    width: 350, // Match the expanded search bar width
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    width: 350,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 6,
+      height: 4,
     },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 12,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
   },
   resultsList: {
     maxHeight: 250,
@@ -341,4 +340,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default memo(SearchBarWithResults); 
+export default memo(SearchBarWithResults);

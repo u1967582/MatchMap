@@ -144,10 +144,8 @@ function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap, in
           onPress={() => onViewOnMap(bar)}
           activeOpacity={0.7}
         >
-          <Ionicons name="map-outline" size={16} color={colors.brand.link} />
-          <AppText variant="label" color={colors.brand.link} style={styles.viewOnMapTextSpacing}>
-            Ver en el Mapa
-          </AppText>
+          <Ionicons name="map-outline" size={13} color={colors.brand.link} />
+          <AppText variant="caption" color={colors.brand.link}>Ver en el Mapa</AppText>
         </TouchableOpacity>
       </View>
     </AppCard>
@@ -618,16 +616,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
     backgroundColor: colors.alpha.brandLight,
-    paddingVertical: spacing.md - 2,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.alpha.brandBorder,
-    marginTop: spacing.md,
-  },
-  viewOnMapTextSpacing: {
-    marginLeft: spacing.xs,
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
   },
 }); 

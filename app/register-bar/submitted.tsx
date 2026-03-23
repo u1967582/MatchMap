@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +19,7 @@ export default function RegisterBarSubmittedScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Verificación</Text>
+        <AppText maxScale={1.0} style={styles.headerTitle}>Verificación</AppText>
         <View style={{ width: 28 }} />
       </View>
 
@@ -28,14 +29,14 @@ export default function RegisterBarSubmittedScreen() {
             <Ionicons name="time-outline" size={28} color="#FFD700" />
           </View>
 
-          <Text style={styles.title}>Bar enviado para verificación</Text>
-          <Text style={styles.subtitle}>
+          <AppText maxScale={1.2} style={styles.title}>Bar enviado para verificación</AppText>
+          <AppText maxScale={1.3} style={styles.subtitle}>
             En cuanto lo aprobemos, aparecerá en el mapa y en la búsqueda.
-          </Text>
+          </AppText>
 
           <View style={styles.badge}>
             <Ionicons name="alert-circle-outline" size={16} color="#FFD700" />
-            <Text style={styles.badgeText}>Pendiente de verificación</Text>
+            <AppText maxScale={1.0} style={styles.badgeText}>Pendiente de verificación</AppText>
           </View>
 
           <TouchableOpacity
@@ -43,7 +44,7 @@ export default function RegisterBarSubmittedScreen() {
             style={styles.primaryButton}
             onPress={() => router.replace('/(protected)/profile' as any)}
           >
-            <Text style={styles.primaryButtonText}>Volver al perfil</Text>
+            <AppText maxScale={1.0} style={styles.primaryButtonText}>Volver al perfil</AppText>
           </TouchableOpacity>
 
           {canViewBar ? (
@@ -52,7 +53,7 @@ export default function RegisterBarSubmittedScreen() {
               style={styles.secondaryButton}
               onPress={() => router.replace(`/bar-profile/${barId}` as any)}
             >
-              <Text style={styles.secondaryButtonText}>Ver mi bar</Text>
+              <AppText maxScale={1.0} style={styles.secondaryButtonText}>Ver mi bar</AppText>
               <Ionicons name="chevron-forward" size={16} color="#A3B3CC" />
             </TouchableOpacity>
           ) : null}

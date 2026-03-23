@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { AppText } from '~/components/ds';
 
 interface RadioOption {
   id: string;
@@ -24,10 +25,10 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>
+      <AppText style={styles.label}>
         {label}
-        {required && <Text style={styles.required}> *</Text>}
-      </Text>
+        {required && <AppText style={styles.required}> *</AppText>}
+      </AppText>
       <View style={styles.optionsContainer}>
         {options.map((option) => (
           <TouchableOpacity
@@ -41,11 +42,11 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
                 {selectedId === option.id && <View style={styles.radioInner} />}
               </View>
             </View>
-            <Text style={styles.optionText}>{option.label}</Text>
+            <AppText style={styles.optionText}>{option.label}</AppText>
           </TouchableOpacity>
         ))}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <AppText style={styles.errorText}>{error}</AppText>}
     </View>
   );
 };

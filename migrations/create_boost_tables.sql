@@ -8,8 +8,6 @@ create table if not exists public.bar_boosts (
   end_at timestamptz not null,
   status text not null default 'active' check (status in ('active','expired','cancelled')),
   created_at timestamptz not null default now(),
-  stripe_session_id text unique,
-  stripe_payment_intent_id text,
   amount_cents int not null,
   currency text not null default 'eur'
 );
@@ -18,8 +16,6 @@ create table if not exists public.boost_payments (
   id uuid primary key default gen_random_uuid(),
   bar_id uuid not null references public.bars(id) on delete cascade,
   user_id uuid references public.users(id),
-  stripe_session_id text unique,
-  stripe_payment_intent_id text,
   product_id text not null,
   plan text not null check (plan in ('7d','1m','1y')),
   amount_cents int not null,

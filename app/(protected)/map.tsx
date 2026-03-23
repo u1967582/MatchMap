@@ -23,6 +23,7 @@ export default function MapScreen() {
     }
   }, []);
 
+
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 80 : 60) } ]}>
       <Stack.Screen 

@@ -1,4 +1,5 @@
-import { Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { AppText } from '~/components/ds';
 
 interface ScreenTitleProps {
   title: string;
@@ -28,7 +29,7 @@ const ScreenTitle: React.FC<ScreenTitleProps> = ({
     },
   ];
 
-  return <Text style={titleStyle}>{title}</Text>;
+  return <AppText maxScale={1.2} style={titleStyle}>{title}</AppText>;
 };
 
 const styles = StyleSheet.create({

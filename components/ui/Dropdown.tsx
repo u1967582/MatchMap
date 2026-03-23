@@ -1,13 +1,13 @@
 import { useState, useRef } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Modal,
   FlatList,
   Dimensions,
 } from 'react-native';
+import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 
 interface DropdownOption {
@@ -65,26 +65,20 @@ export default function Dropdown({
 
   return (
     <>
-      <Text style={{ position: 'absolute', left: -1000, width: 1, height: 1, opacity: 0 }}>{String(label)}</Text>
+      <AppText style={{ position: 'absolute', left: -1000, width: 1, height: 1, opacity: 0 }}>{String(label)}</AppText>
       <TouchableOpacity
         ref={buttonRef}
-        style={[
-          styles.dropdownButton,
-          selectedValue !== options[0]?.value && styles.dropdownButtonActive
-        ]}
+        style={styles.dropdownButton}
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        <Text style={[
-          styles.dropdownButtonText,
-          selectedValue !== options[0]?.value && styles.dropdownButtonTextActive
-        ]}>
+        <AppText style={styles.dropdownButtonText}>
           {String(displayText)}
-        </Text>
-        <Ionicons 
-          name={isOpen ? "chevron-up" : "chevron-down"} 
-          size={12} 
-          color={selectedValue !== options[0]?.value ? '#FFFFFF' : '#A3B3CC'} 
+        </AppText>
+        <Ionicons
+          name={isOpen ? "chevron-up" : "chevron-down"}
+          size={12}
+          color="#A3B3CC"
         />
       </TouchableOpacity>
 
@@ -125,12 +119,12 @@ export default function Dropdown({
                   ]}
                   onPress={() => handleSelect(item.value)}
                 >
-                  <Text style={[
+                  <AppText style={[
                     styles.dropdownItemText,
                     selectedValue === item.value && styles.dropdownItemTextActive
                   ]}>
                     {String(item.label)}
-                  </Text>
+                  </AppText>
                   {selectedValue === item.value && (
                     <Ionicons name="checkmark" size={16} color="#1976D2" />
                   )}

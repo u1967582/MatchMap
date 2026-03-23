@@ -95,21 +95,19 @@ Servicios y utilidades:
 ```
 1. Usuario selecciona plan (7d, 1m, 1y)
    ↓
-2. Frontend → RevenueCat → Stripe Checkout
+2. Frontend → RevenueCat
    ↓
-3. Usuario completa pago en Stripe
+3. Usuario completa pago en RevenueCat
    ↓
-4. Webhook de Stripe → RevenueCat
+4. RevenueCat webhook → Supabase Edge Function
    ↓
-5. RevenueCat webhook → Supabase Edge Function
+5. Edge Function crea registro en bar_boosts
    ↓
-6. Edge Function crea registro en bar_boosts
+6. Edge Function crea registro en boost_payments
    ↓
-7. Edge Function crea registro en boost_payments
+7. Realtime subscription notifica al cliente
    ↓
-8. Realtime subscription notifica al cliente
-   ↓
-9. UI actualiza mostrando boost activo
+8. UI actualiza mostrando boost activo
 ```
 
 ## Patrones de Diseño

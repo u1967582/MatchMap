@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -10,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { AppText } from '~/components/ds';
 
 interface PlanFeature {
   text: string;
@@ -80,10 +80,10 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, isSelected, onSelect }) => {
       activeOpacity={0.8}
     >
       <View style={styles.planHeader}>
-        <Text style={styles.planName}>{plan.name}</Text>
+        <AppText style={styles.planName}>{plan.name}</AppText>
         <View style={styles.priceContainer}>
-          <Text style={styles.planPrice}>{plan.price}</Text>
-          <Text style={styles.priceUnit}>{plan.priceUnit}</Text>
+          <AppText style={styles.planPrice}>{plan.price}</AppText>
+          <AppText style={styles.priceUnit}>{plan.priceUnit}</AppText>
         </View>
       </View>
 
@@ -92,16 +92,16 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, isSelected, onSelect }) => {
         onPress={handleSelect}
         activeOpacity={0.7}
       >
-        <Text style={[styles.choosePlanText, isSelected && styles.choosePlanTextSelected]}>
+        <AppText style={[styles.choosePlanText, isSelected && styles.choosePlanTextSelected]}>
           {isSelected ? 'Selected' : 'Choose plan'}
-        </Text>
+        </AppText>
       </TouchableOpacity>
 
       <View style={styles.featuresContainer}>
         {plan.features.map((feature, index) => (
           <View key={`feature-${plan.id}-${index}`} style={styles.featureRow}>
             <Ionicons name="checkmark" size={20} color="#10B981" />
-            <Text style={styles.featureText}>{feature.text}</Text>
+            <AppText style={styles.featureText}>{feature.text}</AppText>
           </View>
         ))}
       </View>
@@ -153,13 +153,13 @@ export default function PricingScreen() {
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Choose your plan</Text>
+          <AppText style={styles.headerTitle}>Choose your plan</AppText>
           <View style={styles.headerSpacer} />
         </View>
 
         {/* Section Title */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Select your plan</Text>
+          <AppText style={styles.sectionTitle}>Select your plan</AppText>
         </View>
 
         {/* Plan Cards */}
@@ -182,9 +182,9 @@ export default function PricingScreen() {
             activeOpacity={0.8}
             disabled={!selectedPlan}
           >
-            <Text style={[styles.continueText, !selectedPlan && styles.continueTextDisabled]}>
+            <AppText style={[styles.continueText, !selectedPlan && styles.continueTextDisabled]}>
               Continue
-            </Text>
+            </AppText>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -339,4 +339,4 @@ const styles = StyleSheet.create({
   continueTextDisabled: {
     color: '#6B7280',
   },
-}); 
+});

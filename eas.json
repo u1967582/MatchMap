@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 13.0.0"
+    "version": ">= 13.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "preview": {
@@ -27,7 +28,6 @@
         "EXPO_PUBLIC_FUNCTIONS_URL": "https://hmtfxpihkoisncglllmq.functions.supabase.co",
         "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_CRtAAkRCMobOPrYXnEvjgHHLGZJ",
-        "EXPO_NO_FORKED_METRO_SERIALIZERS": "1",
         "EXPO_NO_FORKED_METRO_SERIALIZERS": "1"
       }
     },
@@ -78,7 +78,8 @@
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "autoIncrement": true
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://hmtfxpihkoisncglllmq.supabase.co",
@@ -108,14 +109,14 @@
     "preview-ios": {
       "ios": {
         "appleId": "roger17fernandez@gmail.com",
-        "ascAppId": "6741088453",
+        "ascAppId": "6758625895",
         "appleTeamId": "K2C9W5KCNL"
       }
     },
     "production": {
       "ios": {
         "appleId": "roger17fernandez@gmail.com",
-        "ascAppId": "6741088453",
+        "ascAppId": "6758625895",
         "appleTeamId": "K2C9W5KCNL"
       }
     }

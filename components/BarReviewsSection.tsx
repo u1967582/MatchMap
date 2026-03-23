@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Image, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { AppText } from '~/components/ds';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -190,9 +191,9 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
       {/* título interno eliminado */}
       <View style={styles.headerRow}>
         <View style={styles.avgColumn}>
-          <Text style={styles.avgRating}>{average.toFixed(1)}</Text>
+          <AppText style={styles.avgRating}>{average.toFixed(1)}</AppText>
           {renderStars(average, 16)}
-          <Text style={styles.totalReviews}>{totalReviews} reseñas</Text>
+          <AppText style={styles.totalReviews}>{totalReviews} reseñas</AppText>
         </View>
         <View style={styles.distribution}>
           {[5, 4, 3, 2, 1].map((star) => {
@@ -200,11 +201,11 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
             const percent = totalReviews ? (count / totalReviews) * 100 : 0;
             return (
               <View key={`dist-${star}`} style={styles.distRow}>
-                <Text style={styles.distLabel}>{star}</Text>
+                <AppText maxScale={1.0} style={styles.distLabel}>{star}</AppText>
                 <View style={styles.distBarBackground}>
                   <View style={[styles.distBarFill, { width: `${percent}%` }]} />
                 </View>
-                <Text style={styles.distPercent}>{percent.toFixed(0)}%</Text>
+                <AppText maxScale={1.0} style={styles.distPercent}>{percent.toFixed(0)}%</AppText>
               </View>
             );
           })}
@@ -223,18 +224,18 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           style={styles.avatar} 
         />
         <View style={styles.userInfo}>
-          <Text style={styles.username}>{item.user.username || 'Anonymous'}</Text>
-          <Text style={styles.timestamp}>{formatDate(item.created_at)}</Text>
+          <AppText maxScale={1.2} style={styles.username}>{item.user.username || 'Anonymous'}</AppText>
+          <AppText style={styles.timestamp}>{formatDate(item.created_at)}</AppText>
           {renderStars(item.rating, 16)}
         </View>
       </View>
 
-      <Text style={styles.comment}>{item.comment}</Text>
+      <AppText maxScale={1.5} style={styles.comment}>{item.comment}</AppText>
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionButton} onPress={() => toggleLike(item)} disabled={!userId || busyById[item.id]}>
           <Ionicons name={isLiked(item.id) ? 'heart' : 'heart-outline'} size={16} color={isLiked(item.id) ? '#EF4444' : '#94A3B8'} />
-          <Text style={[styles.actionText, isLiked(item.id) && styles.actionTextActive]}>{item.likes ?? 0}</Text>
+          <AppText maxScale={1.0} style={[styles.actionText, isLiked(item.id) && styles.actionTextActive]}>{item.likes ?? 0}</AppText>
         </TouchableOpacity>
       </View>
     </View>
@@ -244,7 +245,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Cargando reseñas...</Text>
+          <AppText style={styles.loadingText}>Cargando reseñas...</AppText>
         </View>
       </View>
     );
@@ -262,8 +263,8 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
       {!hasReviews && (
         <View style={styles.emptyContainer}>
           <Ionicons name="chatbubble-outline" size={48} color="#94A3B8" />
-          <Text style={styles.emptyTitle}>Aún no hay reseñas</Text>
-          <Text style={styles.emptySubtitle}>¡Sé el primero en compartir tu experiencia!</Text>
+          <AppText style={styles.emptyTitle}>Aún no hay reseñas</AppText>
+          <AppText style={styles.emptySubtitle}>¡Sé el primero en compartir tu experiencia!</AppText>
         </View>
       )}
 
@@ -274,7 +275,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         activeOpacity={0.85}
       >
         <Ionicons name="star-outline" size={18} color="#FFFFFF" />
-        <Text style={styles.ctaText}>Escribir una reseña</Text>
+        <AppText maxScale={1.0} style={styles.ctaText}>Escribir una reseña</AppText>
       </TouchableOpacity>
 
       {/* Lista de reseñas - solo cuando hay reseñas */}
@@ -317,10 +318,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     minWidth: 120,
   },
-  avgRating: { 
+  avgRating: {
     fontSize: 36,
-    fontWeight: 'bold', 
-    color: '#FFFFFF' 
+    lineHeight: 46,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   starsRow: { 
     flexDirection: 'row', 
