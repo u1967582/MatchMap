@@ -78,7 +78,8 @@
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "autoIncrement": true
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://hmtfxpihkoisncglllmq.supabase.co",
