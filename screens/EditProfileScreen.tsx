@@ -14,6 +14,7 @@ import { useRouter, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '~/utils/supabase';
+import { deleteAccount } from '~/utils/auth';
 import {
   AppText,
   AppInput,
@@ -778,6 +779,50 @@ export default function EditProfileScreen() {
                 </AppText>
               )}
             </View>
+
+            {/* Delete Account */}
+            <TouchableOpacity
+              style={styles.deleteAccountButton}
+              onPress={() => {
+                Alert.alert(
+                  'Eliminar Cuenta',
+                  '¿Estás seguro? Esta acción es irreversible. Se eliminarán todos tus datos, bares y contenido asociado.',
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Eliminar',
+                      style: 'destructive',
+                      onPress: () => {
+                        Alert.alert(
+                          'Confirmación Final',
+                          'Esta es tu última oportunidad. ¿Realmente quieres eliminar tu cuenta permanentemente?',
+                          [
+                            { text: 'No, conservar', style: 'cancel' },
+                            {
+                              text: 'Sí, eliminar',
+                              style: 'destructive',
+                              onPress: async () => {
+                                const result = await deleteAccount();
+                                if (result.success) {
+                                  router.replace('/');
+                                } else {
+                                  Alert.alert('Error', result.error || 'No se pudo eliminar la cuenta.');
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      },
+                    },
+                  ]
+                );
+              }}
+              activeOpacity={0.7}
+            >
+              <AppText variant="caption" color={colors.status.error}>
+                Eliminar Cuenta
+              </AppText>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -870,5 +915,10 @@ const styles = StyleSheet.create({
   },
   noChangesText: {
     fontStyle: 'italic',
+  },
+  deleteAccountButton: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    marginTop: spacing.xxxl,
   },
 }); 

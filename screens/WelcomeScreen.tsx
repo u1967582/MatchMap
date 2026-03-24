@@ -1,7 +1,8 @@
-import { View, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent, Platform } from 'react-native';
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import BackgroundImage from '~/components/ui/BackgroundImage';
 import CustomButton from '~/components/ui/CustomButton';
 import { useState } from 'react';
@@ -10,14 +11,18 @@ interface WelcomeScreenProps {
   onLoginPress: () => void;
   onRegisterPress: () => void;
   onGooglePress: () => void;
+  onApplePress: () => void;
   loadingGoogle: boolean;
+  loadingApple: boolean;
 }
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onLoginPress,
   onRegisterPress,
   onGooglePress,
+  onApplePress,
   loadingGoogle,
+  loadingApple,
 }) => {
   const { width } = Dimensions.get('window');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -110,8 +115,37 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               onPress={onGooglePress}
               variant="social"
               loading={loadingGoogle}
-              disabled={loadingGoogle}
+              disabled={loadingGoogle || loadingApple}
             />
+
+            {Platform.OS === 'ios' && (
+              <CustomButton
+                text="Continuar con Apple"
+                onPress={onApplePress}
+                variant="dark"
+                loading={loadingApple}
+                disabled={loadingGoogle || loadingApple}
+              />
+            )}
+
+            <AppText maxScale={1.0} style={styles.legalText}>
+              Al continuar, aceptas nuestros{' '}
+              <AppText
+                maxScale={1.0}
+                style={styles.legalLink}
+                onPress={() => WebBrowser.openBrowserAsync('https://shared-orange-c4f.notion.site/MatchMap-Terms-of-Service-32cfe32774b580fe8ad4d06d0ec552ae')}
+              >
+                Términos de Servicio
+              </AppText>
+              {' '}y{' '}
+              <AppText
+                maxScale={1.0}
+                style={styles.legalLink}
+                onPress={() => WebBrowser.openBrowserAsync('https://shared-orange-c4f.notion.site/MatchMap-Privacy-Policy-2fdfe32774b580e4b19ae0b7898c1ce8')}
+              >
+                Política de Privacidad
+              </AppText>
+            </AppText>
           </View>
         </SafeAreaView>
       </View>
@@ -196,6 +230,18 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     paddingHorizontal: 16,
     fontSize: 14,
+  },
+  legalText: {
+    color: '#8E8E93',
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 16,
+    paddingHorizontal: 16,
+  },
+  legalLink: {
+    color: '#7FB3FF',
+    fontSize: 11,
+    textDecorationLine: 'underline',
   },
 });
 
