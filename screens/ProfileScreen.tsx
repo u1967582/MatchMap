@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
+import * as WebBrowser from 'expo-web-browser';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
 import { AppText, colors, spacing, ProfileSkeleton } from '~/components/ds';
@@ -38,15 +39,16 @@ interface SettingsRowProps {
   title: string;
   onPress: () => void;
   isLast?: boolean;
+  color?: string;
 }
 
-const SettingsRow: React.FC<SettingsRowProps> = ({ title, onPress, isLast = false }) => (
+const SettingsRow: React.FC<SettingsRowProps> = ({ title, onPress, isLast = false, color }) => (
   <TouchableOpacity
     style={[styles.settingsRow, isLast && styles.settingsRowLast]}
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <AppText variant="body" color={colors.text.primary}>{title}</AppText>
+    <AppText variant="body" color={color || colors.text.primary}>{title}</AppText>
     <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
   </TouchableOpacity>
 );
@@ -215,6 +217,15 @@ export default function ProfileScreen() {
   const handlePrivacy = useCallback(() => {
     router.push('/support' as any);
   }, [router]);
+
+  const handlePrivacyPolicy = useCallback(() => {
+    WebBrowser.openBrowserAsync('https://shared-orange-c4f.notion.site/MatchMap-Privacy-Policy-2fdfe32774b580e4b19ae0b7898c1ce8');
+  }, []);
+
+  const handleTermsOfService = useCallback(() => {
+    WebBrowser.openBrowserAsync('https://shared-orange-c4f.notion.site/MatchMap-Terms-of-Service-32cfe32774b580fe8ad4d06d0ec552ae');
+  }, []);
+
 
   const handleAddBar = useCallback(() => {
     router.push('/register-bar/step1' as any);
@@ -527,11 +538,13 @@ export default function ProfileScreen() {
           <AppText variant="title" style={styles.sectionTitleSpacing}>Configuración de Cuenta</AppText>
           <View style={styles.settingsContainer}>
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
-            <SettingsRow title="Preguntas Frequentes" onPress={handlePrivacy} />
+            <SettingsRow title="Preguntas Frecuentes" onPress={handlePrivacy} />
             {userBars.length > 0 && (
               <SettingsRow title="Soporte y Tickets" onPress={handleContactSupport} />
             )}
-            <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast />
+            <SettingsRow title="Política de Privacidad" onPress={handlePrivacyPolicy} />
+            <SettingsRow title="Términos de Servicio" onPress={handleTermsOfService} />
+            <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast color={colors.status.error} />
           </View>
         </View>
       </ScrollView>

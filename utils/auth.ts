@@ -695,24 +695,22 @@ export async function checkOAuthSession() {
 }
 
 // ============================================
-// APPLE OAUTH (Opcional - para futuro)
+// APPLE OAUTH
 // ============================================
+
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 /**
  * Inicia el flujo de autenticación con Apple Sign-In
  * Solo disponible en iOS
- * 
+ *
  * @returns Datos de autenticación o lanza error
  * @throws Error si no está disponible o falla
  */
 export async function signInWithApple() {
   try {
-    // Importar dinámicamente para evitar errores en Android
-    // @ts-ignore - dynamic import for optional dependency
-    const AppleAuthentication = await import('expo-apple-authentication');
-    
-    const isAvailable = await AppleAuthentication.AppleAuthentication.isAvailableAsync();
-    
+    const isAvailable = await AppleAuthentication.isAvailableAsync();
+
     if (!isAvailable) {
       throw new Error('Apple Sign-In no está disponible en este dispositivo.');
     }
@@ -725,12 +723,12 @@ export async function signInWithApple() {
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
     const hashedNonce = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256, 
+      Crypto.CryptoDigestAlgorithm.SHA256,
       rawNonce
     );
 
     // Solicitar credenciales de Apple
-    const credential = await AppleAuthentication.AppleAuthentication.signInAsync({
+    const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [
         AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
         AppleAuthentication.AppleAuthenticationScope.EMAIL,
@@ -889,6 +887,61 @@ export async function updatePassword(
   } catch (error: any) {
     console.error('❌ Exception:', error);
     return { success: false, error: error.message };
+  }
+}
+
+// ============================================
+// ACCOUNT DELETION
+// ============================================
+
+/**
+ * Elimina la cuenta del usuario actual.
+ * Borra datos en public.users y luego elimina el auth user via Edge Function.
+ *
+ * @returns Objeto con success y error opcional
+ */
+export async function deleteAccount(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { success: false, error: 'No se pudo obtener el usuario actual.' };
+    }
+
+    // Llamar a Edge Function que maneja la eliminación completa
+    // (borrar datos relacionados + auth user con service_role)
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      return { success: false, error: 'No hay sesión activa.' };
+    }
+
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://hmtfxpihkoisncglllmq.supabase.co';
+    const functionUrl = `${supabaseUrl}/functions/v1/delete-user-account`;
+
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionData.session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId: user.id }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      return { success: false, error: result.error || 'Error al eliminar la cuenta.' };
+    }
+
+    // Sign out locally after deletion
+    await supabase.auth.signOut();
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Error inesperado al eliminar la cuenta.' };
   }
 }
 

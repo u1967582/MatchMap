@@ -1,0 +1,20 @@
+{
+  "_note": "This file is created automatically after your first audit. Edit it to update your preferences.",
+  "mode": "developer",
+  "stack": "react-native-expo",
+  "has_subscriptions": true,
+  "has_social_features": false,
+  "has_location": true,
+  "eu_distribution": false,
+  "first_time_submitter": null,
+  "last_audit": "2026-03-23",
+  "issues_fixed": [],
+  "issues_outstanding": [
+    "P0: Account deletion missing",
+    "P0: Sign in with Apple not wired to UI",
+    "P1: No privacy policy / terms links in-app",
+    "P1: Location permission plugin string generic",
+    "P2: 775 console.log calls",
+    "P2: Placeholder image URL in favorites"
+  ]
+}

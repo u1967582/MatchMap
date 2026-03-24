@@ -3,7 +3,7 @@ import { Stack, useRouter } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import WelcomeScreen from '~/screens/WelcomeScreen';
 import { supabase } from '~/utils/supabase';
-import { signInWithGoogle } from '~/utils/auth';
+import { signInWithGoogle, signInWithApple } from '~/utils/auth';
 import LoginModal from './(auth)/components/LoginModal';
 import RegisterModal from './(auth)/components/RegisterModal';
 
@@ -12,6 +12,7 @@ export default function Home() {
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingApple, setLoadingApple] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -81,6 +82,21 @@ export default function Home() {
     }
   };
 
+  const handleAppleLogin = async () => {
+    setLoadingApple(true);
+    try {
+      await signInWithApple();
+      // Navigation handled by auth state listener in _layout.tsx
+    } catch (error: any) {
+      // Don't show error if user cancelled
+      if (error?.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Error', error.message || 'No se pudo iniciar sesión con Apple');
+      }
+    } finally {
+      setLoadingApple(false);
+    }
+  };
+
   // Show loading indicator while checking authentication
   if (isCheckingAuth) {
     return (
@@ -100,7 +116,9 @@ export default function Home() {
         onLoginPress={() => setLoginModalVisible(true)}
         onRegisterPress={() => setRegisterModalVisible(true)}
         onGooglePress={handleGoogleLogin}
+        onApplePress={handleAppleLogin}
         loadingGoogle={loadingGoogle}
+        loadingApple={loadingApple}
       />
 
       {/* Modals */}
