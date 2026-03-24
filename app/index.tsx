@@ -13,6 +13,7 @@ export default function Home() {
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingApple, setLoadingApple] = useState(false);
+  const [loadingGuest, setLoadingGuest] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -24,8 +25,8 @@ export default function Home() {
       // Check if there's an active session
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (session) {
-        // User is already authenticated, redirect to map
+      if (session && !session.user.is_anonymous) {
+        // User is already authenticated with real account, redirect to map
         console.log('✅ Usuario ya autenticado, redirigiendo al mapa...');
         router.replace('/(protected)/map');
       } else {
@@ -82,6 +83,23 @@ export default function Home() {
     }
   };
 
+  const handleGuestLogin = async () => {
+    setLoadingGuest(true);
+    try {
+      const { error } = await supabase.auth.signInAnonymously();
+      if (error) {
+        Alert.alert('Error', error.message || 'No se pudo continuar como invitado');
+        return;
+      }
+      // Navegar explícitamente (el listener de _layout ignora sesiones anónimas)
+      router.replace('/(protected)/map');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Error inesperado');
+    } finally {
+      setLoadingGuest(false);
+    }
+  };
+
   const handleAppleLogin = async () => {
     setLoadingApple(true);
     try {
@@ -117,8 +135,10 @@ export default function Home() {
         onRegisterPress={() => setRegisterModalVisible(true)}
         onGooglePress={handleGoogleLogin}
         onApplePress={handleAppleLogin}
+        onGuestPress={handleGuestLogin}
         loadingGoogle={loadingGoogle}
         loadingApple={loadingApple}
+        loadingGuest={loadingGuest}
       />
 
       {/* Modals */}

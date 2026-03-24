@@ -15,7 +15,8 @@ import { supabase } from '~/utils/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
-import { AppText, colors, spacing, ProfileSkeleton } from '~/components/ds';
+import { AppText, colors, spacing, radius, ProfileSkeleton } from '~/components/ds';
+import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 
 interface UserProfile {
   id: string;
@@ -58,6 +59,7 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [userBars, setUserBars] = useState<UserBar[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isGuestUser, setIsGuestUser] = useState(false);
   const [planName, setPlanName] = useState<string>('Cargando...');
   const router = useRouter();
 
@@ -66,7 +68,13 @@ export default function ProfileScreen() {
   const fetchUserProfile = useCallback(async () => {
     try {
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-      
+
+      if (authUser?.is_anonymous) {
+        setIsGuestUser(true);
+        setLoading(false);
+        return;
+      }
+
       if (authError || !authUser) {
         console.error('Error getting user:', authError);
         router.replace('/login');
@@ -227,7 +235,12 @@ export default function ProfileScreen() {
   }, []);
 
 
-  const handleAddBar = useCallback(() => {
+  const handleAddBar = useCallback(async () => {
+    const isGuest = await getIsGuest();
+    if (isGuest) {
+      showGuestLoginAlert(router);
+      return;
+    }
     router.push('/register-bar/step1' as any);
   }, [router]);
 
@@ -247,6 +260,29 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <ProfileSkeleton />
+      </SafeAreaView>
+    );
+  }
+
+  if (isGuestUser) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xxxl }}>
+          <Ionicons name="person-circle-outline" size={80} color={colors.text.muted} />
+          <AppText variant="title" align="center" style={{ marginTop: spacing.xl }}>
+            Inicia sesión para ver tu perfil
+          </AppText>
+          <AppText variant="body" color={colors.text.secondary} align="center" style={{ marginTop: spacing.sm }}>
+            Necesitas una cuenta para acceder a tu perfil y gestionar tus bares.
+          </AppText>
+          <TouchableOpacity
+            style={{ marginTop: spacing.xxl, backgroundColor: colors.brand.primary, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md, borderRadius: radius.pill }}
+            onPress={() => router.replace('/')}
+          >
+            <AppText variant="button" color={colors.text.light}>Iniciar sesión</AppText>
+          </TouchableOpacity>
+        </View>
+        <BottomTabBar />
       </SafeAreaView>
     );
   }

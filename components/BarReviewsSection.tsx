@@ -6,6 +6,7 @@ import { supabase } from '~/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from '~/components/ds';
 import { useLikesStore } from '~/stores/likesStore';
+import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 
 interface Review {
   id: string;
@@ -271,7 +272,14 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
       {/* Botón para escribir reseña - SIEMPRE visible */}
       <TouchableOpacity
         style={styles.ctaButton}
-        onPress={() => router.push(`/write-review/${barId}` as any)}
+        onPress={async () => {
+          const isGuest = await getIsGuest();
+          if (isGuest) {
+            showGuestLoginAlert(router);
+            return;
+          }
+          router.push(`/write-review/${barId}` as any);
+        }}
         activeOpacity={0.85}
       >
         <Ionicons name="star-outline" size={18} color="#FFFFFF" />
