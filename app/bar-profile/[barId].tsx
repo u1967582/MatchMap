@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import React from 'react';
 import Gradient from '~/components/ui/Gradient';
 import { supabase } from '~/utils/supabase';
+import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
@@ -1220,6 +1221,11 @@ export default function BarProfileScreen() {
 
   const handleFavoriteToggle = async () => {
     if (!barId) return;
+    const isGuest = await getIsGuest();
+    if (isGuest) {
+      showGuestLoginAlert(router);
+      return;
+    }
 
     const wasFavorite = isFavorite(barId);
     const success = await toggleFavorite(barId);

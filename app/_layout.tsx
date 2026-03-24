@@ -41,11 +41,18 @@ export default function Layout() {
         console.log('🔐 Auth State Change en _layout:', event);
 
         if (event === 'SIGNED_IN' && session) {
-          console.log('✅ Usuario autenticado en _layout, navegando a mapa...');
           // Inicializar stores con el userId
           setFavoritesUserId(session.user.id);
           setLikesUserId(session.user.id);
           console.log('🔄 Stores inicializados con userId:', session.user.id);
+
+          // No redirigir al mapa si es sesión anónima (guest en WelcomeScreen)
+          if (session.user.is_anonymous) {
+            console.log('👤 Sesión anónima detectada, no redirigir al mapa');
+            return;
+          }
+
+          console.log('✅ Usuario autenticado en _layout, navegando a mapa...');
           // Pequeño delay para asegurar que todo esté listo
           setTimeout(() => {
             router.replace('/(protected)/map');
