@@ -37,6 +37,9 @@ export async function initializeRevenueCat(userId?: string): Promise<void> {
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
     }
 
+    console.log('[RC DEBUG] Platform:', Platform.OS);
+    console.log('[RC DEBUG] API Key being used:', REVENUECAT_API_KEY);
+
     // Configure SDK
     Purchases.configure({
       apiKey: REVENUECAT_API_KEY,
