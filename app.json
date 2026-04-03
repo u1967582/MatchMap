@@ -61,7 +61,15 @@
       "@react-native-community/datetimepicker",
       "expo-secure-store",
       "expo-font",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native",
+          "organization": "matchmap"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -73,9 +81,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
       "usesAppleSignIn": true,
@@ -83,10 +89,7 @@
       "buildNumber": "8",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
-        "LSApplicationQueriesSchemes": [
-          "googlegmail",
-          "googlemail"
-        ],
+        "LSApplicationQueriesSchemes": ["googlegmail", "googlemail"],
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "MatchMap uses your location to show nearby bars and sports events on the map.",
         "NSCameraUsageDescription": "MatchMap needs camera access to let you take photos for your bar profile and posts.",
@@ -116,10 +119,7 @@
               "host": "*"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },
