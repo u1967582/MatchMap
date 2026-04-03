@@ -31,3 +31,8 @@ google-services.json
 client_secret_*.json
 
 .env.local
+
+# Claude Code (skills internos)
+.claude/skills/
+.agents/
+skills-lock.json
