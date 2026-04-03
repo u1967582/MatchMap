@@ -32,18 +32,18 @@ export const PRODUCT_IDS = {
  */
 export async function initializeRevenueCat(userId?: string): Promise<void> {
   try {
-    // Set debug logs BEFORE configure to capture all initialization logs
     if (__DEV__) {
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
     }
 
-    console.log('[RC DEBUG] Platform:', Platform.OS);
-    console.log('[RC DEBUG] API Key being used:', REVENUECAT_API_KEY);
+    const alreadyConfigured = await Purchases.isConfigured();
+    if (alreadyConfigured) {
+      return;
+    }
 
-    // Configure SDK
     Purchases.configure({
       apiKey: REVENUECAT_API_KEY,
-      appUserID: userId, // Optional: pass user ID for identification
+      appUserID: userId,
     });
 
     console.log('✅ RevenueCat initialized successfully');
