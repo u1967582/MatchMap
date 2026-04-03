@@ -1,8 +1,8 @@
-import Purchases, { 
-  PurchasesPackage, 
+import Purchases, {
+  PurchasesPackage,
   CustomerInfo,
   PurchasesOffering,
-  LOG_LEVEL
+  LOG_LEVEL,
 } from 'react-native-purchases';
 import { Platform } from 'react-native';
 
@@ -86,13 +86,29 @@ export async function hasActiveBoost(): Promise<boolean> {
 export async function getOfferings(): Promise<PurchasesOffering | null> {
   try {
     const offerings = await Purchases.getOfferings();
+
+    console.log('[RC] All offerings keys:', Object.keys(offerings.all));
+    console.log('[RC] Current offering:', offerings.current?.identifier ?? 'null');
+
     if (offerings.current !== null) {
+      const pkgs = offerings.current.availablePackages;
+      console.log(`[RC] Packages in current offering (${pkgs.length}):`);
+      pkgs.forEach((pkg, i) => {
+        console.log(
+          `[RC]   [${i}] identifier=${pkg.identifier}` +
+            ` | productId=${pkg.product.identifier}` +
+            ` | title=${pkg.product.title}` +
+            ` | price=${pkg.product.priceString}` +
+            ` | type=${pkg.packageType}`
+        );
+      });
       return offerings.current;
     }
-    console.warn('⚠️ No current offering available');
+
+    console.warn('[RC] ⚠️ No current offering available');
     return null;
   } catch (error) {
-    console.error('❌ Failed to get offerings:', error);
+    console.error('[RC] ❌ Failed to get offerings:', error);
     return null;
   }
 }
@@ -169,14 +185,14 @@ export async function getActiveSubscriptionInfo(): Promise<{
   try {
     const customerInfo = await Purchases.getCustomerInfo();
     const activeEntitlements = customerInfo.entitlements.active;
-    
+
     if (Object.keys(activeEntitlements).length === 0) {
       return { isActive: false };
     }
 
     // Get the first active entitlement
     const firstEntitlement = Object.values(activeEntitlements)[0];
-    
+
     return {
       isActive: true,
       productIdentifier: firstEntitlement.productIdentifier,
