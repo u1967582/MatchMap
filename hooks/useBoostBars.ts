@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Image } from 'react-native';
 import { supabase } from '~/utils/supabase';
 import { haversineDistance, type LatLng } from '~/utils/geo';
@@ -204,6 +204,7 @@ export function useBarBoost(barId: string | null) {
     endAt: string | null;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!barId) {
@@ -262,7 +263,9 @@ export function useBarBoost(barId: string | null) {
     return () => {
       isMounted = false;
     };
-  }, [barId]);
+  }, [barId, refreshKey]);
 
-  return { boost, isLoading };
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  return { boost, isLoading, refresh };
 }

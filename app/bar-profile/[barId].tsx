@@ -10,6 +10,7 @@ import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
+import Paywall from '~/components/revenuecat/Paywall';
 import { useBarBoost } from '~/hooks/useBoostBars';
 import { AppText, colors, spacing, radius, BarProfileSkeleton, toast } from '~/components/ds';
 import { useFavoritesStore } from '~/stores/favoritesStore';
@@ -82,13 +83,14 @@ export default function BarProfileScreen() {
   const [verificationNotes, setVerificationNotes] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any; actionLabel?: string; onAction?: () => void }>({ title: '', content: null });
+  const [paywallVisible, setPaywallVisible] = useState(false);
   const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
 
   // Ref para scroll programático al FlatList
   const flatListRef = useRef<FlatList>(null);
 
   // Get boost status for countdown
-  const { boost, isLoading: boostLoading } = useBarBoost(barId);
+  const { boost, isLoading: boostLoading, refresh: refreshBoost } = useBarBoost(barId);
 
   // Functions to show info modals
   const showManualMatchInfo = () => {
@@ -655,7 +657,7 @@ export default function BarProfileScreen() {
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
                     style={styles.barActionButton}
-                    onPress={() => router.push(`/boost?barId=${barId}` as any)}
+                    onPress={() => setPaywallVisible(true)}
                     activeOpacity={0.8}
                   >
                     <View style={[styles.barActionIcon, styles.barActionIconBoost]}>
@@ -1356,6 +1358,13 @@ export default function BarProfileScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      <Paywall
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+        onPurchaseComplete={refreshBoost}
+        barId={barId}
+      />
 
       <BottomTabBar />
     </SafeAreaView>
