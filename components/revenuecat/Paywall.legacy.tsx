@@ -16,9 +16,9 @@ import { AppText, toast } from '~/components/ds';
 import { supabase } from '~/utils/supabase';
 
 function getPlanFromProductId(productId: string): '7d' | '1m' | '1y' | null {
-  if (productId.includes('boost_7d')) return '7d';
-  if (productId.includes('boost_1m')) return '1m';
-  if (productId.includes('boost_1y')) return '1y';
+  if (productId.includes('boost_7d_v2')) return '7d';
+  if (productId.includes('boost_1m_v2')) return '1m';
+  if (productId.includes('boost_1y_v2')) return '1y';
   return null;
 }
 
