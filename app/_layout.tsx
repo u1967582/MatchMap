@@ -10,26 +10,7 @@ import { supabase } from '~/utils/supabase';
 import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import { useLikesStore } from '~/stores/likesStore';
-import * as Sentry from '@sentry/react-native';
-
-Sentry.init({
-  dsn: 'https://7366aaf09d48ab852f62fd20c04ce60b@o4510800190701568.ingest.de.sentry.io/4510800192208976',
-
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
-  sendDefaultPii: true,
-
-  // Enable Logs
-  enableLogs: true,
-
-  // Tracing: 100% en desarrollo, 20% en producción
-  tracesSampleRate: __DEV__ ? 1.0 : 0.2,
-
-  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-  // spotlight: __DEV__,
-});
-
-export default Sentry.wrap(function Layout() {
+export default function Layout() {
   const router = useRouter();
   const setFavoritesUserId = useFavoritesStore((state) => state.setUserId);
   const setLikesUserId = useLikesStore((state) => state.setUserId);
@@ -232,4 +213,4 @@ export default Sentry.wrap(function Layout() {
       <ToastRoot config={toastConfig} position="top" topOffset={60} />
     </SafeAreaProvider>
   );
-});
+}

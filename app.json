@@ -2,7 +2,7 @@
   "expo": {
     "name": "MatchMap",
     "slug": "matchmap",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "scheme": "matchmap",
     "jsEngine": "hermes",
     "orientation": "portrait",
@@ -62,14 +62,6 @@
       "expo-secure-store",
       "expo-font",
       "expo-apple-authentication",
-      [
-        "@sentry/react-native/expo",
-        {
-          "url": "https://sentry.io/",
-          "project": "react-native",
-          "organization": "matchmap"
-        }
-      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -86,7 +78,7 @@
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.tuorg.matchmap",
-      "buildNumber": "8",
+      "buildNumber": "10",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
         "LSApplicationQueriesSchemes": ["googlegmail", "googlemail"],
@@ -98,7 +90,7 @@
       }
     },
     "android": {
-      "versionCode": 16,
+      "versionCode": 17,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#1C2A3A"
