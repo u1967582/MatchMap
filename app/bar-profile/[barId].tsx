@@ -173,7 +173,10 @@ export default function BarProfileScreen() {
         </View>
       ),
       actionLabel: 'Ver planes y precios',
-      onAction: () => router.push(`/boost?barId=${barId}` as any),
+      onAction: () => {
+        setInfoModalVisible(false);
+        setPaywallVisible(true);
+      },
     });
     setInfoModalVisible(true);
   };
