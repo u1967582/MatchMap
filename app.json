@@ -2,7 +2,7 @@
   "expo": {
     "name": "MatchMap",
     "slug": "matchmap",
-    "version": "1.0.15",
+    "version": "1.0.16",
     "scheme": "matchmap",
     "jsEngine": "hermes",
     "orientation": "portrait",
@@ -78,7 +78,7 @@
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.tuorg.matchmap",
-      "buildNumber": "10",
+      "buildNumber": "12",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
         "LSApplicationQueriesSchemes": ["googlegmail", "googlemail"],
