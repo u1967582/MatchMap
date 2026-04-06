@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Platform, StyleSheet, View } from 'react-native';
 import RevenueCatUI from 'react-native-purchases-ui';
-import { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
+import { CustomerInfo, PurchasesOffering, PurchasesPackage, PurchasesStoreTransaction } from 'react-native-purchases';
 import * as RevenueCatService from '~/utils/revenuecat';
 import { toast } from '~/components/ds';
 import { supabase } from '~/utils/supabase';
@@ -51,18 +51,19 @@ export default function Paywall({ visible, onClose, onPurchaseComplete, barId }:
   const handlePurchaseCompleted = async ({
     storeTransaction,
   }: {
-    storeTransaction: { transactionIdentifier: string };
-    customerInfo: unknown;
+    storeTransaction: PurchasesStoreTransaction;
+    customerInfo: CustomerInfo;
   }) => {
-    if (barId && pendingPackageRef.current) {
-      const pkg = pendingPackageRef.current;
-      const plan = getPlanFromProductId(pkg.product.identifier);
+    if (barId) {
+      // Usar productIdentifier del transaction como fuente primaria (siempre disponible en iOS y Android)
+      const plan = getPlanFromProductId(storeTransaction.productIdentifier);
       if (plan) {
         const {
           data: { user },
         } = await supabase.auth.getUser();
         if (user) {
           const endAt = getEndAt(plan);
+          const pkg = pendingPackageRef.current; // solo para precio; puede ser null en Android
           const { error: insertError } = await supabase.from('bar_boosts').insert({
             bar_id: barId,
             user_id: user.id,
@@ -70,8 +71,8 @@ export default function Paywall({ visible, onClose, onPurchaseComplete, barId }:
             start_at: new Date().toISOString(),
             end_at: endAt.toISOString(),
             status: 'active',
-            amount_cents: Math.round(pkg.product.price * 100),
-            currency: (pkg.product.currencyCode ?? 'eur').toLowerCase(),
+            amount_cents: pkg ? Math.round(pkg.product.price * 100) : 0,
+            currency: pkg ? (pkg.product.currencyCode ?? 'eur').toLowerCase() : 'eur',
             revenuecat_transaction_id: storeTransaction.transactionIdentifier ?? null,
           });
           if (insertError) {
