@@ -1,4 +1,4 @@
-import { View, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent, Platform } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent, Platform, ActivityIndicator } from 'react-native';
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,8 +12,10 @@ interface WelcomeScreenProps {
   onRegisterPress: () => void;
   onGooglePress: () => void;
   onApplePress: () => void;
+  onGuestPress: () => void;
   loadingGoogle: boolean;
   loadingApple: boolean;
+  loadingGuest: boolean;
 }
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
@@ -21,8 +23,10 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onRegisterPress,
   onGooglePress,
   onApplePress,
+  onGuestPress,
   loadingGoogle,
   loadingApple,
+  loadingGuest,
 }) => {
   const { width } = Dimensions.get('window');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -146,6 +150,18 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 Política de Privacidad
               </AppText>
             </AppText>
+
+            <AppText
+              maxScale={1.0}
+              style={styles.guestLink}
+              onPress={!loadingGuest && !loadingGoogle && !loadingApple ? onGuestPress : undefined}
+            >
+              {loadingGuest ? (
+                <ActivityIndicator size="small" color="#8E8E93" />
+              ) : (
+                'Explorar sin cuenta →'
+              )}
+            </AppText>
           </View>
         </SafeAreaView>
       </View>
@@ -242,6 +258,12 @@ const styles = StyleSheet.create({
     color: '#7FB3FF',
     fontSize: 11,
     textDecorationLine: 'underline',
+  },
+  guestLink: {
+    color: '#8E8E93',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
 

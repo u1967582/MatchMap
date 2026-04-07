@@ -58,9 +58,9 @@ serve(async (req) => {
           }
 
           const productId: string = event.product_id ?? '';
-          const plan = productId.includes('boost_7d') ? '7d'
-            : productId.includes('boost_1m') ? '1m'
-            : productId.includes('boost_1y') ? '1y'
+          const plan = productId.includes('boost_7d_v2') ? '7d'
+            : productId.includes('boost_1m_v2') ? '1m'
+            : productId.includes('boost_1y_v2') ? '1y'
             : null;
 
           if (!plan) {

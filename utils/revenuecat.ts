@@ -1,8 +1,8 @@
-import Purchases, { 
-  PurchasesPackage, 
+import Purchases, {
+  PurchasesPackage,
   CustomerInfo,
   PurchasesOffering,
-  LOG_LEVEL
+  LOG_LEVEL,
 } from 'react-native-purchases';
 import { Platform } from 'react-native';
 
@@ -21,9 +21,9 @@ export const ENTITLEMENTS = {
 // Product identifiers - Must match App Store Connect + RevenueCat
 export const PRODUCT_IDS = {
   LIFETIME: 'lifetime',
-  BOOST_7D: 'boost_7d',
-  BOOST_1M: 'boost_1m',
-  BOOST_1Y: 'boost_1y',
+  BOOST_7D: 'boost_7d_v2',
+  BOOST_1M: 'boost_1m_v2',
+  BOOST_1Y: 'boost_1y_v2',
 } as const;
 
 /**
@@ -32,15 +32,18 @@ export const PRODUCT_IDS = {
  */
 export async function initializeRevenueCat(userId?: string): Promise<void> {
   try {
-    // Set debug logs BEFORE configure to capture all initialization logs
     if (__DEV__) {
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
     }
 
-    // Configure SDK
+    const alreadyConfigured = await Purchases.isConfigured();
+    if (alreadyConfigured) {
+      return;
+    }
+
     Purchases.configure({
       apiKey: REVENUECAT_API_KEY,
-      appUserID: userId, // Optional: pass user ID for identification
+      appUserID: userId,
     });
 
     console.log('✅ RevenueCat initialized successfully');
@@ -83,13 +86,29 @@ export async function hasActiveBoost(): Promise<boolean> {
 export async function getOfferings(): Promise<PurchasesOffering | null> {
   try {
     const offerings = await Purchases.getOfferings();
+
+    console.log('[RC] All offerings keys:', Object.keys(offerings.all));
+    console.log('[RC] Current offering:', offerings.current?.identifier ?? 'null');
+
     if (offerings.current !== null) {
+      const pkgs = offerings.current.availablePackages;
+      console.log(`[RC] Packages in current offering (${pkgs.length}):`);
+      pkgs.forEach((pkg, i) => {
+        console.log(
+          `[RC]   [${i}] identifier=${pkg.identifier}` +
+            ` | productId=${pkg.product.identifier}` +
+            ` | title=${pkg.product.title}` +
+            ` | price=${pkg.product.priceString}` +
+            ` | type=${pkg.packageType}`
+        );
+      });
       return offerings.current;
     }
-    console.warn('⚠️ No current offering available');
+
+    console.warn('[RC] ⚠️ No current offering available');
     return null;
   } catch (error) {
-    console.error('❌ Failed to get offerings:', error);
+    console.error('[RC] ❌ Failed to get offerings:', error);
     return null;
   }
 }
@@ -166,14 +185,14 @@ export async function getActiveSubscriptionInfo(): Promise<{
   try {
     const customerInfo = await Purchases.getCustomerInfo();
     const activeEntitlements = customerInfo.entitlements.active;
-    
+
     if (Object.keys(activeEntitlements).length === 0) {
       return { isActive: false };
     }
 
     // Get the first active entitlement
     const firstEntitlement = Object.values(activeEntitlements)[0];
-    
+
     return {
       isActive: true,
       productIdentifier: firstEntitlement.productIdentifier,

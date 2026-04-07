@@ -6,6 +6,7 @@ import { supabase } from '~/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { toast } from '~/components/ds';
 import { useLikesStore } from '~/stores/likesStore';
+import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 
 interface Review {
   id: string;
@@ -26,6 +27,7 @@ interface BarReviewsSectionProps {
 }
 
 const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader = true, title = 'Reseñas' }) => {
+  const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [distribution, setDistribution] = useState<number[]>([0, 0, 0, 0, 0]);
   const [average, setAverage] = useState(0);
@@ -140,6 +142,11 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   };
 
   const toggleLike = useCallback(async (review: Review) => {
+    const isGuest = await getIsGuest();
+    if (isGuest) {
+      showGuestLoginAlert(router);
+      return;
+    }
     if (!userId || busyById[review.id]) return;
     setBusyById(prev => ({ ...prev, [review.id]: true }));
 
@@ -183,7 +190,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
     } finally {
       setBusyById(prev => ({ ...prev, [review.id]: false }));
     }
-  }, [userId, busyById, isLiked, toggleLikeStore]);
+  }, [userId, busyById, isLiked, toggleLikeStore, router]);
 
   // Build header consistently on every render to keep hook order stable
   const header = useMemo(() => (
@@ -252,7 +259,6 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   }
 
   const hasReviews = totalReviews > 0;
-  const router = useRouter();
 
   return (
     <View style={styles.container}>
@@ -271,7 +277,14 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
       {/* Botón para escribir reseña - SIEMPRE visible */}
       <TouchableOpacity
         style={styles.ctaButton}
-        onPress={() => router.push(`/write-review/${barId}` as any)}
+        onPress={async () => {
+          const isGuest = await getIsGuest();
+          if (isGuest) {
+            showGuestLoginAlert(router);
+            return;
+          }
+          router.push(`/write-review/${barId}` as any);
+        }}
         activeOpacity={0.85}
       >
         <Ionicons name="star-outline" size={18} color="#FFFFFF" />

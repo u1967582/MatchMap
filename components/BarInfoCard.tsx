@@ -5,6 +5,7 @@ import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
+import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 
 interface Bar {
   id: string;
@@ -116,6 +117,12 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
   };
 
   const handleFavoriteToggle = async () => {
+    const isGuest = await getIsGuest();
+    if (isGuest) {
+      showGuestLoginAlert(router);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {

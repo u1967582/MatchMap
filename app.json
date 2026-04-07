@@ -2,7 +2,7 @@
   "expo": {
     "name": "MatchMap",
     "slug": "matchmap",
-    "version": "1.0.13",
+    "version": "1.0.16",
     "scheme": "matchmap",
     "jsEngine": "hermes",
     "orientation": "portrait",
@@ -61,7 +61,7 @@
       "@react-native-community/datetimepicker",
       "expo-secure-store",
       "expo-font",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
     ],
     "experiments": {
       "typedRoutes": true,
@@ -73,20 +73,15 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.tuorg.matchmap",
-      "buildNumber": "8",
+      "buildNumber": "12",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
-        "LSApplicationQueriesSchemes": [
-          "googlegmail",
-          "googlemail"
-        ],
+        "LSApplicationQueriesSchemes": ["googlegmail", "googlemail"],
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "MatchMap uses your location to show nearby bars and sports events on the map.",
         "NSCameraUsageDescription": "MatchMap needs camera access to let you take photos for your bar profile and posts.",
@@ -95,7 +90,7 @@
       }
     },
     "android": {
-      "versionCode": 16,
+      "versionCode": 17,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#1C2A3A"
@@ -116,10 +111,7 @@
               "host": "*"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },

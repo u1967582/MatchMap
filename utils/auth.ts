@@ -949,6 +949,30 @@ export async function deleteAccount(): Promise<{
 // TIPOS Y EXPORTS
 // ============================================
 
+/**
+ * Verifica si el usuario actual es un invitado (sesión anónima).
+ * Para uso en Phase 2 — restricción de funciones para invitados.
+ */
+export const getIsGuest = async (): Promise<boolean> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.is_anonymous === true;
+};
+
+/**
+ * Muestra alerta para invitados que intentan usar funciones restringidas.
+ * Ofrece navegar al WelcomeScreen para iniciar sesión.
+ */
+export const showGuestLoginAlert = (router: any) => {
+  Alert.alert(
+    'Inicia sesión',
+    'Necesitas una cuenta para usar esta función.',
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Iniciar sesión', onPress: () => router.replace('/') },
+    ]
+  );
+};
+
 export type AuthProvider = 'google' | 'apple' | 'facebook';
 
 export interface OAuthError {
