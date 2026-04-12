@@ -42,7 +42,7 @@ interface TicketClaim {
   ticket_image_url: string;
   location_verified: boolean;
   match_day_verified: boolean;
-  people_count: number;
+  people_count?: number;
   rejection_reason: string | null;
   created_at: string;
   bar: { name: string } | null;
@@ -201,7 +201,7 @@ export default function AdminTicketClaimsScreen() {
       .select(`
         id, user_id, status, ticket_image_url,
         location_verified, match_day_verified,
-        people_count, rejection_reason, created_at,
+        rejection_reason, created_at,
         bar:bars!ticket_claims_bar_id_fkey(name),
         team:teams!ticket_claims_team_id_fkey(id, name, logo_url)
       `)
