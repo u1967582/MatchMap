@@ -350,6 +350,12 @@ export default function ClaimScarfScreen() {
   // ─── Render: SUCCESS ──────────────────────────────────────────────────────
 
   if (claimState === 'success') {
+    const rarityColor =
+      claimResult?.rarity === 'legendary'
+        ? colors.status.success
+        : claimResult?.rarity === 'rare'
+          ? colors.status.boost
+          : colors.text.muted;
     const rarityLabel =
       claimResult?.rarity === 'legendary'
         ? 'Legendaria 🏆'
@@ -360,10 +366,10 @@ export default function ClaimScarfScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ScrollView contentContainerStyle={styles.successContent}>
-          <AppText variant="h1" align="center" style={styles.successEmoji}>
-            🎉
-          </AppText>
+        <View style={styles.successContent}>
+
+          {/* Emoji + títulos */}
+          <AppText style={styles.successEmoji}>🎉</AppText>
           <AppText variant="h2" align="center" style={styles.successTitle}>
             ¡Bufandas conseguidas!
           </AppText>
@@ -371,74 +377,107 @@ export default function ClaimScarfScreen() {
             Has añadido 2 bufandas a tu colección
           </AppText>
 
-          {/* Logos de los dos equipos */}
+          {/* Escudos */}
           <View style={styles.successTeams}>
             <View style={styles.successTeamItem}>
-              <Image
-                source={{ uri: homeLogoUrl }}
-                style={styles.successLogo}
-                resizeMode="contain"
-                defaultSource={require('~/assets/icon.png')}
-              />
-              <AppText variant="caption" align="center" maxScale={1.0} numberOfLines={2}>
+              <View style={styles.successLogoWrapper}>
+                <Image
+                  source={{ uri: homeLogoUrl }}
+                  style={styles.successLogo}
+                  resizeMode="contain"
+                  defaultSource={require('~/assets/icon.png')}
+                />
+              </View>
+              <AppText variant="caption" align="center" maxScale={1.0} numberOfLines={2} style={styles.successTeamName}>
                 {params.homeTeamName}
               </AppText>
             </View>
-            <AppText variant="h2" color={colors.text.muted}>+</AppText>
+
+            <AppText variant="title" color={colors.text.muted} style={styles.successPlus}>+</AppText>
+
             <View style={styles.successTeamItem}>
-              <Image
-                source={{ uri: awayLogoUrl }}
-                style={styles.successLogo}
-                resizeMode="contain"
-                defaultSource={require('~/assets/icon.png')}
-              />
-              <AppText variant="caption" align="center" maxScale={1.0} numberOfLines={2}>
+              <View style={styles.successLogoWrapper}>
+                <Image
+                  source={{ uri: awayLogoUrl }}
+                  style={styles.successLogo}
+                  resizeMode="contain"
+                  defaultSource={require('~/assets/icon.png')}
+                />
+              </View>
+              <AppText variant="caption" align="center" maxScale={1.0} numberOfLines={2} style={styles.successTeamName}>
                 {params.awayTeamName}
               </AppText>
             </View>
           </View>
 
           {/* Rareza */}
-          <View style={styles.raritySuccess}>
-            <AppText variant="label" color={colors.status.boost} maxScale={1.0}>
-              {rarityLabel}
-            </AppText>
+          <View style={[styles.rarityPill, { borderColor: rarityColor, backgroundColor: `${rarityColor}18` }]}>
+            <AppText variant="label" color={rarityColor} maxScale={1.0}>{rarityLabel}</AppText>
             {claimResult && claimResult.claim_count > 1 && (
-              <AppText variant="caption" color={colors.text.secondary} maxScale={1.0}>
-                {claimResult.claim_count} visitas · ¡vas a por más!
+              <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>
+                · {claimResult.claim_count} visitas
               </AppText>
             )}
           </View>
 
-          {/* Badges de validación */}
-          <View style={styles.validationBadges}>
-            <ValidationBadge verified={locationVerified} label="Ubicación verificada" />
-            <ValidationBadge verified={matchDayVerified} label="Partido verificado" />
-            {!locationVerified || !matchDayVerified ? (
-              <ValidationBadge verified={null} label="" />
-            ) : null}
-            <View style={styles.ticketPendingBadge}>
-              <Ionicons name="camera-outline" size={14} color={colors.text.muted} />
+          {/* Validaciones como chips en fila */}
+          <View style={styles.validationRow}>
+            {locationVerified !== null && (
+              <View style={[styles.validationChip, locationVerified ? styles.chipGreen : styles.chipOrange]}>
+                <Ionicons
+                  name={locationVerified ? 'location' : 'location-outline'}
+                  size={13}
+                  color={locationVerified ? colors.status.success : colors.status.warning}
+                />
+                <AppText
+                  variant="caption"
+                  color={locationVerified ? colors.status.success : colors.status.warning}
+                  maxScale={1.0}
+                >
+                  Ubicación
+                </AppText>
+              </View>
+            )}
+            {matchDayVerified !== null && (
+              <View style={[styles.validationChip, matchDayVerified ? styles.chipGreen : styles.chipOrange]}>
+                <Ionicons
+                  name={matchDayVerified ? 'football' : 'football-outline'}
+                  size={13}
+                  color={matchDayVerified ? colors.status.success : colors.status.warning}
+                />
+                <AppText
+                  variant="caption"
+                  color={matchDayVerified ? colors.status.success : colors.status.warning}
+                  maxScale={1.0}
+                >
+                  Partido
+                </AppText>
+              </View>
+            )}
+            <View style={[styles.validationChip, styles.chipGray]}>
+              <Ionicons name="camera-outline" size={13} color={colors.text.muted} />
               <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>
-                Ticket en revisión
+                Ticket
               </AppText>
             </View>
           </View>
 
-          <View style={styles.successButton}>
+          {/* CTA */}
+          <View style={styles.successCta}>
             <AppButton
               text="Ver mi colección"
               onPress={() => router.replace('/scarves' as any)}
               variant="primary"
               fullWidth
             />
+            <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+              <AppText variant="caption" color={colors.text.secondary}>
+                Volver al bar
+              </AppText>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
-            <AppText variant="caption" color={colors.text.secondary}>
-              Volver al bar
-            </AppText>
-          </TouchableOpacity>
-        </ScrollView>
+
+        </View>
       </SafeAreaView>
     );
   }
@@ -770,18 +809,18 @@ const styles = StyleSheet.create({
   },
   // Success
   successContent: {
-    flexGrow: 1,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxxl,
+    paddingBottom: spacing.xxxl,
   },
   successEmoji: {
+    fontSize: 56,
     marginBottom: spacing.lg,
-    fontSize: 64,
   },
   successTitle: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   successSubtitle: {
     marginBottom: spacing.xxl,
@@ -789,52 +828,72 @@ const styles = StyleSheet.create({
   successTeams: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.lg,
     marginBottom: spacing.xl,
+    width: '100%',
   },
   successTeamItem: {
+    flex: 1,
     alignItems: 'center',
     gap: spacing.sm,
-    flex: 1,
+  },
+  successLogoWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: radius.round,
+    backgroundColor: colors.bg.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.sm,
   },
   successLogo: {
-    width: 72,
-    height: 72,
+    width: 60,
+    height: 60,
   },
-  raritySuccess: {
+  successTeamName: {
+    maxWidth: 100,
+  },
+  successPlus: {
+    paddingHorizontal: spacing.md,
+  },
+  rarityPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xl,
-    backgroundColor: 'rgba(255,215,0,0.1)',
+    gap: spacing.sm,
+    borderWidth: 1,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+    marginBottom: spacing.xl,
   },
-  validationBadges: {
+  // Validaciones compactas en fila
+  validationRow: {
+    flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.xxl,
-    width: '100%',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
-  validationBadge: {
+  validationChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.md,
-    padding: spacing.sm,
+    gap: spacing.xs,
+    borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
   },
-  ticketPendingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+  chipGreen: {
+    backgroundColor: 'rgba(16,185,129,0.12)',
+  },
+  chipOrange: {
+    backgroundColor: 'rgba(245,158,11,0.12)',
+  },
+  chipGray: {
     backgroundColor: colors.bg.element,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    paddingHorizontal: spacing.md,
   },
-  successButton: {
-    marginBottom: spacing.md,
+  successCta: {
     width: '100%',
+    gap: spacing.xs,
+    alignItems: 'center',
   },
   backLink: {
     paddingVertical: spacing.md,
