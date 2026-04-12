@@ -78,6 +78,7 @@ export default function BarProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [claimedMatchIds, setClaimedMatchIds] = useState<Set<string>>(new Set());
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
@@ -759,7 +760,7 @@ export default function BarProfileScreen() {
                     {(() => {
                       console.log('🧣 [match]', match.id, '| competition:', match.competition_name, '| date:', match.date, '| isSuperAdmin:', isSuperAdmin, '| isOwner:', isOwner);
                       if (isSuperAdmin) {
-                        // Admin: sin restricciones
+                        // Admin: sin restricciones de competición, fecha ni repetición
                       } else {
                         if (isOwner) return null;
                         const isLaLiga =
@@ -769,6 +770,8 @@ export default function BarProfileScreen() {
                         const today = new Date().toISOString().split('T')[0];
                         const isToday = match.date === today;
                         if (!isLaLiga || !isToday) return null;
+                        // Ocultar si ya se reclamó este partido
+                        if (match.id && claimedMatchIds.has(match.id)) return null;
                       }
                       return (
                         <TouchableOpacity
@@ -934,7 +937,16 @@ export default function BarProfileScreen() {
         const superAdminCheck = !!(ownerResult.data as any)?.is_super_user;
         setIsOwner(ownerCheck);
         setIsSuperAdmin(superAdminCheck);
-        console.log('🧣 [BarProfile] isOwner:', ownerCheck, '| isSuperAdmin:', superAdminCheck, '| matches:', upcomingMatches.length);
+
+        // Cargar partidos ya reclamados por el usuario (solo si no es admin)
+        if (authUser && !superAdminCheck) {
+          const { data: claimed } = await supabase
+            .from('ticket_claims')
+            .select('match_id')
+            .eq('user_id', authUser.id)
+            .not('match_id', 'is', null);
+          setClaimedMatchIds(new Set((claimed ?? []).map((c: any) => c.match_id)));
+        }
 
         await Promise.all([
           fetchBarPosts(barData.id, authUser, ownerCheck),

@@ -7,21 +7,23 @@ import {
   Image,
   FlatList,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import {
   AppText,
-  AppChip,
   EmptyState,
   SkeletonBox,
   colors,
   spacing,
   radius,
   shadows,
+  toast,
 } from '~/components/ds';
 import { useScarves, type UserScarf, type ScarveRarity } from '~/hooks/useScarves';
 
@@ -51,9 +53,11 @@ type RarityFilter = 'all' | ScarveRarity;
 
 interface ScarfCardProps {
   scarf: UserScarf;
+  isSuperAdmin?: boolean;
+  onDelete?: (id: string) => void;
 }
 
-function ScarfCard({ scarf }: ScarfCardProps) {
+function ScarfCard({ scarf, isSuperAdmin, onDelete }: ScarfCardProps) {
   const rarityColor = RARITY_COLORS[scarf.rarity];
   const rarityBg = RARITY_BG[scarf.rarity];
 
@@ -70,6 +74,17 @@ function ScarfCard({ scarf }: ScarfCardProps) {
 
   return (
     <View style={styles.scarfCard}>
+      {/* Botón eliminar admin (esquina superior derecha) */}
+      {isSuperAdmin && onDelete && (
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={() => onDelete(scarf.id)}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <Ionicons name="trash-outline" size={14} color={colors.status.error} />
+        </TouchableOpacity>
+      )}
+
       {/* Badge rareza */}
       <View style={[styles.rarityBadge, { backgroundColor: rarityBg }]}>
         <AppText variant="caption" color={rarityColor} maxScale={1.0}>
@@ -138,14 +153,24 @@ function ScarvesSkeleton() {
 export default function ScarvesScreen() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [activeFilter, setActiveFilter] = useState<RarityFilter>('all');
 
   const { scarves, loading, refetch } = useScarves(userId);
 
-  // Obtener userId al montar
+  // Obtener userId + admin flag al montar
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null);
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id ?? null;
+      setUserId(uid);
+      if (uid) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('is_super_user')
+          .eq('id', uid)
+          .single();
+        setIsSuperAdmin(!!(profile as any)?.is_super_user);
+      }
     });
   }, []);
 
@@ -154,14 +179,47 @@ export default function ScarvesScreen() {
     if (userId) refetch();
   }, [userId, refetch]);
 
+  const handleDelete = useCallback((scarfId: string) => {
+    Alert.alert(
+      'Eliminar bufanda',
+      '¿Seguro que quieres eliminar esta bufanda de la colección? (Solo disponible para admins)',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            const { error } = await supabase
+              .from('user_scarves')
+              .delete()
+              .eq('id', scarfId);
+            if (error) {
+              toast.error('Error al eliminar la bufanda');
+            } else {
+              toast.success('Bufanda eliminada');
+              refetch();
+            }
+          },
+        },
+      ]
+    );
+  }, [refetch]);
+
   const filteredScarves =
     activeFilter === 'all'
       ? scarves
       : scarves.filter((s) => s.rarity === activeFilter);
 
   const renderScarf = useCallback(
-    ({ item }: { item: UserScarf }) => <ScarfCard scarf={item} />,
-    []
+    ({ item }: { item: UserScarf }) => (
+      <ScarfCard
+        scarf={item}
+        isSuperAdmin={isSuperAdmin}
+        onDelete={handleDelete}
+      />
+    ),
+    [isSuperAdmin, handleDelete]
   );
 
   const keyExtractor = useCallback((item: UserScarf) => item.id, []);
@@ -245,26 +303,30 @@ export default function ScarvesScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersScroll}
         >
-          <AppChip
-            label="Todas"
-            selected={activeFilter === 'all'}
-            onPress={() => setActiveFilter('all')}
-          />
-          <AppChip
-            label="Común"
-            selected={activeFilter === 'common'}
-            onPress={() => setActiveFilter('common')}
-          />
-          <AppChip
-            label="Rara"
-            selected={activeFilter === 'rare'}
-            onPress={() => setActiveFilter('rare')}
-          />
-          <AppChip
-            label="Legendaria"
-            selected={activeFilter === 'legendary'}
-            onPress={() => setActiveFilter('legendary')}
-          />
+          {([
+            { key: 'all', label: 'Todas' },
+            { key: 'common', label: 'Común' },
+            { key: 'rare', label: 'Rara' },
+            { key: 'legendary', label: 'Legendaria' },
+          ] as { key: RarityFilter; label: string }[]).map((f) => (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.filterChip, activeFilter === f.key && styles.filterChipActive]}
+              onPress={() => {
+                setActiveFilter(f.key);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              activeOpacity={0.75}
+            >
+              <AppText
+                variant="label"
+                color={activeFilter === f.key ? '#fff' : colors.text.muted}
+                maxScale={1.0}
+              >
+                {f.label}
+              </AppText>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
       </View>
 
@@ -351,6 +413,24 @@ const styles = StyleSheet.create({
   filtersScroll: {
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
+    alignItems: 'center',
+  },
+  filterChip: {
+    paddingVertical: 7,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 20,
+    backgroundColor: colors.bg.elevated,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  filterChipActive: {
+    backgroundColor: '#007AFF',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
   content: {
     flex: 1,
@@ -370,6 +450,14 @@ const styles = StyleSheet.create({
   columnWrapper: {
     justifyContent: 'space-between',
     marginBottom: spacing.md,
+  },
+  // Botón eliminar admin
+  deleteBtn: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    zIndex: 10,
+    padding: spacing.xs,
   },
   // Tarjeta de bufanda
   scarfCard: {

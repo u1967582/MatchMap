@@ -281,9 +281,20 @@ export default function ClaimScarfScreen() {
         _people_count: peopleCount,
       };
 
+      // Fallback: si la migración aún no está aplicada (PGRST202), reintenta sin _people_count
+      const rpcWithFallback = async (teamId: string) => {
+        const fullParams = { ...claimParams, _team_id: teamId };
+        const result = await supabase.rpc('fn_claim_scarf', fullParams);
+        if ((result.error as any)?.code === 'PGRST202') {
+          const { _people_count: _, ...legacyParams } = fullParams;
+          return supabase.rpc('fn_claim_scarf', legacyParams);
+        }
+        return result;
+      };
+
       const [homeResult, awayResult] = await Promise.all([
-        supabase.rpc('fn_claim_scarf', { ...claimParams, _team_id: params.homeTeamId }),
-        supabase.rpc('fn_claim_scarf', { ...claimParams, _team_id: params.awayTeamId }),
+        rpcWithFallback(params.homeTeamId),
+        rpcWithFallback(params.awayTeamId),
       ]);
 
       if (homeResult.error) throw homeResult.error;
