@@ -77,6 +77,7 @@ export default function BarProfileScreen() {
   const [posts, setPosts] = useState<BarPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
@@ -752,7 +753,7 @@ export default function BarProfileScreen() {
                       {match.competition_name}
                     </AppText>
                     
-                    {/* Botón reclamar bufanda — solo LaLiga, solo hoy, solo usuarios no-owner */}
+                    {/* Botón reclamar bufanda — solo LaLiga; admins siempre, usuarios solo hoy */}
                     {!isOwner && (() => {
                       const isLaLiga =
                         match.competition_name?.toLowerCase().includes('primera') ||
@@ -760,7 +761,7 @@ export default function BarProfileScreen() {
                         match.competition_name?.toLowerCase().includes('la liga');
                       const today = new Date().toISOString().split('T')[0];
                       const isToday = match.date === today;
-                      if (!isLaLiga || !isToday) return null;
+                      if (!isLaLiga || (!isToday && !isSuperAdmin)) return null;
                       return (
                         <TouchableOpacity
                           style={styles.claimScarfButton}
@@ -918,11 +919,12 @@ export default function BarProfileScreen() {
 
         // Round 2: ownership primer, després posts + matches
         const ownerResult = authUser
-          ? await supabase.from('users').select('bar_id').eq('id', authUser.id).single()
+          ? await supabase.from('users').select('bar_id, is_super_user').eq('id', authUser.id).single()
           : { data: null, error: null };
 
         const ownerCheck = !!(authUser && ownerResult.data && (ownerResult.data as any).bar_id === barData.id);
         setIsOwner(ownerCheck);
+        setIsSuperAdmin(!!(ownerResult.data as any)?.is_super_user);
 
         await Promise.all([
           fetchBarPosts(barData.id, authUser, ownerCheck),
