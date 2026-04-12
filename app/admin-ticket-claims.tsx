@@ -37,6 +37,7 @@ type FilterTab = 'pending' | 'approved' | 'rejected';
 
 interface TicketClaim {
   id: string;
+  user_id: string;
   status: ClaimStatus;
   ticket_image_url: string;
   location_verified: boolean;
@@ -46,7 +47,7 @@ interface TicketClaim {
   created_at: string;
   bar: { name: string } | null;
   team: { id: string; name: string; logo_url: string | null } | null;
-  user_profile: { full_name: string | null; username: string | null } | null;
+  user_display?: string;
 }
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -91,7 +92,7 @@ function ClaimCard({ claim, onApprove, onReject }: ClaimCardProps) {
             {claim.bar?.name ?? '—'}
           </AppText>
           <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>
-            {claim.user_profile?.full_name ?? claim.user_profile?.username ?? 'Usuario anónimo'} · {createdAt}
+            {claim.user_display ?? 'Usuario'} · {createdAt}
           </AppText>
         </View>
         <StatusBadge status={claim.status} />
@@ -198,18 +199,31 @@ export default function AdminTicketClaimsScreen() {
     const { data, error } = await supabase
       .from('ticket_claims')
       .select(`
-        id, status, ticket_image_url,
+        id, user_id, status, ticket_image_url,
         location_verified, match_day_verified,
         people_count, rejection_reason, created_at,
         bar:bars!ticket_claims_bar_id_fkey(name),
-        team:teams!ticket_claims_team_id_fkey(id, name, logo_url),
-        user_profile:users!ticket_claims_user_id_fkey(full_name, username)
+        team:teams!ticket_claims_team_id_fkey(id, name, logo_url)
       `)
       .eq('status', status)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-    setClaims((data ?? []) as unknown as TicketClaim[]);
+
+    const rawClaims = (data ?? []) as unknown as TicketClaim[];
+
+    // Query secundaria a public.users para obtener nombres (no se puede hacer join directo
+    // porque ticket_claims.user_id referencia auth.users, no public.users)
+    const userIds = [...new Set(rawClaims.map(c => c.user_id))];
+    const { data: usersData } = userIds.length
+      ? await supabase.from('users').select('id, full_name, username').in('id', userIds)
+      : { data: [] };
+
+    const userMap = new Map(
+      (usersData ?? []).map((u: any) => [u.id, u.full_name ?? u.username ?? 'Usuario'])
+    );
+
+    setClaims(rawClaims.map(c => ({ ...c, user_display: userMap.get(c.user_id) ?? 'Usuario' })));
   }, []);
 
   const load = useCallback(async (status: FilterTab = activeTab) => {
