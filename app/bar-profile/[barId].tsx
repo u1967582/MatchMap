@@ -24,6 +24,8 @@ interface BarProfile {
   city: string;
   phone?: string;
   website?: string;
+  latitude?: number;
+  longitude?: number;
   images: string[];
   category?: { id: number; name: string };
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
@@ -750,6 +752,48 @@ export default function BarProfileScreen() {
                       {match.competition_name}
                     </AppText>
                     
+                    {/* Botón reclamar bufanda — solo LaLiga, solo hoy, solo usuarios no-owner */}
+                    {!isOwner && (() => {
+                      const isLaLiga =
+                        match.competition_name?.toLowerCase().includes('primera') ||
+                        match.competition_name?.toLowerCase().includes('laliga') ||
+                        match.competition_name?.toLowerCase().includes('la liga');
+                      const today = new Date().toISOString().split('T')[0];
+                      const isToday = match.date === today;
+                      if (!isLaLiga || !isToday) return null;
+                      return (
+                        <TouchableOpacity
+                          style={styles.claimScarfButton}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/claim-scarf/[barId]',
+                              params: {
+                                barId,
+                                matchId: match.id,
+                                homeTeamId: match.home_team_id,
+                                awayTeamId: match.away_team_id,
+                                homeTeamName: match.home_team_name,
+                                awayTeamName: match.away_team_name,
+                                homeLogoUrl: match.home_team_logo_url ?? '',
+                                awayLogoUrl: match.away_team_logo_url ?? '',
+                                matchDate: match.date,
+                                matchTime: match.time,
+                                barLat: String(bar?.latitude ?? ''),
+                                barLng: String(bar?.longitude ?? ''),
+                                competitionName: match.competition_name,
+                              },
+                            } as any)
+                          }
+                          activeOpacity={0.7}
+                        >
+                          <AppText style={styles.claimScarfEmoji}>🧣</AppText>
+                          <AppText variant="caption" color={colors.status.boost} maxScale={1.0}>
+                            Reclamar bufanda
+                          </AppText>
+                        </TouchableOpacity>
+                      );
+                    })()}
+
                     {isOwner && (
                       <TouchableOpacity
                         style={styles.deleteMatchButton}
@@ -809,6 +853,8 @@ export default function BarProfileScreen() {
             city,
             phone,
             website,
+            latitude,
+            longitude,
             bar_images(image_url, image_order),
             bar_categories(id, name),
             bar_food_types(food_type_id, food_types(name)),
@@ -850,6 +896,8 @@ export default function BarProfileScreen() {
           city: barData.city,
           phone: barData.phone,
           website: barData.website,
+          latitude: (barData as any).latitude,
+          longitude: (barData as any).longitude,
           images: (barData as any).bar_images
             ?.sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))
             .map((img: any) => img.image_url) || [],
@@ -1919,6 +1967,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  claimScarfButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,215,0,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.25)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    alignSelf: 'center',
+    gap: 6,
+  },
+  claimScarfEmoji: {
+    fontSize: 14,
   },
   deleteMatchButton: {
     flexDirection: 'row',

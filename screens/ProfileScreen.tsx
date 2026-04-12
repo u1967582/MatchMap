@@ -569,6 +569,29 @@ export default function ProfileScreen() {
         {/* Plan section removed: all users are PRO now */}
 
 
+        {/* Mi Colección de Bufandas */}
+        <View style={styles.section}>
+          <AppText variant="title" style={styles.sectionTitleSpacing}>Mi Colección</AppText>
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => router.push('/scarves' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.adminButtonIcon, { backgroundColor: 'rgba(255,215,0,0.12)' }]}>
+              <AppText style={{ fontSize: 22 }}>🧣</AppText>
+            </View>
+            <View style={styles.adminButtonContent}>
+              <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                Bufandas de LaLiga
+              </AppText>
+              <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                Colecciona bufandas yendo a ver partidos
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+          </TouchableOpacity>
+        </View>
+
         {/* Account Settings Section */}
         <View style={styles.section}>
           <AppText variant="title" style={styles.sectionTitleSpacing}>Configuración de Cuenta</AppText>

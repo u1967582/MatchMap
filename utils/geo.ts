@@ -45,6 +45,19 @@ export function roundCoordinate(value: number, decimals: number = 3): number {
 }
 
 /**
+ * Calculate distance in meters between two lat/lng pairs (Haversine).
+ * Used for proximity validation (e.g. 500m radius check).
+ */
+export function haversineDistanceMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  return haversineDistance({ lat: lat1, lng: lon1 }, { lat: lat2, lng: lon2 }) * 1000;
+}
+
+/**
  * Create a deterministic key from coordinates for stable random selection
  */
 export function coordsToKey(coords: LatLng, decimals: number = 3): string {
