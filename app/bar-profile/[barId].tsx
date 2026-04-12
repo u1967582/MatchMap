@@ -753,15 +753,23 @@ export default function BarProfileScreen() {
                       {match.competition_name}
                     </AppText>
                     
-                    {/* Botón reclamar bufanda — solo LaLiga; admins siempre, usuarios solo hoy */}
-                    {!isOwner && (() => {
-                      const isLaLiga =
-                        match.competition_name?.toLowerCase().includes('primera') ||
-                        match.competition_name?.toLowerCase().includes('laliga') ||
-                        match.competition_name?.toLowerCase().includes('la liga');
-                      const today = new Date().toISOString().split('T')[0];
-                      const isToday = match.date === today;
-                      if (!isLaLiga || (!isToday && !isSuperAdmin)) return null;
+                    {/* Botón reclamar bufanda:
+                        - Admin: visible en cualquier partido (sin restricciones, para testing)
+                        - Usuario normal: solo LaLiga, solo hoy, solo si no es owner */}
+                    {(() => {
+                      console.log('🧣 [match]', match.id, '| competition:', match.competition_name, '| date:', match.date, '| isSuperAdmin:', isSuperAdmin, '| isOwner:', isOwner);
+                      if (isSuperAdmin) {
+                        // Admin: sin restricciones
+                      } else {
+                        if (isOwner) return null;
+                        const isLaLiga =
+                          match.competition_name?.toLowerCase().includes('primera') ||
+                          match.competition_name?.toLowerCase().includes('laliga') ||
+                          match.competition_name?.toLowerCase().includes('la liga');
+                        const today = new Date().toISOString().split('T')[0];
+                        const isToday = match.date === today;
+                        if (!isLaLiga || !isToday) return null;
+                      }
                       return (
                         <TouchableOpacity
                           style={styles.claimScarfButton}
@@ -923,8 +931,10 @@ export default function BarProfileScreen() {
           : { data: null, error: null };
 
         const ownerCheck = !!(authUser && ownerResult.data && (ownerResult.data as any).bar_id === barData.id);
+        const superAdminCheck = !!(ownerResult.data as any)?.is_super_user;
         setIsOwner(ownerCheck);
-        setIsSuperAdmin(!!(ownerResult.data as any)?.is_super_user);
+        setIsSuperAdmin(superAdminCheck);
+        console.log('🧣 [BarProfile] isOwner:', ownerCheck, '| isSuperAdmin:', superAdminCheck, '| matches:', upcomingMatches.length);
 
         await Promise.all([
           fetchBarPosts(barData.id, authUser, ownerCheck),
