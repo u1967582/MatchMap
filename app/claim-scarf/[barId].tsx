@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Text,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -358,51 +359,53 @@ export default function ClaimScarfScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.successContent}>
 
-          {/* Emoji + títulos */}
-          <AppText style={styles.successEmoji}>🎉</AppText>
+        {/* Bloque superior: celebración */}
+        <View style={styles.successTop}>
+          <Text style={styles.successEmoji}>🎉</Text>
           <AppText variant="h2" align="center" style={styles.successTitle}>
             ¡Bufandas conseguidas!
           </AppText>
-          <AppText variant="body" color={colors.text.secondary} align="center" style={styles.successSubtitle}>
+          <AppText variant="body" color={colors.text.secondary} align="center">
             Has añadido 2 bufandas a tu colección
           </AppText>
+        </View>
 
-          {/* Escudos */}
-          <View style={styles.successTeams}>
-            <View style={styles.successTeamItem}>
-              <View style={styles.successLogoWrapper}>
-                <Image
-                  source={{ uri: homeLogoUrl }}
-                  style={styles.successLogo}
-                  resizeMode="contain"
-                  defaultSource={require('~/assets/icon.png')}
-                />
-              </View>
-              <AppText variant="caption" align="center" maxScale={1.0} numberOfLines={2} style={styles.successTeamName}>
-                {params.homeTeamName}
-              </AppText>
+        {/* Card de equipos */}
+        <View style={styles.successTeamsCard}>
+          <View style={styles.successTeamItem}>
+            <View style={styles.successLogoWrapper}>
+              <Image
+                source={{ uri: homeLogoUrl }}
+                style={styles.successLogo}
+                resizeMode="contain"
+                defaultSource={require('~/assets/icon.png')}
+              />
             </View>
-
-            <AppText variant="title" color={colors.text.muted} style={styles.successPlus}>+</AppText>
-
-            <View style={styles.successTeamItem}>
-              <View style={styles.successLogoWrapper}>
-                <Image
-                  source={{ uri: awayLogoUrl }}
-                  style={styles.successLogo}
-                  resizeMode="contain"
-                  defaultSource={require('~/assets/icon.png')}
-                />
-              </View>
-              <AppText variant="caption" align="center" maxScale={1.0} numberOfLines={2} style={styles.successTeamName}>
-                {params.awayTeamName}
-              </AppText>
-            </View>
+            <AppText variant="label" align="center" maxScale={1.0} numberOfLines={2} style={styles.successTeamName}>
+              {params.homeTeamName}
+            </AppText>
           </View>
 
-          {/* Rareza */}
+          <AppText variant="h2" color={colors.text.muted} style={styles.successPlus}>+</AppText>
+
+          <View style={styles.successTeamItem}>
+            <View style={styles.successLogoWrapper}>
+              <Image
+                source={{ uri: awayLogoUrl }}
+                style={styles.successLogo}
+                resizeMode="contain"
+                defaultSource={require('~/assets/icon.png')}
+              />
+            </View>
+            <AppText variant="label" align="center" maxScale={1.0} numberOfLines={2} style={styles.successTeamName}>
+              {params.awayTeamName}
+            </AppText>
+          </View>
+        </View>
+
+        {/* Rareza */}
+        <View style={styles.successMeta}>
           <View style={[styles.rarityPill, { borderColor: rarityColor, backgroundColor: `${rarityColor}18` }]}>
             <AppText variant="label" color={rarityColor} maxScale={1.0}>{rarityLabel}</AppText>
             {claimResult && claimResult.claim_count > 1 && (
@@ -412,7 +415,7 @@ export default function ClaimScarfScreen() {
             )}
           </View>
 
-          {/* Validaciones como chips en fila */}
+          {/* Validaciones */}
           <View style={styles.validationRow}>
             {locationVerified !== null && (
               <View style={[styles.validationChip, locationVerified ? styles.chipGreen : styles.chipOrange]}>
@@ -421,11 +424,7 @@ export default function ClaimScarfScreen() {
                   size={13}
                   color={locationVerified ? colors.status.success : colors.status.warning}
                 />
-                <AppText
-                  variant="caption"
-                  color={locationVerified ? colors.status.success : colors.status.warning}
-                  maxScale={1.0}
-                >
+                <AppText variant="caption" color={locationVerified ? colors.status.success : colors.status.warning} maxScale={1.0}>
                   Ubicación
                 </AppText>
               </View>
@@ -437,39 +436,33 @@ export default function ClaimScarfScreen() {
                   size={13}
                   color={matchDayVerified ? colors.status.success : colors.status.warning}
                 />
-                <AppText
-                  variant="caption"
-                  color={matchDayVerified ? colors.status.success : colors.status.warning}
-                  maxScale={1.0}
-                >
+                <AppText variant="caption" color={matchDayVerified ? colors.status.success : colors.status.warning} maxScale={1.0}>
                   Partido
                 </AppText>
               </View>
             )}
             <View style={[styles.validationChip, styles.chipGray]}>
               <Ionicons name="camera-outline" size={13} color={colors.text.muted} />
-              <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>
-                Ticket
-              </AppText>
+              <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>Ticket</AppText>
             </View>
           </View>
-
-          {/* CTA */}
-          <View style={styles.successCta}>
-            <AppButton
-              text="Ver mi colección"
-              onPress={() => router.replace('/scarves' as any)}
-              variant="primary"
-              fullWidth
-            />
-            <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
-              <AppText variant="caption" color={colors.text.secondary}>
-                Volver al bar
-              </AppText>
-            </TouchableOpacity>
-          </View>
-
         </View>
+
+        {/* CTA — fijado al fondo */}
+        <View style={styles.successCta}>
+          <AppButton
+            text="Ver mi colección"
+            onPress={() => router.replace('/scarves' as any)}
+            variant="primary"
+            fullWidth
+          />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+            <AppText variant="caption" color={colors.text.secondary}>
+              Volver al bar
+            </AppText>
+          </TouchableOpacity>
+        </View>
+
       </SafeAreaView>
     );
   }
@@ -897,53 +890,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.lg,
   },
-  // Success
-  successContent: {
-    flex: 1,
+  // ─── Success ────────────────────────────────────────────────────────────────
+  successTop: {
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxxl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
   },
   successEmoji: {
-    fontSize: 56,
-    marginBottom: spacing.lg,
-  },
-  successTitle: {
+    fontSize: 64,
+    textAlign: 'center',
     marginBottom: spacing.xs,
   },
-  successSubtitle: {
-    marginBottom: spacing.xxl,
+  successTitle: {
+    marginBottom: 0,
   },
-  successTeams: {
+  // Card con los dos equipos
+  successTeamsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xl,
-    width: '100%',
+    marginHorizontal: spacing.xl,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.xxl,
+    padding: spacing.xl,
+    ...shadows.sm,
   },
   successTeamItem: {
     flex: 1,
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   successLogoWrapper: {
-    width: 80,
-    height: 80,
+    width: 88,
+    height: 88,
     borderRadius: radius.round,
-    backgroundColor: colors.bg.card,
+    backgroundColor: colors.bg.elevated,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.sm,
   },
   successLogo: {
-    width: 60,
-    height: 60,
+    width: 64,
+    height: 64,
   },
   successTeamName: {
-    maxWidth: 100,
+    maxWidth: 110,
   },
   successPlus: {
     paddingHorizontal: spacing.md,
+    opacity: 0.4,
+  },
+  // Rareza + validaciones
+  successMeta: {
+    alignItems: 'center',
+    paddingTop: spacing.xl,
+    gap: spacing.md,
+    flex: 1,
   },
   rarityPill: {
     flexDirection: 'row',
@@ -951,15 +956,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderWidth: 1,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm,
-    marginBottom: spacing.xl,
   },
   // Validaciones compactas en fila
   validationRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.xxl,
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
@@ -980,8 +983,10 @@ const styles = StyleSheet.create({
   chipGray: {
     backgroundColor: colors.bg.element,
   },
+  // CTA fijado al fondo
   successCta: {
-    width: '100%',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? 8 : spacing.xl,
     gap: spacing.xs,
     alignItems: 'center',
   },
