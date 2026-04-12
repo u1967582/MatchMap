@@ -206,7 +206,7 @@ export default function ClaimScarfScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: false,
       quality: 0.75,
     });
