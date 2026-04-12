@@ -32,27 +32,6 @@ interface ClaimResult {
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
-// ─── Componente de validación badge ─────────────────────────────────────────
-
-interface ValidationBadgeProps {
-  verified: boolean | null;
-  label: string;
-}
-
-function ValidationBadge({ verified, label }: ValidationBadgeProps) {
-  if (verified === null) return null;
-  const color = verified ? colors.status.success : colors.status.warning;
-  const icon = verified ? 'checkmark-circle' : 'alert-circle';
-  return (
-    <View style={[styles.validationBadge, { backgroundColor: verified ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)' }]}>
-      <Ionicons name={icon} size={14} color={color} />
-      <AppText variant="caption" color={color} maxScale={1.0}>
-        {label}
-      </AppText>
-    </View>
-  );
-}
-
 // ─── Pantalla principal ───────────────────────────────────────────────────────
 
 export default function ClaimScarfScreen() {
@@ -80,6 +59,7 @@ export default function ClaimScarfScreen() {
   const [locationVerified, setLocationVerified] = useState<boolean | null>(null);
   const [matchDayVerified, setMatchDayVerified] = useState<boolean | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [peopleCount, setPeopleCount] = useState(1);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -298,6 +278,7 @@ export default function ClaimScarfScreen() {
         _location_lng: locLng,
         _match_day_verified: matchDayOk,
         _match_time_verified: matchTimeOk,
+        _people_count: peopleCount,
       };
 
       const [homeResult, awayResult] = await Promise.all([
@@ -610,21 +591,76 @@ export default function ClaimScarfScreen() {
           {ticketUri ? (
             <View>
               <Image source={{ uri: ticketUri }} style={styles.ticketPreview} resizeMode="cover" />
-              <TouchableOpacity style={styles.changeTicketButton} onPress={handleSelectTicket}>
-                <Ionicons name="refresh-outline" size={14} color={colors.brand.link} />
-                <AppText variant="caption" color={colors.brand.link} maxScale={1.0}>
+              {/* Cambiar foto - estilo acción */}
+              <TouchableOpacity style={styles.actionRow} onPress={handleSelectTicket} activeOpacity={0.7}>
+                <View style={styles.actionIcon}>
+                  <Ionicons name="refresh-outline" size={18} color={colors.text.secondary} />
+                </View>
+                <AppText variant="body" color={colors.text.primary} style={styles.actionText}>
                   Cambiar foto
                 </AppText>
+                <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity style={styles.uploadPlaceholder} onPress={handleSelectTicket} activeOpacity={0.7}>
-              <Ionicons name="camera-outline" size={32} color={colors.text.muted} />
-              <AppText variant="body" color={colors.text.muted} style={{ marginTop: spacing.sm }}>
-                Toca para subir foto
-              </AppText>
+            /* Subir foto - estilo acción */
+            <TouchableOpacity style={styles.actionRow} onPress={handleSelectTicket} activeOpacity={0.7}>
+              <View style={styles.actionIcon}>
+                <Ionicons name="camera-outline" size={18} color={colors.text.secondary} />
+              </View>
+              <View style={styles.actionContent}>
+                <AppText variant="body" color={colors.text.primary} style={styles.actionText}>
+                  Subir foto del ticket
+                </AppText>
+                <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>
+                  Galería o cámara
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* Número de personas */}
+        <View style={styles.peopleSection}>
+          <AppText variant="subtitle" style={styles.ticketTitle}>
+            👥 ¿Cuántas personas sois?
+          </AppText>
+          <AppText variant="body" color={colors.text.secondary} style={styles.ticketSubtitle}>
+            Incluye a todos los que estáis viendo el partido
+          </AppText>
+          <View style={styles.stepper}>
+            <TouchableOpacity
+              style={[styles.stepperBtn, peopleCount <= 1 && styles.stepperBtnDisabled]}
+              onPress={() => {
+                if (peopleCount > 1) {
+                  setPeopleCount(c => c - 1);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="remove" size={20} color={peopleCount <= 1 ? colors.text.muted : colors.text.primary} />
+            </TouchableOpacity>
+            <View style={styles.stepperCount}>
+              <AppText variant="h2" align="center" maxScale={1.0}>{peopleCount}</AppText>
+              <AppText variant="caption" color={colors.text.muted} align="center" maxScale={1.0}>
+                {peopleCount === 1 ? 'persona' : 'personas'}
+              </AppText>
+            </View>
+            <TouchableOpacity
+              style={[styles.stepperBtn, peopleCount >= 20 && styles.stepperBtnDisabled]}
+              onPress={() => {
+                if (peopleCount < 20) {
+                  setPeopleCount(c => c + 1);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={20} color={peopleCount >= 20 ? colors.text.muted : colors.text.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Info de verificación */}
@@ -759,29 +795,72 @@ const styles = StyleSheet.create({
   ticketSubtitle: {
     marginBottom: spacing.lg,
   },
-  uploadPlaceholder: {
-    backgroundColor: colors.bg.element,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    borderStyle: 'dashed',
-    height: 160,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   ticketPreview: {
     width: '100%',
     height: 200,
     borderRadius: radius.xl,
     backgroundColor: colors.bg.element,
+    marginBottom: spacing.sm,
   },
-  changeTicketButton: {
+  // Botones estilo "acción de bar" (sin colorines)
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    gap: spacing.md,
+  },
+  actionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bg.card,
     justifyContent: 'center',
-    marginTop: spacing.sm,
-    paddingVertical: spacing.xs,
+    alignItems: 'center',
+  },
+  actionContent: {
+    flex: 1,
+    gap: 2,
+  },
+  actionText: {
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  // Contador de personas
+  peopleSection: {
+    marginBottom: spacing.lg,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg.elevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    overflow: 'hidden',
+  },
+  stepperBtn: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperBtnDisabled: {
+    opacity: 0.35,
+  },
+  stepperCount: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: spacing.sm,
   },
   // Info box
   infoBox: {
