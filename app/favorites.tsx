@@ -1,484 +1,699 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  TouchableOpacity,
-  Image,
-  FlatList,
-  Alert,
   ScrollView,
+  Image,
+  Animated,
   Platform,
-  TextInput,
+  Pressable,
+  RefreshControl,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, Stack } from 'expo-router';
-import * as Location from 'expo-location';
+import { Stack } from 'expo-router';
+import Reanimated, {
+  useSharedValue,
+  withSpring,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
 import BottomTabBar from '~/components/ui/BottomTabBar';
-import { useFavoritesStore } from '~/stores/favoritesStore';
+import { useCountdown } from '~/hooks/useCountdown';
+import type { CountdownTime } from '~/hooks/useCountdown';
+import { useWorldCupData } from '~/hooks/useWorldCupData';
+import type { WorldCupMatch, WorldCupTeam } from '~/hooks/useWorldCupData';
 import {
   AppText,
-  AppCard,
-  AppChip,
+  SkeletonBox,
   EmptyState,
-  SkeletonCard,
-  toast,
   colors,
   spacing,
   radius,
+  springs,
 } from '~/components/ds';
 
-interface FavoriteBar {
-  id: string;
-  name: string;
-  description?: string;
-  address: string;
-  city: string;
-  image_url?: string;
-  latitude?: number;
-  longitude?: number;
-  rating?: number;
-  review_count?: number;
+// ── Constantes ───────────────────────────────────────────────
+const WC_GOLD = '#FFD700';
+const WC_GOLD_DIM = 'rgba(255,215,0,0.12)';
+const WC_GOLD_BORDER = 'rgba(255,215,0,0.22)';
+const MUNDIAL_START = '2026-06-11T00:00:00Z';
+const MUNDIAL_LOGO = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo-teams/mundial-2026.png`;
+
+const KNOCKOUT_ORDER = [
+  'Round of 32',
+  'Round of 16',
+  'Quarter-finals',
+  'Semi-finals',
+  '3rd Place Final',
+  'Final',
+];
+
+// Estructura de respaldo cuando group_name no está poblado en la BD
+const GROUP_TEAMS: Record<string, string[]> = {
+  'Grupo A': ['Corea del Sur', 'México', 'República Checa', 'Sudáfrica'],
+  'Grupo B': ['Bosnia y Herzegovina', 'Canadá', 'Catar', 'Suiza'],
+  'Grupo C': ['Brasil', 'Escocia', 'Haití', 'Marruecos'],
+  'Grupo D': ['Australia', 'Estados Unidos', 'Paraguay', 'Turquía'],
+  'Grupo E': ['Alemania', 'Costa de Marfil', 'Curazao', 'Ecuador'],
+  'Grupo F': ['Japón', 'Países Bajos', 'Suecia', 'Túnez'],
+  'Grupo G': ['Bélgica', 'Egipto', 'Irán', 'Nueva Zelanda'],
+  'Grupo H': ['Arabia Saudí', 'Cabo Verde', 'España', 'Uruguay'],
+  'Grupo I': ['Francia', 'Iraq', 'Noruega', 'Senegal'],
+  'Grupo J': ['Argelia', 'Argentina', 'Austria', 'Jordania'],
+  'Grupo K': ['Colombia', 'Portugal', 'RD Congo', 'Uzbekistán'],
+  'Grupo L': ['Croacia', 'Ghana', 'Inglaterra', 'Panamá'],
+};
+
+type TabKey = 'matches' | 'groups' | 'bracket';
+
+interface GroupStanding {
+  team: WorldCupTeam;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  points: number;
 }
 
-// Component for individual favorite bar card
-interface FavoriteBarCardProps {
-  bar: FavoriteBar;
-  userLocation: Location.LocationObject | null;
-  onPress: (barId: string) => void;
-  onRemove: (barId: string, barName: string) => void;
-  onViewOnMap: (bar: FavoriteBar) => void;
-  innerRef?: React.RefObject<any>;
+// ── Helpers ──────────────────────────────────────────────────
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T12:00:00');
+  const formatted = date.toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap, innerRef }: FavoriteBarCardProps) {
-  // Calculate distance if user location is available
-  let distance: number | null = null;
-  if (userLocation && userLocation.coords && bar.latitude && bar.longitude) {
-    const R = 6371; // Earth's radius in kilometers
-    const lat1 = userLocation.coords.latitude;
-    const lon1 = userLocation.coords.longitude;
-    const lat2 = bar.latitude;
-    const lon2 = bar.longitude;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    distance = R * c;
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function buildAllGroupStandings(
+  allMatches: WorldCupMatch[]
+): Array<{ groupName: string; standings: GroupStanding[] }> {
+  // Mapa nombre normalizado → logo_url para enriquecer el fallback
+  const logoByName = new Map<string, string | null>();
+  for (const m of allMatches) {
+    logoByName.set(m.home_team.name.toLowerCase().trim(), m.home_team.logo_url);
+    logoByName.set(m.away_team.name.toLowerCase().trim(), m.away_team.logo_url);
   }
 
+  // Intentar construir desde group_name real de la BD
+  const groupsMap = new Map<string, Map<string, GroupStanding>>();
+  for (const match of allMatches) {
+    const gName = match.group_name;
+    if (!gName) continue;
+
+    if (!groupsMap.has(gName)) groupsMap.set(gName, new Map());
+    const group = groupsMap.get(gName)!;
+
+    for (const team of [match.home_team, match.away_team] as WorldCupTeam[]) {
+      if (!group.has(team.id)) {
+        group.set(team.id, { team, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0 });
+      }
+    }
+
+    if (match.status !== 'finished' || match.home_score === null || match.away_score === null) continue;
+
+    const home = group.get(match.home_team.id)!;
+    const away = group.get(match.away_team.id)!;
+
+    home.played++; away.played++;
+    home.gf += match.home_score; home.ga += match.away_score;
+    away.gf += match.away_score; away.ga += match.home_score;
+    home.gd = home.gf - home.ga;
+    away.gd = away.gf - away.ga;
+
+    if (match.home_score > match.away_score) {
+      home.won++; home.points += 3; away.lost++;
+    } else if (match.home_score < match.away_score) {
+      away.won++; away.points += 3; home.lost++;
+    } else {
+      home.drawn++; home.points++;
+      away.drawn++; away.points++;
+    }
+  }
+
+  if (groupsMap.size > 0) {
+    return Array.from(groupsMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([groupName, teamsMap]) => ({
+        groupName,
+        standings: Array.from(teamsMap.values()).sort(
+          (a, b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf
+        ),
+      }));
+  }
+
+  // Fallback: estructura hardcodeada con logos obtenidos de los partidos disponibles
+  return Object.entries(GROUP_TEAMS).map(([groupName, teamNames]) => ({
+    groupName,
+    standings: teamNames.map(name => ({
+      team: {
+        id: name,
+        name,
+        logo_url: logoByName.get(name.toLowerCase().trim()) ?? null,
+      },
+      played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0,
+    })),
+  }));
+}
+
+// ── Sub-componentes ──────────────────────────────────────────
+function CountdownBox({ value, label }: { value: number; label: string }) {
   return (
-    <AppCard ref={innerRef} style={styles.barCard}>
-      <TouchableOpacity
-        style={styles.imageContainer}
-        onPress={() => onPress(bar.id)}
-        activeOpacity={0.9}
-      >
-        <Image
-          source={{
-            uri: bar.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar'
-          }}
-          style={styles.barImage}
-        />
-      </TouchableOpacity>
-
-      <View style={styles.barInfo}>
-        <View style={styles.barHeader}>
-          <View style={styles.barTextContainer}>
-            <AppText variant="subtitle" style={styles.barNameSpacing}>{bar.name}</AppText>
-            {bar.description && (
-              <AppText variant="body" color={colors.text.secondary} style={styles.barDescriptionSpacing}>
-                {bar.description}
-              </AppText>
-            )}
-            {/* Address Row */}
-            <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={14} color={colors.text.muted} />
-              <AppText variant="caption" color={colors.text.secondary} style={styles.addressText}>
-                {bar.address}, {bar.city}
-              </AppText>
-            </View>
-
-            {/* Rating and Distance Info */}
-            <View style={styles.barDetails}>
-              {typeof bar.rating === 'number' && (
-                <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={14} color={colors.status.boost} />
-                  <AppText variant="caption" color={colors.status.boost} style={styles.ratingTextSpacing}>
-                    {bar.rating.toFixed(1)}
-                  </AppText>
-                  {typeof bar.review_count === 'number' && (
-                    <AppText variant="caption" color={colors.text.muted} style={styles.reviewCountSpacing}>
-                      ({bar.review_count} reseñas)
-                    </AppText>
-                  )}
-                </View>
-              )}
-
-              {distance !== null && (
-                <View style={styles.distanceContainer}>
-                  <Ionicons name="location-outline" size={14} color={colors.status.success} />
-                  <AppText variant="caption" color={colors.status.success} style={styles.distanceTextSpacing}>
-                    {distance.toFixed(1)} km
-                  </AppText>
-                </View>
-              )}
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={() => onRemove(bar.id, bar.name)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="trash-outline" size={20} color={colors.status.destructive} />
-          </TouchableOpacity>
-        </View>
-
-        {/* View on Map Button */}
-        <TouchableOpacity
-          style={styles.viewOnMapButton}
-          onPress={() => onViewOnMap(bar)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="map-outline" size={13} color={colors.brand.link} />
-          <AppText variant="caption" color={colors.brand.link}>Ver en el Mapa</AppText>
-        </TouchableOpacity>
+    <View style={styles.countdownBox}>
+      <View style={styles.countdownValueBox}>
+        <AppText style={styles.countdownValue}>{pad2(value)}</AppText>
       </View>
-    </AppCard>
+      <AppText style={styles.countdownLabel}>{label}</AppText>
+    </View>
   );
 }
 
-export default function FavoritesScreen() {
-  const router = useRouter();
+function CountdownSep() {
+  return <AppText style={styles.countdownSep}>:</AppText>;
+}
 
-  // Store de favoritos (con actualizaciones automáticas)
-  const getFavoriteBars = useFavoritesStore(state => state.getFavoriteBars);
-  const removeFavorite = useFavoritesStore(state => state.removeFavorite);
-  const favorites = useFavoritesStore(state => state.favorites);
+function TeamLogo({ logoUrl, size }: { logoUrl: string | null; size: number }) {
+  const [imgError, setImgError] = useState(false);
 
-  const [favoriteBars, setFavoriteBars] = useState<FavoriteBar[]>([]);
-  const [filteredBars, setFilteredBars] = useState<FavoriteBar[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchVisible, setSearchVisible] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'recommended' | 'nearby' | 'top_rated'>('recommended');
-
-  // Get user location
-  const getUserLocation = useCallback(async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('📍 Location permission denied');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      setUserLocation(location);
-      console.log('📍 User location obtained:', location.coords);
-    } catch (error) {
-      console.error('❌ Error getting user location:', error);
-    }
-  }, []);
-
-  // Calculate distance between two points
-  const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // Distance in kilometers
-  }, []);
-
-  // Load favorite bars
-  const loadFavoriteBars = useCallback(async () => {
-    setLoading(true);
-    try {
-      const bars = await getFavoriteBars();
-      setFavoriteBars(bars as unknown as FavoriteBar[]);
-      setFilteredBars(bars as unknown as FavoriteBar[]);
-    } catch (error) {
-      console.error('❌ Error loading favorite bars:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [getFavoriteBars]);
-
-  // Filter bars based on search text
-  const filterBars = useCallback((text: string) => {
-    if (!text.trim()) {
-      setFilteredBars(favoriteBars);
-      return;
-    }
-    
-    const filtered = favoriteBars.filter(bar => 
-      bar.name.toLowerCase().includes(text.toLowerCase())
-    );
-    setFilteredBars(filtered);
-  }, [favoriteBars]);
-
-  // Handle search text change
-  const handleSearchTextChange = useCallback((text: string) => {
-    setSearchText(text);
-  }, []);
-
-  // Toggle search visibility
-  const toggleSearch = useCallback(() => {
-    setSearchVisible(!searchVisible);
-    if (searchVisible) {
-      setSearchText('');
-    }
-  }, [searchVisible]);
-
-  // Load favorites and user location on mount
-  useEffect(() => {
-    loadFavoriteBars();
-    getUserLocation();
-  }, [loadFavoriteBars, getUserLocation]);
-
-  // Reload favorites when favorites store changes (auto-update)
-  useEffect(() => {
-    loadFavoriteBars();
-  }, [favorites, loadFavoriteBars]);
-
-  // Handle bar press
-  const handleBarPress = useCallback((barId: string) => {
-    router.push(`/bar-profile/${barId}` as any);
-  }, [router]);
-
-  // Handle remove from favorites
-  const handleRemoveFromFavorites = useCallback(async (barId: string, barName: string) => {
-    Alert.alert(
-      'Eliminar de favoritos',
-      `¿Estás seguro de que quieres eliminar "${barName}" de tus favoritos?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            const success = await removeFavorite(barId);
-            if (success) {
-              console.log('🗑️ Removed from favorites:', barName);
-              toast.success('Eliminado de favoritos');
-              // La lista se actualizará automáticamente por el efecto que escucha `favorites`
-            } else {
-              toast.error('No se pudo eliminar de favoritos');
-            }
-          },
-        },
-      ]
-    );
-  }, [removeFavorite]);
-
-  // Apply filters and sorting
-  const applyFilters = useCallback(() => {
-    let currentBars = [...favoriteBars];
-
-    // Apply search filter first
-    if (searchText.trim()) {
-      const lowerCaseSearchText = searchText.toLowerCase();
-      currentBars = currentBars.filter(bar =>
-        bar.name.toLowerCase().includes(lowerCaseSearchText)
-      );
-    }
-
-    // Apply active filter/sort
-    switch (activeFilter) {
-      case 'recommended':
-        // For now, 'recommended' just means no specific sorting beyond search
-        // In a real app, this would involve a recommendation algorithm
-        break;
-      case 'nearby':
-        if (userLocation && userLocation.coords) {
-          // Sort by distance (closest first)
-          currentBars.sort((a, b) => {
-            if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) {
-              return 0; // Keep original order if location data is missing
-            }
-            
-            const distanceA = calculateDistance(
-              userLocation.coords.latitude,
-              userLocation.coords.longitude,
-              a.latitude,
-              a.longitude
-            );
-            const distanceB = calculateDistance(
-              userLocation.coords.latitude,
-              userLocation.coords.longitude,
-              b.latitude,
-              b.longitude
-            );
-            
-            return distanceA - distanceB; // Ascending order (closest first)
-          });
-        } else {
-          console.log('📍 Cannot sort by nearby - no user location available');
-        }
-        break;
-      case 'top_rated':
-        // Sort by rating (descending - highest first)
-        currentBars.sort((a, b) => {
-          const ratingA = a.rating || 0;
-          const ratingB = b.rating || 0;
-          return ratingB - ratingA; // Descending order (highest first)
-        });
-        break;
-      default:
-        break;
-    }
-
-    setFilteredBars(currentBars);
-  }, [favoriteBars, searchText, activeFilter, userLocation, calculateDistance]);
-
-  // Apply filters when dependencies change
-  useEffect(() => {
-    applyFilters();
-  }, [favoriteBars, searchText, activeFilter, userLocation, applyFilters]);
-
-  // Handle view on map
-  const handleViewOnMap = useCallback((bar: FavoriteBar) => {
-    router.push({
-      pathname: '/(protected)/map',
-      params: {
-        selectedBarId: bar.id,
-        selectedBarLat: bar.latitude,
-        selectedBarLng: bar.longitude,
-        selectedBarName: bar.name,
-      },
-    });
-  }, [router]);
-
-  // Render favorite bar card
-  const renderFavoriteBar = useCallback(({ item }: { item: FavoriteBar }) => {
+  if (!logoUrl || imgError) {
     return (
-      <FavoriteBarCard
-        bar={item}
-        userLocation={userLocation}
-        onPress={handleBarPress}
-        onRemove={handleRemoveFromFavorites}
-        onViewOnMap={handleViewOnMap}
+      <View style={[styles.teamLogoFallback, { width: size, height: size, borderRadius: size / 2 }]}>
+        <Ionicons name="football-outline" size={size * 0.45} color={colors.text.muted} />
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: logoUrl }}
+      style={{ width: size, height: size, resizeMode: 'contain' }}
+      onError={() => setImgError(true)}
+    />
+  );
+}
+
+function LiveBadge() {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.25, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.View style={[styles.liveBadge, { opacity }]}>
+      <AppText style={styles.liveText}>EN VIVO</AppText>
+    </Animated.View>
+  );
+}
+
+const MatchCard = memo(function MatchCard({ match }: { match: WorldCupMatch }) {
+  const isLive = match.status === 'live';
+  const isFinished = match.status === 'finished';
+  const hasScore = isFinished || isLive;
+
+  const localTime = new Date(match.datetime_utc).toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return (
+    <View style={styles.matchCard}>
+      <View style={styles.matchTeamsRow}>
+        {/* Equipo local */}
+        <View style={styles.matchTeam}>
+          <TeamLogo logoUrl={match.home_team.logo_url} size={44} />
+          <AppText variant="caption" align="center" style={styles.teamName} numberOfLines={2}>
+            {match.home_team.name}
+          </AppText>
+        </View>
+
+        {/* Centro: marcador o hora */}
+        <View style={styles.matchCenter}>
+          {hasScore ? (
+            <View style={styles.scoreContainer}>
+              <AppText style={styles.scoreText}>
+                {match.home_score} - {match.away_score}
+              </AppText>
+              {isLive && <LiveBadge />}
+            </View>
+          ) : (
+            <AppText style={styles.matchTime}>{localTime}</AppText>
+          )}
+          {match.stadium && (
+            <View style={styles.stadiumRow}>
+              <Ionicons name="location-outline" size={10} color={colors.text.muted} />
+              <AppText style={styles.stadiumText} numberOfLines={1}>{match.stadium}</AppText>
+            </View>
+          )}
+        </View>
+
+        {/* Equipo visitante */}
+        <View style={styles.matchTeam}>
+          <TeamLogo logoUrl={match.away_team.logo_url} size={44} />
+          <AppText variant="caption" align="center" style={styles.teamName} numberOfLines={2}>
+            {match.away_team.name}
+          </AppText>
+        </View>
+      </View>
+    </View>
+  );
+});
+
+function WorldCupHeader({ countdown }: { countdown: CountdownTime }) {
+  const trophyScale = useSharedValue(0.3);
+
+  useEffect(() => {
+    trophyScale.value = withSpring(1, springs.bouncy);
+  }, [trophyScale]);
+
+  const trophyStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: trophyScale.value }],
+  }));
+
+  return (
+    <LinearGradient
+      colors={['rgba(255,215,0,0.20)', 'rgba(255,215,0,0.08)', 'transparent']}
+      style={styles.headerGradient}
+    >
+      {/* Estrellas decorativas */}
+      <View style={styles.starsRow}>
+        {['★', '★', '★', '★', '★'].map((s, i) => (
+          <AppText key={i} style={styles.decorStar}>{s}</AppText>
+        ))}
+      </View>
+
+      <View style={styles.headerContent}>
+        <Reanimated.View style={[styles.logoRing, trophyStyle]}>
+          <Image
+            source={{ uri: MUNDIAL_LOGO }}
+            style={styles.mundialLogo}
+            resizeMode="contain"
+          />
+        </Reanimated.View>
+
+        <AppText style={styles.mundialTitle}>MUNDIAL 2026</AppText>
+        <AppText variant="caption" color={colors.text.muted} align="center" style={styles.hostText}>
+          Estados Unidos · México · Canadá
+        </AppText>
+
+        <View style={styles.countdownWrapper}>
+          {countdown.expired ? (
+            <View style={styles.startedRow}>
+              <AppText style={styles.startedText}>¡El torneo ha comenzado! 🎉</AppText>
+            </View>
+          ) : (
+            <View style={styles.countdownRow}>
+              <CountdownBox value={countdown.days} label="DÍAS" />
+              <CountdownSep />
+              <CountdownBox value={countdown.hours} label="HORAS" />
+              <CountdownSep />
+              <CountdownBox value={countdown.minutes} label="MIN" />
+              <CountdownSep />
+              <CountdownBox value={countdown.seconds} label="SEG" />
+            </View>
+          )}
+        </View>
+      </View>
+    </LinearGradient>
+  );
+}
+
+// ── Tabs de contenido ────────────────────────────────────────
+function MatchesTab({
+  sortedDates,
+  matchesByDate,
+  loading,
+  refreshing,
+  onRefresh,
+  onScrollY,
+}: {
+  sortedDates: string[];
+  matchesByDate: Record<string, WorldCupMatch[]>;
+  loading: boolean;
+  refreshing: boolean;
+  onRefresh: () => void;
+  onScrollY: (y: number) => void;
+}) {
+  if (loading) {
+    return (
+      <View style={styles.tabPad}>
+        <SkeletonBox width="100%" height={90} style={styles.skeletonGap} />
+        <SkeletonBox width="100%" height={90} style={styles.skeletonGap} />
+        <SkeletonBox width="100%" height={90} style={styles.skeletonGap} />
+      </View>
+    );
+  }
+
+  if (sortedDates.length === 0) {
+    return (
+      <EmptyState
+        icon="football-outline"
+        title="Sin partidos del Mundial"
+        subtitle="Los partidos del Mundial 2026 aparecerán aquí cuando estén disponibles"
       />
     );
-  }, [handleBarPress, handleRemoveFromFavorites, handleViewOnMap, userLocation]);
+  }
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.matchListContent}
+      scrollEventThrottle={16}
+      onScroll={(e) => onScrollY(e.nativeEvent.contentOffset.y)}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={WC_GOLD}
+          colors={[WC_GOLD]}
+        />
+      }
+    >
+      {sortedDates.map(date => (
+        <View key={date}>
+          <View style={styles.dateSectionHeader}>
+            <View style={styles.dateLine} />
+            <AppText style={styles.dateSectionText}>{formatDate(date)}</AppText>
+            <View style={styles.dateLine} />
+          </View>
+          {matchesByDate[date].map(match => (
+            <MatchCard key={match.id} match={match} />
+          ))}
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+const POS_COLORS = ['#2E7D32', '#388E3C', '#546E7A', '#C62828'] as const;
+const POS_BG = ['rgba(46,125,50,0.15)', 'rgba(56,142,60,0.10)', 'transparent', 'rgba(198,40,40,0.10)'] as const;
+const STAT_COLS = ['Pts', 'PJ', 'PG', 'PE', 'PP', 'GF', 'GC', 'DG'] as const;
+
+function GroupTable({ groupName, standings }: { groupName: string; standings: GroupStanding[] }) {
+  return (
+    <View style={styles.groupCard}>
+      <View style={styles.groupHeader}>
+        <AppText style={styles.groupHeaderText}>{groupName}</AppText>
+      </View>
+
+      {/* Cabecera de columnas */}
+      <View style={styles.standingRow}>
+        <View style={styles.standingTeamCol} />
+        {STAT_COLS.map(col => (
+          <AppText key={col} style={[styles.standingColHeader, styles.standingStatCol]}>{col}</AppText>
+        ))}
+      </View>
+
+      {standings.map((s, idx) => {
+        const posColor = POS_COLORS[Math.min(idx, 3)];
+        const rowBg = POS_BG[Math.min(idx, 3)];
+        const stats = [s.points, s.played, s.won, s.drawn, s.lost, s.gf, s.ga, s.gd];
+        return (
+          <View
+            key={s.team.id}
+            style={[
+              styles.standingRow,
+              { backgroundColor: rowBg },
+              idx === standings.length - 1 && styles.standingRowLast,
+            ]}
+          >
+            <View style={styles.standingTeamCol}>
+              <View style={[styles.posBadge, { backgroundColor: posColor }]}>
+                <AppText style={styles.posBadgeText}>{idx + 1}</AppText>
+              </View>
+              <TeamLogo logoUrl={s.team.logo_url} size={20} />
+              <AppText style={styles.standingTeamName} numberOfLines={1}>{s.team.name}</AppText>
+            </View>
+            {stats.map((val, i) => (
+              <AppText
+                key={i}
+                style={[styles.standingStatCol, i === 0 && styles.standingPtsText]}
+              >
+                {i === 7 && val > 0 ? `+${val}` : val}
+              </AppText>
+            ))}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function GroupsTab({ matches, loading, onScrollY }: { matches: WorldCupMatch[]; loading: boolean; onScrollY: (y: number) => void }) {
+  const groupStandings = useMemo(() => buildAllGroupStandings(matches), [matches]);
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.header}>
-          <AppText variant="title">Favoritos</AppText>
-          <View style={{ width: 24 }} />
-        </View>
-        <View style={styles.content}>
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </View>
-        <BottomTabBar />
-      </SafeAreaView>
+      <View style={styles.tabPad}>
+        <SkeletonBox width="100%" height={200} style={styles.skeletonGap} />
+        <SkeletonBox width="100%" height={200} style={styles.skeletonGap} />
+      </View>
     );
   }
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.groupsContent}
+      scrollEventThrottle={16}
+      onScroll={(e) => onScrollY(e.nativeEvent.contentOffset.y)}
+    >
+      {groupStandings.map(({ groupName, standings }) => (
+        <GroupTable key={groupName} groupName={groupName} standings={standings} />
+      ))}
+    </ScrollView>
+  );
+}
+
+function BracketTab({
+  knockoutMatches,
+  loading,
+  onScrollY,
+}: {
+  knockoutMatches: WorldCupMatch[];
+  loading: boolean;
+  onScrollY: (y: number) => void;
+}) {
+  const roundsMap = useMemo(() => {
+    const map: Record<string, WorldCupMatch[]> = {};
+    for (const match of knockoutMatches) {
+      const round = match.round_name ?? 'Eliminatorias';
+      if (!map[round]) map[round] = [];
+      map[round].push(match);
+    }
+    return map;
+  }, [knockoutMatches]);
+
+  const sortedRounds = useMemo(() =>
+    KNOCKOUT_ORDER.filter(r => roundsMap[r]).concat(
+      Object.keys(roundsMap).filter(r => !KNOCKOUT_ORDER.includes(r))
+    ),
+    [roundsMap]
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.tabPad}>
+        <SkeletonBox width="100%" height={120} style={styles.skeletonGap} />
+        <SkeletonBox width="100%" height={120} style={styles.skeletonGap} />
+      </View>
+    );
+  }
+
+  if (sortedRounds.length === 0) {
+    return (
+      <EmptyState
+        icon="git-branch-outline"
+        title="Cuadro por confirmar"
+        subtitle="El cuadro eliminatorio se irá completando a medida que avanza el torneo"
+      />
+    );
+  }
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.bracketContent}
+      scrollEventThrottle={16}
+      onScroll={(e) => onScrollY(e.nativeEvent.contentOffset.y)}
+    >
+      {sortedRounds.map(round => (
+        <View key={round}>
+          <View style={styles.bracketRoundHeader}>
+            <View style={styles.bracketRoundLine} />
+            <AppText style={styles.bracketRoundTitle}>{round}</AppText>
+            <View style={styles.bracketRoundLine} />
+          </View>
+          {roundsMap[round].map(match => (
+            <MatchCard key={match.id} match={match} />
+          ))}
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+// ── Tab Button ───────────────────────────────────────────────
+function TabButton({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Reanimated.View style={animStyle}>
+      <Pressable
+        style={[styles.tabBtn, selected && styles.tabBtnSelected]}
+        onPressIn={() => { scale.value = withSpring(0.95, springs.press); }}
+        onPressOut={() => { scale.value = withSpring(1, springs.press); }}
+        onPress={() => { Haptics.selectionAsync(); onPress(); }}
+      >
+        <AppText style={[styles.tabBtnLabel, selected && styles.tabBtnLabelSelected]}>
+          {label}
+        </AppText>
+      </Pressable>
+    </Reanimated.View>
+  );
+}
+
+// ── Pantalla principal ───────────────────────────────────────
+export default function WorldCupHubScreen() {
+  const [activeTab, setActiveTab] = useState<TabKey>('matches');
+  const [refreshing, setRefreshing] = useState(false);
+  const countdown = useCountdown(MUNDIAL_START);
+  const { matches, loading, refetch } = useWorldCupData();
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
+  // Animación de entrada + colapso al scroll (useNativeDriver:false para maxHeight)
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const lastScrollY = useRef(0);
+  const isCollapsed = useRef(false);
+
+  // Entrada al montar
+  useEffect(() => {
+    Animated.timing(headerAnim, { toValue: 1, duration: 350, useNativeDriver: false }).start();
+  }, [headerAnim]);
+
+  // Al cambiar de tab, restaurar header
+  useEffect(() => {
+    lastScrollY.current = 0;
+    if (isCollapsed.current) {
+      isCollapsed.current = false;
+      Animated.timing(headerAnim, { toValue: 1, duration: 220, useNativeDriver: false }).start();
+    }
+  }, [activeTab, headerAnim]);
+
+  const onContentScroll = useCallback((y: number) => {
+    const prev = lastScrollY.current;
+    lastScrollY.current = y;
+    if (y < 10 && isCollapsed.current) {
+      isCollapsed.current = false;
+      Animated.timing(headerAnim, { toValue: 1, duration: 220, useNativeDriver: false }).start();
+      return;
+    }
+    if (y - prev > 4 && !isCollapsed.current) {
+      isCollapsed.current = true;
+      Animated.timing(headerAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+    } else if (prev - y > 4 && isCollapsed.current) {
+      isCollapsed.current = false;
+      Animated.timing(headerAnim, { toValue: 1, duration: 220, useNativeDriver: false }).start();
+    }
+  }, [headerAnim]);
+
+  // Derivaciones de datos según tab
+  const matchesByDate = useMemo(() => {
+    const groups: Record<string, WorldCupMatch[]> = {};
+    for (const m of matches) {
+      if (!groups[m.date]) groups[m.date] = [];
+      groups[m.date].push(m);
+    }
+    return groups;
+  }, [matches]);
+
+  const sortedDates = useMemo(() => Object.keys(matchesByDate).sort(), [matchesByDate]);
+
+  const knockoutMatches = useMemo(
+    () => matches.filter(m => m.round_name && !m.round_name.toLowerCase().includes('group')),
+    [matches]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <AppText variant="title">Favoritos</AppText>
-        <TouchableOpacity style={styles.searchButton} onPress={toggleSearch} activeOpacity={0.7}>
-          <Ionicons name="search" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-      </View>
+      {/* Header colapsable al hacer scroll */}
+      <Animated.View
+        style={{
+          opacity: headerAnim,
+          maxHeight: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 400] }),
+          overflow: 'hidden',
+        }}
+      >
+        <WorldCupHeader countdown={countdown} />
+      </Animated.View>
 
-      {/* Search Bar */}
-      {searchVisible && (
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputWrapper}>
-            <Ionicons name="search" size={20} color={colors.text.muted} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar bares..."
-              placeholderTextColor={colors.text.muted}
-              value={searchText}
-              onChangeText={handleSearchTextChange}
-              autoFocus={true}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={20} color={colors.text.muted} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      )}
-
-      {/* Sort Options */}
-      <View style={styles.sortContainer}>
+      {/* Selector de tabs — siempre visible */}
+      <View style={styles.tabSelectorWrapper}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.sortScrollContent}
+          contentContainerStyle={styles.tabSelectorContent}
         >
-          <AppChip
-            label="Recomendados"
-            selected={activeFilter === 'recommended'}
-            onPress={() => setActiveFilter('recommended')}
+          <TabButton
+            label="Partidos"
+            selected={activeTab === 'matches'}
+            onPress={() => setActiveTab('matches')}
           />
-          <AppChip
-            label="Cercanos"
-            selected={activeFilter === 'nearby'}
-            onPress={() => setActiveFilter('nearby')}
+          <TabButton
+            label="Grupos"
+            selected={activeTab === 'groups'}
+            onPress={() => setActiveTab('groups')}
           />
-          <AppChip
-            label="Mejor valorado"
-            selected={activeFilter === 'top_rated'}
-            onPress={() => setActiveFilter('top_rated')}
+          <TabButton
+            label="Cuadro"
+            selected={activeTab === 'bracket'}
+            onPress={() => setActiveTab('bracket')}
           />
         </ScrollView>
       </View>
 
-      {/* Favorite Bars List */}
-      <View style={styles.content}>
-        {filteredBars.length > 0 ? (
-          <FlatList
-            data={filteredBars}
-            renderItem={renderFavoriteBar}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.barsList}
+      {/* Contenido del tab activo */}
+      <View style={styles.tabContent}>
+        {activeTab === 'matches' && (
+          <MatchesTab
+            sortedDates={sortedDates}
+            matchesByDate={matchesByDate}
+            loading={loading}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            onScrollY={onContentScroll}
           />
-        ) : (
-          <View style={styles.emptyContainer}>
-            {searchText.length > 0 ? (
-              <EmptyState
-                icon="search-outline"
-                title="No se encontraron resultados"
-                subtitle={`No hay bares favoritos que coincidan con "${searchText}"`}
-                actionLabel="Limpiar búsqueda"
-                onAction={() => handleSearchTextChange('')}
-              />
-            ) : (
-              <EmptyState
-                icon="heart-outline"
-                title="No tienes favoritos"
-                subtitle="Explora bares y añádelos a tus favoritos para verlos aquí"
-                actionLabel="Explorar Bares"
-                onAction={() => router.push('/search' as any)}
-              />
-            )}
-          </View>
+        )}
+        {activeTab === 'groups' && (
+          <GroupsTab matches={matches} loading={loading} onScrollY={onContentScroll} />
+        )}
+        {activeTab === 'bracket' && (
+          <BracketTab knockoutMatches={knockoutMatches} loading={loading} onScrollY={onContentScroll} />
         )}
       </View>
 
@@ -487,143 +702,379 @@ export default function FavoritesScreen() {
   );
 }
 
+// ── Estilos ──────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg.primary,
   },
-  header: {
+
+  // Header
+  headerGradient: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: WC_GOLD_BORDER,
+  },
+  starsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    opacity: 0.4,
+  },
+  decorStar: {
+    fontSize: 10,
+    color: WC_GOLD,
+  },
+  headerContent: {
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
+    gap: spacing.md,
   },
-  searchButton: {
-    padding: spacing.xs,
-  },
-  searchContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  searchInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bg.element,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 50,
-  },
-  searchIcon: {
-    marginRight: spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.text.primary,
-    paddingVertical: 0,
-  },
-  clearButton: {
-    marginLeft: spacing.sm,
-    padding: spacing.xs,
-  },
-  sortContainer: {
-    paddingBottom: spacing.lg,
-  },
-  sortScrollContent: {
-    paddingHorizontal: spacing.xl,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-  },
-  emptyContainer: {
-    flex: 1,
-  },
-  barsList: {
-    paddingBottom: Platform.OS === 'ios' ? 100 : 80,
-  },
-  barCard: {
-    marginBottom: spacing.lg,
-  },
-  imageContainer: {
-    width: '100%',
-    height: 200,
-  },
-  barImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  barInfo: {
-    padding: spacing.lg,
-  },
-  barHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  barTextContainer: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  barNameSpacing: {
-    marginBottom: spacing.xs,
-  },
-  barDescriptionSpacing: {
-    marginBottom: spacing.xs,
-  },
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  addressText: {
-    flex: 1,
-  },
-  barDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    flexWrap: 'wrap',
-    gap: spacing.lg,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingTextSpacing: {
-    marginLeft: spacing.xs,
-  },
-  reviewCountSpacing: {
-    marginLeft: spacing.xs,
-  },
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  distanceTextSpacing: {
-    marginLeft: spacing.xs,
-  },
-  removeButton: {
-    padding: spacing.sm,
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
-    borderRadius: radius.md,
-  },
-  viewOnMapButton: {
-    flexDirection: 'row',
+  logoRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: WC_GOLD_BORDER,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.alpha.brandLight,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.alpha.brandBorder,
-    marginTop: spacing.xs,
-    alignSelf: 'flex-start',
+    shadowColor: WC_GOLD,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
-}); 
+  mundialLogo: {
+    width: 88,
+    height: 88,
+  },
+  hostText: {
+    letterSpacing: 0.3,
+  },
+  mundialTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: WC_GOLD,
+    letterSpacing: 3,
+    textAlign: 'center',
+  },
+
+  // Countdown
+  countdownWrapper: {
+    marginTop: spacing.sm,
+  },
+  countdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  countdownBox: {
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  countdownValueBox: {
+    backgroundColor: 'rgba(255,215,0,0.15)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,215,0,0.35)',
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minWidth: 58,
+    alignItems: 'center',
+    shadowColor: WC_GOLD,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  countdownValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: WC_GOLD,
+    fontVariant: ['tabular-nums'],
+  },
+  countdownLabel: {
+    fontSize: 9,
+    color: colors.text.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontWeight: '600',
+  },
+  countdownSep: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: WC_GOLD,
+    opacity: 0.4,
+    marginBottom: spacing.lg,
+  },
+  startedRow: {
+    paddingVertical: spacing.xs,
+  },
+  startedText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: WC_GOLD,
+    textAlign: 'center',
+  },
+
+  // Tab selector
+  tabSelectorWrapper: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.bg.elevated,
+  },
+  tabSelectorContent: {
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+
+  // Tab button
+  tabBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.round,
+    backgroundColor: colors.bg.elevated,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  tabBtnSelected: {
+    backgroundColor: WC_GOLD_DIM,
+    borderColor: WC_GOLD_BORDER,
+  },
+  tabBtnLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text.secondary,
+  },
+  tabBtnLabelSelected: {
+    color: WC_GOLD,
+    fontWeight: '700',
+  },
+
+  // Tab content
+  tabContent: {
+    flex: 1,
+  },
+  tabPad: {
+    padding: spacing.xl,
+  },
+  skeletonGap: {
+    marginBottom: spacing.md,
+    borderRadius: radius.md,
+  },
+
+  // Match list
+  matchListContent: {
+    padding: spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? 110 : 90,
+  },
+  dateSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+  },
+  dateLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.bg.elevated,
+  },
+  dateSectionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: WC_GOLD,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+
+  // Match card
+  matchCard: {
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.lg,
+    marginBottom: spacing.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.bg.elevated,
+  },
+  matchTeamsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  matchTeam: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  teamName: {
+    fontSize: 11,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+  matchCenter: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    gap: spacing.xxs,
+  },
+  scoreContainer: {
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  scoreText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text.primary,
+    fontVariant: ['tabular-nums'],
+  },
+  matchTime: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.secondary,
+    fontVariant: ['tabular-nums'],
+  },
+  stadiumRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: spacing.xxs,
+  },
+  stadiumText: {
+    fontSize: 10,
+    color: colors.text.muted,
+    maxWidth: 120,
+  },
+
+  // Team logo fallback
+  teamLogoFallback: {
+    backgroundColor: colors.bg.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Live badge
+  liveBadge: {
+    backgroundColor: colors.status.success,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  liveText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+
+  // Groups
+  groupsContent: {
+    padding: spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? 110 : 90,
+    gap: spacing.lg,
+  },
+  groupCard: {
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.bg.elevated,
+  },
+  groupHeader: {
+    backgroundColor: WC_GOLD_DIM,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: WC_GOLD_BORDER,
+  },
+  groupHeaderText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: WC_GOLD,
+    letterSpacing: 0.5,
+  },
+  standingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.bg.elevated,
+  },
+  standingRowLast: {
+    borderBottomWidth: 0,
+  },
+  standingTeamCol: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minWidth: 0,
+  },
+  posBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  posBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    lineHeight: 12,
+  },
+  standingTeamName: {
+    fontSize: 11,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  standingStatCol: {
+    width: 24,
+    fontSize: 11,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
+  standingColHeader: {
+    fontSize: 10,
+    color: colors.text.muted,
+    fontWeight: '600',
+    textAlign: 'center',
+    width: 24,
+  },
+  standingPtsText: {
+    color: WC_GOLD,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+
+  // Bracket
+  bracketContent: {
+    padding: spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? 110 : 90,
+  },
+  bracketRoundHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+  },
+  bracketRoundLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.bg.elevated,
+  },
+  bracketRoundTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.brand.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+});
