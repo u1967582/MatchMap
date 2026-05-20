@@ -595,9 +595,27 @@ export default function ProfileScreen() {
         {/* Plan section removed: all users are PRO now */}
 
 
-        {/* Mi Colección de Bufandas */}
+        {/* Mi Colección */}
         <View style={styles.section}>
           <AppText variant="title" style={styles.sectionTitleSpacing}>Mi Colección</AppText>
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => router.push('/my-favorites' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.adminButtonIcon, { backgroundColor: 'rgba(255,107,107,0.12)' }]}>
+              <Ionicons name="heart" size={24} color={colors.status.destructive} />
+            </View>
+            <View style={styles.adminButtonContent}>
+              <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                Mis Bares Favoritos
+              </AppText>
+              <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                Bares que guardaste para volver
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.adminButton}
             onPress={() => router.push('/scarves' as any)}

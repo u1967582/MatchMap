@@ -24,6 +24,7 @@ function getCompetitionLogoFilename(compName: string): string | null {
 	if (nameLower.includes('liga f') || (nameLower.includes('primera') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))) return 'ligaf.png';
 	if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) return 'primera-division-ea.png';
 	if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) return 'segunda-division-hypermotion.png';
+	if (nameLower.includes('mundial')) return 'mundial-2026.png';
 	return null;
 }
 

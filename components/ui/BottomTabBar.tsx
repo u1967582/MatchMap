@@ -14,7 +14,7 @@ interface TabItem {
 const tabs: TabItem[] = [
   { icon: 'home-outline', label: 'Inicio', route: '/(protected)/map' },
   { icon: 'search-outline', label: 'Buscar', route: '/search' },
-  { icon: 'heart-outline', label: 'Favoritos', route: '/favorites' },
+  { icon: 'trophy-outline', label: 'Mundial', route: '/favorites' },
   { icon: 'person-outline', label: 'Perfil', route: '/profile' },
 ];
 

@@ -70,10 +70,10 @@ async function apiFetch(path: string) {
 }
 
 // ── Sincronizar equipos de una liga ─────────────────────────
-async function syncTeams(leagueId: number, gender: string): Promise<number> {
-  console.log(`[teams] league=${leagueId} gender=${gender}`)
+async function syncTeams(leagueId: number, gender: string, season: string): Promise<number> {
+  console.log(`[teams] league=${leagueId} gender=${gender} season=${season}`)
 
-  const response = await apiFetch(`/teams?league=${leagueId}&season=${SEASON}`)
+  const response = await apiFetch(`/teams?league=${leagueId}&season=${season}`)
 
   if (!response?.length) {
     console.warn(`[teams] No results for league ${leagueId}`)
@@ -113,11 +113,13 @@ async function syncTeams(leagueId: number, gender: string): Promise<number> {
 async function syncFixtures(
   leagueId: number,
   competitionUUID: string,
-  competitionName: string
+  competitionName: string,
+  season: string,
+  isYearOnly: boolean = false
 ): Promise<{ synced: number; skipped: number }> {
-  console.log(`[fixtures] league=${leagueId}`)
+  console.log(`[fixtures] league=${leagueId} season=${season}`)
 
-  const response = await apiFetch(`/fixtures?league=${leagueId}&season=${SEASON}`)
+  const response = await apiFetch(`/fixtures?league=${leagueId}&season=${season}`)
 
   if (!response?.length) {
     console.warn(`[fixtures] No results for league ${leagueId}`)
@@ -182,8 +184,10 @@ async function syncFixtures(
         {
           competition_id:           competitionUUID,
           old_competition:          competitionName,
-          season:                   `${SEASON}/${parseInt(SEASON) + 1}`,
+          season:                   isYearOnly ? season : `${season}/${parseInt(season) + 1}`,
           matchday:                 matchday,
+          round_name:               roundStr || null,
+          group_name:               (league.group as string | undefined) ?? null,
           date:                     dateStr,
           time:                     timeStr,
           datetime_utc:             fixture.date,          // timestamptz
@@ -214,16 +218,34 @@ async function syncFixtures(
 }
 
 // ── Handler principal ────────────────────────────────────────
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
   try {
     console.log('=== sync-football START ===')
 
+    // Parámetro opcional: ?leagueId=1 (URL) o body { leagueId: 1 } (cliente)
+    const url = new URL(req.url)
+    const leagueIdParam = url.searchParams.get('leagueId')
+    let leagueIdFilter: number | null = leagueIdParam ? parseInt(leagueIdParam) : null
+
+    if (leagueIdFilter === null) {
+      try {
+        const body = await req.json()
+        if (body?.leagueId) leagueIdFilter = parseInt(String(body.leagueId))
+      } catch { /* body vacío o no-JSON */ }
+    }
+
     // Obtener solo las competiciones que tienen api_football_id asignado
     // (las que configuraste en el PASO 2)
-    const { data: competitions, error: compError } = await supabase
+    let query = supabase
       .from('competitions')
-      .select('id, name, gender, api_football_id')
+      .select('id, name, gender, scope, api_football_id, api_football_season')
       .not('api_football_id', 'is', null)
+
+    if (leagueIdFilter !== null) {
+      query = query.eq('api_football_id', leagueIdFilter)
+    }
+
+    const { data: competitions, error: compError } = await query
 
     if (compError) {
       throw new Error(`Error fetching competitions: ${compError.message}`)
@@ -246,17 +268,22 @@ Deno.serve(async (_req) => {
       const gender = comp.gender === 'female' ? 'female' : 'male'
 
       try {
+        const season = comp.api_football_season?.toString() ?? SEASON
+
         // 1. Primero los equipos (fixtures dependen de que existan)
-        const teamsCount = await syncTeams(comp.api_football_id, gender)
+        const teamsCount = await syncTeams(comp.api_football_id, gender, season)
 
         // Pausa corta para no golpear la API
         await new Promise((r) => setTimeout(r, 600))
 
         // 2. Luego los partidos
+        const isYearOnly = comp.scope === 'world'
         const { synced, skipped } = await syncFixtures(
           comp.api_football_id,
           comp.id,
-          comp.name
+          comp.name,
+          season,
+          isYearOnly
         )
 
         results.push({
