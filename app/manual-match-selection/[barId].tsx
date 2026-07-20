@@ -16,6 +16,7 @@ import { supabase } from '~/utils/supabase';
 import CustomCalendar from '~/components/ui/CustomCalendar';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
 import { type Capabilities, CAP_BY_TIER, type Tier } from '~/lib/planCapabilities';
+import { checkEventLimit } from '~/lib/matchSelectionLimits';
 import { toast, AppText } from '~/components/ds';
 
 interface Team {
@@ -58,7 +59,6 @@ function getCompetitionLogoFilename(compName: string): string | null {
   if (nameLower.includes('liga f') || (nameLower.includes('primera') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))) return 'ligaf.png';
   if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) return 'primera-division-ea.png';
   if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) return 'segunda-division-hypermotion.png';
-  if (nameLower.includes('mundial')) return 'mundial-2026.png';
 
   return null;
 }
@@ -242,22 +242,27 @@ export default function ManualMatchSelectionScreen() {
     setSaving(true);
     try {
       // Enforce events_limit per bar plan
-      const maxEvents = capabilities.events_limit === 'unlimited' ? Infinity : capabilities.events_limit;
-      if (maxEvents !== Infinity) {
+      if (capabilities.events_limit !== 'unlimited') {
         const { count } = await supabase
           .from('events')
           .select('id', { count: 'exact', head: true })
           .eq('bar_id', barId)
           .gte('start_time', new Date().toISOString());
-        if (typeof count === 'number' && count + selectedMatches.length > maxEvents) {
-          const remaining = Math.max(0, (maxEvents as number) - count);
-          // Usar Alert aquí porque es un límite del plan (importante)
-          Alert.alert(
-            'Límite de eventos alcanzado',
-            `Tu plan ${planTier} permite máximo ${maxEvents} eventos. ${remaining === 0 ? 'No puedes añadir más eventos.' : `Solo puedes añadir ${remaining} más.`}`
-          );
-          setSaving(false);
-          return;
+        if (typeof count === 'number') {
+          const limitCheck = checkEventLimit({
+            capabilities,
+            currentCount: count,
+            selectedCount: selectedMatches.length,
+          });
+          if (limitCheck.exceeds) {
+            // Usar Alert aquí porque es un límite del plan (importante)
+            Alert.alert(
+              'Límite de eventos alcanzado',
+              `Tu plan ${planTier} permite máximo ${limitCheck.maxEvents} eventos. ${limitCheck.remaining === 0 ? 'No puedes añadir más eventos.' : `Solo puedes añadir ${limitCheck.remaining} más.`}`
+            );
+            setSaving(false);
+            return;
+          }
         }
       }
 

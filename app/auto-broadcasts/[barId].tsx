@@ -6,14 +6,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import { toast } from '~/components/ds';
+import { buildBroadcastPreferencesPayload, teamSelectionKey as teamKey } from '~/lib/broadcastPreferences';
 
 type Competition = { id: number | string; name: string; gender?: string | null };
 type Team = { id: string; name: string; short_name?: string | null; logo_url?: string | null };
-
-// Clau per identificar un equip dins una competició: "teamId|competitionId"
-function teamKey(teamId: string, compId: string | number): string {
-	return `${teamId}|${String(compId)}`;
-}
 
 function getCompetitionLogoFilename(compName: string): string | null {
 	const nameLower = compName.toLowerCase();
@@ -24,7 +20,6 @@ function getCompetitionLogoFilename(compName: string): string | null {
 	if (nameLower.includes('liga f') || (nameLower.includes('primera') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))) return 'ligaf.png';
 	if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) return 'primera-division-ea.png';
 	if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) return 'segunda-division-hypermotion.png';
-	if (nameLower.includes('mundial')) return 'mundial-2026.png';
 	return null;
 }
 
@@ -216,15 +211,10 @@ export default function AutoBroadcastsScreen() {
 			setSaving(true);
 			const bar = String(barId);
 
-			const competition_ids = Object.entries(selectedCompetitions).filter(([, v]) => v).map(([k]) => k);
-
-			// Descompondre les claus "teamId|competitionId" en dos arrays paral·lels
-			const teamPairs = Array.from(selectedTeams).map(key => {
-				const [tid, cid] = key.split('|');
-				return { team_id: tid, competition_id: cid };
-			});
-			const team_ids             = teamPairs.map(p => p.team_id);
-			const team_competition_ids = teamPairs.map(p => p.competition_id);
+			const { competition_ids, team_ids, team_competition_ids } = buildBroadcastPreferencesPayload(
+				selectedCompetitions,
+				selectedTeams
+			);
 
 			const rpcFunction = isSuperAdmin ? 'fn_sync_bar_preferences_admin' : 'fn_sync_bar_preferences';
 			console.log(`[AutoBroadcasts] Using RPC: ${rpcFunction}`, { bar, competition_ids, team_ids, team_competition_ids });

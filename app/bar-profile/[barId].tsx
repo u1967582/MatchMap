@@ -77,8 +77,6 @@ export default function BarProfileScreen() {
   const [posts, setPosts] = useState<BarPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [claimedMatchIds, setClaimedMatchIds] = useState<Set<string>>(new Set());
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
@@ -754,58 +752,6 @@ export default function BarProfileScreen() {
                       {match.competition_name}
                     </AppText>
                     
-                    {/* Botón reclamar bufanda:
-                        - Admin: visible en cualquier partido (sin restricciones, para testing)
-                        - Usuario normal: solo LaLiga, solo hoy, solo si no es owner */}
-                    {(() => {
-                      console.log('🧣 [match]', match.id, '| competition:', match.competition_name, '| date:', match.date, '| isSuperAdmin:', isSuperAdmin, '| isOwner:', isOwner);
-                      if (isSuperAdmin) {
-                        // Admin: sin restricciones de competición, fecha ni repetición
-                      } else {
-                        if (isOwner) return null;
-                        const isLaLiga =
-                          match.competition_name?.toLowerCase().includes('primera') ||
-                          match.competition_name?.toLowerCase().includes('laliga') ||
-                          match.competition_name?.toLowerCase().includes('la liga');
-                        const today = new Date().toISOString().split('T')[0];
-                        const isToday = match.date === today;
-                        if (!isLaLiga || !isToday) return null;
-                        // Ocultar si ya se reclamó este partido
-                        if (match.id && claimedMatchIds.has(match.id)) return null;
-                      }
-                      return (
-                        <TouchableOpacity
-                          style={styles.claimScarfButton}
-                          onPress={() =>
-                            router.push({
-                              pathname: '/claim-scarf/[barId]',
-                              params: {
-                                barId,
-                                matchId: match.id,
-                                homeTeamId: match.home_team_id,
-                                awayTeamId: match.away_team_id,
-                                homeTeamName: match.home_team_name,
-                                awayTeamName: match.away_team_name,
-                                homeLogoUrl: match.home_team_logo_url ?? '',
-                                awayLogoUrl: match.away_team_logo_url ?? '',
-                                matchDate: match.date,
-                                matchTime: match.time,
-                                barLat: String(bar?.latitude ?? ''),
-                                barLng: String(bar?.longitude ?? ''),
-                                competitionName: match.competition_name,
-                              },
-                            } as any)
-                          }
-                          activeOpacity={0.7}
-                        >
-                          <AppText style={styles.claimScarfEmoji}>🧣</AppText>
-                          <AppText variant="caption" color={colors.status.boost} maxScale={1.0}>
-                            Reclamar bufanda
-                          </AppText>
-                        </TouchableOpacity>
-                      );
-                    })()}
-
                     {isOwner && (
                       <TouchableOpacity
                         style={styles.deleteMatchButton}
@@ -934,19 +880,7 @@ export default function BarProfileScreen() {
           : { data: null, error: null };
 
         const ownerCheck = !!(authUser && ownerResult.data && (ownerResult.data as any).bar_id === barData.id);
-        const superAdminCheck = !!(ownerResult.data as any)?.is_super_user;
         setIsOwner(ownerCheck);
-        setIsSuperAdmin(superAdminCheck);
-
-        // Cargar partidos ya reclamados por el usuario (solo si no es admin)
-        if (authUser && !superAdminCheck) {
-          const { data: claimed } = await supabase
-            .from('ticket_claims')
-            .select('match_id')
-            .eq('user_id', authUser.id)
-            .not('match_id', 'is', null);
-          setClaimedMatchIds(new Set((claimed ?? []).map((c: any) => c.match_id)));
-        }
 
         await Promise.all([
           fetchBarPosts(barData.id, authUser, ownerCheck),
@@ -1991,23 +1925,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     fontStyle: 'italic',
-  },
-  claimScarfButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,215,0,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.25)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginTop: 8,
-    alignSelf: 'center',
-    gap: 6,
-  },
-  claimScarfEmoji: {
-    fontSize: 14,
   },
   deleteMatchButton: {
     flexDirection: 'row',

@@ -14,7 +14,7 @@ interface TabItem {
 const tabs: TabItem[] = [
   { icon: 'home-outline', label: 'Inicio', route: '/(protected)/map' },
   { icon: 'search-outline', label: 'Buscar', route: '/search' },
-  { icon: 'trophy-outline', label: 'Mundial', route: '/favorites' },
+  { icon: 'heart-outline', label: 'Favoritos', route: '/my-favorites' },
   { icon: 'person-outline', label: 'Perfil', route: '/profile' },
 ];
 
@@ -27,7 +27,7 @@ const BottomTabBar = () => {
   const tabAnimations = useRef<Record<string, Animated.Value>>({
     '/(protected)/map': new Animated.Value(1),
     '/search': new Animated.Value(1),
-    '/favorites': new Animated.Value(1),
+    '/my-favorites': new Animated.Value(1),
     '/profile': new Animated.Value(1),
   }).current;
 

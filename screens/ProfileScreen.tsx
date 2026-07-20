@@ -447,32 +447,6 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <AppText variant="title" style={styles.sectionTitleSpacing}>Super Usuario</AppText>
 
-            {/* Bufandas */}
-            <View style={styles.adminCategory}>
-              <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
-                Bufandas
-              </AppText>
-
-              <TouchableOpacity
-                style={styles.adminButton}
-                onPress={() => router.push('/admin-ticket-claims' as any)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.adminButtonIcon, { backgroundColor: 'rgba(255,215,0,0.12)' }]}>
-                  <AppText style={{ fontSize: 20 }}>🧣</AppText>
-                </View>
-                <View style={styles.adminButtonContent}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
-                    Revisar Tickets
-                  </AppText>
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
-                    Aprobar o rechazar tickets de reclamación de bufandas
-                  </AppText>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
-              </TouchableOpacity>
-            </View>
-
             {/* Gestión de Bares */}
             <View style={styles.adminCategory}>
               <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
@@ -612,24 +586,6 @@ export default function ProfileScreen() {
               </AppText>
               <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
                 Bares que guardaste para volver
-              </AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.adminButton}
-            onPress={() => router.push('/scarves' as any)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.adminButtonIcon, { backgroundColor: 'rgba(255,215,0,0.12)' }]}>
-              <AppText style={{ fontSize: 22 }}>🧣</AppText>
-            </View>
-            <View style={styles.adminButtonContent}>
-              <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
-                Bufandas de LaLiga
-              </AppText>
-              <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
-                Colecciona bufandas yendo a ver partidos
               </AppText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
