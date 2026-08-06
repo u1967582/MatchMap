@@ -10,7 +10,7 @@ import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
-import Paywall from '~/components/revenuecat/Paywall';
+import BoostPaywallSheet from '~/components/boost/BoostPaywallSheet';
 import { useBarBoost } from '~/hooks/useBoostBars';
 import { AppText, colors, spacing, radius, BarProfileSkeleton, toast } from '~/components/ds';
 import { useFavoritesStore } from '~/stores/favoritesStore';
@@ -1406,12 +1406,15 @@ export default function BarProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
-      <Paywall
-        visible={paywallVisible}
-        onClose={() => setPaywallVisible(false)}
-        onPurchaseComplete={refreshBoost}
-        barId={barId}
-      />
+      {user && barId && (
+        <BoostPaywallSheet
+          isVisible={paywallVisible}
+          onClose={() => setPaywallVisible(false)}
+          onPurchaseComplete={refreshBoost}
+          barId={barId}
+          userId={user.id}
+        />
+      )}
 
       <BottomTabBar />
     </SafeAreaView>

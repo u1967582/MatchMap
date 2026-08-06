@@ -1,5 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar, Platform, Linking } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { requireOptionalNativeModule } from 'expo-modules-core';
@@ -227,24 +228,26 @@ export default function Layout() {
   };
 
   return (
-    <SafeAreaProvider>
-      <AdsProvider>
-        <RevenueCatProvider>
-          <BoostSelectionProvider>
-            <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                presentation: 'card',
-                animation: 'slide_from_right',
-                gestureEnabled: true,
-                contentStyle: { backgroundColor: '#1C2A3A' },
-              }}
-            />
-          </BoostSelectionProvider>
-        </RevenueCatProvider>
-      </AdsProvider>
-      <ToastRoot config={toastConfig} position="top" topOffset={60} />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AdsProvider>
+          <RevenueCatProvider>
+            <BoostSelectionProvider>
+              <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  presentation: 'card',
+                  animation: 'slide_from_right',
+                  gestureEnabled: true,
+                  contentStyle: { backgroundColor: '#1C2A3A' },
+                }}
+              />
+            </BoostSelectionProvider>
+          </RevenueCatProvider>
+        </AdsProvider>
+        <ToastRoot config={toastConfig} position="top" topOffset={60} />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
