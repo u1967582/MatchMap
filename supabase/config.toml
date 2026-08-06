@@ -8,3 +8,12 @@ entrypoint = "./functions/sync-football/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/sync-football/*.html" ]
+
+[functions.revenuecat-webhook]
+enabled = true
+# RevenueCat envía su propio secreto compartido en el header Authorization,
+# no un JWT de Supabase. Si verify_jwt=true, la plataforma rechaza la
+# petición con 401 antes de que el código de la función pueda validar
+# REVENUECAT_WEBHOOK_SECRET.
+verify_jwt = false
+entrypoint = "./functions/revenuecat-webhook/index.ts"

@@ -1,19 +1,50 @@
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar, Platform, Linking } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { requireOptionalNativeModule } from 'expo-modules-core';
+import * as Notifications from 'expo-notifications';
 import ToastRoot from 'react-native-toast-message';
 import { BoostSelectionProvider } from '~/context/BoostSelectionContext';
 import { RevenueCatProvider } from '~/contexts/RevenueCatContext';
+import { AdsProvider } from '~/contexts/AdsContext';
 import { supabase } from '~/utils/supabase';
 import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import { useLikesStore } from '~/stores/likesStore';
+import { configureNotificationHandler, unregisterCurrentPushToken } from '~/services/notifications';
 export default function Layout() {
   const router = useRouter();
   const setFavoritesUserId = useFavoritesStore((state) => state.setUserId);
   const setLikesUserId = useLikesStore((state) => state.setUserId);
+
+  useEffect(() => {
+    configureNotificationHandler();
+
+    type NotificationData = { matchId?: string; type?: string };
+
+    const handleNotificationTap = (data: NotificationData | undefined) => {
+      if (data?.type === 'favorite_team_match' && data.matchId) {
+        router.push({ pathname: '/(protected)/map', params: { matchId: data.matchId } });
+      }
+    };
+
+    const notificationSubscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        handleNotificationTap(response.notification.request.content.data as NotificationData);
+      }
+    );
+
+    // Cubre el caso de la app abierta en frío tocando la notificación
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      handleNotificationTap(response?.notification.request.content.data as NotificationData);
+    });
+
+    return () => {
+      notificationSubscription.remove();
+    };
+  }, [router]);
 
   useEffect(() => {
     // Configure Android navigation bar
@@ -59,6 +90,8 @@ export default function Layout() {
         }, 300);
       } else if (event === 'SIGNED_OUT') {
         console.log('👋 Usuario cerró sesión en _layout, navegando a inicio...');
+        // Desregistrar el push token del dispositivo antes de perder la sesión
+        unregisterCurrentPushToken();
         // Limpiar stores
         setFavoritesUserId(null);
         setLikesUserId(null);
@@ -195,22 +228,26 @@ export default function Layout() {
   };
 
   return (
-    <SafeAreaProvider>
-      <RevenueCatProvider>
-        <BoostSelectionProvider>
-          <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              presentation: 'card',
-              animation: 'slide_from_right',
-              gestureEnabled: true,
-              contentStyle: { backgroundColor: '#1C2A3A' },
-            }}
-          />
-        </BoostSelectionProvider>
-      </RevenueCatProvider>
-      <ToastRoot config={toastConfig} position="top" topOffset={60} />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AdsProvider>
+          <RevenueCatProvider>
+            <BoostSelectionProvider>
+              <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  presentation: 'card',
+                  animation: 'slide_from_right',
+                  gestureEnabled: true,
+                  contentStyle: { backgroundColor: '#1C2A3A' },
+                }}
+              />
+            </BoostSelectionProvider>
+          </RevenueCatProvider>
+        </AdsProvider>
+        <ToastRoot config={toastConfig} position="top" topOffset={60} />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

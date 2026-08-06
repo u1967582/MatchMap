@@ -10,13 +10,14 @@ import Animated, {
   withTiming,
   runOnJS,
   useAnimatedReaction,
+  type SharedValue,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import type { DraggableImage } from './DraggableImageGrid';
 
 interface DraggableImageItemProps {
   image: DraggableImage;
-  positions: Animated.SharedValue<{ [key: string]: { x: number; y: number; order: number } }>;
+  positions: SharedValue<{ [key: string]: { x: number; y: number; order: number } }>;
   onReorder: (imageId: string, newOrder: number) => void;
   onDelete: (imageId: string) => void;
   itemSize: number;
@@ -50,7 +51,7 @@ const DraggableImageItem: React.FC<DraggableImageItemProps> = ({
     'worklet';
 
     const position = positions.value[image.id];
-    if (!position) return position?.order || 0;
+    if (!position) return 0;
 
     const absoluteX = position.x + x;
     const absoluteY = position.y + y;

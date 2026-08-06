@@ -10,10 +10,11 @@ import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
-import Paywall from '~/components/revenuecat/Paywall';
+import BoostPaywallSheet from '~/components/boost/BoostPaywallSheet';
 import { useBarBoost } from '~/hooks/useBoostBars';
 import { AppText, colors, spacing, radius, BarProfileSkeleton, toast } from '~/components/ds';
 import { useFavoritesStore } from '~/stores/favoritesStore';
+import AdBanner from '~/components/ads/AdBanner';
 // Plans removed: all bars are PRO
 
 interface BarProfile {
@@ -26,6 +27,7 @@ interface BarProfile {
   website?: string;
   latitude?: number;
   longitude?: number;
+  owner_id: string | null;
   images: string[];
   category?: { id: number; name: string };
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
@@ -215,6 +217,7 @@ export default function BarProfileScreen() {
   const sections = [
     { type: 'header', key: 'header' },
     { type: 'images', key: 'images' },
+    { type: 'ad', key: 'ad-top' },
     { type: 'nav', key: 'nav' },
     { type: 'matches', key: 'matches' },
     { type: 'upcoming-matches', key: 'upcoming-matches' },
@@ -228,6 +231,8 @@ export default function BarProfileScreen() {
 
   const renderSection = ({ item }: { item: { type: string; key: string } }) => {
     switch (item.type) {
+      case 'ad':
+        return <AdBanner placement="bar-profile-top" />;
       case 'header':
         return (
           <View style={styles.headerContainer}>
@@ -357,6 +362,19 @@ export default function BarProfileScreen() {
                 <Ionicons name="create-outline" size={16} color={colors.text.primary} />
                 <AppText variant="label" color={colors.text.primary}>Editar información</AppText>
               </TouchableOpacity>
+            )}
+
+            {!isOwner && bar?.owner_id === null && (
+              <View style={styles.unclaimedActionsRow}>
+                <TouchableOpacity style={styles.reportButton} onPress={handleReportBar}>
+                  <Ionicons name="flag-outline" size={14} color={colors.text.secondary} />
+                  <AppText variant="label" color={colors.text.secondary}>Reportar información</AppText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.claimButton} onPress={handleClaimBar}>
+                  <Ionicons name="storefront-outline" size={14} color={colors.brand.link} />
+                  <AppText variant="label" color={colors.brand.link}>¿Eres el propietario?</AppText>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         );
@@ -813,6 +831,7 @@ export default function BarProfileScreen() {
             website,
             latitude,
             longitude,
+            owner_id,
             bar_images(image_url, image_order),
             bar_categories(id, name),
             bar_food_types(food_type_id, food_types(name)),
@@ -856,6 +875,7 @@ export default function BarProfileScreen() {
           website: barData.website,
           latitude: (barData as any).latitude,
           longitude: (barData as any).longitude,
+          owner_id: (barData as any).owner_id ?? null,
           images: (barData as any).bar_images
             ?.sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))
             .map((img: any) => img.image_url) || [],
@@ -990,6 +1010,24 @@ export default function BarProfileScreen() {
       router.push(`/edit-bar-info/${barId}` as any);
     }
   }, [isOwner, barId, router]);
+
+  const handleReportBar = useCallback(async () => {
+    const isGuest = await getIsGuest();
+    if (isGuest) {
+      showGuestLoginAlert(router);
+      return;
+    }
+    router.push(`/report-bar/${barId}` as any);
+  }, [barId, router]);
+
+  const handleClaimBar = useCallback(async () => {
+    const isGuest = await getIsGuest();
+    if (isGuest) {
+      showGuestLoginAlert(router);
+      return;
+    }
+    router.push(`/claim-bar/${barId}` as any);
+  }, [barId, router]);
 
   const handleCreatePost = useCallback(() => {
     if (isOwner) {
@@ -1368,12 +1406,15 @@ export default function BarProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
-      <Paywall
-        visible={paywallVisible}
-        onClose={() => setPaywallVisible(false)}
-        onPurchaseComplete={refreshBoost}
-        barId={barId}
-      />
+      {user && barId && (
+        <BoostPaywallSheet
+          isVisible={paywallVisible}
+          onClose={() => setPaywallVisible(false)}
+          onPurchaseComplete={refreshBoost}
+          barId={barId}
+          userId={user.id}
+        />
+      )}
 
       <BottomTabBar />
     </SafeAreaView>
@@ -1505,6 +1546,33 @@ const styles = StyleSheet.create({
     color: '#A3B3CC',
     fontSize: 14,
     marginTop: 8,
+  },
+  unclaimedActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+  },
+  reportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  claimButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.brand.link,
   },
   editButton: {
     position: 'absolute',

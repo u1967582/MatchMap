@@ -7,6 +7,7 @@ import {
   Image,
   Alert,
   Platform,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,8 +16,17 @@ import { supabase } from '~/utils/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
-import { AppText, colors, spacing, radius, ProfileSkeleton } from '~/components/ds';
+import { AppText, colors, spacing, radius, ProfileSkeleton, toast } from '~/components/ds';
 import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
+import AdBanner from '~/components/ads/AdBanner';
+import FavoriteTeamPopup from '~/components/FavoriteTeamPopup';
+import { setMatchNotificationsEnabled } from '~/services/notifications';
+
+interface FavoriteTeam {
+  id: string;
+  name: string;
+  logo_url: string | null;
+}
 
 interface UserProfile {
   id: string;
@@ -25,6 +35,9 @@ interface UserProfile {
   username?: string;
   profile_image_url?: string;
   is_super_user?: boolean;
+  favorite_team_id?: string | null;
+  favorite_team?: FavoriteTeam | null;
+  match_notifications_enabled?: boolean;
 }
 
 interface UserBar {
@@ -54,6 +67,36 @@ const SettingsRow: React.FC<SettingsRowProps> = ({ title, onPress, isLast = fals
   </TouchableOpacity>
 );
 
+interface SettingsToggleRowProps {
+  title: string;
+  subtitle?: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+  isLast?: boolean;
+}
+
+const SettingsToggleRow: React.FC<SettingsToggleRowProps> = ({
+  title,
+  subtitle,
+  value,
+  onValueChange,
+  isLast = false,
+}) => (
+  <View style={[styles.settingsRow, isLast && styles.settingsRowLast]}>
+    <View style={styles.settingsToggleText}>
+      <AppText variant="body" color={colors.text.primary}>{title}</AppText>
+      {subtitle && (
+        <AppText variant="caption" color={colors.text.secondary}>{subtitle}</AppText>
+      )}
+    </View>
+    <Switch
+      value={value}
+      onValueChange={onValueChange}
+      trackColor={{ true: colors.brand.primary }}
+    />
+  </View>
+);
+
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -61,6 +104,9 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [isGuestUser, setIsGuestUser] = useState(false);
   const [planName, setPlanName] = useState<string>('Cargando...');
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
+  const [showTeamPicker, setShowTeamPicker] = useState(false);
   const router = useRouter();
 
   // All users are PRO; no subscription gating
@@ -84,13 +130,17 @@ export default function ProfileScreen() {
       // Try to get additional profile data from users table
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select('full_name, username, profile_image_url, bar_id, is_super_user')
+        .select('full_name, username, profile_image_url, bar_id, is_super_user, favorite_team_id, favorite_team:teams!favorite_team_id(id, name, logo_url), match_notifications_enabled')
         .eq('id', authUser.id)
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile:', profileError);
       }
+
+      const favoriteTeamData = Array.isArray(profileData?.favorite_team)
+        ? profileData.favorite_team[0]
+        : profileData?.favorite_team;
 
       setUser({
         id: authUser.id,
@@ -99,7 +149,19 @@ export default function ProfileScreen() {
         username: profileData?.username,
         profile_image_url: profileData?.profile_image_url,
         is_super_user: profileData?.is_super_user || false,
+        favorite_team_id: profileData?.favorite_team_id ?? null,
+        favorite_team: favoriteTeamData ?? null,
+        match_notifications_enabled: profileData?.match_notifications_enabled ?? true,
       });
+
+      if (profileData?.is_super_user) {
+        const [{ count: reportsCount }, { count: claimsCount }] = await Promise.all([
+          supabase.from('bar_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+          supabase.from('bar_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        ]);
+        setPendingReportsCount(reportsCount || 0);
+        setPendingClaimsCount(claimsCount || 0);
+      }
 
       // Fetch user's bars:
       // 1) Prefer users.bar_id (legacy linkage)
@@ -214,6 +276,23 @@ export default function ProfileScreen() {
     router.back();
   }, [router]);
 
+  const handleToggleMatchNotifications = useCallback(
+    async (value: boolean) => {
+      if (!user) return;
+      const previousValue = user.match_notifications_enabled ?? true;
+      setUser((prev) => (prev ? { ...prev, match_notifications_enabled: value } : prev));
+      try {
+        await setMatchNotificationsEnabled(user.id, value);
+      } catch (error) {
+        setUser((prev) =>
+          prev ? { ...prev, match_notifications_enabled: previousValue } : prev
+        );
+        toast.supabaseError(error, 'No se pudo actualizar la preferencia');
+      }
+    },
+    [user]
+  );
+
   const handleEditProfile = useCallback(() => {
     router.push('/edit-profile' as any);
   }, [router]);
@@ -326,10 +405,23 @@ export default function ProfileScreen() {
               style={styles.avatar}
               defaultSource={require('~/assets/icon.png')}
             />
+            <TouchableOpacity
+              style={styles.favoriteTeamBadge}
+              onPress={() => setShowTeamPicker(true)}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              {user?.favorite_team?.logo_url ? (
+                <Image source={{ uri: user.favorite_team.logo_url }} style={styles.favoriteTeamBadgeImage} />
+              ) : (
+                <Ionicons name="add" size={18} color={colors.text.secondary} />
+              )}
+            </TouchableOpacity>
           </View>
           <AppText variant="h2">{displayName}</AppText>
           <AppText variant="body" color={colors.text.secondary} style={styles.userHandleSpacing}>{displayHandle}</AppText>
         </View>
+
+        <AdBanner placement="profile" />
 
         {/* Bar Management Section */}
         <View style={styles.section}>
@@ -490,6 +582,58 @@ export default function ProfileScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/bar-reports-admin' as any)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.adminButtonIcon, styles.adminButtonIconRed]}>
+                  <Ionicons name="flag-outline" size={24} color={colors.status.error} />
+                </View>
+                <View style={styles.adminButtonContent}>
+                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                    Reportes de bares
+                  </AppText>
+                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                    Información incorrecta reportada por usuarios
+                  </AppText>
+                </View>
+                {pendingReportsCount > 0 && (
+                  <View style={styles.adminBadge}>
+                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                      {pendingReportsCount}
+                    </AppText>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/bar-claims-admin' as any)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.adminButtonIcon, styles.adminButtonIconBlue]}>
+                  <Ionicons name="key-outline" size={24} color={colors.brand.primary} />
+                </View>
+                <View style={styles.adminButtonContent}>
+                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                    Solicitudes de reclamo
+                  </AppText>
+                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                    Propietarios que reclaman un bar sin dueño
+                  </AppText>
+                </View>
+                {pendingClaimsCount > 0 && (
+                  <View style={styles.adminBadge}>
+                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                      {pendingClaimsCount}
+                    </AppText>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
             </View>
 
             {/* Soporte */}
@@ -569,29 +713,6 @@ export default function ProfileScreen() {
         {/* Plan section removed: all users are PRO now */}
 
 
-        {/* Mi Colección */}
-        <View style={styles.section}>
-          <AppText variant="title" style={styles.sectionTitleSpacing}>Mi Colección</AppText>
-          <TouchableOpacity
-            style={styles.adminButton}
-            onPress={() => router.push('/my-favorites' as any)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.adminButtonIcon, { backgroundColor: 'rgba(255,107,107,0.12)' }]}>
-              <Ionicons name="heart" size={24} color={colors.status.destructive} />
-            </View>
-            <View style={styles.adminButtonContent}>
-              <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
-                Mis Bares Favoritos
-              </AppText>
-              <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
-                Bares que guardaste para volver
-              </AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
-          </TouchableOpacity>
-        </View>
-
         {/* Account Settings Section */}
         <View style={styles.section}>
           <AppText variant="title" style={styles.sectionTitleSpacing}>Configuración de Cuenta</AppText>
@@ -603,12 +724,42 @@ export default function ProfileScreen() {
             )}
             <SettingsRow title="Política de Privacidad" onPress={handlePrivacyPolicy} />
             <SettingsRow title="Términos de Servicio" onPress={handleTermsOfService} />
+            {user?.favorite_team_id && (
+              <SettingsToggleRow
+                title="Avisos de mi equipo"
+                subtitle="Te avisamos 2h antes si juega tu equipo favorito"
+                value={user.match_notifications_enabled ?? true}
+                onValueChange={handleToggleMatchNotifications}
+              />
+            )}
             <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast color={colors.status.error} />
           </View>
         </View>
       </ScrollView>
       <BottomTabBar />
 
+      {user && (
+        <FavoriteTeamPopup
+          visible={showTeamPicker}
+          userId={user.id}
+          mode="change"
+          currentTeamId={user.favorite_team_id}
+          onClose={() => setShowTeamPicker(false)}
+          onSaved={(option) => {
+            setUser((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    favorite_team_id: option?.id ?? null,
+                    favorite_team: option
+                      ? { id: option.id, name: option.name, logo_url: option.logo_url }
+                      : null,
+                  }
+                : prev
+            );
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -660,11 +811,32 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginBottom: spacing.lg,
+    position: 'relative',
   },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
+  },
+  favoriteTeamBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: radius.round,
+    backgroundColor: colors.bg.card,
+    borderWidth: 2,
+    borderColor: colors.bg.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    padding: 5,
+  },
+  favoriteTeamBadgeImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
   },
   userHandleSpacing: {
     marginTop: spacing.xs,
@@ -718,6 +890,10 @@ const styles = StyleSheet.create({
   },
   settingsRowLast: {
     borderBottomWidth: 0,
+  },
+  settingsToggleText: {
+    flex: 1,
+    paddingRight: spacing.md,
   },
   barCard: {
     backgroundColor: colors.bg.card,
@@ -977,6 +1153,9 @@ const styles = StyleSheet.create({
   adminButtonIconGreen: {
     backgroundColor: 'rgba(52, 199, 89, 0.15)',
   },
+  adminButtonIconRed: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+  },
   adminButtonIconOrange: {
     backgroundColor: 'rgba(255, 149, 0, 0.15)',
   },
@@ -995,6 +1174,20 @@ const styles = StyleSheet.create({
   },
   adminButtonSubtitle: {
     lineHeight: 16,
+  },
+  adminBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: radius.round,
+    backgroundColor: colors.status.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    marginRight: spacing.sm,
+  },
+  adminBadgeText: {
+    fontWeight: '700',
+    fontSize: 11,
   },
   verificationPill: {
     flexDirection: 'row',

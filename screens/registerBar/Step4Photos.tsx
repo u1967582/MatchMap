@@ -8,7 +8,7 @@ import { useBarRegisterStore } from '~/stores/barRegisterStore';
 import PrimaryButton from '~/components/ui/PrimaryButton';
 import { supabase } from '~/utils/supabase';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DraggableImageGrid } from '~/components/images';
 import type { DraggableImage } from '~/components/images';
