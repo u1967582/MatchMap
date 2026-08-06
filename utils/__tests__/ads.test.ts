@@ -4,6 +4,8 @@ jest.mock('react-native-google-mobile-ads', () => {
   const mockInitialize = jest.fn(() => Promise.resolve());
   const mobileAds = jest.fn(() => ({ initialize: mockInitialize }));
   const createForAdRequest = jest.fn();
+  const gatherConsent = jest.fn(() => Promise.resolve());
+  const getConsentInfo = jest.fn(() => Promise.resolve({ canRequestAds: true }));
 
   return {
     __esModule: true,
@@ -11,6 +13,7 @@ jest.mock('react-native-google-mobile-ads', () => {
     AppOpenAd: { createForAdRequest },
     AdEventType,
     TestIds,
+    AdsConsent: { gatherConsent, getConsentInfo },
   };
 });
 
@@ -19,7 +22,7 @@ jest.mock('expo-tracking-transparency', () => ({
 }));
 
 import { Platform } from 'react-native';
-import mobileAds, { AppOpenAd } from 'react-native-google-mobile-ads';
+import mobileAds, { AppOpenAd, AdsConsent } from 'react-native-google-mobile-ads';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import {
   hasShownAppOpenAdThisSession,
@@ -60,10 +63,31 @@ describe('hasShownAppOpenAdThisSession / markAppOpenAdShown', () => {
 });
 
 describe('initializeAdsSDK', () => {
-  it('inicializa el SDK de anuncios', async () => {
+  it('pide consentimiento GDPR/UMP antes de inicializar el SDK', async () => {
     await initializeAdsSDK();
 
+    expect(AdsConsent.gatherConsent).toHaveBeenCalled();
+    expect(AdsConsent.getConsentInfo).toHaveBeenCalled();
     expect(mobileAds).toHaveBeenCalled();
+    expect(mobileAds().initialize).toHaveBeenCalled();
+  });
+
+  it('devuelve true cuando el SDK se inicializa', async () => {
+    await expect(initializeAdsSDK()).resolves.toBe(true);
+  });
+
+  it('no inicializa el SDK si canRequestAds es false', async () => {
+    (AdsConsent.getConsentInfo as jest.Mock).mockResolvedValueOnce({ canRequestAds: false });
+
+    await expect(initializeAdsSDK()).resolves.toBe(false);
+
+    expect(mobileAds().initialize).not.toHaveBeenCalled();
+  });
+
+  it('sigue comprobando canRequestAds aunque gatherConsent falle', async () => {
+    (AdsConsent.gatherConsent as jest.Mock).mockRejectedValueOnce(new Error('network error'));
+
+    await expect(initializeAdsSDK()).resolves.toBe(true);
     expect(mobileAds().initialize).toHaveBeenCalled();
   });
 
@@ -89,7 +113,7 @@ describe('initializeAdsSDK', () => {
     Platform.OS = 'ios';
     (requestTrackingPermissionsAsync as jest.Mock).mockRejectedValueOnce(new Error('denied'));
 
-    await expect(initializeAdsSDK()).resolves.toBeUndefined();
+    await expect(initializeAdsSDK()).resolves.toBe(true);
   });
 });
 

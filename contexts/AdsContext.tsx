@@ -21,14 +21,15 @@ export function AdsProvider({ children }: { children: React.ReactNode }) {
     };
 
     const run = async () => {
+      let adsEnabled = false;
       try {
-        await initializeAdsSDK();
+        adsEnabled = await initializeAdsSDK();
       } catch (error) {
         if (__DEV__) console.log('[ads] SDK init failed, continuing without ads', error);
         return;
       }
 
-      if (cancelled) return;
+      if (cancelled || !adsEnabled) return;
 
       // No mostrar el App Open Ad en la pantalla de bienvenida/login: esperamos
       // a que exista una sesión (login real o "Explorar sin cuenta") antes de

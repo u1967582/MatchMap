@@ -64,13 +64,16 @@ export default function Paywall({ visible, onClose, onPurchaseComplete, barId }:
         if (user) {
           const endAt = getEndAt(plan);
           const pkg = pendingPackageRef.current; // solo para precio; puede ser null en Android
+          // status='pending': la activación real (status='active') la hace
+          // el webhook de RevenueCat (service_role) tras confirmar el pago,
+          // no el cliente. Ver supabase/functions/revenuecat-webhook.
           const { error: insertError } = await supabase.from('bar_boosts').insert({
             bar_id: barId,
             user_id: user.id,
             plan,
             start_at: new Date().toISOString(),
             end_at: endAt.toISOString(),
-            status: 'active',
+            status: 'pending',
             amount_cents: pkg ? Math.round(pkg.product.price * 100) : 0,
             currency: pkg ? (pkg.product.currencyCode ?? 'eur').toLowerCase() : 'eur',
             revenuecat_transaction_id: storeTransaction.transactionIdentifier ?? null,
@@ -82,7 +85,7 @@ export default function Paywall({ visible, onClose, onPurchaseComplete, barId }:
         }
       }
     }
-    toast.success('¡Compra exitosa!', 'Tu boost ha sido activado');
+    toast.success('¡Compra exitosa!', 'Tu boost se activará en unos instantes');
     onPurchaseComplete?.();
     onClose();
   };
