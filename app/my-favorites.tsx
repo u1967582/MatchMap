@@ -1,20 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Image,
   FlatList,
   Alert,
   ScrollView,
   Platform,
   TextInput,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import { useFavoritesStore } from '~/stores/favoritesStore';
+import BottomTabBar from '~/components/ui/BottomTabBar';
+import AdBanner from '~/components/ads/AdBanner';
+import { interleaveWithAds } from '~/utils/adListInterleave';
 import {
   AppText,
   AppCard,
@@ -63,66 +66,72 @@ function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap }: 
     distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  const handleRemove = (e: any) => {
+    e.stopPropagation();
+    onRemove(bar.id, bar.name);
+  };
+
+  const handleViewOnMap = (e: any) => {
+    e.stopPropagation();
+    onViewOnMap(bar);
+  };
+
   return (
-    <AppCard style={styles.barCard}>
-      <TouchableOpacity style={styles.imageContainer} onPress={() => onPress(bar.id)} activeOpacity={0.9}>
-        <Image
-          source={{ uri: bar.image_url || 'https://via.placeholder.com/300x200/2A3A4A/A3B3CC?text=Bar' }}
-          style={styles.barImage}
-        />
-      </TouchableOpacity>
+    <AppCard onPress={() => onPress(bar.id)}>
+      <View style={styles.imageContainer}>
+        {bar.image_url ? (
+          <Image
+            source={{ uri: bar.image_url }}
+            style={[styles.barImage, { backgroundColor: '#1A2332' }]}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+            recyclingKey={bar.id}
+          />
+        ) : (
+          <View style={styles.placeholderContainer}>
+            <Ionicons name="image-outline" size={32} color={colors.text.muted} />
+            <AppText variant="caption" color={colors.text.muted}>
+              Sin imagen
+            </AppText>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.favoritesButton} onPress={handleRemove}>
+          <Ionicons name="heart" size={20} color={colors.text.primary} />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.barInfo}>
-        <View style={styles.barHeader}>
-          <View style={styles.barTextContainer}>
-            <AppText variant="subtitle" style={styles.barNameSpacing}>{bar.name}</AppText>
-            {bar.description && (
-              <AppText variant="body" color={colors.text.secondary} style={styles.barDescriptionSpacing}>
-                {bar.description}
-              </AppText>
-            )}
-            <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={14} color={colors.text.muted} />
-              <AppText variant="caption" color={colors.text.secondary} style={styles.addressText}>
-                {bar.address}, {bar.city}
-              </AppText>
-            </View>
-            <View style={styles.barDetails}>
-              {typeof bar.rating === 'number' && (
-                <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={14} color={colors.status.boost} />
-                  <AppText variant="caption" color={colors.status.boost} style={styles.ratingTextSpacing}>
-                    {bar.rating.toFixed(1)}
-                  </AppText>
-                  {typeof bar.review_count === 'number' && (
-                    <AppText variant="caption" color={colors.text.muted} style={styles.reviewCountSpacing}>
-                      ({bar.review_count} reseñas)
-                    </AppText>
-                  )}
-                </View>
-              )}
-              {distance !== null && (
-                <View style={styles.distanceContainer}>
-                  <Ionicons name="location-outline" size={14} color={colors.status.success} />
-                  <AppText variant="caption" color={colors.status.success} style={styles.distanceTextSpacing}>
-                    {distance.toFixed(1)} km
-                  </AppText>
-                </View>
-              )}
-            </View>
+        <AppText variant="title" style={styles.barName}>{bar.name}</AppText>
+
+        <View style={styles.barMeta}>
+          <View style={styles.ratingContainer}>
+            <Ionicons name="star" size={16} color={colors.status.warning} />
+            <AppText variant="body">
+              {(typeof bar.rating === 'number' ? bar.rating.toFixed(1) : 'N/A')} ({bar.review_count || 0} reseñas)
+            </AppText>
           </View>
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={() => onRemove(bar.id, bar.name)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="trash-outline" size={20} color={colors.status.destructive} />
-          </TouchableOpacity>
+
+          {distance !== null && (
+            <AppText variant="body" color={colors.brand.accent} style={styles.distanceText}>
+              {distance.toFixed(1)} km
+            </AppText>
+          )}
         </View>
 
-        <TouchableOpacity style={styles.viewOnMapButton} onPress={() => onViewOnMap(bar)} activeOpacity={0.7}>
-          <Ionicons name="map-outline" size={13} color={colors.brand.link} />
-          <AppText variant="caption" color={colors.brand.link}>Ver en el Mapa</AppText>
+        {bar.address && bar.city && (
+          <View style={styles.addressRow}>
+            <Ionicons name="location-outline" size={14} color={colors.text.muted} />
+            <AppText variant="caption" color={colors.text.secondary} style={styles.barAddress}>
+              {bar.address}, {bar.city}
+            </AppText>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.viewOnMapButton} onPress={handleViewOnMap}>
+          <Ionicons name="map-outline" size={16} color={colors.brand.link} />
+          <AppText variant="label" color={colors.brand.link}>Ver en el Mapa</AppText>
         </TouchableOpacity>
       </View>
     </AppCard>
@@ -225,22 +234,35 @@ export default function MyFavoritesScreen() {
     />
   ), [handleBarPress, handleRemove, handleViewOnMap, userLocation]);
 
+  const listRows = useMemo(
+    () => interleaveWithAds(filteredBars, (bar) => bar.id, 3),
+    [filteredBars]
+  );
+
+  const renderRow = useCallback(({ item }: { item: (typeof listRows)[number] }) => {
+    if (item.kind === 'ad') {
+      return <AdBanner placement="favorites-inline" />;
+    }
+    return renderBar({ item: item.data });
+  }, [renderBar]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+            <Ionicons name="chevron-back" size={18} color={colors.text.primary} />
           </TouchableOpacity>
           <AppText variant="title">Mis Favoritos</AppText>
-          <View style={{ width: 24 }} />
+          <View style={{ width: 36 }} />
         </View>
         <View style={styles.content}>
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
         </View>
+        <BottomTabBar />
       </SafeAreaView>
     );
   }
@@ -251,11 +273,11 @@ export default function MyFavoritesScreen() {
 
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+          <Ionicons name="chevron-back" size={18} color={colors.text.primary} />
         </TouchableOpacity>
         <AppText variant="title">Mis Favoritos</AppText>
         <TouchableOpacity style={styles.searchButton} onPress={() => setSearchVisible(v => !v)} activeOpacity={0.7}>
-          <Ionicons name="search" size={24} color={colors.text.primary} />
+          <Ionicons name="search" size={18} color={colors.text.primary} />
         </TouchableOpacity>
       </View>
 
@@ -293,9 +315,9 @@ export default function MyFavoritesScreen() {
       <View style={styles.content}>
         {filteredBars.length > 0 ? (
           <FlatList
-            data={filteredBars}
-            renderItem={renderBar}
-            keyExtractor={item => item.id}
+            data={listRows}
+            renderItem={renderRow}
+            keyExtractor={row => row.key}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.barsList}
           />
@@ -321,6 +343,8 @@ export default function MyFavoritesScreen() {
           </View>
         )}
       </View>
+
+      <BottomTabBar />
     </SafeAreaView>
   );
 }
@@ -334,8 +358,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
   },
-  backButton: { padding: spacing.xs },
-  searchButton: { padding: spacing.xs },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.lg,
+    backgroundColor: colors.bg.element,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.lg,
+    backgroundColor: colors.bg.element,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   searchContainer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
   searchInputWrapper: {
     flexDirection: 'row',
@@ -353,36 +391,52 @@ const styles = StyleSheet.create({
   sortScrollContent: { paddingHorizontal: spacing.xl },
   content: { flex: 1, paddingHorizontal: spacing.xl },
   emptyContainer: { flex: 1 },
-  barsList: { paddingBottom: Platform.OS === 'ios' ? 40 : 24 },
-  barCard: { marginBottom: spacing.lg },
-  imageContainer: { width: '100%', height: 200 },
-  barImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  barsList: { paddingBottom: Platform.OS === 'ios' ? 100 : 80 },
+  imageContainer: { position: 'relative', width: '100%', height: 180 },
+  barImage: { width: '100%', height: '100%' },
+  placeholderContainer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.bg.elevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  favoritesButton: {
+    position: 'absolute',
+    top: spacing.lg - 6,
+    right: spacing.lg - 6,
+    backgroundColor: colors.status.error,
+    borderRadius: radius.round,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
   barInfo: { padding: spacing.lg },
-  barHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  barTextContainer: { flex: 1, marginRight: spacing.md },
-  barNameSpacing: { marginBottom: spacing.xs },
-  barDescriptionSpacing: { marginBottom: spacing.xs },
-  addressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  addressText: { flex: 1 },
-  barDetails: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, flexWrap: 'wrap', gap: spacing.lg },
-  ratingContainer: { flexDirection: 'row', alignItems: 'center' },
-  ratingTextSpacing: { marginLeft: spacing.xs },
-  reviewCountSpacing: { marginLeft: spacing.xs },
-  distanceContainer: { flexDirection: 'row', alignItems: 'center' },
-  distanceTextSpacing: { marginLeft: spacing.xs },
-  removeButton: { padding: spacing.sm, backgroundColor: 'rgba(255, 107, 107, 0.1)', borderRadius: radius.md },
+  barName: { marginBottom: spacing.sm },
+  barMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  ratingContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  distanceText: { fontWeight: '500' },
+  addressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
+  barAddress: { flex: 1 },
   viewOnMapButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm - 2,
     backgroundColor: colors.alpha.brandLight,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
+    paddingVertical: spacing.lg - 6,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.alpha.brandBorder,
     marginTop: spacing.xs,
-    alignSelf: 'flex-start',
   },
 });

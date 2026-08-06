@@ -15,6 +15,7 @@ import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
 import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
+import { fetchMatchById } from '~/services/matches';
 import { AppText, MapSkeleton } from '~/components/ds';
 
 // Use environment variable for Mapbox token
@@ -100,12 +101,18 @@ interface MapProps {
   initialSelectedBarId?: string;
   initialSelectedBarCoords?: { latitude: number; longitude: number };
   initialSelectedBarName?: string;
+  initialMatchId?: string;
 }
 
 // Module-level flag: persists while the JS bundle is loaded (i.e., the whole app session)
 let boostedPopupShownThisSession = false;
 
-const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoords, initialSelectedBarName }) => {
+const Map: React.FC<MapProps> = ({
+  initialSelectedBarId,
+  initialSelectedBarCoords,
+  initialSelectedBarName,
+  initialMatchId,
+}) => {
   const [hasPermission, setHasPermission] = React.useState<boolean | null>(null);
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
   const [bars, setBars] = React.useState<Bar[]>([]);
@@ -132,6 +139,18 @@ const Map: React.FC<MapProps> = ({ initialSelectedBarId, initialSelectedBarCoord
   // Match filter states
   const [selectedMatch, setSelectedMatch] = React.useState<Match | null>(null);
   const [matchPickerOpen, setMatchPickerOpen] = React.useState(false);
+
+  // Deep link desde una notificación push: resuelve el partido completo y
+  // reutiliza el mismo flujo de filtrado que MatchPickerModal (useEffect
+  // de [selectedMatch] más abajo se encarga de llamar a fetchBarIdsByMatch).
+  React.useEffect(() => {
+    if (!initialMatchId) return;
+    fetchMatchById(initialMatchId)
+      .then((match) => {
+        if (match) setSelectedMatch(match);
+      })
+      .catch((error) => console.error('❌ Error resolviendo initialMatchId:', error));
+  }, [initialMatchId]);
 
   // Search bar expanded state
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);

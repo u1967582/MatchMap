@@ -27,6 +27,8 @@ import { useFavorites } from '~/hooks/useFavorites';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { useBoostBars } from '~/hooks/useBoostBars';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
+import AdBanner from '~/components/ads/AdBanner';
+import { interleaveWithAds } from '~/utils/adListInterleave';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import {
   AppText,
@@ -135,6 +137,10 @@ export default function SearchScreen() {
     [boostedDisplayBars, regularDisplayBars, regularPage]
   );
   const hasMoreBars = regularDisplayBars.length > regularPage * PAGE_SIZE;
+  const listRows = useMemo(
+    () => interleaveWithAds(displayedBars, (bar) => bar.id, 3),
+    [displayedBars]
+  );
 
   // Update context when selection changes - with stabilized reference
   useEffect(() => {
@@ -622,6 +628,13 @@ export default function SearchScreen() {
 
   }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable, favorites]);
 
+  const renderRow = useCallback(({ item }: { item: (typeof listRows)[number] }) => {
+    if (item.kind === 'ad') {
+      return <AdBanner placement="search-inline" />;
+    }
+    return renderBarCard({ item: item.data });
+  }, [renderBarCard]);
+
   // Load initial data
   useEffect(() => {
     getUserLocation();
@@ -714,13 +727,13 @@ export default function SearchScreen() {
           <SkeletonList count={3} />
         ) : allBars.length > 0 ? (
           <FlashList
-            data={displayedBars}
-            renderItem={renderBarCard}
-            keyExtractor={(item) => item.id}
+            data={listRows}
+            renderItem={renderRow}
+            keyExtractor={(row) => row.key}
+            getItemType={(row) => row.kind}
             extraData={favorites}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.barsList}
-            estimatedItemSize={300}
             onEndReached={loadMore}
             onEndReachedThreshold={0.4}
             ListFooterComponent={renderListFooter}
