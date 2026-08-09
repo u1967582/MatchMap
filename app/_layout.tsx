@@ -1,6 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar, Platform, Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { requireOptionalNativeModule } from 'expo-modules-core';
@@ -233,16 +234,18 @@ export default function Layout() {
         <AdsProvider>
           <RevenueCatProvider>
             <BoostSelectionProvider>
-              <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  presentation: 'card',
-                  animation: 'slide_from_right',
-                  gestureEnabled: true,
-                  contentStyle: { backgroundColor: '#1C2A3A' },
-                }}
-              />
+              <BottomSheetModalProvider>
+                <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                    gestureEnabled: true,
+                    contentStyle: { backgroundColor: '#1C2A3A' },
+                  }}
+                />
+              </BottomSheetModalProvider>
             </BoostSelectionProvider>
           </RevenueCatProvider>
         </AdsProvider>

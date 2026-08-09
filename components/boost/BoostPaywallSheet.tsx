@@ -5,7 +5,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import BottomSheet, {
+import {
+  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
@@ -45,24 +46,17 @@ export default function BoostPaywallSheet({
   userId,
   onPurchaseComplete,
 }: BoostPaywallSheetProps) {
-  const sheetRef = useRef<BottomSheet>(null);
+  const sheetRef = useRef<BottomSheetModal>(null);
   const { packages, isLoading, error, purchaseBoost, isPurchasing, purchasingId } =
     useBoostOfferings();
 
   useEffect(() => {
     if (isVisible) {
-      sheetRef.current?.expand();
+      sheetRef.current?.present();
     } else {
-      sheetRef.current?.close();
+      sheetRef.current?.dismiss();
     }
   }, [isVisible]);
-
-  const handleSheetChange = useCallback(
-    (index: number) => {
-      if (index === -1) onClose();
-    },
-    [onClose],
-  );
 
   const renderBackdrop = useCallback(
     (props: BottomSheetDefaultBackdropProps) => (
@@ -80,7 +74,7 @@ export default function BoostPaywallSheet({
     async (pkgInfo: typeof packages[number]) => {
       const success = await purchaseBoost(pkgInfo.pkg, barId, userId);
       if (success) {
-        sheetRef.current?.close();
+        sheetRef.current?.dismiss();
         onPurchaseComplete?.();
       }
     },
@@ -88,12 +82,12 @@ export default function BoostPaywallSheet({
   );
 
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={sheetRef}
-      index={-1}
+      index={0}
       snapPoints={SNAP_POINTS}
       enablePanDownToClose
-      onChange={handleSheetChange}
+      onDismiss={onClose}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBackground}
       handleIndicatorStyle={styles.handleIndicator}
@@ -293,7 +287,7 @@ export default function BoostPaywallSheet({
           El pago se cargará en tu cuenta de Apple / Google. Sin renovación automática.
         </AppText>
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 }
 
