@@ -27,6 +27,8 @@ import Dropdown from '~/components/ui/Dropdown';
 import FilterModal from '~/components/ui/FilterModal';
 import MatchPickerModal, { type Match } from '~/components/ui/MatchPickerModal';
 import { useFilterData } from '~/hooks/useFilterData';
+import { useIsAdmin } from '~/hooks/useIsAdmin';
+import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { useFavorites } from '~/hooks/useFavorites';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { useBoostBars } from '~/hooks/useBoostBars';
@@ -116,6 +118,12 @@ export default function SearchScreen() {
   // Load filter data
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
 
+  // Solo el admin puede ver los bares marcados como "de test", y solo si además
+  // tiene activado el toggle (compartido con la pantalla de mapa)
+  const { isAdmin } = useIsAdmin();
+  const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
+  const includeTestBars = isAdmin && showTestBars;
+
   // Load favorites functionality from store (optimistic updates)
   // Suscribir a `favorites` para que el componente re-renderice al cambiar el Set
   const favorites = useFavoritesStore(state => state.favorites);
@@ -129,6 +137,7 @@ export default function SearchScreen() {
   const { selected3Stable, allBoostBarIds } = useBoostBars({
     centerLatLng: userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null,
     enabled: !!userLocation,
+    includeTestBars,
   });
 
   // Ref for allBoostBarIds so searchBars can read the latest value without being recreated
@@ -250,6 +259,15 @@ export default function SearchScreen() {
           bar_images(image_url, image_order)
         `)
         .eq('is_active', true);
+
+      // Bares aprobados para todos; el admin además ve los de test aunque
+      // todavía no estén aprobados, salvo que haya apagado el toggle
+      // "mostrar bares de test" (misma lógica que el mapa).
+      if (includeTestBars) {
+        barsQuery = barsQuery.or('verification_status.eq.approved,is_test.eq.true');
+      } else {
+        barsQuery = barsQuery.eq('verification_status', 'approved').eq('is_test', false);
+      }
 
       // Aplicar filtro de búsqueda
       if (searchQuery.trim()) {
@@ -431,7 +449,7 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch]);
+  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch, includeTestBars]);
 
   // La cabecera sigue el scroll 1:1 (misma velocidad/distancia que el dedo), sin easing:
   // se traduce exactamente lo que avanza el scroll, con clamp entre 0 (visible) y -headerHeight (oculta).

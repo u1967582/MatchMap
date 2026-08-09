@@ -18,6 +18,8 @@ export interface BoostBar {
 interface UseBoostBarsOptions {
   centerLatLng: LatLng | null;
   enabled?: boolean;
+  /** Incluir bares marcados como "de test" (solo debe activarse para el admin) */
+  includeTestBars?: boolean;
 }
 
 interface UseBoostBarsResult {
@@ -37,6 +39,7 @@ interface UseBoostBarsResult {
 export function useBoostBars({
   centerLatLng,
   enabled = true,
+  includeTestBars = false,
 }: UseBoostBarsOptions): UseBoostBarsResult {
   const [boostBars, setBoostBars] = useState<BoostBar[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,23 +62,31 @@ export function useBoostBars({
         const now = new Date().toISOString();
 
         // Query bars with active boosts
-        const { data, error: queryError } = await supabase
+        let boostsQuery = supabase
           .from('bar_boosts')
           .select(`
             bar_id,
             end_at,
-            bars (
+            bars!inner (
               id,
               name,
               latitude,
               longitude,
               rating,
               review_count,
+              is_test,
               bar_images (image_url, image_order)
             )
           `)
           .eq('status', 'active')
           .gt('end_at', now);
+
+        // Los bares de test solo son visibles para el admin
+        if (!includeTestBars) {
+          boostsQuery = boostsQuery.eq('bars.is_test', false);
+        }
+
+        const { data, error: queryError } = await boostsQuery;
 
         if (queryError) throw queryError;
 
@@ -133,7 +144,7 @@ export function useBoostBars({
     return () => {
       isMounted = false;
     };
-  }, [enabled]);
+  }, [enabled, includeTestBars]);
 
   const allBoostBarIds = useMemo(() => boostBars.map((b) => b.id), [boostBars]);
 
