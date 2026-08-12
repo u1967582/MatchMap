@@ -3,11 +3,11 @@ import { View, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '~/utils/supabase';
 import {
   AppText,
   AppButton,
-  AppChip,
   toast,
   colors,
   spacing,
@@ -119,14 +119,24 @@ export default function ReportBarScreen() {
         <View style={styles.section}>
           <AppText variant="subtitle" style={styles.sectionTitle}>¿Qué está mal?</AppText>
           <View style={styles.chipsRow}>
-            {REASON_OPTIONS.map((option) => (
-              <AppChip
-                key={option.value}
-                label={option.label}
-                selected={reason === option.value}
-                onPress={() => setReason(option.value)}
-              />
-            ))}
+            {REASON_OPTIONS.map((option) => {
+              const isActive = reason === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.reasonChip, isActive && styles.reasonChipActive]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setReason(option.value);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <AppText variant="label" color={isActive ? colors.text.primary : colors.brand.link}>
+                    {option.label}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -198,6 +208,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  reasonChip: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 20,
+    backgroundColor: colors.alpha.brandLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  reasonChipActive: {
+    backgroundColor: colors.brand.link,
   },
   textInputWrapper: {
     backgroundColor: colors.bg.elevated,

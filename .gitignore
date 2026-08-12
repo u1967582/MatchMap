@@ -31,3 +31,9 @@ google-services.json
 client_secret_*.json
 
 .env.local
+
+# Proyecto local de vídeos de marketing (Remotion) — no se versiona
+/marketing-videos/
+
+# Artefacto local de estado de la Supabase CLI
+supabase/.temp/

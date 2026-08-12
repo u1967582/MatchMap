@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
 import {
   AppText,
@@ -31,6 +32,9 @@ export default function ClaimBarScreen() {
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [message, setMessage] = useState('');
+  const [documentUri, setDocumentUri] = useState<string | null>(null);
+  const [documentPath, setDocumentPath] = useState<string | null>(null);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingBar, setLoadingBar] = useState(true);
 
@@ -47,9 +51,86 @@ export default function ClaimBarScreen() {
     })();
   }, [barId]);
 
+  const handlePickDocument = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        toast.warning('Necesitamos acceso a la galería para subir el documento');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+      });
+
+      if (result.canceled || !result.assets[0]) return;
+
+      const imageUri = result.assets[0].uri;
+      setDocumentUri(imageUri);
+      await uploadDocument(imageUri);
+    } catch (error) {
+      console.error('❌ Error picking document:', error);
+      toast.error('No se pudo seleccionar la imagen', 'Inténtalo de nuevo');
+    }
+  };
+
+  const uploadDocument = async (imageUri: string) => {
+    if (!barId) return;
+
+    setUploadingDocument(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Debes iniciar sesión');
+        return;
+      }
+
+      const fileName = `${user.id}/${barId}-${Date.now()}.jpg`;
+      const fileUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: fileUri,
+        type: 'image/jpeg',
+        name: fileName,
+      } as any);
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('bar-claim-documents')
+        .upload(fileName, formData as any, {
+          contentType: 'image/jpeg',
+        });
+
+      if (uploadError) {
+        console.error('❌ Error uploading document:', uploadError);
+        toast.error('No se pudo subir el documento', uploadError.message);
+        setDocumentUri(null);
+        return;
+      }
+
+      setDocumentPath(uploadData.path);
+    } catch (error) {
+      console.error('❌ Error uploading document:', error);
+      toast.error('No se pudo subir el documento', 'Inténtalo de nuevo');
+      setDocumentUri(null);
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  const handleRemoveDocument = () => {
+    setDocumentUri(null);
+    setDocumentPath(null);
+  };
+
   const handleSubmit = async () => {
-    if (!contactName.trim() || !contactPhone.trim() || !message.trim()) {
-      toast.warning('Completa todos los campos');
+    if (!contactName.trim() || !contactPhone.trim()) {
+      toast.warning('Completa tu nombre y teléfono');
+      return;
+    }
+    if (!documentPath) {
+      toast.warning('Sube una foto de un documento que demuestre que eres el propietario');
       return;
     }
     if (!barId) return;
@@ -67,7 +148,8 @@ export default function ClaimBarScreen() {
         claimant_id: user.id,
         contact_name: contactName.trim(),
         contact_phone: contactPhone.trim(),
-        message: message.trim(),
+        message: message.trim() || null,
+        document_path: documentPath,
       });
 
       if (error) {
@@ -88,6 +170,8 @@ export default function ClaimBarScreen() {
       setLoading(false);
     }
   };
+
+  const canSubmit = !loading && !uploadingDocument && !!contactName.trim() && !!contactPhone.trim() && !!documentPath;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -151,10 +235,35 @@ export default function ClaimBarScreen() {
               keyboardType="phone-pad"
             />
 
-            <AppText variant="label" style={styles.messageLabel}>Mensaje</AppText>
+            <AppText variant="label" style={styles.messageLabel}>Documento de verificación</AppText>
+            <AppText variant="caption" color={colors.text.secondary} style={styles.documentHint}>
+              Sube una foto de un documento que demuestre que este bar es tuyo (licencia de actividad, factura o recibo a nombre del bar).
+            </AppText>
+
+            {documentUri ? (
+              <View style={styles.documentPreviewWrapper}>
+                <Image source={{ uri: documentUri }} style={styles.documentPreview} />
+                {uploadingDocument ? (
+                  <View style={styles.documentUploadingOverlay}>
+                    <AppText variant="caption" color="#FFFFFF">Subiendo...</AppText>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.documentRemoveButton} onPress={handleRemoveDocument}>
+                    <Ionicons name="close" size={16} color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.documentPickButton} onPress={handlePickDocument}>
+                <Ionicons name="camera-outline" size={20} color={colors.brand.link} />
+                <AppText variant="label" color={colors.brand.link}>Subir foto del documento</AppText>
+              </TouchableOpacity>
+            )}
+
+            <AppText variant="label" style={styles.messageLabel}>Contexto adicional (opcional)</AppText>
             <View style={styles.textInputWrapper}>
               <TextInput
-                placeholder="Explícanos por qué eres el propietario de este bar..."
+                placeholder="Añade cualquier detalle que nos ayude a verificar tu solicitud..."
                 placeholderTextColor={colors.text.muted}
                 value={message}
                 onChangeText={setMessage}
@@ -175,7 +284,7 @@ export default function ClaimBarScreen() {
             onPress={handleSubmit}
             variant="primary"
             loading={loading}
-            disabled={loading}
+            disabled={!canSubmit}
           />
         </View>
       )}
@@ -241,6 +350,55 @@ const styles = StyleSheet.create({
   },
   messageLabel: {
     marginBottom: spacing.sm,
+  },
+  documentHint: {
+    marginBottom: spacing.md,
+  },
+  documentPickButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm - 2,
+    backgroundColor: colors.alpha.brandLight,
+    paddingVertical: spacing.lg - 6,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.alpha.brandBorder,
+    marginBottom: spacing.xl,
+  },
+  documentPreviewWrapper: {
+    marginBottom: spacing.xl,
+    alignSelf: 'flex-start',
+  },
+  documentPreview: {
+    width: 140,
+    height: 140,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  documentUploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.xl,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  documentRemoveButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: radius.round,
+    backgroundColor: colors.status.error,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textInputWrapper: {
     backgroundColor: colors.bg.elevated,

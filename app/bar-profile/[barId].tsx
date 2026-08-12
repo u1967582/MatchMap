@@ -227,6 +227,7 @@ export default function BarProfileScreen() {
     { type: 'posts', key: 'posts' },
     { type: 'reviews', key: 'reviews' },
     { type: 'danger', key: 'danger' },
+    { type: 'unclaimed-actions', key: 'unclaimed-actions' },
   ];
 
   const renderSection = ({ item }: { item: { type: string; key: string } }) => {
@@ -362,19 +363,6 @@ export default function BarProfileScreen() {
                 <Ionicons name="create-outline" size={16} color={colors.text.primary} />
                 <AppText variant="label" color={colors.text.primary}>Editar información</AppText>
               </TouchableOpacity>
-            )}
-
-            {!isOwner && bar?.owner_id === null && (
-              <View style={styles.unclaimedActionsRow}>
-                <TouchableOpacity style={styles.reportButton} onPress={handleReportBar}>
-                  <Ionicons name="flag-outline" size={14} color={colors.text.secondary} />
-                  <AppText variant="label" color={colors.text.secondary}>Reportar información</AppText>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.claimButton} onPress={handleClaimBar}>
-                  <Ionicons name="storefront-outline" size={14} color={colors.brand.link} />
-                  <AppText variant="label" color={colors.brand.link}>¿Eres el propietario?</AppText>
-                </TouchableOpacity>
-              </View>
             )}
           </View>
         );
@@ -799,6 +787,22 @@ export default function BarProfileScreen() {
               <TouchableOpacity style={styles.deleteBarButton} onPress={handleDeleteBar}>
                 <Ionicons name="trash-outline" size={20} color={colors.status.destructive} />
                 <AppText variant="body" color={colors.status.destructive} style={styles.deleteBarButtonTextMedium}>Eliminar Bar</AppText>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        );
+
+      case 'unclaimed-actions':
+        return (
+          !isOwner && bar?.owner_id === null ? (
+            <View style={styles.unclaimedActionsRow}>
+              <TouchableOpacity style={styles.reportButton} onPress={handleReportBar}>
+                <Ionicons name="flag-outline" size={14} color={colors.text.secondary} />
+                <AppText variant="label" color={colors.text.secondary}>Reportar información</AppText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.claimButton} onPress={handleClaimBar}>
+                <Ionicons name="storefront-outline" size={14} color={colors.brand.link} />
+                <AppText variant="label" color={colors.brand.link}>¿Eres el propietario?</AppText>
               </TouchableOpacity>
             </View>
           ) : null
@@ -1552,7 +1556,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
   },
   reportButton: {
     flexDirection: 'row',
