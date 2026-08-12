@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, Alert, Platform } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -36,14 +37,16 @@ interface BarInfoCardProps {
   onClose: () => void;
   onNavigate?: (barId: string) => void;
   onStartNavigation?: (destination: { latitude: number; longitude: number; name: string }) => void;
+  isBoosted?: boolean;
 }
 
-const BarInfoCard: React.FC<BarInfoCardProps> = ({ 
-  bar, 
-  visible, 
+const BarInfoCard: React.FC<BarInfoCardProps> = ({
+  bar,
+  visible,
   onClose,
   onNavigate,
-  onStartNavigation 
+  onStartNavigation,
+  isBoosted = false,
 }) => {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = React.useState(false);
@@ -179,11 +182,28 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
         onPress={onClose}
         activeOpacity={1}
       />
-      <TouchableOpacity 
-        style={styles.card} 
+      <TouchableOpacity
+        style={styles.card}
         onPress={handleCardPress}
         activeOpacity={0.8}
       >
+        {isBoosted && (
+          <>
+            <LinearGradient
+              colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.boostLineTop}
+            />
+            <LinearGradient
+              colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.boostLineLeft}
+            />
+          </>
+        )}
+
         {/* Image Container with Favorite Button */}
         <View style={styles.imageContainer}>
           {bar.image_url ? (
@@ -283,6 +303,17 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
             </View>
           )}
         </View>
+
+        {isBoosted && (
+          <View style={styles.topBarSticker}>
+            <View style={styles.topBarStickerBorder} />
+            <View style={styles.topBarStickerContent}>
+              <AppText style={styles.topBarStickerTop}>TOP</AppText>
+              <AppText style={styles.topBarStickerBar}>BAR</AppText>
+              <AppText style={styles.topBarStickerStars}>★ ★ ★</AppText>
+            </View>
+          </View>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -457,6 +488,87 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
+  },
+  // Amber top decorative line (boosted bars)
+  boostLineTop: {
+    position: 'absolute',
+    top: 0,
+    left: 14,
+    right: 14,
+    height: 2,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+    zIndex: 4,
+  },
+  // Amber left decorative line (boosted bars)
+  boostLineLeft: {
+    position: 'absolute',
+    top: 14,
+    bottom: 14,
+    left: 0,
+    width: 2.5,
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+    zIndex: 4,
+  },
+  // TOP BAR sticker — sello circular dorado (boosted bars)
+  topBarSticker: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    zIndex: 20,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#080d16',
+    borderWidth: 2.5,
+    borderColor: '#f0c030',
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ rotate: '8deg' }],
+    shadowColor: '#f0c030',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 14,
+  },
+  topBarStickerBorder: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(240,192,48,0.5)',
+  },
+  topBarStickerContent: {
+    alignItems: 'center',
+    gap: 1,
+  },
+  topBarStickerTop: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#f0c030',
+    textTransform: 'uppercase',
+    lineHeight: 14,
+    letterSpacing: 1.5,
+  },
+  topBarStickerBar: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#f0c030',
+    textTransform: 'uppercase',
+    lineHeight: 14,
+    letterSpacing: 1.5,
+  },
+  topBarStickerStars: {
+    fontSize: 7,
+    color: '#f0c030',
+    letterSpacing: 3,
+    lineHeight: 10,
+    marginTop: 2,
   },
 });
 

@@ -13,6 +13,8 @@ import { supabase } from '~/utils/supabase';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
 import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
+import { useIsAdmin } from '~/hooks/useIsAdmin';
+import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { fetchMatchById } from '~/services/matches';
@@ -175,6 +177,12 @@ const Map: React.FC<MapProps> = ({
   // Load filter data
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
 
+  // Solo el admin puede ver los bares marcados como "de test", y solo si además
+  // tiene activado el toggle (compartido con la pantalla de search)
+  const { isAdmin } = useIsAdmin();
+  const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
+  const includeTestBars = isAdmin && showTestBars;
+
   // MapBox Directions hook
   const { loading: directionsLoading, error: directionsError, routeData, travelMode, getDirections, clearRoute } = useMapboxDirections();
 
@@ -194,6 +202,7 @@ const Map: React.FC<MapProps> = ({
       lng: userLocation.coords.longitude
     } : null,
     enabled: true,
+    includeTestBars,
   });
 
   // Update context with only the 3 selected bars — same ones shown in popup and search
@@ -585,6 +594,15 @@ const Map: React.FC<MapProps> = ({
           `)
           .eq('is_active', true);
 
+        // Bares aprobados para todos; el admin además ve los de test aunque
+        // todavía no estén aprobados (para poder revisarlos en el mapa),
+        // salvo que haya apagado el toggle de "mostrar bares de test".
+        if (includeTestBars) {
+          barsQuery = barsQuery.or('verification_status.eq.approved,is_test.eq.true');
+        } else {
+          barsQuery = barsQuery.eq('verification_status', 'approved').eq('is_test', false);
+        }
+
         // Apply match filter if active
         if (barIdsFilter) {
           barsQuery = barsQuery.in('id', barIdsFilter);
@@ -642,7 +660,7 @@ const Map: React.FC<MapProps> = ({
     };
 
     fetchBars();
-  }, [selectedMatch]);
+  }, [selectedMatch, includeTestBars]);
 
   // Search for locations using Mapbox Geocoding API
   const searchLocations = React.useCallback(async (query: string) => {
@@ -1203,6 +1221,7 @@ const Map: React.FC<MapProps> = ({
         onClose={handleCloseBarCard}
         onNavigate={handleNavigateToBar}
         onStartNavigation={handleStartNavigation}
+        isBoosted={selectedBar ? selectedBoostBarIds.includes(selectedBar.id) : false}
       />
 
       {/* Filter Modal */}

@@ -7,6 +7,8 @@ import {
   Alert,
   TextInput,
   ScrollView,
+  Image,
+  Linking,
 } from 'react-native';
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +22,7 @@ type ClaimDetail = {
   contact_name: string;
   contact_phone: string;
   message: string;
+  document_path: string | null;
   status: string;
   created_at: string;
   bars: { name: string; address?: string | null; city?: string | null; phone?: string | null; owner_id: string | null } | null;
@@ -31,6 +34,7 @@ export default function BarClaimDetailScreen() {
 
   const [loading, setLoading] = useState(true);
   const [claim, setClaim] = useState<ClaimDetail | null>(null);
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<null | 'approve' | 'reject'>(null);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -41,11 +45,24 @@ export default function BarClaimDetailScreen() {
     try {
       const { data, error } = await supabase
         .from('bar_claims')
-        .select('id, bar_id, contact_name, contact_phone, message, status, created_at, bars(name, address, city, phone, owner_id)')
+        .select('id, bar_id, contact_name, contact_phone, message, document_path, status, created_at, bars(name, address, city, phone, owner_id)')
         .eq('id', claimId)
         .single();
       if (error) throw error;
       setClaim(data as any);
+
+      if (data?.document_path) {
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from('bar-claim-documents')
+          .createSignedUrl(data.document_path, 3600);
+        if (signedError) {
+          console.error('❌ Error signing document url:', signedError);
+        } else {
+          setDocumentUrl(signedData.signedUrl);
+        }
+      } else {
+        setDocumentUrl(null);
+      }
     } catch (e: any) {
       console.error('❌ Error loading claim:', e);
       Alert.alert('Error', e?.message || 'No se pudo cargar la solicitud.');
@@ -186,8 +203,19 @@ export default function BarClaimDetailScreen() {
             hint={phoneMatches === true ? 'Coincide con el teléfono guardado' : phoneMatches === false ? 'No coincide con el teléfono guardado' : undefined}
             hintColor={phoneMatches === true ? '#10B981' : phoneMatches === false ? '#F59E0B' : undefined}
           />
-          <InfoRow label="Mensaje" value={claim.message} />
+          <InfoRow label="Mensaje" value={claim.message || '—'} />
           <InfoRow label="Enviado" value={new Date(claim.created_at).toLocaleString('es-ES')} />
+
+          <View style={styles.infoRow}>
+            <AppText style={styles.infoLabel}>Documento de verificación</AppText>
+            {documentUrl ? (
+              <TouchableOpacity activeOpacity={0.85} onPress={() => Linking.openURL(documentUrl)}>
+                <Image source={{ uri: documentUrl }} style={styles.documentThumbnail} />
+              </TouchableOpacity>
+            ) : (
+              <AppText style={styles.infoValue}>Sin documento adjunto</AppText>
+            )}
+          </View>
         </View>
 
         <View style={styles.infoCard}>
@@ -303,6 +331,14 @@ const styles = StyleSheet.create({
   infoLabel: { color: '#A3B3CC', fontWeight: '900', fontSize: 12 },
   infoValue: { color: 'rgba(255,255,255,0.82)', fontSize: 13, lineHeight: 18 },
   infoHint: { fontSize: 11, fontWeight: '700', marginTop: 2 },
+  documentThumbnail: {
+    width: 160,
+    height: 160,
+    borderRadius: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
 
   warningBox: {
     flexDirection: 'row',

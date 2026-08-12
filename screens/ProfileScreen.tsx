@@ -21,6 +21,7 @@ import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 import AdBanner from '~/components/ads/AdBanner';
 import FavoriteTeamPopup from '~/components/FavoriteTeamPopup';
 import { setMatchNotificationsEnabled } from '~/services/notifications';
+import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 
 interface FavoriteTeam {
   id: string;
@@ -108,6 +109,10 @@ export default function ProfileScreen() {
   const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   const router = useRouter();
+
+  // Toggle de admin: mostrar/ocultar bares de test en mapa y search
+  const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
+  const toggleShowTestBars = useTestBarsVisibilityStore((state) => state.toggleShowTestBars);
 
   // All users are PRO; no subscription gating
 
@@ -705,6 +710,22 @@ export default function ProfileScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
               </TouchableOpacity>
+            </View>
+
+            {/* Depuración */}
+            <View style={styles.adminCategory}>
+              <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
+                Depuración
+              </AppText>
+              <View style={styles.settingsContainer}>
+                <SettingsToggleRow
+                  title="Mostrar bares de test"
+                  subtitle="Visibles en el mapa y en la búsqueda"
+                  value={showTestBars}
+                  onValueChange={toggleShowTestBars}
+                  isLast
+                />
+              </View>
             </View>
           </View>
         )}

@@ -3,26 +3,32 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Image as RNImage,
   TextInput,
   Alert,
   Dimensions,
   Platform,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import Dropdown from '~/components/ui/Dropdown';
 import FilterModal from '~/components/ui/FilterModal';
 import MatchPickerModal, { type Match } from '~/components/ui/MatchPickerModal';
 import { useFilterData } from '~/hooks/useFilterData';
+import { useIsAdmin } from '~/hooks/useIsAdmin';
+import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { useFavorites } from '~/hooks/useFavorites';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { useBoostBars } from '~/hooks/useBoostBars';
@@ -40,6 +46,8 @@ import {
   colors,
   spacing,
   radius,
+  springs,
+  timings,
 } from '~/components/ds';
 
 interface Bar {
@@ -79,9 +87,15 @@ const PAGE_SIZE = 10;
 
 const { width } = Dimensions.get('window');
 
+const HEADER_HEIGHT_FALLBACK = 150;
+const BANNER_HEIGHT_FALLBACK = 64;
+const FAB_SHOW_SCROLL_THRESHOLD = 250;
+const FAB_BASE_BOTTOM = (Platform.OS === 'ios' ? 95 : 75) + spacing.xl;
+
 export default function SearchScreen() {
   const router = useRouter();
-  
+  const insets = useSafeAreaInsets();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [allBars, setAllBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(false);
@@ -104,6 +118,12 @@ export default function SearchScreen() {
   // Load filter data
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
 
+  // Solo el admin puede ver los bares marcados como "de test", y solo si además
+  // tiene activado el toggle (compartido con la pantalla de mapa)
+  const { isAdmin } = useIsAdmin();
+  const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
+  const includeTestBars = isAdmin && showTestBars;
+
   // Load favorites functionality from store (optimistic updates)
   // Suscribir a `favorites` para que el componente re-renderice al cambiar el Set
   const favorites = useFavoritesStore(state => state.favorites);
@@ -117,11 +137,23 @@ export default function SearchScreen() {
   const { selected3Stable, allBoostBarIds } = useBoostBars({
     centerLatLng: userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null,
     enabled: !!userLocation,
+    includeTestBars,
   });
 
   // Ref for allBoostBarIds so searchBars can read the latest value without being recreated
   const allBoostBarIdsRef = useRef<string[]>([]);
   useEffect(() => { allBoostBarIdsRef.current = allBoostBarIds; }, [allBoostBarIds]);
+
+  // Header auto-hide on scroll + scroll-to-top FAB
+  const listRef = useRef<FlashListRef<(typeof listRows)[number]>>(null);
+  const [headerHeight, setHeaderHeight] = useState(HEADER_HEIGHT_FALLBACK);
+  const [bannerHeight, setBannerHeight] = useState(BANNER_HEIGHT_FALLBACK);
+  const [fabVisible, setFabVisible] = useState(false);
+  const headerTranslateY = useSharedValue(0);
+  const headerOpacity = useSharedValue(1);
+  const fabScale = useSharedValue(0);
+  const lastScrollY = useRef(0);
+  const fabShownRef = useRef(false);
 
   // Split bars: boosted (always shown) + regular (paginated)
   const boostedDisplayBars = useMemo(
@@ -227,6 +259,15 @@ export default function SearchScreen() {
           bar_images(image_url, image_order)
         `)
         .eq('is_active', true);
+
+      // Bares aprobados para todos; el admin además ve los de test aunque
+      // todavía no estén aprobados, salvo que haya apagado el toggle
+      // "mostrar bares de test" (misma lógica que el mapa).
+      if (includeTestBars) {
+        barsQuery = barsQuery.or('verification_status.eq.approved,is_test.eq.true');
+      } else {
+        barsQuery = barsQuery.eq('verification_status', 'approved').eq('is_test', false);
+      }
 
       // Aplicar filtro de búsqueda
       if (searchQuery.trim()) {
@@ -408,7 +449,61 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch]);
+  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch, includeTestBars]);
+
+  // La cabecera sigue el scroll 1:1 (misma velocidad/distancia que el dedo), sin easing:
+  // se traduce exactamente lo que avanza el scroll, con clamp entre 0 (visible) y -headerHeight (oculta).
+  const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const diff = y - lastScrollY.current;
+    lastScrollY.current = y;
+
+    if (y <= 0) {
+      // Bounce elástico en iOS o llegada al principio: cabecera siempre visible
+      headerTranslateY.value = 0;
+      headerOpacity.value = 1;
+    } else {
+      const next = headerTranslateY.value - diff;
+      const clamped = Math.min(0, Math.max(-headerHeight, next));
+      headerTranslateY.value = clamped;
+      // Al llegar al límite (totalmente fuera de pantalla) se oculta del todo,
+      // para que no quede ningún resto visible (sombra/borde) pegado arriba.
+      headerOpacity.value = clamped <= -headerHeight + 0.5 ? 0 : 1;
+    }
+
+    const shouldShowFab = y > FAB_SHOW_SCROLL_THRESHOLD;
+    if (shouldShowFab !== fabShownRef.current) {
+      fabShownRef.current = shouldShowFab;
+      fabScale.value = withSpring(shouldShowFab ? 1 : 0, springs.bouncy);
+      setFabVisible(shouldShowFab);
+    }
+  }, [headerHeight, headerTranslateY, headerOpacity, fabScale]);
+
+  const handleScrollToTop = useCallback(() => {
+    listRef.current?.scrollToTop({ animated: true });
+  }, []);
+
+  // Keep header visible while loading or when there is no scrollable list mounted
+  useEffect(() => {
+    if (loading || allBars.length === 0) {
+      fabShownRef.current = false;
+      lastScrollY.current = 0;
+      headerTranslateY.value = withTiming(0, timings.fade);
+      headerOpacity.value = withTiming(1, timings.fade);
+      fabScale.value = withTiming(0, timings.fade);
+      setFabVisible(false);
+    }
+  }, [loading, allBars.length, headerTranslateY, headerOpacity, fabScale]);
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: headerOpacity.value,
+    transform: [{ translateY: headerTranslateY.value }],
+  }));
+
+  const fabAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: fabScale.value,
+    transform: [{ scale: fabScale.value }],
+  }));
 
   // Load next page of bars
   const loadMore = useCallback(() => {
@@ -651,95 +746,31 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-  
-      {/* Removed header for minimalist design */}
-  
-      <View style={styles.searchContainer}>
-        <View style={styles.searchRow}>
-          <View style={[styles.searchBar, { flex: 1 }]}>
-            <Ionicons name="search" size={18} color={colors.text.secondary} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar nombre de bar..."
-              placeholderTextColor={colors.text.muted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color={colors.text.secondary} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity
-            style={[
-              styles.filterIconButton,
-              (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterIconButtonActive
-            ]}
-            onPress={() => setFilterModalVisible(true)}
-          >
-            <Ionicons name="filter" size={18} color={colors.text.secondary} />
-            {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
-              <View style={styles.filterDot} />
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      {/* Filtros */}
-      <View style={styles.filtersContainer}>
-        <View style={styles.filtersRow}>
-          {/* Ordenar */}
-          <View style={styles.filterColumn}>
-            <AppText variant="label" style={styles.filterLabelSpacing}>Ordenar por</AppText>
-            <Dropdown
-              label="Ordenar"
-              options={SORT_OPTIONS}
-              selectedValue={selectedSort}
-              onSelect={setSelectedSort}
-              placeholder="Ordenar"
-            />
-          </View>
-
-          {/* Partido */}
-          <View style={styles.filterColumn}>
-            <AppText variant="label" style={styles.filterLabelSpacing}>Partido</AppText>
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={() => setMatchPickerOpen(true)}
-            >
-              <AppText style={styles.iconEmoji}>⚽</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>
-                {selectedMatch ? 'Cambiar partido' : 'Seleccionar partido'}
-              </AppText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-  
       {/* 🔽 Resultados */}
       <View style={styles.resultsContainer}>
-        {/* Team selector chip moved to top controls */}
-
         {loading ? (
-          <SkeletonList count={3} />
+          <View style={{ paddingTop: headerHeight }}>
+            <SkeletonList count={3} />
+          </View>
         ) : allBars.length > 0 ? (
           <FlashList
+            ref={listRef}
             data={listRows}
             renderItem={renderRow}
             keyExtractor={(row) => row.key}
             getItemType={(row) => row.kind}
             extraData={favorites}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.barsList}
+            contentContainerStyle={[styles.barsList, { paddingTop: headerHeight }]}
             onEndReached={loadMore}
             onEndReachedThreshold={0.4}
             ListFooterComponent={renderListFooter}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
           />
         ) : (
-          <View style={styles.emptyWrapper}>
+          <View style={[styles.emptyWrapper, { paddingTop: headerHeight }]}>
             <EmptyState
               icon="search"
               title="No se encontraron bares"
@@ -768,9 +799,80 @@ export default function SearchScreen() {
         )}
       </View>
 
+      {/* Cabecera: barra de búsqueda + filtros (se desliza a la velocidad del scroll) */}
+      <Animated.View
+        style={[styles.headerOverlay, { top: insets.top }, headerAnimatedStyle]}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
+        <View style={styles.searchContainer}>
+          <View style={styles.searchRow}>
+            <View style={[styles.searchBar, { flex: 1 }]}>
+              <Ionicons name="search" size={18} color={colors.text.secondary} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar nombre de bar..."
+                placeholderTextColor={colors.text.muted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearch}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={18} color={colors.text.secondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.filterIconButton,
+                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterIconButtonActive
+              ]}
+              onPress={() => setFilterModalVisible(true)}
+            >
+              <Ionicons name="filter" size={18} color={colors.text.secondary} />
+              {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
+                <View style={styles.filterDot} />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Filtros */}
+        <View style={styles.filtersContainer}>
+          <View style={styles.filtersRow}>
+            {/* Ordenar */}
+            <View style={styles.filterColumn}>
+              <AppText variant="label" style={styles.filterLabelSpacing}>Ordenar por</AppText>
+              <Dropdown
+                label="Ordenar"
+                options={SORT_OPTIONS}
+                selectedValue={selectedSort}
+                onSelect={setSelectedSort}
+                placeholder="Ordenar"
+              />
+            </View>
+
+            {/* Partido */}
+            <View style={styles.filterColumn}>
+              <AppText variant="label" style={styles.filterLabelSpacing}>Partido</AppText>
+              <TouchableOpacity
+                style={styles.filterButton}
+                onPress={() => setMatchPickerOpen(true)}
+              >
+                <AppText style={styles.iconEmoji}>⚽</AppText>
+                <AppText variant="caption" color={colors.text.secondary}>
+                  {selectedMatch ? 'Cambiar partido' : 'Seleccionar partido'}
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Animated.View>
+
       {/* Floating Match Banner - Above BottomTabBar */}
       {selectedMatch && (
-        <View style={styles.floatingMatchBanner}>
+        <View style={styles.floatingMatchBanner} onLayout={(e) => setBannerHeight(e.nativeEvent.layout.height)}>
           <View style={styles.matchBannerContent}>
             <View style={styles.matchTeam}>
               {selectedMatch.home_team?.logo_url ? (
@@ -810,6 +912,20 @@ export default function SearchScreen() {
         </View>
       )}
 
+      {/* Botón flotante "volver arriba" — visible tras hacer scroll suficiente hacia abajo */}
+      <Animated.View
+        pointerEvents={fabVisible ? 'auto' : 'none'}
+        style={[
+          styles.scrollTopFab,
+          { bottom: FAB_BASE_BOTTOM + (selectedMatch ? bannerHeight + spacing.sm : 0) },
+          fabAnimatedStyle,
+        ]}
+      >
+        <Pressable onPress={handleScrollToTop} style={styles.scrollTopFabPressable} hitSlop={8}>
+          <Ionicons name="arrow-up" size={22} color={colors.text.primary} />
+        </Pressable>
+      </Animated.View>
+
       <BottomTabBar />
 
       {/* Filter Modal */}
@@ -847,6 +963,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg.primary,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: colors.bg.primary,
+  },
+  scrollTopFab: {
+    position: 'absolute',
+    right: spacing.lg,
+    width: 46,
+    height: 46,
+    borderRadius: radius.round,
+    zIndex: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  scrollTopFabPressable: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.round,
+    backgroundColor: colors.brand.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchContainer: {
     paddingHorizontal: spacing.lg,

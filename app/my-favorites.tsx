@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
+import * as Haptics from 'expo-haptics';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import AdBanner from '~/components/ads/AdBanner';
@@ -21,7 +22,6 @@ import { interleaveWithAds } from '~/utils/adListInterleave';
 import {
   AppText,
   AppCard,
-  AppChip,
   EmptyState,
   SkeletonCard,
   toast,
@@ -152,6 +152,12 @@ export default function MyFavoritesScreen() {
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [activeFilter, setActiveFilter] = useState<'recommended' | 'nearby' | 'top_rated'>('recommended');
 
+  const filterOptions: { key: typeof activeFilter; label: string }[] = [
+    { key: 'recommended', label: 'Recomendados' },
+    { key: 'nearby', label: 'Cercanos' },
+    { key: 'top_rated', label: 'Mejor valorado' },
+  ];
+
   const getUserLocation = useCallback(async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -252,10 +258,10 @@ export default function MyFavoritesScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={18} color={colors.text.primary} />
+            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <AppText variant="title">Mis Favoritos</AppText>
-          <View style={{ width: 36 }} />
+          <View style={styles.headerSpacer} />
         </View>
         <View style={styles.content}>
           <SkeletonCard />
@@ -273,18 +279,18 @@ export default function MyFavoritesScreen() {
 
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={18} color={colors.text.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <AppText variant="title">Mis Favoritos</AppText>
         <TouchableOpacity style={styles.searchButton} onPress={() => setSearchVisible(v => !v)} activeOpacity={0.7}>
-          <Ionicons name="search" size={18} color={colors.text.primary} />
+          <Ionicons name="search" size={24} color={colors.text.primary} />
         </TouchableOpacity>
       </View>
 
       {searchVisible && (
         <View style={styles.searchContainer}>
           <View style={styles.searchInputWrapper}>
-            <Ionicons name="search" size={20} color={colors.text.muted} style={styles.searchIcon} />
+            <Ionicons name="search" size={18} color={colors.text.secondary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Buscar bares..."
@@ -297,7 +303,7 @@ export default function MyFavoritesScreen() {
             />
             {searchText.length > 0 && (
               <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={20} color={colors.text.muted} />
+                <Ionicons name="close-circle" size={18} color={colors.text.secondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -306,9 +312,24 @@ export default function MyFavoritesScreen() {
 
       <View style={styles.sortContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortScrollContent}>
-          <AppChip label="Recomendados" selected={activeFilter === 'recommended'} onPress={() => setActiveFilter('recommended')} />
-          <AppChip label="Cercanos" selected={activeFilter === 'nearby'} onPress={() => setActiveFilter('nearby')} />
-          <AppChip label="Mejor valorado" selected={activeFilter === 'top_rated'} onPress={() => setActiveFilter('top_rated')} />
+          {filterOptions.map(opt => {
+            const isActive = activeFilter === opt.key;
+            return (
+              <TouchableOpacity
+                key={opt.key}
+                style={[styles.sortChip, isActive && styles.sortChipActive]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setActiveFilter(opt.key);
+                }}
+                activeOpacity={0.75}
+              >
+                <AppText variant="label" color={isActive ? colors.text.primary : colors.brand.primary}>
+                  {opt.label}
+                </AppText>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -359,36 +380,51 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.lg,
-    backgroundColor: colors.bg.element,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: spacing.xs,
   },
   searchButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.lg,
-    backgroundColor: colors.bg.element,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: spacing.xs,
   },
-  searchContainer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
+  headerSpacer: { width: 32 },
+  searchContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+  },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bg.element,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 50,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: Platform.OS === 'android' ? spacing.sm : spacing.lg - 6,
+    ...(Platform.OS === 'android' && { minHeight: 44 }),
   },
-  searchIcon: { marginRight: spacing.md },
-  searchInput: { flex: 1, fontSize: 16, color: colors.text.primary, paddingVertical: 0 },
+  searchIcon: { marginRight: spacing.sm },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text.primary,
+    paddingVertical: 0,
+    ...(Platform.OS === 'android' && { textAlignVertical: 'center', includeFontPadding: false }),
+  },
   clearButton: { marginLeft: spacing.sm, padding: spacing.xs },
   sortContainer: { paddingBottom: spacing.lg },
-  sortScrollContent: { paddingHorizontal: spacing.xl },
+  sortScrollContent: { paddingHorizontal: spacing.xl, gap: spacing.sm },
+  sortChip: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 20,
+    backgroundColor: colors.alpha.brandLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  sortChipActive: {
+    backgroundColor: colors.brand.primary,
+  },
   content: { flex: 1, paddingHorizontal: spacing.xl },
   emptyContainer: { flex: 1 },
   barsList: { paddingBottom: Platform.OS === 'ios' ? 100 : 80 },

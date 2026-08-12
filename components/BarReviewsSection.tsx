@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Image, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { AppText } from '~/components/ds';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
@@ -221,32 +221,43 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
     </View>
   ), [average, totalReviews, distribution, title]);
 
-  const renderReview = ({ item }: { item: Review }) => (
-    <View style={styles.reviewCard}>
-      <View style={styles.userRow}>
-        <Image 
-          source={{ 
+  const renderReview = ({ item }: { item: Review }) => {
+    const liked = isLiked(item.id);
+    return (
+      <View style={styles.reviewRow}>
+        <Image
+          source={{
             uri: item.user.profile_image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(item.user.username || 'U') + '&background=2A3A4A&color=94A3B8&size=64'
-          }} 
-          style={styles.avatar} 
+          }}
+          style={styles.avatar}
         />
-        <View style={styles.userInfo}>
-          <AppText maxScale={1.2} style={styles.username}>{item.user.username || 'Anonymous'}</AppText>
-          <AppText style={styles.timestamp}>{formatDate(item.created_at)}</AppText>
-          {renderStars(item.rating, 16)}
+
+        <View style={styles.reviewContent}>
+          <Text maxFontSizeMultiplier={1.5} style={styles.commentLine}>
+            <Text style={styles.username}>{item.user.username || 'Anonymous'}</Text>
+            {'  '}
+            <Text style={styles.commentText}>{item.comment}</Text>
+          </Text>
+
+          <View style={styles.metaRow}>
+            <AppText maxScale={1.0} style={styles.metaText}>{formatDate(item.created_at)}</AppText>
+            <View style={styles.metaDot} />
+            {renderStars(item.rating, 11)}
+          </View>
         </View>
-      </View>
 
-      <AppText maxScale={1.5} style={styles.comment}>{item.comment}</AppText>
-
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => toggleLike(item)} disabled={!userId || busyById[item.id]}>
-          <Ionicons name={isLiked(item.id) ? 'heart' : 'heart-outline'} size={16} color={isLiked(item.id) ? '#EF4444' : '#94A3B8'} />
-          <AppText maxScale={1.0} style={[styles.actionText, isLiked(item.id) && styles.actionTextActive]}>{item.likes ?? 0}</AppText>
+        <TouchableOpacity
+          style={styles.likeButton}
+          onPress={() => toggleLike(item)}
+          disabled={!userId || busyById[item.id]}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name={liked ? 'heart' : 'heart-outline'} size={16} color={liked ? '#EF4444' : '#94A3B8'} />
+          <AppText maxScale={1.0} style={[styles.likeCount, liked && styles.likeCountActive]}>{item.likes ?? 0}</AppText>
         </TouchableOpacity>
       </View>
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -383,64 +394,62 @@ const styles = StyleSheet.create({
   reviewList: { 
     marginTop: 8 
   },
-  reviewCard: { 
-    backgroundColor: 'rgba(15, 23, 36, 0.18)', 
-    borderRadius: 12, 
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 0,
+  reviewRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
-  userRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 8 
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    marginRight: 10,
   },
-  avatar: { 
-    width: 32, 
-    height: 32, 
-    borderRadius: 16, 
-    marginRight: 12 
-  },
-  userInfo: {
+  reviewContent: {
     flex: 1,
+    paddingRight: 8,
   },
-  username: { 
-    color: '#FFFFFF', 
-    fontWeight: 'bold',
-    fontSize: 16,
+  commentLine: {
+    fontSize: 14,
+    lineHeight: 19,
   },
-  timestamp: { 
-    fontSize: 13,
-    color: '#94A3B8' 
+  username: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
-  comment: { 
-    color: '#FFFFFF', 
-    marginTop: 8,
-    fontSize: 15,
-    lineHeight: 22,
+  commentText: {
+    color: '#E5E7EB',
+    fontWeight: '400',
   },
-  actions: { 
-    flexDirection: 'row', 
-    marginTop: 12,
-    gap: 16,
-  },
-  actionButton: { 
-    flexDirection: 'row', 
+  metaRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4
+    marginTop: 5,
+    gap: 6,
   },
-  actionText: { 
-    fontSize: 12, 
-    color: '#94A3B8' 
+  metaText: {
+    fontSize: 12,
+    color: '#6B7A8F',
   },
-  actionTextActive: {
-    color: '#EF4444'
+  metaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#6B7A8F',
+  },
+  likeButton: {
+    alignItems: 'center',
+    gap: 2,
+    paddingTop: 2,
+  },
+  likeCount: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  likeCountActive: {
+    color: '#EF4444',
   },
   loadingContainer: {
     alignItems: 'center',
