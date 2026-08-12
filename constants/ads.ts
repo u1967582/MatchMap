@@ -10,11 +10,11 @@ const USE_TEST_ADS = __DEV__;
 
 const PRODUCTION_AD_UNITS = {
   banner: {
-    android: 'ca-app-pub-5753100822208837/9130674119',
+    android: 'ca-app-pub-5753100822208837/5618640219',
     ios: 'ca-app-pub-5753100822208837/8940650588',
   },
   appOpen: {
-    android: 'ca-app-pub-5753100822208837/3878347435',
+    android: 'ca-app-pub-5753100822208837/5522633416',
     ios: 'ca-app-pub-5753100822208837/3976364447',
   },
 };
