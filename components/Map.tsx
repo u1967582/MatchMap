@@ -1221,6 +1221,7 @@ const Map: React.FC<MapProps> = ({
         onClose={handleCloseBarCard}
         onNavigate={handleNavigateToBar}
         onStartNavigation={handleStartNavigation}
+        isBoosted={selectedBar ? selectedBoostBarIds.includes(selectedBar.id) : false}
       />
 
       {/* Filter Modal */}
