@@ -8,13 +8,13 @@ import {
   TextInput,
   ScrollView,
   Image,
-  Linking,
 } from 'react-native';
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
+import ImageViewing from 'react-native-image-viewing';
 
 type ClaimDetail = {
   id: string;
@@ -38,6 +38,7 @@ export default function BarClaimDetailScreen() {
   const [actionLoading, setActionLoading] = useState<null | 'approve' | 'reject'>(null);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [viewerVisible, setViewerVisible] = useState(false);
 
   const load = useCallback(async () => {
     if (!claimId) return;
@@ -209,7 +210,7 @@ export default function BarClaimDetailScreen() {
           <View style={styles.infoRow}>
             <AppText style={styles.infoLabel}>Documento de verificación</AppText>
             {documentUrl ? (
-              <TouchableOpacity activeOpacity={0.85} onPress={() => Linking.openURL(documentUrl)}>
+              <TouchableOpacity activeOpacity={0.85} onPress={() => setViewerVisible(true)}>
                 <Image source={{ uri: documentUrl }} style={styles.documentThumbnail} />
               </TouchableOpacity>
             ) : (
@@ -281,6 +282,15 @@ export default function BarClaimDetailScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      <ImageViewing
+        images={documentUrl ? [{ uri: documentUrl }] : []}
+        imageIndex={0}
+        visible={viewerVisible}
+        onRequestClose={() => setViewerVisible(false)}
+        swipeToCloseEnabled
+        doubleTapToZoomEnabled
+      />
     </SafeAreaView>
   );
 }
