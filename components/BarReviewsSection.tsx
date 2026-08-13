@@ -18,6 +18,7 @@ interface Review {
     profile_image_url: string;
   };
   likes?: number;
+  is_google_review?: boolean;
 }
 
 interface BarReviewsSectionProps {
@@ -51,7 +52,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         // Fetch reviews
         const { data: reviewsData, error: reviewsError } = await supabase
           .from('reviews')
-          .select(`id, rating, comment, created_at, likes, user:users(username, profile_image_url)`)
+          .select(`id, rating, comment, created_at, likes, is_google_review, google_author_name, user:users(username, profile_image_url)`)
           .eq('bar_id', barId)
           .order('created_at', { ascending: false });
 
@@ -80,8 +81,11 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
             comment: item.comment,
             created_at: item.created_at,
             likes: item.likes ?? 0,
+            is_google_review: item.is_google_review ?? false,
             user: {
-              username: item.user?.username || 'Anonymous',
+              username: item.is_google_review
+                ? (item.google_author_name || 'Google')
+                : (item.user?.username || 'Anonymous'),
               profile_image_url: item.user?.profile_image_url || '',
             },
           }));
@@ -235,6 +239,9 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         <View style={styles.reviewContent}>
           <Text maxFontSizeMultiplier={1.5} style={styles.commentLine}>
             <Text style={styles.username}>{item.user.username || 'Anonymous'}</Text>
+            {item.is_google_review && (
+              <>{' '}<Ionicons name="logo-google" size={11} color="#4285F4" /></>
+            )}
             {'  '}
             <Text style={styles.commentText}>{item.comment}</Text>
           </Text>
