@@ -20,6 +20,8 @@ interface DraggableImageGridProps {
   images: DraggableImage[];
   onReorder: (reorderedImages: DraggableImage[]) => void;
   onDelete: (imageId: string) => void;
+  /** Toque corto sobre una imagen (fuera de modo selección) — para abrir un visor en grande. */
+  onImagePress?: (imageId: string) => void;
   columns?: number;
   itemSize?: number;
   gap?: number;
@@ -32,6 +34,7 @@ const DraggableImageGrid: React.FC<DraggableImageGridProps> = ({
   images,
   onReorder,
   onDelete,
+  onImagePress,
   columns = 4,
   itemSize = 80,
   gap = 8,
@@ -155,6 +158,7 @@ const DraggableImageGrid: React.FC<DraggableImageGridProps> = ({
             positions={positions}
             onReorder={handleReorder}
             onDelete={onDelete}
+            onPress={onImagePress}
             itemSize={itemSize}
             gap={gap}
             columns={columns}
