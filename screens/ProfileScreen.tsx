@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '~/utils/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import BottomTabBar from '~/components/ui/BottomTabBar';
@@ -107,6 +108,8 @@ export default function ProfileScreen() {
   const [planName, setPlanName] = useState<string>('Cargando...');
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
+  const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
+  const [pendingTicketsCount, setPendingTicketsCount] = useState(0);
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   const router = useRouter();
 
@@ -115,6 +118,26 @@ export default function ProfileScreen() {
   const toggleShowTestBars = useTestBarsVisibilityStore((state) => state.toggleShowTestBars);
 
   // All users are PRO; no subscription gating
+
+  const fetchAdminCounts = useCallback(async () => {
+    const [
+      { count: reportsCount },
+      { count: claimsCount },
+      { count: scrapedPendingCount },
+      { count: barsPendingCount },
+      { count: ticketsCount },
+    ] = await Promise.all([
+      supabase.from('bar_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('bar_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('bars_scraped').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('bars').select('id', { count: 'exact', head: true }).eq('verification_status', 'pending'),
+      supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+    ]);
+    setPendingReportsCount(reportsCount || 0);
+    setPendingClaimsCount(claimsCount || 0);
+    setPendingVerificationCount((scrapedPendingCount || 0) + (barsPendingCount || 0));
+    setPendingTicketsCount(ticketsCount || 0);
+  }, []);
 
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -160,12 +183,7 @@ export default function ProfileScreen() {
       });
 
       if (profileData?.is_super_user) {
-        const [{ count: reportsCount }, { count: claimsCount }] = await Promise.all([
-          supabase.from('bar_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-          supabase.from('bar_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        ]);
-        setPendingReportsCount(reportsCount || 0);
-        setPendingClaimsCount(claimsCount || 0);
+        await fetchAdminCounts();
       }
 
       // Fetch user's bars:
@@ -249,7 +267,7 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, fetchAdminCounts]);
 
   const handleLogout = useCallback(async () => {
     Alert.alert(
@@ -339,6 +357,18 @@ export default function ProfileScreen() {
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
+
+  // Refresca los contadores de "pendientes" cada vez que la pantalla recupera
+  // el foco (p.ej. al volver de aprobar/rechazar algo en un admin screen).
+  // El fetch inicial ya lo hace fetchUserProfile; aquí evitamos duplicarlo
+  // comprobando que ya sabemos que el usuario es super_user.
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.is_super_user) {
+        fetchAdminCounts();
+      }
+    }, [user?.is_super_user, fetchAdminCounts])
+  );
 
   if (loading) {
     return (
@@ -585,6 +615,13 @@ export default function ProfileScreen() {
                     Aprobar o rechazar bares pendientes de verificación
                   </AppText>
                 </View>
+                {pendingVerificationCount > 0 && (
+                  <View style={styles.adminBadge}>
+                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                      {pendingVerificationCount}
+                    </AppText>
+                  </View>
+                )}
                 <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
               </TouchableOpacity>
 
@@ -663,6 +700,13 @@ export default function ProfileScreen() {
                     Ver y responder tickets de usuarios
                   </AppText>
                 </View>
+                {pendingTicketsCount > 0 && (
+                  <View style={styles.adminBadge}>
+                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                      {pendingTicketsCount}
+                    </AppText>
+                  </View>
+                )}
                 <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
               </TouchableOpacity>
             </View>
