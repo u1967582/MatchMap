@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { BannerAd, BannerAdSize, type PaidEvent } from 'react-native-google-mobile-ads';
+import { AdFormat } from 'react-native-purchases';
 import { spacing } from '~/components/ds';
 import { AD_UNIT_IDS } from '~/constants/ads';
+import { generateAdImpressionId, trackAdRevenue } from '~/utils/revenuecat';
 
 type Status = 'loading' | 'loaded' | 'failed';
 
@@ -12,6 +14,7 @@ interface AdBannerProps {
 
 export default function AdBanner({ placement }: AdBannerProps) {
   const [status, setStatus] = useState<Status>('loading');
+  const impressionIdRef = useRef(generateAdImpressionId());
 
   const handleLoaded = useCallback(() => setStatus('loaded'), []);
 
@@ -19,6 +22,19 @@ export default function AdBanner({ placement }: AdBannerProps) {
     (error: Error) => {
       if (__DEV__) console.log(`[AdBanner:${placement}] failed to load`, error);
       setStatus('failed');
+    },
+    [placement]
+  );
+
+  const handlePaid = useCallback(
+    (event: PaidEvent) => {
+      trackAdRevenue({
+        event,
+        adUnitId: AD_UNIT_IDS.banner,
+        adFormat: AdFormat.banner,
+        placement,
+        impressionId: impressionIdRef.current,
+      });
     },
     [placement]
   );
@@ -38,6 +54,7 @@ export default function AdBanner({ placement }: AdBannerProps) {
         size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
         onAdLoaded={handleLoaded}
         onAdFailedToLoad={handleFailed}
+        onPaid={handlePaid}
       />
     </View>
   );

@@ -3,8 +3,11 @@ import Purchases, {
   CustomerInfo,
   PurchasesOffering,
   LOG_LEVEL,
+  AdMediatorName,
+  AdRevenuePrecision,
 } from 'react-native-purchases';
 import { Platform } from 'react-native';
+import { RevenuePrecisions, type PaidEvent } from 'react-native-google-mobile-ads';
 
 // RevenueCat API Keys - Use environment variable with fallback
 const REVENUECAT_API_KEY = Platform.select({
@@ -228,5 +231,59 @@ export async function getAllEntitlements(): Promise<Record<string, any>> {
   } catch (error) {
     console.error('❌ Failed to get all entitlements:', error);
     return {};
+  }
+}
+
+// AdMob RevenuePrecisions -> RevenueCat AdRevenuePrecision. Ambos SDKs usan
+// vocabularios distintos para el mismo concepto de "impression-level ad
+// revenue".
+const AD_REVENUE_PRECISION_MAP: Record<RevenuePrecisions, AdRevenuePrecision> = {
+  [RevenuePrecisions.PRECISE]: AdRevenuePrecision.exact,
+  [RevenuePrecisions.PUBLISHER_PROVIDED]: AdRevenuePrecision.publisherDefined,
+  [RevenuePrecisions.ESTIMATED]: AdRevenuePrecision.estimated,
+  [RevenuePrecisions.UNKNOWN]: AdRevenuePrecision.unknown,
+};
+
+/**
+ * Genera un id único por impresión de anuncio, para correlacionar los
+ * eventos load/show/paid de una misma impresión en RevenueCat.
+ */
+export function generateAdImpressionId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/**
+ * Reenvía a RevenueCat (Ad Monetization / Manual Ad Tracking) el ingreso
+ * generado por un anuncio de AdMob, para que aparezca junto al revenue de
+ * compras en el dashboard. No lanza si falla, para no interrumpir el flujo
+ * del anuncio por un error de reporting.
+ */
+export async function trackAdRevenue({
+  event,
+  adUnitId,
+  adFormat,
+  placement,
+  impressionId,
+}: {
+  event: PaidEvent;
+  adUnitId: string;
+  adFormat: string;
+  placement: string;
+  impressionId: string;
+}): Promise<void> {
+  try {
+    await Purchases.adTracker.trackAdRevenue({
+      mediatorName: AdMediatorName.adMob,
+      networkName: AdMediatorName.adMob,
+      adFormat,
+      adUnitId,
+      impressionId,
+      placement,
+      revenueMicros: Math.round(event.value * 1_000_000),
+      currency: event.currency,
+      precision: AD_REVENUE_PRECISION_MAP[event.precision] ?? AdRevenuePrecision.unknown,
+    });
+  } catch (error) {
+    console.error('❌ Failed to track ad revenue:', error);
   }
 }
