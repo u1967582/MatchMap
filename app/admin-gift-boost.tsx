@@ -21,6 +21,9 @@ import {
   spacing,
   radius,
 } from '~/components/ds';
+import { useIsAdmin } from '~/hooks/useIsAdmin';
+import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
+import { TestBarsFlagButton } from '~/components/admin/TestBarsFlagButton';
 
 interface Bar {
   id: string;
@@ -32,14 +35,19 @@ interface Bar {
   longitude?: number;
   distance_km?: number;
   has_active_boost?: boolean;
+  is_test?: boolean;
 }
 
 export default function AdminGiftBoostScreen() {
   const router = useRouter();
+  const { isAdmin } = useIsAdmin();
+  const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
+  const includeTestBars = isAdmin && showTestBars;
   const [bars, setBars] = useState<Bar[]>([]);
   const [filteredBars, setFilteredBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
 
   const getUserLocation = useCallback(async () => {
@@ -78,7 +86,7 @@ export default function AdminGiftBoostScreen() {
       const { data, error } = await supabase
         .from('bars')
         .select(
-          'id, name, address, city, latitude, longitude, bar_images(image_url, image_order), bar_boosts(id, status, end_at)'
+          'id, name, address, city, latitude, longitude, is_test, bar_images(image_url, image_order), bar_boosts(id, status, end_at)'
         )
         .order('name');
 
@@ -117,7 +125,6 @@ export default function AdminGiftBoostScreen() {
       }
 
       setBars(barsWithData);
-      setFilteredBars(barsWithData);
     } catch (error) {
       console.error('❌ Error in loadBars:', error);
     } finally {
@@ -125,29 +132,17 @@ export default function AdminGiftBoostScreen() {
     }
   }, [userLocation, calculateDistance]);
 
-  const filterBars = useCallback(
-    (text: string) => {
-      if (!text.trim()) {
-        setFilteredBars(bars);
-        return;
-      }
-      const filtered = bars.filter(
-        (bar) =>
-          bar.name.toLowerCase().includes(text.toLowerCase()) ||
-          bar.city.toLowerCase().includes(text.toLowerCase())
-      );
-      setFilteredBars(filtered);
-    },
-    [bars]
-  );
+  const handleSearchTextChange = useCallback((text: string) => {
+    setSearchText(text);
+  }, []);
 
-  const handleSearchTextChange = useCallback(
-    (text: string) => {
-      setSearchText(text);
-      filterBars(text);
-    },
-    [filterBars]
-  );
+  const handleToggleSearch = useCallback(() => {
+    setSearchOpen((open) => {
+      const next = !open;
+      if (!next) setSearchText('');
+      return next;
+    });
+  }, []);
 
   const handleBarPress = useCallback(
     (barId: string) => {
@@ -163,6 +158,22 @@ export default function AdminGiftBoostScreen() {
   useEffect(() => {
     loadBars();
   }, [loadBars]);
+
+  // Recalculate visible bars when the source list, search text or test-bars visibility changes
+  useEffect(() => {
+    let result = includeTestBars ? bars : bars.filter((bar) => !bar.is_test);
+
+    if (searchText.trim()) {
+      const text = searchText.toLowerCase();
+      result = result.filter(
+        (bar) =>
+          bar.name.toLowerCase().includes(text) ||
+          bar.city.toLowerCase().includes(text)
+      );
+    }
+
+    setFilteredBars(result);
+  }, [bars, searchText, includeTestBars]);
 
   const renderBarCard = useCallback(
     ({ item }: { item: Bar }) => (
@@ -220,7 +231,12 @@ export default function AdminGiftBoostScreen() {
             <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <AppText variant="title">Regalar Boost</AppText>
-          <View style={{ width: 24 }} />
+          <View style={styles.headerActions}>
+            {isAdmin && <TestBarsFlagButton />}
+            <TouchableOpacity onPress={handleToggleSearch} style={styles.headerIconButton}>
+              <Ionicons name={searchOpen ? 'close' : 'search'} size={22} color={colors.text.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.brand.primary} />
@@ -245,36 +261,44 @@ export default function AdminGiftBoostScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <AppText variant="title">Regalar Boost</AppText>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerActions}>
+          {isAdmin && <TestBarsFlagButton />}
+          <TouchableOpacity onPress={handleToggleSearch} style={styles.headerIconButton}>
+            <Ionicons name={searchOpen ? 'close' : 'search'} size={22} color={colors.text.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputWrapper}>
-          <Ionicons
-            name="search"
-            size={20}
-            color={colors.text.muted}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar por nombre o ciudad..."
-            placeholderTextColor={colors.text.muted}
-            value={searchText}
-            onChangeText={handleSearchTextChange}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchText.length > 0 && (
-            <TouchableOpacity
-              onPress={() => handleSearchTextChange('')}
-              style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color={colors.text.muted} />
-            </TouchableOpacity>
-          )}
+      {searchOpen && (
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons
+              name="search"
+              size={20}
+              color={colors.text.muted}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por nombre o ciudad..."
+              placeholderTextColor={colors.text.muted}
+              value={searchText}
+              onChangeText={handleSearchTextChange}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+            />
+            {searchText.length > 0 && (
+              <TouchableOpacity
+                onPress={() => handleSearchTextChange('')}
+                style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Info */}
       <View style={styles.infoContainer}>
@@ -335,6 +359,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   backButton: {
+    padding: spacing.xs,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  headerIconButton: {
     padding: spacing.xs,
   },
   searchContainer: {
