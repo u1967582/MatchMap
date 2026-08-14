@@ -36,6 +36,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [busyById, setBusyById] = useState<Record<string, boolean>>({});
+  const [visibleCount, setVisibleCount] = useState(5);
 
   // Store de likes (actualizaciones optimistas)
   const isLiked = useLikesStore(state => state.isLiked);
@@ -90,21 +91,31 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
             },
           }));
 
-          setReviews(transformedData);
+          // Priorizar reseñas de la app sobre las de Google; dentro de cada
+          // grupo, más recientes primero.
+          const sortedData = [...transformedData].sort((a, b) => {
+            if (a.is_google_review !== b.is_google_review) {
+              return a.is_google_review ? 1 : -1;
+            }
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+
+          setReviews(sortedData);
+          setVisibleCount(5);
 
           // Calculate distribution from reviews
           const ratings = [0, 0, 0, 0, 0];
-          transformedData.forEach((r) => {
+          sortedData.forEach((r) => {
             if (r.rating >= 1 && r.rating <= 5) ratings[r.rating - 1]++;
           });
           setDistribution(ratings);
 
           // Compute totals from fetched reviews (fallback to bars data if needed)
-          const total = transformedData.length;
+          const total = sortedData.length;
           setTotalReviews(total);
 
           const computedAvg = total > 0
-            ? transformedData.reduce((sum, r) => sum + (r.rating || 0), 0) / total
+            ? sortedData.reduce((sum, r) => sum + (r.rating || 0), 0) / total
             : 0;
           setAverage(typeof barData?.rating === 'number' && barData.rating > 0 ? barData.rating : computedAvg);
         }
@@ -311,14 +322,26 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
 
       {/* Lista de reseñas - solo cuando hay reseñas */}
       {hasReviews && (
-        <FlatList
-          data={reviews}
-          keyExtractor={(item) => item.id}
-          renderItem={renderReview}
-          style={styles.reviewList}
-          contentContainerStyle={{ paddingBottom: 40 }}
-          showsVerticalScrollIndicator={false}
-        />
+        <>
+          <FlatList
+            data={reviews.slice(0, visibleCount)}
+            keyExtractor={(item) => item.id}
+            renderItem={renderReview}
+            style={styles.reviewList}
+            contentContainerStyle={{ paddingBottom: visibleCount < reviews.length ? 0 : 40 }}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={false}
+          />
+          {visibleCount < reviews.length && (
+            <TouchableOpacity
+              style={styles.loadMoreButton}
+              onPress={() => setVisibleCount((prev) => Math.min(prev + 5, reviews.length))}
+              activeOpacity={0.7}
+            >
+              <AppText maxScale={1.0} style={styles.loadMoreText}>Cargar más reseñas</AppText>
+            </TouchableOpacity>
+          )}
+        </>
       )}
     </View>
   );
@@ -502,6 +525,18 @@ const styles = StyleSheet.create({
   ctaText: {
     color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  loadMoreButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    marginTop: 4,
+    marginBottom: 24,
+  },
+  loadMoreText: {
+    color: '#1976D2',
+    fontSize: 14,
     fontWeight: '600',
   },
 });
