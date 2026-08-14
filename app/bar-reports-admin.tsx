@@ -20,6 +20,8 @@ const REASON_LABELS: Record<string, string> = {
   cerrado: 'Ha cerrado',
   ubicacion_incorrecta: 'Ubicación incorrecta',
   fotos_incorrectas: 'Fotos incorrectas',
+  sin_television: 'No tienen televisión',
+  no_dan_partido: 'No aparece el partido en la televisión',
   otro: 'Otro',
 };
 
