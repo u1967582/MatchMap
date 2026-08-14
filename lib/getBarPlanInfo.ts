@@ -2,6 +2,8 @@
 import { CAP_BY_TIER, type Tier, type Capabilities } from './planCapabilities';
 import { supabase } from '~/utils/supabase';
 
+type PlanType = 'free' | 'pro_monthly' | 'pro_yearly' | 'elite_monthly' | 'elite_yearly';
+
 export async function getBarPlanInfo(barId: string) {
   const { data, error } = await supabase
     .from('subscriptions')
@@ -13,12 +15,12 @@ export async function getBarPlanInfo(barId: string) {
 
   if (error || !data || data.length === 0) {
     return {
-      plan_type: 'free',
+      plan_type: 'free' as PlanType,
       name: 'Gratuito'
     };
   }
 
-  const planLabels: Record<string, string> = {
+  const planLabels: Record<PlanType, string> = {
     free: 'Gratuito',
     pro_monthly: 'Pro Mensual',
     pro_yearly: 'Pro Anual',
@@ -31,7 +33,7 @@ export async function getBarPlanInfo(barId: string) {
     plan_type: planType,
     name: planLabels[planType] || 'Desconocido'
   };
-} 
+}
 
 /** Devuelve el tier efectivo (free/pro/elite) y sus capacidades para un bar dado */
 export async function getBarTierAndCapabilities(barId: string): Promise<{ tier: Tier; capabilities: Capabilities }> {
