@@ -86,6 +86,7 @@ export default function BoostPaywallSheet({
       ref={sheetRef}
       index={0}
       snapPoints={SNAP_POINTS}
+      enableDynamicSizing={false}
       enablePanDownToClose
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
