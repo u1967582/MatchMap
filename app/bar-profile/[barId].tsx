@@ -34,6 +34,7 @@ interface BarProfile {
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
   bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
+  is_betting_venue?: boolean;
 }
 
 interface BarPost {
@@ -522,11 +523,12 @@ export default function BarProfileScreen() {
 
       case 'tags':
         return (
-          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_selected_tv_features?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
+          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_selected_tv_features?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0 || bar?.is_betting_venue) ? (
             <View style={styles.tagsSection}>
               <FlatList
                 data={[
                   ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
+                  ...(bar?.is_betting_venue ? [{ type: 'betting', data: null, id: 'betting' }] : []),
                   ...(bar?.bar_food_types?.map((item) => ({ type: 'food', data: item, id: `food-${item.food_type_id}` })) || []),
                   ...(bar?.bar_selected_tv_features?.map((item) => ({ type: 'tv_feature', data: item, id: `tv-${item.tv_feature_id}` })) || []),
                   ...(bar?.bar_selected_features?.map((item) => ({ type: 'feature', data: item, id: `feature-${item.feature_id}` })) || [])
@@ -535,12 +537,17 @@ export default function BarProfileScreen() {
                   let backgroundColor = '#1976D2';
                   let icon = '📂';
                   let text = '';
-                  
+
                   switch (item.type) {
                     case 'category':
                       backgroundColor = colors.tags.category;
                       icon = '📂';
                       text = (item.data as { name: string }).name;
+                      break;
+                    case 'betting':
+                      backgroundColor = colors.tags.betting;
+                      icon = '🎰';
+                      text = 'Apuestas Deportivas';
                       break;
                     case 'food':
                       backgroundColor = colors.tags.food;
@@ -901,6 +908,7 @@ export default function BarProfileScreen() {
             bar_food_types(food_type_id, food_types(name)),
             bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
             bar_selected_features(feature_id, bar_features(name)),
+            is_betting_venue,
             verification_status,
             verification_notes
           `)
@@ -956,6 +964,7 @@ export default function BarProfileScreen() {
             feature_id: item.feature_id,
             feature: { name: item.bar_features?.name || 'Unknown' },
           })),
+          is_betting_venue: (barData as any).is_betting_venue ?? false,
         });
 
         // Round 2: ownership primer, després posts + matches

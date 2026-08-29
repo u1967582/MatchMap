@@ -21,8 +21,11 @@ import { AppText, colors, spacing, radius, ProfileSkeleton, toast } from '~/comp
 import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 import AdBanner from '~/components/ads/AdBanner';
 import FavoriteTeamPopup from '~/components/FavoriteTeamPopup';
+import BettingBarsAgeGatePopup from '~/components/BettingBarsAgeGatePopup';
 import { setMatchNotificationsEnabled } from '~/services/notifications';
+import { updateShowBettingBars } from '~/services/users';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
+import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
 
 interface FavoriteTeam {
   id: string;
@@ -40,6 +43,8 @@ interface UserProfile {
   favorite_team_id?: string | null;
   favorite_team?: FavoriteTeam | null;
   match_notifications_enabled?: boolean;
+  is_adult_confirmed?: boolean;
+  show_betting_bars?: boolean;
 }
 
 interface UserBar {
@@ -111,11 +116,15 @@ export default function ProfileScreen() {
   const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
   const [pendingTicketsCount, setPendingTicketsCount] = useState(0);
   const [showTeamPicker, setShowTeamPicker] = useState(false);
+  const [showBettingBarsAgeGate, setShowBettingBarsAgeGate] = useState(false);
   const router = useRouter();
 
   // Toggle de admin: mostrar/ocultar bares de test en mapa y search
   const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
   const toggleShowTestBars = useTestBarsVisibilityStore((state) => state.toggleShowTestBars);
+
+  // Preferencia (para todos los usuarios) de mostrar bares de apuestas deportivas
+  const setBettingBarsShowValue = useBettingBarsVisibilityStore((state) => state.setShowBettingBars);
 
   // All users are PRO; no subscription gating
 
@@ -158,7 +167,7 @@ export default function ProfileScreen() {
       // Try to get additional profile data from users table
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select('full_name, username, profile_image_url, bar_id, is_super_user, favorite_team_id, favorite_team:teams!favorite_team_id(id, name, logo_url), match_notifications_enabled')
+        .select('full_name, username, profile_image_url, bar_id, is_super_user, favorite_team_id, favorite_team:teams!favorite_team_id(id, name, logo_url), match_notifications_enabled, is_adult_confirmed, show_betting_bars')
         .eq('id', authUser.id)
         .single();
 
@@ -180,6 +189,8 @@ export default function ProfileScreen() {
         favorite_team_id: profileData?.favorite_team_id ?? null,
         favorite_team: favoriteTeamData ?? null,
         match_notifications_enabled: profileData?.match_notifications_enabled ?? true,
+        is_adult_confirmed: profileData?.is_adult_confirmed ?? false,
+        show_betting_bars: profileData?.show_betting_bars ?? false,
       });
 
       if (profileData?.is_super_user) {
@@ -314,6 +325,34 @@ export default function ProfileScreen() {
       }
     },
     [user]
+  );
+
+  const handleToggleShowBettingBars = useCallback(
+    async (value: boolean) => {
+      if (!user) return;
+      const previousValue = user.show_betting_bars ?? false;
+      setUser((prev) => (prev ? { ...prev, show_betting_bars: value } : prev));
+      setBettingBarsShowValue(value);
+      try {
+        await updateShowBettingBars(user.id, value);
+      } catch (error) {
+        setUser((prev) => (prev ? { ...prev, show_betting_bars: previousValue } : prev));
+        setBettingBarsShowValue(previousValue);
+        toast.supabaseError(error, 'No se pudo actualizar la preferencia');
+      }
+    },
+    [user, setBettingBarsShowValue]
+  );
+
+  const handleBettingBarsAgeGateSaved = useCallback(
+    (result: { isAdultConfirmed: boolean; showBettingBars: boolean }) => {
+      setUser((prev) =>
+        prev
+          ? { ...prev, is_adult_confirmed: result.isAdultConfirmed, show_betting_bars: result.showBettingBars }
+          : prev
+      );
+    },
+    []
   );
 
   const handleEditProfile = useCallback(() => {
@@ -797,6 +836,19 @@ export default function ProfileScreen() {
                 onValueChange={handleToggleMatchNotifications}
               />
             )}
+            {user?.is_adult_confirmed ? (
+              <SettingsToggleRow
+                title="Mostrar bares de apuestas deportivas"
+                subtitle="Incluirlos en el mapa y la búsqueda"
+                value={user.show_betting_bars ?? false}
+                onValueChange={handleToggleShowBettingBars}
+              />
+            ) : (
+              <SettingsRow
+                title="Ver bares de apuestas deportivas"
+                onPress={() => setShowBettingBarsAgeGate(true)}
+              />
+            )}
             <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast color={colors.status.error} />
           </View>
         </View>
@@ -823,6 +875,16 @@ export default function ProfileScreen() {
                 : prev
             );
           }}
+        />
+      )}
+
+      {user && (
+        <BettingBarsAgeGatePopup
+          visible={showBettingBarsAgeGate}
+          userId={user.id}
+          mode="settings"
+          onClose={() => setShowBettingBarsAgeGate(false)}
+          onSaved={handleBettingBarsAgeGateSaved}
         />
       )}
     </SafeAreaView>

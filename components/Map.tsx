@@ -15,6 +15,7 @@ import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
 import { useIsAdmin } from '~/hooks/useIsAdmin';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
+import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
 import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { fetchMatchById } from '~/services/matches';
@@ -111,6 +112,7 @@ interface Bar {
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
   bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
+  is_betting_venue?: boolean;
 }
 
 interface MapProps {
@@ -197,6 +199,10 @@ const Map: React.FC<MapProps> = ({
   const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
   const includeTestBars = isAdmin && showTestBars;
 
+  // Preferencia del usuario (cualquiera, no solo admin) de ver locales de
+  // apuestas deportivas, decidida en el popup de edad/onboarding o en su perfil
+  const includeBettingBars = useBettingBarsVisibilityStore((state) => state.showBettingBars);
+
   // MapBox Directions hook
   const { loading: directionsLoading, error: directionsError, routeData, travelMode, getDirections, clearRoute } = useMapboxDirections();
 
@@ -217,6 +223,7 @@ const Map: React.FC<MapProps> = ({
     } : null,
     enabled: true,
     includeTestBars,
+    includeBettingBars,
   });
 
   // Update context with only the 3 selected bars — same ones shown in popup and search
@@ -651,7 +658,8 @@ const Map: React.FC<MapProps> = ({
             bar_categories(id, name),
             bar_food_types(food_type_id, food_types(name)),
             bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
-            bar_selected_features(feature_id, bar_features(name))
+            bar_selected_features(feature_id, bar_features(name)),
+            is_betting_venue
           `)
           .eq('is_active', true);
 
@@ -662,6 +670,12 @@ const Map: React.FC<MapProps> = ({
           barsQuery = barsQuery.or('verification_status.eq.approved,is_test.eq.true');
         } else {
           barsQuery = barsQuery.eq('verification_status', 'approved').eq('is_test', false);
+        }
+
+        // Locales de apuestas deportivas ocultos salvo que el usuario haya
+        // optado explícitamente por verlos (ver bettingBarsVisibilityStore).
+        if (!includeBettingBars) {
+          barsQuery = barsQuery.eq('is_betting_venue', false);
         }
 
         // Apply match filter if active
@@ -721,7 +735,7 @@ const Map: React.FC<MapProps> = ({
     };
 
     fetchBars();
-  }, [selectedMatch, includeTestBars]);
+  }, [selectedMatch, includeTestBars, includeBettingBars]);
 
   // Search for locations using Mapbox Geocoding API
   const searchLocations = React.useCallback(async (query: string) => {

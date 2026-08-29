@@ -14,6 +14,7 @@ import { supabase } from '~/utils/supabase';
 import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import { useLikesStore } from '~/stores/likesStore';
+import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
 import { configureNotificationHandler, unregisterCurrentPushToken } from '~/services/notifications';
 export default function Layout() {
   const router = useRouter();
@@ -96,6 +97,7 @@ export default function Layout() {
         // Limpiar stores
         setFavoritesUserId(null);
         setLikesUserId(null);
+        useBettingBarsVisibilityStore.getState().reset();
         console.log('🧹 Stores limpiados');
         router.replace('/');
       }

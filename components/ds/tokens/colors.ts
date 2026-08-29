@@ -69,5 +69,6 @@ export const colors = {
     food: '#D89B6A',
     tv: '#7FB894',
     feature: '#B084B8',
+    betting: '#C97B3D',
   },
 } as const;

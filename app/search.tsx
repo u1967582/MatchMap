@@ -29,6 +29,7 @@ import MatchPickerModal, { type Match } from '~/components/ui/MatchPickerModal';
 import { useFilterData } from '~/hooks/useFilterData';
 import { useIsAdmin } from '~/hooks/useIsAdmin';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
+import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
 import { useFavorites } from '~/hooks/useFavorites';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { useBoostBars } from '~/hooks/useBoostBars';
@@ -66,6 +67,7 @@ interface Bar {
   bar_food_types?: { food_type_id: number }[];
   bar_selected_features?: { feature_id: number }[];
   bar_selected_tv_features?: { tv_feature_id: number }[];
+  is_betting_venue?: boolean;
   next_match?: {
     date: string;
     time: string;
@@ -124,6 +126,10 @@ export default function SearchScreen() {
   const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
   const includeTestBars = isAdmin && showTestBars;
 
+  // Preferencia del usuario (cualquiera, no solo admin) de ver locales de
+  // apuestas deportivas, decidida en el popup de edad/onboarding o en su perfil
+  const includeBettingBars = useBettingBarsVisibilityStore((state) => state.showBettingBars);
+
   // Load favorites functionality from store (optimistic updates)
   // Suscribir a `favorites` para que el componente re-renderice al cambiar el Set
   const favorites = useFavoritesStore(state => state.favorites);
@@ -138,6 +144,7 @@ export default function SearchScreen() {
     centerLatLng: userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null,
     enabled: !!userLocation,
     includeTestBars,
+    includeBettingBars,
   });
 
   // Ref for allBoostBarIds so searchBars can read the latest value without being recreated
@@ -256,7 +263,8 @@ export default function SearchScreen() {
           category_id,
           rating,
           review_count,
-          bar_images(image_url, image_order)
+          bar_images(image_url, image_order),
+          is_betting_venue
         `)
         .eq('is_active', true);
 
@@ -267,6 +275,12 @@ export default function SearchScreen() {
         barsQuery = barsQuery.or('verification_status.eq.approved,is_test.eq.true');
       } else {
         barsQuery = barsQuery.eq('verification_status', 'approved').eq('is_test', false);
+      }
+
+      // Locales de apuestas deportivas ocultos salvo que el usuario haya
+      // optado explícitamente por verlos (ver bettingBarsVisibilityStore).
+      if (!includeBettingBars) {
+        barsQuery = barsQuery.eq('is_betting_venue', false);
       }
 
       // Aplicar filtro de búsqueda
@@ -449,7 +463,7 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch, includeTestBars]);
+  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch, includeTestBars, includeBettingBars]);
 
   // La cabecera sigue el scroll 1:1 (misma velocidad/distancia que el dedo), sin easing:
   // se traduce exactamente lo que avanza el scroll, con clamp entre 0 (visible) y -headerHeight (oculta).
