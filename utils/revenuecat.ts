@@ -182,7 +182,7 @@ export async function logoutUser(): Promise<void> {
 export async function getActiveSubscriptionInfo(): Promise<{
   isActive: boolean;
   productIdentifier?: string;
-  expirationDate?: string;
+  expirationDate?: string | null;
   willRenew?: boolean;
 } | null> {
   try {
