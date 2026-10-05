@@ -61,7 +61,7 @@ interface Bar {
   category_id?: number;
   rating?: number | null;
   review_count?: number | null;
-  image_url?: string;
+  image_url?: string | null;
   distance_km?: number | null;
   bar_food_types?: { food_type_id: number }[];
   bar_selected_features?: { feature_id: number }[];

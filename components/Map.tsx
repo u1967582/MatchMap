@@ -826,7 +826,7 @@ const Map: React.FC<MapProps> = ({
               <BarMapMarker
                 key={`marker-${bar.id}`}
                 type={markerType}
-                animated={(isBoosted || isDestination) && !isSelected}
+                animated={(isBoosted || !!isDestination) && !isSelected}
                 onPress={() => handleMarkerPress(bar)}
               />
             </MapboxGL.PointAnnotation>

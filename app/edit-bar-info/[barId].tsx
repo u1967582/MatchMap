@@ -993,7 +993,7 @@ export default function EditBarInfoScreen() {
           {barImages.length > 0 ? (
             <DraggableImageGrid
               images={barImages}
-              onReorder={handleReorderBarImages}
+              onReorder={(images) => handleReorderBarImages(images as BarImage[])}
               onDelete={(imageId) => handleDeleteImage(imageId, 'bar')}
               columns={4}
               itemSize={80}
@@ -1026,7 +1026,7 @@ export default function EditBarInfoScreen() {
             {menuImages.length > 0 ? (
               <DraggableImageGrid
                 images={menuImages}
-                onReorder={handleReorderMenuImages}
+                onReorder={(images) => handleReorderMenuImages(images as BarImage[])}
                 onDelete={(imageId) => handleDeleteImage(imageId, 'menu')}
                 columns={4}
                 itemSize={80}

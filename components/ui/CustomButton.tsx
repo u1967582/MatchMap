@@ -1,5 +1,11 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { AppText } from '~/components/ds';
 
 interface CustomButtonProps {
@@ -20,7 +26,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   fullWidth = true,
 }) => {
   const getButtonStyle = () => {
-    const baseStyle = [styles.button];
+    const baseStyle: ViewStyle[] = [styles.button];
     
     if (fullWidth) baseStyle.push(styles.fullWidth);
     if (disabled || loading) baseStyle.push(styles.disabled);
@@ -47,7 +53,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   };
 
   const getTextStyle = () => {
-    const baseStyle = [styles.buttonText];
+    const baseStyle: TextStyle[] = [styles.buttonText];
     
     switch (variant) {
       case 'primary':

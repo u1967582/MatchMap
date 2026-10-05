@@ -54,6 +54,14 @@ declare module '@rnmapbox/maps' {
     filter?: any[];
   }
 
+  interface LineLayerProps extends ViewProps {
+    id: string;
+    style?: any;
+    filter?: any[];
+    aboveLayerID?: string;
+    belowLayerID?: string;
+  }
+
   interface ImagesProps extends ViewProps {
     images: Record<string, any>;
   }
@@ -66,6 +74,7 @@ declare module '@rnmapbox/maps' {
   class ShapeSource extends Component<ShapeSourceProps> {}
   class SymbolLayer extends Component<SymbolLayerProps> {}
   class CircleLayer extends Component<CircleLayerProps> {}
+  class LineLayer extends Component<LineLayerProps> {}
   class Images extends Component<ImagesProps> {}
 
   const StyleURL: {
@@ -90,6 +99,7 @@ declare module '@rnmapbox/maps' {
     ShapeSource,
     SymbolLayer,
     CircleLayer,
+    LineLayer,
     Images,
     StyleURL 
   };

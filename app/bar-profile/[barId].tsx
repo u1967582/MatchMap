@@ -813,6 +813,91 @@ export default function BarProfileScreen() {
     }
   };
 
+  const fetchBarPosts = useCallback(async (barId: string, authUser: any, isOwnerCheck: boolean) => {
+    try {
+      let query = supabase
+        .from('bar_posts')
+        .select('*')
+        .eq('bar_id', barId);
+
+      // If not the owner, only show active posts within valid date range
+      if (!authUser || !isOwnerCheck) {
+        const today = new Date().toISOString().split('T')[0];
+        query = query
+          .eq('is_active', true)
+          .or(`start_date.is.null,start_date.lte.${today}`)
+          .or(`end_date.is.null,end_date.gte.${today}`);
+      }
+
+      // Order by pinned first, then by creation date (newest first)
+      query = query.order('pinned', { ascending: false })
+                  .order('created_at', { ascending: false });
+
+      const { data: postsData, error: postsError } = await query;
+
+      if (postsError) {
+        console.error('Error fetching posts:', postsError);
+      } else {
+        setPosts(postsData || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchBarPosts:', error);
+    }
+  }, []);
+
+  const fetchUpcomingMatches = useCallback(async (barId: string) => {
+    try {
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('events')
+        .select(`
+          start_time,
+          matches!inner(
+            id,
+            date,
+            time,
+            home_team_id,
+            away_team_id,
+            competition_id,
+            home_team:teams!matches_home_team_id_fkey(id, name, logo_url),
+            away_team:teams!matches_away_team_id_fkey(id, name, logo_url),
+            competition:competitions!inner(id, name)
+          )
+        `)
+        .eq('bar_id', barId)
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(5);
+
+      if (matchesError) {
+        console.error('Error fetching upcoming matches:', matchesError);
+        return;
+      }
+
+      if (matchesData && matchesData.length > 0) {
+        const upcomingMatches: UpcomingMatch[] = matchesData.map((event: any) => ({
+          id: event.matches.id,
+          start_time: event.start_time,
+          date: event.matches.date,
+          time: event.matches.time,
+          home_team_id: event.matches.home_team_id,
+          away_team_id: event.matches.away_team_id,
+          competition_id: event.matches.competition_id,
+          home_team_name: event.matches.home_team.name,
+          away_team_name: event.matches.away_team.name,
+          competition_name: event.matches.competition.name,
+          home_team_logo_url: event.matches.home_team.logo_url,
+          away_team_logo_url: event.matches.away_team.logo_url,
+        }));
+
+        setUpcomingMatches(upcomingMatches);
+      } else {
+        setUpcomingMatches([]);
+      }
+    } catch (error) {
+      console.error('Error in fetchUpcomingMatches:', error);
+    }
+  }, []);
+
   const fetchBarProfile = useCallback(async () => {
     if (!barId) return;
 
@@ -919,91 +1004,6 @@ export default function BarProfileScreen() {
       setLoading(false);
     }
   }, [barId, fetchBarPosts, fetchUpcomingMatches]);
-
-  const fetchBarPosts = useCallback(async (barId: string, authUser: any, isOwnerCheck: boolean) => {
-    try {
-      let query = supabase
-        .from('bar_posts')
-        .select('*')
-        .eq('bar_id', barId);
-
-      // If not the owner, only show active posts within valid date range
-      if (!authUser || !isOwnerCheck) {
-        const today = new Date().toISOString().split('T')[0];
-        query = query
-          .eq('is_active', true)
-          .or(`start_date.is.null,start_date.lte.${today}`)
-          .or(`end_date.is.null,end_date.gte.${today}`);
-      }
-
-      // Order by pinned first, then by creation date (newest first)
-      query = query.order('pinned', { ascending: false })
-                  .order('created_at', { ascending: false });
-
-      const { data: postsData, error: postsError } = await query;
-
-      if (postsError) {
-        console.error('Error fetching posts:', postsError);
-      } else {
-        setPosts(postsData || []);
-      }
-    } catch (error) {
-      console.error('Error in fetchBarPosts:', error);
-    }
-  }, []);
-
-  const fetchUpcomingMatches = useCallback(async (barId: string) => {
-    try {
-      const { data: matchesData, error: matchesError } = await supabase
-        .from('events')
-        .select(`
-          start_time,
-          matches!inner(
-            id,
-            date,
-            time,
-            home_team_id,
-            away_team_id,
-            competition_id,
-            home_team:teams!matches_home_team_id_fkey(id, name, logo_url),
-            away_team:teams!matches_away_team_id_fkey(id, name, logo_url),
-            competition:competitions!inner(id, name)
-          )
-        `)
-        .eq('bar_id', barId)
-        .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true })
-        .limit(5);
-
-      if (matchesError) {
-        console.error('Error fetching upcoming matches:', matchesError);
-        return;
-      }
-
-      if (matchesData && matchesData.length > 0) {
-        const upcomingMatches: UpcomingMatch[] = matchesData.map((event: any) => ({
-          id: event.matches.id,
-          start_time: event.start_time,
-          date: event.matches.date,
-          time: event.matches.time,
-          home_team_id: event.matches.home_team_id,
-          away_team_id: event.matches.away_team_id,
-          competition_id: event.matches.competition_id,
-          home_team_name: event.matches.home_team.name,
-          away_team_name: event.matches.away_team.name,
-          competition_name: event.matches.competition.name,
-          home_team_logo_url: event.matches.home_team.logo_url,
-          away_team_logo_url: event.matches.away_team.logo_url,
-        }));
-
-        setUpcomingMatches(upcomingMatches);
-      } else {
-        setUpcomingMatches([]);
-      }
-    } catch (error) {
-      console.error('Error in fetchUpcomingMatches:', error);
-    }
-  }, []);
 
   const handleBack = useCallback(() => {
     router.back();

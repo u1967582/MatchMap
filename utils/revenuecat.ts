@@ -196,7 +196,7 @@ export async function getActiveSubscriptionInfo(): Promise<{
     return {
       isActive: true,
       productIdentifier: firstEntitlement.productIdentifier,
-      expirationDate: firstEntitlement.expirationDate,
+      expirationDate: firstEntitlement.expirationDate ?? undefined,
       willRenew: firstEntitlement.willRenew,
     };
   } catch (error) {

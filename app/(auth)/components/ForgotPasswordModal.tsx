@@ -126,7 +126,7 @@ export default function ForgotPasswordModal({
               💡 ¿No recuerdas cómo te registraste?
             </AppText>
             <AppText variant="body" color={colors.text.secondary} style={styles.infoText}>
-              • Si te registraste con Google, usa "Continuar con Google"
+              • Si te registraste con Google, usa &ldquo;Continuar con Google&rdquo;
             </AppText>
             <AppText variant="body" color={colors.text.secondary} style={styles.infoText}>
               • Si te registraste con email, ingresa tu email aquí
