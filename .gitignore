@@ -40,3 +40,9 @@ client_secret_*.json
 
 # Artefacto local de estado de la Supabase CLI
 supabase/.temp/
+
+# Informes de cobertura de jest (se generan localmente)
+coverage/
+
+# Configuración MCP local (puede contener credenciales)
+.mcp-config.json
