@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeForUpload } from '~/utils/imageResize';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '~/utils/supabase';
 import { toast, EditBarSkeleton, AppText } from '~/components/ds';
@@ -340,12 +341,10 @@ export default function EditBarInfoScreen() {
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.75,
-        width: 1400,
-        height: 788,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
+        const imageUri = await resizeForUpload(result.assets[0], 'bar');
         await uploadBarImage(imageUri, 'bar');
       }
     } catch (error) {
@@ -376,12 +375,10 @@ export default function EditBarInfoScreen() {
         allowsEditing: true,
         aspect: [3, 4],
         quality: 0.75,
-        width: 900,
-        height: 1200,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
+        const imageUri = await resizeForUpload(result.assets[0], 'menu');
         await uploadBarImage(imageUri, 'menu');
       }
     } catch (error) {

@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeForUpload } from '~/utils/imageResize';
 import { supabase } from '~/utils/supabase';
 import { toast, AppText } from '~/components/ds';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
@@ -179,12 +180,10 @@ export default function EditPostScreen() {
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.75,
-        width: 1200,
-        height: 675,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
+        const imageUri = await resizeForUpload(result.assets[0], 'post');
         setImageUrl(imageUri);
       }
     } catch (error) {

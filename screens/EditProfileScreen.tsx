@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeForUpload } from '~/utils/imageResize';
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '~/utils/supabase';
 import { deleteAccount } from '~/utils/auth';
@@ -212,8 +213,6 @@ export default function EditProfileScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.75,
-        width: 400,
-        height: 400,
         base64: false, // No necesitamos base64 aquí
       });
 
@@ -256,7 +255,7 @@ export default function EditProfileScreen() {
       }
 
       console.log('✅ Imagen válida seleccionada desde galería');
-      setProfileImage(file.uri);
+      setProfileImage(await resizeForUpload(file, 'avatar'));
       
     } catch (error) {
       console.error('Error picking image from gallery:', error);
@@ -282,8 +281,6 @@ export default function EditProfileScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.75,
-        width: 400,
-        height: 400,
       });
 
       console.log('📷 Resultado de la cámara:', {
@@ -325,7 +322,7 @@ export default function EditProfileScreen() {
       }
 
       console.log('✅ Foto válida tomada con cámara');
-      setProfileImage(file.uri);
+      setProfileImage(await resizeForUpload(file, 'avatar'));
       
     } catch (error) {
       console.error('Error taking photo:', error);

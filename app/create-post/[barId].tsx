@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeForUpload } from '~/utils/imageResize';
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '~/utils/supabase';
 import { toast, AppText } from '~/components/ds';
@@ -102,8 +103,6 @@ export default function CreatePostScreen() {
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.75,
-        width: 1200,
-        height: 675,
       });
 
       if (!result.canceled && result.assets?.length) {
@@ -111,7 +110,7 @@ export default function CreatePostScreen() {
         if (file.uri) {
           const fileInfo = await FileSystem.getInfoAsync(file.uri);
           if (fileInfo.exists && fileInfo.size > 0) {
-            setSelectedImage(file.uri);
+            setSelectedImage(await resizeForUpload(file, 'post'));
           }
         }
       }
@@ -133,8 +132,6 @@ export default function CreatePostScreen() {
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.75,
-        width: 1200,
-        height: 675,
       });
 
       if (!result.canceled && result.assets?.length) {
@@ -142,7 +139,7 @@ export default function CreatePostScreen() {
         if (file.uri) {
           const fileInfo = await FileSystem.getInfoAsync(file.uri);
           if (fileInfo.exists && fileInfo.size > 0) {
-            setSelectedImage(file.uri);
+            setSelectedImage(await resizeForUpload(file, 'post'));
           }
         }
       }
