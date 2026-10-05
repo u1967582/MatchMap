@@ -20,6 +20,7 @@ interface DraggableImageItemProps {
   positions: SharedValue<{ [key: string]: { x: number; y: number; order: number } }>;
   onReorder: (imageId: string, newOrder: number) => void;
   onDelete: (imageId: string) => void;
+  onPress?: (imageId: string) => void;
   itemSize: number;
   gap: number;
   columns: number;
@@ -31,6 +32,7 @@ const DraggableImageItem: React.FC<DraggableImageItemProps> = ({
   positions,
   onReorder,
   onDelete,
+  onPress,
   itemSize,
   gap,
   columns,
@@ -158,7 +160,14 @@ const DraggableImageItem: React.FC<DraggableImageItemProps> = ({
       runOnJS(triggerHaptic)();
     });
 
-  const composedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
+  const tapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd((_event, success) => {
+      if (success && onPress) runOnJS(onPress)(image.id);
+    });
+
+  // Un toque corto abre el visor; mantener pulsado y arrastrar reordena.
+  const composedGesture = Gesture.Race(tapGesture, Gesture.Simultaneous(longPressGesture, panGesture));
 
   const animatedStyle = useAnimatedStyle(() => {
     const position = positions.value[image.id];

@@ -21,11 +21,14 @@ import * as Haptics from 'expo-haptics';
 import { supabase } from '~/utils/supabase';
 import ImageViewing from 'react-native-image-viewing';
 import { DraggableImageGrid, type DraggableImage } from '~/components/images';
+import { useAutoBroadcastPreferences } from '~/hooks/useAutoBroadcastPreferences';
+import { CompetitionsTeamsSelector } from '~/components/admin/CompetitionsTeamsSelector';
+import { buildBroadcastPreferencesPayload } from '~/lib/broadcastPreferences';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Source = 'owner' | 'scraped';
-type VerificationStatus = 'pending' | 'approved' | 'rejected';
+type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'archived';
 
 type BarDetail = {
   id: string;
@@ -75,12 +78,14 @@ const STATUS_COLOR: Record<VerificationStatus, string> = {
   pending: colors.status.warning,
   approved: colors.status.success,
   rejected: colors.status.error,
+  archived: colors.text.muted,
 };
 
 const STATUS_LABEL: Record<VerificationStatus, string> = {
   pending: 'Pendiente',
   approved: 'Aprobado',
   rejected: 'Rechazado',
+  archived: 'Archivado',
 };
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
@@ -91,11 +96,16 @@ export default function BarVerificationDetailScreen() {
   const source: Source = sourceParam === 'scraped' ? 'scraped' : 'owner';
   const isScraped = source === 'scraped';
 
+  // Se levanta aquí (en vez de dentro de AutomationSection) para que approve()
+  // pueda leer la selección y aplicarla justo después de convertir un
+  // candidato de scraper, que todavía no tiene fila real en `bars`.
+  const automation = useAutoBroadcastPreferences({ barId: barId ? String(barId) : undefined, forceAdminRpc: true });
+
   // ── Loading ──
   const [loading, setLoading] = useState(true);
   const [loadingExtras, setLoadingExtras] = useState(true);
   const [savingInfo, setSavingInfo] = useState(false);
-  const [actionLoading, setActionLoading] = useState<null | 'approve' | 'reject' | 'delete'>(null);
+  const [actionLoading, setActionLoading] = useState<null | 'approve' | 'reject' | 'delete' | 'archive' | 'reactivate'>(null);
 
   // ── Reseñas de Google ──
   const [googleReviews, setGoogleReviews] = useState<GoogleReview[]>([]);
@@ -129,7 +139,10 @@ export default function BarVerificationDetailScreen() {
   const [flagMenuPhotos, setFlagMenuPhotos] = useState(false);
 
   // ── UI ──
-  const [rejectSheetVisible, setRejectSheetVisible] = useState(false);
+  // Comparte el mismo bottom sheet para rechazar (nota obligatoria) y
+  // archivar (nota opcional) — solo cambia el título, los presets y a qué
+  // estado transiciona.
+  const [sheetMode, setSheetMode] = useState<'reject' | 'archive' | null>(null);
   const [rejectNotes, setRejectNotes] = useState('');
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerImages, setViewerImages] = useState<Array<{ uri: string }>>([]);
@@ -247,7 +260,12 @@ export default function BarVerificationDetailScreen() {
       latitude: data.latitude,
       longitude: data.longitude,
       created_at: data.created_at,
-      verification_status: (data.status === 'rejected' ? 'rejected' : data.status === 'converted' ? 'approved' : 'pending') as VerificationStatus,
+      verification_status: (
+        data.status === 'rejected' ? 'rejected'
+        : data.status === 'converted' ? 'approved'
+        : data.status === 'archived' ? 'archived'
+        : 'pending'
+      ) as VerificationStatus,
       verification_notes: data.verification_notes,
       place_id: data.place_id,
       confidence: data.confidence,
@@ -648,7 +666,7 @@ export default function BarVerificationDetailScreen() {
     setActionLoading('approve');
     try {
       if (isScraped) {
-        const { error } = await supabase.rpc('convert_scraped_bar', {
+        const { data: newBarId, error } = await supabase.rpc('convert_scraped_bar', {
           p_scraped_id: bar.id,
           p_name: editName.trim(),
           p_description: editDescription.trim() || null,
@@ -668,6 +686,27 @@ export default function BarVerificationDetailScreen() {
           p_food_type_ids: selectedFoodTypeIds,
         });
         if (error) throw error;
+
+        // La automatización se elige mientras el candidato todavía no tiene
+        // fila real en `bars` (sin eso, bar_selected_competitions/teams no
+        // tienen a qué engancharse) — se aplica aquí, justo tras crearla.
+        if (automation.hasSelection && newBarId) {
+          const { competition_ids, team_ids, team_competition_ids } = buildBroadcastPreferencesPayload(
+            automation.selectedCompetitions,
+            automation.selectedTeams,
+          );
+          const { error: automationError } = await supabase.rpc('fn_sync_bar_preferences_admin', {
+            _bar_id: newBarId,
+            _competition_ids: competition_ids,
+            _team_ids: team_ids,
+            _team_competition_ids: team_competition_ids,
+          });
+          if (automationError) {
+            console.error('❌ Error aplicando automatización preseleccionada:', automationError);
+            toast.warning('Bar aprobado, pero no se pudo aplicar la automatización', 'Configúrala manualmente desde el bar ya aprobado');
+          }
+        }
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         toast.success('Bar aprobado', 'Ya es visible para los usuarios');
         router.back();
@@ -689,7 +728,7 @@ export default function BarVerificationDetailScreen() {
       toast.supabaseError(e, 'No se pudo aprobar el bar');
       setActionLoading(null);
     }
-  }, [bar, isScraped, editName, editDescription, editPhone, editWebsite, barImages, menuImages, selectedFeatureIds, selectedTvFeatureIds, selectedFoodTypeIds, router]);
+  }, [bar, isScraped, editName, editDescription, editPhone, editWebsite, barImages, menuImages, selectedFeatureIds, selectedTvFeatureIds, selectedFoodTypeIds, router, automation.hasSelection, automation.selectedCompetitions, automation.selectedTeams]);
 
   const reject = useCallback(async () => {
     if (!bar) return;
@@ -715,7 +754,7 @@ export default function BarVerificationDetailScreen() {
           .eq('id', bar.id);
         if (error) throw error;
       }
-      setRejectSheetVisible(false);
+      setSheetMode(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       toast.info('Bar rechazado', isScraped ? 'Se descarta de la cola de revisión' : 'El propietario verá el motivo');
       router.back();
@@ -724,6 +763,68 @@ export default function BarVerificationDetailScreen() {
       setActionLoading(null);
     }
   }, [bar, isScraped, rejectNotes, router]);
+
+  const archiveBar = useCallback(async () => {
+    if (!bar) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setActionLoading('archive');
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (!user) throw new Error('No auth user');
+      const notes = rejectNotes.trim() || null;
+
+      if (isScraped) {
+        const { error } = await supabase
+          .from('bars_scraped')
+          .update({ status: 'archived', verification_notes: notes, reviewed_at: new Date().toISOString(), reviewed_by: user.id })
+          .eq('id', bar.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('bars')
+          .update({ verification_status: 'archived', verified_at: new Date().toISOString(), verified_by: user.id, verification_notes: notes })
+          .eq('id', bar.id);
+        if (error) throw error;
+      }
+      setSheetMode(null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast.info('Bar archivado', 'Podrás reactivarlo más tarde desde "Archivados"');
+      router.back();
+    } catch (e: any) {
+      toast.supabaseError(e, 'No se pudo archivar el bar');
+      setActionLoading(null);
+    }
+  }, [bar, isScraped, rejectNotes, router]);
+
+  const reactivateBar = useCallback(() => {
+    if (!bar) return;
+    Alert.alert('Reactivar bar', `"${bar.name}" volverá a la cola de pendientes.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Reactivar',
+        onPress: async () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          setActionLoading('reactivate');
+          try {
+            if (isScraped) {
+              const { error } = await supabase.from('bars_scraped').update({ status: 'pending' }).eq('id', bar.id);
+              if (error) throw error;
+            } else {
+              const { error } = await supabase.from('bars').update({ verification_status: 'pending' }).eq('id', bar.id);
+              if (error) throw error;
+            }
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            toast.success('Bar reactivado', 'Vuelve a la cola de pendientes');
+            router.back();
+          } catch (e: any) {
+            toast.supabaseError(e, 'No se pudo reactivar el bar');
+            setActionLoading(null);
+          }
+        },
+      },
+    ]);
+  }, [bar, isScraped, router]);
 
   const deleteBar = useCallback(() => {
     if (!bar) return;
@@ -977,6 +1078,7 @@ export default function BarVerificationDetailScreen() {
                 images={barImages.map((i) => ({ id: i.id, image_url: i.image_url, image_order: i.image_order ?? 0 }))}
                 onReorder={reorderBarPhotos}
                 onDelete={deleteBarPhoto}
+                onImagePress={(id) => openViewer(barUrls, barImages.findIndex((i) => i.id === id), 'bar')}
                 columns={gridColumns}
                 itemSize={gridItemSize}
                 gap={gridGap}
@@ -1004,6 +1106,7 @@ export default function BarVerificationDetailScreen() {
                 images={menuImages.map((i) => ({ id: i.id, image_url: i.image_url, image_order: i.image_order ?? 0 }))}
                 onReorder={reorderMenuPhotos}
                 onDelete={deleteMenuPhoto}
+                onImagePress={(id) => openViewer(menuUrls, menuImages.findIndex((i) => i.id === id), 'menu')}
                 columns={gridColumns}
                 itemSize={gridItemSize}
                 gap={gridGap}
@@ -1079,10 +1182,15 @@ export default function BarVerificationDetailScreen() {
           </View>
 
           {/* ── Reseñas de Google ── */}
-          {bar.place_id && googleReviews.length > 0 && (
+          {bar.place_id && (
             <>
               <SectionTitle title="Reseñas de Google" count={googleReviews.length} />
               <View style={{ paddingHorizontal: spacing.xl, marginBottom: spacing.xl, gap: spacing.sm }}>
+                {googleReviews.length === 0 && (
+                  <AppText variant="caption" color={colors.text.muted}>
+                    {loadingExtras ? 'Cargando…' : 'Este bar no tiene reseñas de Google'}
+                  </AppText>
+                )}
                 {googleReviews.map((review) => (
                   <View key={review.id} style={styles.reviewCard}>
                     <View style={styles.reviewHeader}>
@@ -1141,8 +1249,20 @@ export default function BarVerificationDetailScreen() {
             </>
           )}
 
+          {/* ── Automatizar retransmisiones ── */}
+          <AutomationSection {...automation} deferred={isScraped} />
+
           {/* ── Botones de verificación ── */}
           <View style={styles.actionsRow}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.rejectBtn, busy && styles.btnDisabled]}
+              disabled={busy}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSheetMode('reject'); }}
+            >
+              <Ionicons name="close-circle" size={18} color="#FFFFFF" />
+              <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Rechazar</AppText>
+            </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.85}
               style={[styles.approveBtn, busy && styles.btnDisabled]}
@@ -1156,16 +1276,41 @@ export default function BarVerificationDetailScreen() {
                 </>
               )}
             </TouchableOpacity>
+          </View>
+
+          {/* ── Reactivar (solo si está archivado) ── */}
+          {bar.verification_status === 'archived' && (
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[styles.rejectBtn, busy && styles.btnDisabled]}
+              style={[styles.reactivateBtn, busy && styles.btnDisabled]}
               disabled={busy}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setRejectSheetVisible(true); }}
+              onPress={reactivateBar}
             >
-              <Ionicons name="close-circle" size={18} color="#FFFFFF" />
-              <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Rechazar</AppText>
+              {actionLoading === 'reactivate' ? <ActivityIndicator color="#FFFFFF" /> : (
+                <>
+                  <Ionicons name="refresh" size={18} color="#FFFFFF" />
+                  <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Reactivar</AppText>
+                </>
+              )}
             </TouchableOpacity>
-          </View>
+          )}
+
+          {/* ── Archivar ── */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.archiveBarBtn, busy && styles.btnDisabled]}
+            disabled={busy}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSheetMode('archive'); }}
+          >
+            {actionLoading === 'archive' ? <ActivityIndicator color={colors.text.secondary} /> : (
+              <>
+                <Ionicons name="archive-outline" size={15} color={colors.text.secondary} />
+                <AppText variant="label" style={{ color: colors.text.secondary }} maxScale={1.0}>
+                  Archivar (posponer)
+                </AppText>
+              </>
+            )}
+          </TouchableOpacity>
 
           {/* ── Eliminar ── */}
           <TouchableOpacity
@@ -1237,35 +1382,37 @@ export default function BarVerificationDetailScreen() {
         )}
       </KeyboardAvoidingView>
 
-      {/* ── Bottom sheet: rechazar ── */}
+      {/* ── Bottom sheet: rechazar / archivar ── */}
       <Modal
-        visible={rejectSheetVisible}
+        visible={sheetMode !== null}
         transparent
         animationType="slide"
-        onRequestClose={() => setRejectSheetVisible(false)}
+        onRequestClose={() => setSheetMode(null)}
       >
-        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setRejectSheetVisible(false)} />
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setSheetMode(null)} />
         <View style={styles.sheetContent}>
           <View style={styles.sheetHandle} />
           <AppText variant="title" color={colors.text.primary} style={{ marginBottom: spacing.lg }} maxScale={1.0}>
-            Motivo de rechazo
+            {sheetMode === 'archive' ? 'Nota de archivado (opcional)' : 'Motivo de rechazo'}
           </AppText>
-          <View style={styles.presetRow}>
-            {QUICK_REJECT_PRESETS.map((p) => (
-              <TouchableOpacity
-                key={p}
-                activeOpacity={0.8}
-                style={[styles.presetChip, rejectNotes === p && styles.presetChipActive]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setRejectNotes(p); }}
-              >
-                <AppText variant="caption" style={[styles.presetText, rejectNotes === p && styles.presetTextActive]} maxScale={1.0}>
-                  {p}
-                </AppText>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {sheetMode === 'reject' && (
+            <View style={styles.presetRow}>
+              {QUICK_REJECT_PRESETS.map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  activeOpacity={0.8}
+                  style={[styles.presetChip, rejectNotes === p && styles.presetChipActive]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setRejectNotes(p); }}
+                >
+                  <AppText variant="caption" style={[styles.presetText, rejectNotes === p && styles.presetTextActive]} maxScale={1.0}>
+                    {p}
+                  </AppText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           <TextInput
-            placeholder="O escribe un motivo personalizado…"
+            placeholder={sheetMode === 'archive' ? 'Explica qué le falta a este bar (opcional)…' : 'O escribe un motivo personalizado…'}
             placeholderTextColor={colors.text.muted}
             value={rejectNotes}
             onChangeText={setRejectNotes}
@@ -1276,7 +1423,7 @@ export default function BarVerificationDetailScreen() {
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.cancelBtn}
-              onPress={() => setRejectSheetVisible(false)}
+              onPress={() => setSheetMode(null)}
             >
               <AppText variant="button" color={colors.text.secondary} maxScale={1.0}>Cancelar</AppText>
             </TouchableOpacity>
@@ -1284,10 +1431,10 @@ export default function BarVerificationDetailScreen() {
               activeOpacity={0.85}
               style={[styles.rejectConfirmBtn, (busy) && styles.btnDisabled]}
               disabled={busy}
-              onPress={reject}
+              onPress={sheetMode === 'archive' ? archiveBar : reject}
             >
-              {actionLoading === 'reject' ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
-                <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Rechazar</AppText>
+              {(actionLoading === 'reject' || actionLoading === 'archive') ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
+                <AppText variant="button" color="#FFFFFF" maxScale={1.0}>{sheetMode === 'archive' ? 'Archivar' : 'Rechazar'}</AppText>
               )}
             </TouchableOpacity>
           </View>
@@ -1487,6 +1634,93 @@ function Chip({ label, active, activeColor, onPress }: { label: string; active: 
   );
 }
 
+// Panel desplegable de automatización de retransmisiones, embebido al final
+// de la ficha del bar. Reutiliza la misma lógica (hook) y UI (selector) que
+// la pantalla completa /auto-broadcasts/[barId], pero sin navegar al guardar.
+function AutomationSection({
+  competitions, loadingComps, expanded, teamsCache,
+  selectedCompetitions, selectedTeams, hasAutomation, hasSelection, hasChanges,
+  toggleExpand, toggleCompetitionSelected, toggleTeamSelected,
+  save, clearAll, saving, clearingAll,
+  deferred,
+}: ReturnType<typeof useAutoBroadcastPreferences> & {
+  /** Candidato de scraper aún sin fila real en `bars`: la selección se
+   *  aplicará al aprobar en vez de guardarse aquí mismo. */
+  deferred: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <View style={styles.automationCard}>
+      <TouchableOpacity onPress={() => setOpen((v) => !v)} style={styles.automationHeader} activeOpacity={0.8}>
+        <View style={styles.automationIconWrap}>
+          <Ionicons name="tv-outline" size={14} color={colors.status.boost} />
+        </View>
+        <AppText variant="label" color={colors.text.primary} style={{ flex: 1 }} maxScale={1.0}>
+          Automatizar retransmisiones
+        </AppText>
+        {hasAutomation && (
+          <View style={styles.automationActiveBadge}>
+            <AppText variant="caption" color={colors.status.success} maxScale={1.0}>Activa</AppText>
+          </View>
+        )}
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.text.muted} />
+      </TouchableOpacity>
+      {open && (
+        <View style={styles.automationBody}>
+          {loadingComps ? (
+            <ActivityIndicator color={colors.status.boost} style={{ marginVertical: spacing.md }} />
+          ) : (
+            <>
+              <CompetitionsTeamsSelector
+                competitions={competitions}
+                expanded={expanded}
+                teamsCache={teamsCache}
+                selectedCompetitions={selectedCompetitions}
+                selectedTeams={selectedTeams}
+                onToggleExpand={toggleExpand}
+                onToggleCompetition={toggleCompetitionSelected}
+                onToggleTeam={toggleTeamSelected}
+                scrollEnabled={false}
+                variant="app"
+              />
+              <View style={styles.automationActions}>
+                {hasAutomation && (
+                  <TouchableOpacity onPress={clearAll} disabled={clearingAll} style={styles.automationClearBtn}>
+                    {clearingAll ? <ActivityIndicator size="small" color={colors.status.error} /> : (
+                      <AppText variant="caption" color={colors.status.error} maxScale={1.0}>Eliminar automatizaciones</AppText>
+                    )}
+                  </TouchableOpacity>
+                )}
+                {deferred ? (
+                  hasSelection && (
+                    <View style={styles.automationDeferredHint}>
+                      <Ionicons name="checkmark-circle-outline" size={14} color={colors.status.success} />
+                      <AppText variant="caption" color={colors.text.secondary} maxScale={1.0}>
+                        Se guardará al aprobar este bar
+                      </AppText>
+                    </View>
+                  )
+                ) : (
+                  <TouchableOpacity
+                    onPress={save}
+                    disabled={!hasChanges || saving}
+                    style={[styles.automationSaveBtn, (!hasChanges || saving) && styles.btnDisabled]}
+                  >
+                    {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
+                      <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Guardar preferencias</AppText>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+            </>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
@@ -1677,6 +1911,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     ...shadows.sm,
   },
+  reactivateBtn: {
+    height: 50, marginHorizontal: spacing.xl, marginTop: spacing.sm,
+    borderRadius: radius.xl,
+    backgroundColor: colors.status.boost,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    ...shadows.sm,
+  },
+  archiveBarBtn: {
+    height: 46, marginHorizontal: spacing.xl, marginTop: spacing.sm,
+    borderRadius: radius.xl, borderWidth: 1,
+    borderColor: colors.border.subtle, backgroundColor: colors.bg.elevated,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+  },
   deleteBarBtn: {
     height: 46, marginHorizontal: spacing.xl, marginTop: spacing.sm,
     borderRadius: radius.xl, borderWidth: 1,
@@ -1684,6 +1931,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
   },
   btnDisabled: { opacity: 0.55 },
+
+  // Automatización de retransmisiones (panel embebido): un único acordeón
+  // redondeado — cabecera llamativa (icono + insignia), cuerpo minimalista
+  // (filas separadas por líneas finas, sin tarjetas anidadas).
+  automationCard: {
+    marginHorizontal: spacing.xl, marginBottom: spacing.xxl,
+    backgroundColor: colors.bg.elevated, borderRadius: radius.xl,
+    borderWidth: 1, borderColor: colors.border.subtle,
+    overflow: 'hidden',
+  },
+  automationHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+  },
+  automationIconWrap: {
+    width: 26, height: 26, borderRadius: radius.round,
+    backgroundColor: `${colors.status.boost}1f`,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  automationActiveBadge: {
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: `${colors.status.success}1f`,
+  },
+  automationBody: {
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.lg,
+    borderTopWidth: 1, borderTopColor: colors.border.subtle,
+  },
+  automationDeferredHint: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    alignSelf: 'flex-start', paddingVertical: spacing.xs,
+  },
+  automationActions: {
+    marginTop: spacing.xs, gap: spacing.sm,
+  },
+  automationClearBtn: {
+    alignSelf: 'flex-start', paddingVertical: spacing.xs,
+  },
+  automationSaveBtn: {
+    height: 44, borderRadius: radius.lg,
+    backgroundColor: colors.status.success,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+  },
 
   // Viewer footer
   viewerFooter: {

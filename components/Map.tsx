@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing, Platform, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing, Platform, ActivityIndicator, Image, AppState } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,13 +15,28 @@ import { useBoostBars } from '~/hooks/useBoostBars';
 import { useFilterData } from '~/hooks/useFilterData';
 import { useIsAdmin } from '~/hooks/useIsAdmin';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
+import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
 import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { fetchMatchById } from '~/services/matches';
 import { AppText, MapSkeleton } from '~/components/ds';
+import { getNearbyBarIds } from '~/utils/geo';
+import { trackBarProximity } from '~/services/barAnalytics';
 
 // Use environment variable for Mapbox token
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
+
+// Detección de proximidad: solo en primer plano, sin guardar coordenadas
+// exactas ni tracking en background (ver fn_track_bar_proximity).
+//
+// DESACTIVADO A PROPÓSITO: aunque el diseño técnico ya es privacy-friendly
+// (sin lat/lng, sin permiso "always", deduplicado por día), todavía falta
+// actualizar la política de privacidad y pedir consentimiento explícito
+// para este uso concreto de la ubicación (GDPR/LOPDGDD). No activar hasta
+// que ese paso legal esté resuelto.
+const PROXIMITY_TRACKING_ENABLED = false;
+const PROXIMITY_RADIUS_METERS = 150;
+const PROXIMITY_CHECK_COOLDOWN_MS = 5 * 60 * 1000;
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
@@ -97,6 +112,7 @@ interface Bar {
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
   bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
+  is_betting_venue?: boolean;
 }
 
 interface MapProps {
@@ -183,6 +199,10 @@ const Map: React.FC<MapProps> = ({
   const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
   const includeTestBars = isAdmin && showTestBars;
 
+  // Preferencia del usuario (cualquiera, no solo admin) de ver locales de
+  // apuestas deportivas, decidida en el popup de edad/onboarding o en su perfil
+  const includeBettingBars = useBettingBarsVisibilityStore((state) => state.showBettingBars);
+
   // MapBox Directions hook
   const { loading: directionsLoading, error: directionsError, routeData, travelMode, getDirections, clearRoute } = useMapboxDirections();
 
@@ -203,6 +223,7 @@ const Map: React.FC<MapProps> = ({
     } : null,
     enabled: true,
     includeTestBars,
+    includeBettingBars,
   });
 
   // Update context with only the 3 selected bars — same ones shown in popup and search
@@ -488,6 +509,53 @@ const Map: React.FC<MapProps> = ({
     requestLocationPermission();
   }, []);
 
+  // Detección de proximidad (privacy-friendly): solo foreground, sin lat/lng
+  // en el servidor, deduplicado por día en fn_track_bar_proximity.
+  const barsRef = React.useRef<Bar[]>([]);
+  React.useEffect(() => {
+    barsRef.current = bars;
+  }, [bars]);
+
+  const lastProximityCheckAtRef = React.useRef<number>(0);
+
+  const checkBarProximity = React.useCallback((coords: { latitude: number; longitude: number }) => {
+    if (!PROXIMITY_TRACKING_ENABLED) return;
+
+    const now = Date.now();
+    if (now - lastProximityCheckAtRef.current < PROXIMITY_CHECK_COOLDOWN_MS) return;
+    lastProximityCheckAtRef.current = now;
+
+    const nearbyBarIds = getNearbyBarIds(coords, barsRef.current, PROXIMITY_RADIUS_METERS);
+    nearbyBarIds.forEach((barId) => trackBarProximity(barId));
+  }, []);
+
+  // Caso "abrir la app": reutiliza la ubicación ya obtenida al pedir permiso
+  React.useEffect(() => {
+    if (hasPermission && userLocation) {
+      checkBarProximity({
+        latitude: userLocation.coords.latitude,
+        longitude: userLocation.coords.longitude,
+      });
+    }
+  }, [hasPermission, userLocation, checkBarProximity]);
+
+  // Caso "volver a la app": un único fix puntual al pasar a foreground,
+  // nunca watchPositionAsync ni permiso "always".
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active' || !hasPermission) return;
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+        .then((location) =>
+          checkBarProximity({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          })
+        )
+        .catch((error) => console.error('Error obteniendo ubicación en resume:', error));
+    });
+    return () => subscription.remove();
+  }, [hasPermission, checkBarProximity]);
+
   // Cleanup location subscription on unmount
   React.useEffect(() => {
     return () => {
@@ -590,7 +658,8 @@ const Map: React.FC<MapProps> = ({
             bar_categories(id, name),
             bar_food_types(food_type_id, food_types(name)),
             bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
-            bar_selected_features(feature_id, bar_features(name))
+            bar_selected_features(feature_id, bar_features(name)),
+            is_betting_venue
           `)
           .eq('is_active', true);
 
@@ -601,6 +670,12 @@ const Map: React.FC<MapProps> = ({
           barsQuery = barsQuery.or('verification_status.eq.approved,is_test.eq.true');
         } else {
           barsQuery = barsQuery.eq('verification_status', 'approved').eq('is_test', false);
+        }
+
+        // Locales de apuestas deportivas ocultos salvo que el usuario haya
+        // optado explícitamente por verlos (ver bettingBarsVisibilityStore).
+        if (!includeBettingBars) {
+          barsQuery = barsQuery.eq('is_betting_venue', false);
         }
 
         // Apply match filter if active
@@ -660,7 +735,7 @@ const Map: React.FC<MapProps> = ({
     };
 
     fetchBars();
-  }, [selectedMatch, includeTestBars]);
+  }, [selectedMatch, includeTestBars, includeBettingBars]);
 
   // Search for locations using Mapbox Geocoding API
   const searchLocations = React.useCallback(async (query: string) => {

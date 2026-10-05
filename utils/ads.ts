@@ -1,7 +1,14 @@
 import { Platform } from 'react-native';
-import mobileAds, { AppOpenAd, AdEventType, AdsConsent } from 'react-native-google-mobile-ads';
+import mobileAds, {
+  AppOpenAd,
+  AdEventType,
+  AdsConsent,
+  type PaidEvent,
+} from 'react-native-google-mobile-ads';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
+import { AdFormat } from 'react-native-purchases';
 import { AD_UNIT_IDS } from '~/constants/ads';
+import { generateAdImpressionId, trackAdRevenue } from '~/utils/revenuecat';
 
 // Guarda de módulo (no useState): debe sobrevivir a remounts / fast refresh,
 // a diferencia de un estado de React que se resetea en cada montaje.
@@ -58,6 +65,21 @@ export async function loadAndShowAppOpenAdOnce({
   timeoutMs: number;
 }): Promise<void> {
   const ad = AppOpenAd.createForAdRequest(AD_UNIT_IDS.appOpen);
+  const impressionId = generateAdImpressionId();
+
+  // Los tipos de la librería no cubren el payload de PAID para anuncios
+  // full-screen (solo lo tipan para BannerAd vía `onPaid`), pero el evento
+  // nativo sí lo envía con la misma forma { currency, precision, value }
+  // (ver BaseAd.js / MobileAd.js del paquete) — de ahí el cast explícito.
+  ad.addAdEventListener(AdEventType.PAID, (event) => {
+    trackAdRevenue({
+      event: event as unknown as PaidEvent,
+      adUnitId: AD_UNIT_IDS.appOpen,
+      adFormat: AdFormat.appOpen,
+      placement: 'app_open',
+      impressionId,
+    });
+  });
 
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {

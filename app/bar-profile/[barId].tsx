@@ -15,6 +15,7 @@ import { useBarBoost } from '~/hooks/useBoostBars';
 import { AppText, colors, spacing, radius, BarProfileSkeleton, toast } from '~/components/ds';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import AdBanner from '~/components/ads/AdBanner';
+import { trackBarEvent } from '~/services/barAnalytics';
 // Plans removed: all bars are PRO
 
 interface BarProfile {
@@ -33,6 +34,7 @@ interface BarProfile {
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
   bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
+  is_betting_venue?: boolean;
 }
 
 interface BarPost {
@@ -92,6 +94,9 @@ export default function BarProfileScreen() {
 
   // Ref para scroll programático al FlatList
   const flatListRef = useRef<FlatList>(null);
+
+  // Ref para no duplicar el tracking de profile_view dentro del mismo montaje
+  const trackedProfileViewBarIdRef = useRef<string | null>(null);
 
   // Get boost status for countdown
   const { boost, isLoading: boostLoading, refresh: refreshBoost } = useBarBoost(barId);
@@ -185,6 +190,23 @@ export default function BarProfileScreen() {
     setInfoModalVisible(true);
   };
 
+  const showStatsInfo = () => {
+    setInfoModalContent({
+      title: '📊 Estadísticas del Bar',
+      content: (
+        <View>
+          <AppText variant="body" color={colors.text.light}>
+            Consulta cuánta gente ve la ficha de tu bar, abre tu carta o hace clic en tu teléfono, dirección o web.
+          </AppText>
+          <AppText variant="body" color={colors.text.light} style={{ marginTop: spacing.md }}>
+            También verás cuántos favoritos y reseñas acumulas, con gráficas de la evolución día a día — desde los últimos 30 días hasta todo el histórico desde que empezamos a registrar datos de tu bar.
+          </AppText>
+        </View>
+      ),
+    });
+    setInfoModalVisible(true);
+  };
+
   // Functions to copy to clipboard
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -195,21 +217,31 @@ export default function BarProfileScreen() {
     }
   };
 
+  const trackContactClick = useCallback(
+    (eventType: 'contact_click_phone' | 'contact_click_address' | 'contact_click_website') => {
+      trackBarEvent(barId, eventType, isOwner);
+    },
+    [isOwner, barId]
+  );
+
   const copyAddress = () => {
     if (bar?.address && bar?.city) {
       copyToClipboard(`${bar.address}, ${bar.city}`, 'Dirección');
+      trackContactClick('contact_click_address');
     }
   };
 
   const copyPhone = () => {
     if (bar?.phone) {
       copyToClipboard(bar.phone, 'Teléfono');
+      trackContactClick('contact_click_phone');
     }
   };
 
   const copyWebsite = () => {
     if (bar?.website) {
       copyToClipboard(bar.website, 'Sitio web');
+      trackContactClick('contact_click_website');
     }
   };
 
@@ -491,11 +523,12 @@ export default function BarProfileScreen() {
 
       case 'tags':
         return (
-          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_selected_tv_features?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
+          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_selected_tv_features?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0 || bar?.is_betting_venue) ? (
             <View style={styles.tagsSection}>
               <FlatList
                 data={[
                   ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
+                  ...(bar?.is_betting_venue ? [{ type: 'betting', data: null, id: 'betting' }] : []),
                   ...(bar?.bar_food_types?.map((item) => ({ type: 'food', data: item, id: `food-${item.food_type_id}` })) || []),
                   ...(bar?.bar_selected_tv_features?.map((item) => ({ type: 'tv_feature', data: item, id: `tv-${item.tv_feature_id}` })) || []),
                   ...(bar?.bar_selected_features?.map((item) => ({ type: 'feature', data: item, id: `feature-${item.feature_id}` })) || [])
@@ -504,12 +537,17 @@ export default function BarProfileScreen() {
                   let backgroundColor = '#1976D2';
                   let icon = '📂';
                   let text = '';
-                  
+
                   switch (item.type) {
                     case 'category':
                       backgroundColor = colors.tags.category;
                       icon = '📂';
                       text = (item.data as { name: string }).name;
+                      break;
+                    case 'betting':
+                      backgroundColor = colors.tags.betting;
+                      icon = '🎰';
+                      text = 'Apuestas Deportivas';
                       break;
                     case 'food':
                       backgroundColor = colors.tags.food;
@@ -550,7 +588,10 @@ export default function BarProfileScreen() {
               <AppText variant="subtitle" style={styles.menuSectionTitleSpacing}>🍽️ La Carta</AppText>
               <TouchableOpacity
                 style={styles.menuButton}
-                onPress={() => router.push(`/bar-menu/${barId}` as any)}
+                onPress={() => {
+                  trackBarEvent(barId, 'menu_view', isOwner);
+                  router.push(`/bar-menu/${barId}` as any);
+                }}
               >
                 <AppText variant="label" color={colors.text.primary}>Ver Carta</AppText>
               </TouchableOpacity>
@@ -694,6 +735,32 @@ export default function BarProfileScreen() {
                 {boost?.isActive && boost?.endAt && (
                   <BoostCountdown endAt={boost.endAt} style={{ marginTop: spacing.md }} />
                 )}
+
+                {/* Ver estadísticas */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.barActionButton}
+                    onPress={() => router.push(`/bar-stats/${barId}` as any)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.barActionIcon, styles.barActionIconGreen]}>
+                      <Ionicons name="bar-chart-outline" size={18} color={colors.status.success} />
+                    </View>
+                    <View style={styles.barActionContent}>
+                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
+                        Ver estadísticas
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButton}
+                    onPress={showStatsInfo}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           ) : null
@@ -926,6 +993,7 @@ export default function BarProfileScreen() {
             bar_food_types(food_type_id, food_types(name)),
             bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
             bar_selected_features(feature_id, bar_features(name)),
+            is_betting_venue,
             verification_status,
             verification_notes
           `)
@@ -981,6 +1049,7 @@ export default function BarProfileScreen() {
             feature_id: item.feature_id,
             feature: { name: item.bar_features?.name || 'Unknown' },
           })),
+          is_betting_venue: (barData as any).is_betting_venue ?? false,
         });
 
         // Round 2: ownership primer, després posts + matches
@@ -1269,6 +1338,15 @@ export default function BarProfileScreen() {
       fetchBarProfile();
     }, [fetchBarProfile])
   );
+
+  // Trackear vista de perfil (excluye al propio dueño, deduplicado 1 vez por montaje)
+  useEffect(() => {
+    if (loading || !bar || !barId) return;
+    if (trackedProfileViewBarIdRef.current === barId) return;
+    trackedProfileViewBarIdRef.current = barId;
+
+    trackBarEvent(barId, 'profile_view', isOwner);
+  }, [loading, bar, isOwner, barId]);
 
   // Tier loading removed
 
@@ -1926,6 +2004,9 @@ const styles = StyleSheet.create({
   },
   barActionIconBoost: {
     backgroundColor: 'rgba(255, 215, 0, 0.12)',
+  },
+  barActionIconGreen: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
   },
   barActionContent: {
     flex: 1,

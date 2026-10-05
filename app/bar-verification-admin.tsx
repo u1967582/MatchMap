@@ -15,10 +15,15 @@ import { supabase } from '~/utils/supabase';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppText, AppCard, EmptyState, colors, spacing, radius } from '~/components/ds';
 
+// `source` indica en qué tabla vive la fila (bars_scraped vs bars), no quién
+// la originó. Un bar sin dueño de `bars` lleva source:'owner' aunque se
+// muestre en la pestaña visual "Scraper" — el tab es solo una etiqueta de UI.
 type Source = 'scraped' | 'owner';
+type Tab = 'scraped' | 'owner' | 'archived';
 
 type PendingBar = {
   id: string;
+  source: Source;
   name: string;
   address?: string | null;
   city?: string | null;
@@ -32,6 +37,11 @@ const PAGE_SIZE = 20;
 type TabState = {
   bars: PendingBar[];
   page: number;
+  // Solo se usan en la pestaña 'scraped', que combina dos fuentes (candidatos
+  // de bars_scraped + bares sin dueño de bars) en dos fases secuenciales:
+  // primero se agota bars_scraped, luego se continúa con los bares sin dueño.
+  ownerlessPage: number;
+  scrapedExhausted: boolean;
   hasMore: boolean;
   loading: boolean;
   loadingMore: boolean;
@@ -41,15 +51,18 @@ type TabState = {
 const emptyTabState = (): TabState => ({
   bars: [],
   page: 0,
+  ownerlessPage: 0,
+  scrapedExhausted: false,
   hasMore: true,
   loading: true,
   loadingMore: false,
   refreshing: false,
 });
 
-const TABS: { key: Source; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+const TABS: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'scraped', label: 'Scraper', icon: 'globe-outline' },
   { key: 'owner', label: 'Propietarios', icon: 'person-outline' },
+  { key: 'archived', label: 'Archivados', icon: 'archive-outline' },
 ];
 
 const CONFIDENCE_COLOR: Record<string, string> = {
@@ -61,10 +74,11 @@ const CONFIDENCE_COLOR: Record<string, string> = {
 export default function BarVerificationAdminScreen() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<Source>('scraped');
-  const [tabs, setTabs] = useState<Record<Source, TabState>>({
+  const [activeTab, setActiveTab] = useState<Tab>('scraped');
+  const [tabs, setTabs] = useState<Record<Tab, TabState>>({
     scraped: emptyTabState(),
     owner: emptyTabState(),
+    archived: emptyTabState(),
   });
 
   const loadAdminFlag = useCallback(async () => {
@@ -84,112 +98,255 @@ export default function BarVerificationAdminScreen() {
     setIsAdmin(!!data?.is_super_user);
   }, []);
 
-  const fetchPage = useCallback(async (source: Source, page: number): Promise<PendingBar[]> => {
+  const mapBarRow = useCallback((r: any, source: Source): PendingBar => {
+    const images = (r.bar_images as { image_url: string; image_order: number | null }[] | null) || [];
+    const thumb = images.find((i) => i.image_order === 1)?.image_url || images[0]?.image_url || null;
+    return {
+      id: r.id,
+      source,
+      name: r.name,
+      address: r.address,
+      city: r.city,
+      created_at: r.created_at,
+      thumb_url: thumb,
+    };
+  }, []);
+
+  const fetchScrapedPage = useCallback(async (page: number): Promise<PendingBar[]> => {
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('bars_scraped')
+      .select('id, name, address, city, created_at, confidence, image_urls')
+      .eq('status', 'pending')
+      .order('confidence_rank', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+    return ((data as any) || []).map((r: any) => ({
+      id: r.id,
+      source: 'scraped' as const,
+      name: r.name,
+      address: r.address,
+      city: r.city,
+      created_at: r.created_at,
+      thumb_url: (r.image_urls as string[] | null)?.[0] || null,
+      confidence: r.confidence,
+    }));
+  }, []);
 
-    if (source === 'scraped') {
-      const { data, error } = await supabase
-        .from('bars_scraped')
-        .select('id, name, address, city, created_at, confidence, image_urls')
-        .eq('status', 'pending')
-        .order('confidence_rank', { ascending: false })
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      if (error) throw error;
-      return ((data as any) || []).map((r: any) => ({
-        id: r.id,
-        name: r.name,
-        address: r.address,
-        city: r.city,
-        created_at: r.created_at,
-        thumb_url: (r.image_urls as string[] | null)?.[0] || null,
-        confidence: r.confidence,
-      }));
-    }
-
-    // Bares reales pendientes de verificación (creados por propietarios o
-    // importados en bloque, con o sin owner_id asignado todavía).
-    // Se embebe bar_images en la misma query para evitar N+1.
+  // Bares reales pendientes, SIN propietario (convertidos desde el scraper o
+  // importados en bloque por el equipo). Se muestran en la pestaña "Scraper"
+  // tras agotar los candidatos de bars_scraped.
+  const fetchOwnerlessBarsPage = useCallback(async (page: number): Promise<PendingBar[]> => {
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
     const { data, error } = await supabase
       .from('bars')
       .select('id, name, address, city, created_at, bar_images(image_url, image_order)')
       .eq('verification_status', 'pending')
+      .is('owner_id', null)
       .order('created_at', { ascending: false })
       .range(from, to);
     if (error) throw error;
-    return ((data as any) || []).map((r: any) => {
-      const images = (r.bar_images as { image_url: string; image_order: number | null }[] | null) || [];
-      const thumb = images.find((i) => i.image_order === 1)?.image_url || images[0]?.image_url || null;
-      return {
-        id: r.id,
-        name: r.name,
-        address: r.address,
-        city: r.city,
-        created_at: r.created_at,
-        thumb_url: thumb,
-      };
-    });
+    return ((data as any) || []).map((r: any) => mapBarRow(r, 'owner'));
+  }, [mapBarRow]);
+
+  // Bares reales pendientes CON propietario asignado. Única fuente de la
+  // pestaña "Propietarios".
+  const fetchOwnerPage = useCallback(async (page: number): Promise<PendingBar[]> => {
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('bars')
+      .select('id, name, address, city, created_at, bar_images(image_url, image_order)')
+      .eq('verification_status', 'pending')
+      .not('owner_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+    return ((data as any) || []).map((r: any) => mapBarRow(r, 'owner'));
+  }, [mapBarRow]);
+
+  // Candidatos archivados de bars_scraped. Pestaña "Archivados": aquí no
+  // aplica la distinción por owner_id, se muestran todos juntos.
+  const fetchArchivedScrapedPage = useCallback(async (page: number): Promise<PendingBar[]> => {
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('bars_scraped')
+      .select('id, name, address, city, created_at, confidence, image_urls')
+      .eq('status', 'archived')
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+    return ((data as any) || []).map((r: any) => ({
+      id: r.id,
+      source: 'scraped' as const,
+      name: r.name,
+      address: r.address,
+      city: r.city,
+      created_at: r.created_at,
+      thumb_url: (r.image_urls as string[] | null)?.[0] || null,
+      confidence: r.confidence,
+    }));
   }, []);
 
+  // Bares archivados de la tabla bars, sin distinguir owner_id.
+  const fetchArchivedBarsPage = useCallback(async (page: number): Promise<PendingBar[]> => {
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('bars')
+      .select('id, name, address, city, created_at, bar_images(image_url, image_order)')
+      .eq('verification_status', 'archived')
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+    return ((data as any) || []).map((r: any) => mapBarRow(r, 'owner'));
+  }, [mapBarRow]);
+
+  // Combina dos fuentes paginadas en dos fases secuenciales: agota primero
+  // `phase1Fetch` y, en cuanto una página no llega a PAGE_SIZE, completa el
+  // resto con `phase2Fetch` desde su página 0 y continúa paginando solo por
+  // ahí. Evita tener que fusionar/ordenar dos tablas distintas.
+  const fetchTwoPhasePage = useCallback(
+    async (
+      phase1Fetch: (page: number) => Promise<PendingBar[]>,
+      phase2Fetch: (page: number) => Promise<PendingBar[]>,
+      targetPage: number,
+      targetOwnerlessPage: number,
+      wasExhausted: boolean,
+    ): Promise<{ rows: PendingBar[]; page: number; ownerlessPage: number; scrapedExhausted: boolean; hasMore: boolean }> => {
+      if (!wasExhausted) {
+        const rows = await phase1Fetch(targetPage);
+        if (rows.length === PAGE_SIZE) {
+          return { rows, page: targetPage, ownerlessPage: 0, scrapedExhausted: false, hasMore: true };
+        }
+        const extra = await phase2Fetch(0);
+        return { rows: [...rows, ...extra], page: targetPage, ownerlessPage: 0, scrapedExhausted: true, hasMore: extra.length === PAGE_SIZE };
+      }
+      const rows = await phase2Fetch(targetOwnerlessPage);
+      return { rows, page: targetPage, ownerlessPage: targetOwnerlessPage, scrapedExhausted: true, hasMore: rows.length === PAGE_SIZE };
+    },
+    [],
+  );
+
+  // 'owner' es paginación simple de una sola tabla; 'scraped' y 'archived'
+  // combinan dos fuentes en dos fases (ver fetchTwoPhasePage).
+  const twoPhaseFetchersForTab = useCallback(
+    (tab: 'scraped' | 'archived') =>
+      tab === 'scraped'
+        ? { phase1: fetchScrapedPage, phase2: fetchOwnerlessBarsPage }
+        : { phase1: fetchArchivedScrapedPage, phase2: fetchArchivedBarsPage },
+    [fetchScrapedPage, fetchOwnerlessBarsPage, fetchArchivedScrapedPage, fetchArchivedBarsPage],
+  );
+
   const loadFirstPage = useCallback(
-    async (source: Source) => {
-      setTabs((prev) => ({ ...prev, [source]: { ...prev[source], loading: true } }));
+    async (tab: Tab) => {
+      setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], loading: true } }));
       try {
-        const rows = await fetchPage(source, 0);
+        if (tab === 'owner') {
+          const rows = await fetchOwnerPage(0);
+          setTabs((prev) => ({
+            ...prev,
+            owner: { ...prev.owner, bars: rows, page: 0, hasMore: rows.length === PAGE_SIZE, loading: false },
+          }));
+          return;
+        }
+        const { phase1, phase2 } = twoPhaseFetchersForTab(tab);
+        const result = await fetchTwoPhasePage(phase1, phase2, 0, 0, false);
         setTabs((prev) => ({
           ...prev,
-          [source]: { ...prev[source], bars: rows, page: 0, hasMore: rows.length === PAGE_SIZE, loading: false },
+          [tab]: {
+            ...prev[tab],
+            bars: result.rows,
+            page: result.page,
+            ownerlessPage: result.ownerlessPage,
+            scrapedExhausted: result.scrapedExhausted,
+            hasMore: result.hasMore,
+            loading: false,
+          },
         }));
       } catch (e) {
-        console.error(`❌ Error loading ${source} bars:`, e);
-        setTabs((prev) => ({ ...prev, [source]: { ...prev[source], loading: false } }));
+        console.error(`❌ Error loading ${tab} bars:`, e);
+        setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], loading: false } }));
       }
     },
-    [fetchPage],
+    [fetchOwnerPage, fetchTwoPhasePage, twoPhaseFetchersForTab],
   );
 
   const loadMore = useCallback(
-    async (source: Source) => {
-      const current = tabs[source];
+    async (tab: Tab) => {
+      const current = tabs[tab];
       if (current.loading || current.loadingMore || current.refreshing || !current.hasMore) return;
 
-      const nextPage = current.page + 1;
-      setTabs((prev) => ({ ...prev, [source]: { ...prev[source], loadingMore: true } }));
+      setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], loadingMore: true } }));
       try {
-        const rows = await fetchPage(source, nextPage);
+        if (tab === 'owner') {
+          const nextPage = current.page + 1;
+          const rows = await fetchOwnerPage(nextPage);
+          setTabs((prev) => ({
+            ...prev,
+            owner: { ...prev.owner, bars: [...prev.owner.bars, ...rows], page: nextPage, hasMore: rows.length === PAGE_SIZE, loadingMore: false },
+          }));
+          return;
+        }
+        const { phase1, phase2 } = twoPhaseFetchersForTab(tab);
+        const nextPage = current.scrapedExhausted ? current.page : current.page + 1;
+        const nextOwnerlessPage = current.scrapedExhausted ? current.ownerlessPage + 1 : 0;
+        const result = await fetchTwoPhasePage(phase1, phase2, nextPage, nextOwnerlessPage, current.scrapedExhausted);
         setTabs((prev) => ({
           ...prev,
-          [source]: {
-            ...prev[source],
-            bars: [...prev[source].bars, ...rows],
-            page: nextPage,
-            hasMore: rows.length === PAGE_SIZE,
+          [tab]: {
+            ...prev[tab],
+            bars: [...prev[tab].bars, ...result.rows],
+            page: result.page,
+            ownerlessPage: result.ownerlessPage,
+            scrapedExhausted: result.scrapedExhausted,
+            hasMore: result.hasMore,
             loadingMore: false,
           },
         }));
       } catch (e) {
-        console.error(`❌ Error loading more ${source} bars:`, e);
-        setTabs((prev) => ({ ...prev, [source]: { ...prev[source], loadingMore: false } }));
+        console.error(`❌ Error loading more ${tab} bars:`, e);
+        setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], loadingMore: false } }));
       }
     },
-    [fetchPage, tabs],
+    [fetchOwnerPage, fetchTwoPhasePage, twoPhaseFetchersForTab, tabs],
   );
 
   const refresh = useCallback(
-    async (source: Source) => {
-      setTabs((prev) => ({ ...prev, [source]: { ...prev[source], refreshing: true } }));
+    async (tab: Tab) => {
+      setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], refreshing: true } }));
       try {
-        const rows = await fetchPage(source, 0);
+        if (tab === 'owner') {
+          const rows = await fetchOwnerPage(0);
+          setTabs((prev) => ({
+            ...prev,
+            owner: { ...prev.owner, bars: rows, page: 0, hasMore: rows.length === PAGE_SIZE, refreshing: false },
+          }));
+          return;
+        }
+        const { phase1, phase2 } = twoPhaseFetchersForTab(tab);
+        const result = await fetchTwoPhasePage(phase1, phase2, 0, 0, false);
         setTabs((prev) => ({
           ...prev,
-          [source]: { ...prev[source], bars: rows, page: 0, hasMore: rows.length === PAGE_SIZE, refreshing: false },
+          [tab]: {
+            ...prev[tab],
+            bars: result.rows,
+            page: result.page,
+            ownerlessPage: result.ownerlessPage,
+            scrapedExhausted: result.scrapedExhausted,
+            hasMore: result.hasMore,
+            refreshing: false,
+          },
         }));
       } catch (e) {
-        setTabs((prev) => ({ ...prev, [source]: { ...prev[source], refreshing: false } }));
+        setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], refreshing: false } }));
       }
     },
-    [fetchPage],
+    [fetchOwnerPage, fetchTwoPhasePage, twoPhaseFetchersForTab],
   );
 
   useEffect(() => {
@@ -202,6 +359,7 @@ export default function BarVerificationAdminScreen() {
     if (isAdmin) {
       loadFirstPage('scraped');
       loadFirstPage('owner');
+      loadFirstPage('archived');
     }
   }, [isAdmin, loadFirstPage]);
 
@@ -216,13 +374,13 @@ export default function BarVerificationAdminScreen() {
   const tabState = tabs[activeTab];
 
   const renderItem = ({ item }: { item: PendingBar }) => {
-    const isScraped = activeTab === 'scraped';
+    const isScraped = item.source === 'scraped';
     const confidenceKey = item.confidence?.toUpperCase();
     const confidenceColor = (confidenceKey && CONFIDENCE_COLOR[confidenceKey]) || colors.text.muted;
     return (
       <AppCard
         style={styles.card}
-        onPress={() => router.push(`/bar-verification-admin/${item.id}?source=${activeTab}` as any)}
+        onPress={() => router.push(`/bar-verification-admin/${item.id}?source=${item.source}` as any)}
       >
         <View style={styles.cardRow}>
           <View style={styles.thumb}>
@@ -363,12 +521,14 @@ export default function BarVerificationAdminScreen() {
           }
           ListEmptyComponent={
             <EmptyState
-              icon="checkmark-done-outline"
-              title="No hay bares pendientes"
+              icon={activeTab === 'archived' ? 'archive-outline' : 'checkmark-done-outline'}
+              title={activeTab === 'archived' ? 'No hay bares archivados' : 'No hay bares pendientes'}
               subtitle={
                 activeTab === 'scraped'
-                  ? 'Cuando el scraper encuentre nuevos candidatos, aparecerán aquí.'
-                  : 'Cuando un propietario registre un bar nuevo, aparecerá aquí.'
+                  ? 'Cuando el scraper encuentre candidatos o se importen bares sin dueño, aparecerán aquí.'
+                  : activeTab === 'owner'
+                    ? 'Cuando un propietario registre un bar nuevo, aparecerá aquí.'
+                    : 'Los bares archivados aparecerán aquí.'
               }
             />
           }

@@ -1,5 +1,6 @@
 jest.mock('react-native-google-mobile-ads', () => {
-  const AdEventType = { LOADED: 'loaded', ERROR: 'error' };
+  const AdEventType = { LOADED: 'loaded', ERROR: 'error', PAID: 'paid' };
+  const RevenuePrecisions = { UNKNOWN: 0, ESTIMATED: 1, PUBLISHER_PROVIDED: 2, PRECISE: 3 };
   const TestIds = { ADAPTIVE_BANNER: 'test-banner', APP_OPEN: 'test-app-open' };
   const mockInitialize = jest.fn(() => Promise.resolve());
   const mobileAds = jest.fn(() => ({ initialize: mockInitialize }));
@@ -12,10 +13,16 @@ jest.mock('react-native-google-mobile-ads', () => {
     default: mobileAds,
     AppOpenAd: { createForAdRequest },
     AdEventType,
+    RevenuePrecisions,
     TestIds,
     AdsConsent: { gatherConsent, getConsentInfo },
   };
 });
+
+jest.mock('~/utils/revenuecat', () => ({
+  generateAdImpressionId: jest.fn(() => 'test-impression-id'),
+  trackAdRevenue: jest.fn(() => Promise.resolve()),
+}));
 
 jest.mock('expo-tracking-transparency', () => ({
   requestTrackingPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),

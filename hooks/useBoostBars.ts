@@ -20,6 +20,8 @@ interface UseBoostBarsOptions {
   enabled?: boolean;
   /** Incluir bares marcados como "de test" (solo debe activarse para el admin) */
   includeTestBars?: boolean;
+  /** Incluir locales de apuestas deportivas (solo si el usuario ha optado por verlos) */
+  includeBettingBars?: boolean;
 }
 
 interface UseBoostBarsResult {
@@ -40,6 +42,7 @@ export function useBoostBars({
   centerLatLng,
   enabled = true,
   includeTestBars = false,
+  includeBettingBars = false,
 }: UseBoostBarsOptions): UseBoostBarsResult {
   const [boostBars, setBoostBars] = useState<BoostBar[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +78,7 @@ export function useBoostBars({
               rating,
               review_count,
               is_test,
+              is_betting_venue,
               bar_images (image_url, image_order)
             )
           `)
@@ -84,6 +88,11 @@ export function useBoostBars({
         // Los bares de test solo son visibles para el admin
         if (!includeTestBars) {
           boostsQuery = boostsQuery.eq('bars.is_test', false);
+        }
+
+        // Los locales de apuestas deportivas solo si el usuario ha optado por verlos
+        if (!includeBettingBars) {
+          boostsQuery = boostsQuery.eq('bars.is_betting_venue', false);
         }
 
         const { data, error: queryError } = await boostsQuery;
@@ -144,7 +153,7 @@ export function useBoostBars({
     return () => {
       isMounted = false;
     };
-  }, [enabled, includeTestBars]);
+  }, [enabled, includeTestBars, includeBettingBars]);
 
   const allBoostBarIds = useMemo(() => boostBars.map((b) => b.id), [boostBars]);
 

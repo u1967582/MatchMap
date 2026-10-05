@@ -1,5 +1,6 @@
 import {
   coordsToKey,
+  getNearbyBarIds,
   haversineDistance,
   haversineDistanceMeters,
   roundCoordinate,
@@ -66,6 +67,47 @@ describe('roundCoordinate', () => {
 
   it('maneja números negativos', () => {
     expect(roundCoordinate(-3.14159, 2)).toBe(-3.14);
+  });
+});
+
+describe('getNearbyBarIds', () => {
+  const origin = { latitude: 41.3874, longitude: 2.1686 };
+
+  it('incluye bares dentro del radio y excluye los que están fuera', () => {
+    const bars = [
+      { id: 'cerca', latitude: 41.3874, longitude: 2.1686 }, // mismo punto, 0m
+      { id: 'lejos', latitude: 40.4168, longitude: -3.7038 }, // Madrid, ~505km
+    ];
+
+    expect(getNearbyBarIds(origin, bars, 150)).toEqual(['cerca']);
+  });
+
+  it('devuelve [] si ningún bar está dentro del radio', () => {
+    const bars = [{ id: 'lejos', latitude: 40.4168, longitude: -3.7038 }];
+
+    expect(getNearbyBarIds(origin, bars, 150)).toEqual([]);
+  });
+
+  it('devuelve [] si la lista de bares está vacía', () => {
+    expect(getNearbyBarIds(origin, [], 150)).toEqual([]);
+  });
+
+  it('incluye un bar justo en el borde del radio', () => {
+    // ~100m al norte del origen
+    const bars = [{ id: 'borde', latitude: 41.3883, longitude: 2.1686 }];
+
+    expect(getNearbyBarIds(origin, bars, 150)).toEqual(['borde']);
+    expect(getNearbyBarIds(origin, bars, 50)).toEqual([]);
+  });
+
+  it('puede devolver varios bares cercanos', () => {
+    const bars = [
+      { id: 'a', latitude: 41.3874, longitude: 2.1686 },
+      { id: 'b', latitude: 41.3875, longitude: 2.1687 },
+      { id: 'lejos', latitude: 40.4168, longitude: -3.7038 },
+    ];
+
+    expect(getNearbyBarIds(origin, bars, 150).sort()).toEqual(['a', 'b']);
   });
 });
 
