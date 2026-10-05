@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,13 +14,14 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import { useFocusEffect } from '@react-navigation/native';
-import { AppText, AppCard, EmptyState, colors, spacing, radius } from '~/components/ds';
+import { AppText, AppCard, AppButton, EmptyState, colors, spacing, radius, toast } from '~/components/ds';
+import { approveBars } from '~/services/bars';
 
 // `source` indica en qué tabla vive la fila (bars_scraped vs bars), no quién
 // la originó. Un bar sin dueño de `bars` lleva source:'owner' aunque se
 // muestre en la pestaña visual "Scraper" — el tab es solo una etiqueta de UI.
 type Source = 'scraped' | 'owner';
-type Tab = 'scraped' | 'owner' | 'archived';
+type Tab = 'ownerless' | 'scraped' | 'owner' | 'archived';
 
 type PendingBar = {
   id: string;
@@ -60,6 +62,9 @@ const emptyTabState = (): TabState => ({
 });
 
 const TABS: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  // Bares reales pendientes sin dueño: ya tienen ficha completa y se pueden
+  // aprobar en bloque (mantener pulsado para seleccionar).
+  { key: 'ownerless', label: 'Sin dueño', icon: 'storefront-outline' },
   { key: 'scraped', label: 'Scraper', icon: 'globe-outline' },
   { key: 'owner', label: 'Propietarios', icon: 'person-outline' },
   { key: 'archived', label: 'Archivados', icon: 'archive-outline' },
@@ -74,8 +79,9 @@ const CONFIDENCE_COLOR: Record<string, string> = {
 export default function BarVerificationAdminScreen() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('scraped');
+  const [activeTab, setActiveTab] = useState<Tab>('ownerless');
   const [tabs, setTabs] = useState<Record<Tab, TabState>>({
+    ownerless: emptyTabState(),
     scraped: emptyTabState(),
     owner: emptyTabState(),
     archived: emptyTabState(),
@@ -232,8 +238,13 @@ export default function BarVerificationAdminScreen() {
     [],
   );
 
-  // 'owner' es paginación simple de una sola tabla; 'scraped' y 'archived'
-  // combinan dos fuentes en dos fases (ver fetchTwoPhasePage).
+  // 'owner' y 'ownerless' son paginación simple de una sola tabla; 'scraped'
+  // y 'archived' combinan dos fuentes en dos fases (ver fetchTwoPhasePage).
+  const singleTableFetcher = useCallback(
+    (tab: 'owner' | 'ownerless') => (tab === 'owner' ? fetchOwnerPage : fetchOwnerlessBarsPage),
+    [fetchOwnerPage, fetchOwnerlessBarsPage],
+  );
+
   const twoPhaseFetchersForTab = useCallback(
     (tab: 'scraped' | 'archived') =>
       tab === 'scraped'
@@ -246,11 +257,11 @@ export default function BarVerificationAdminScreen() {
     async (tab: Tab) => {
       setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], loading: true } }));
       try {
-        if (tab === 'owner') {
-          const rows = await fetchOwnerPage(0);
+        if (tab === 'owner' || tab === 'ownerless') {
+          const rows = await singleTableFetcher(tab)(0);
           setTabs((prev) => ({
             ...prev,
-            owner: { ...prev.owner, bars: rows, page: 0, hasMore: rows.length === PAGE_SIZE, loading: false },
+            [tab]: { ...prev[tab], bars: rows, page: 0, hasMore: rows.length === PAGE_SIZE, loading: false },
           }));
           return;
         }
@@ -273,7 +284,7 @@ export default function BarVerificationAdminScreen() {
         setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], loading: false } }));
       }
     },
-    [fetchOwnerPage, fetchTwoPhasePage, twoPhaseFetchersForTab],
+    [singleTableFetcher, fetchTwoPhasePage, twoPhaseFetchersForTab],
   );
 
   const loadMore = useCallback(
@@ -283,12 +294,12 @@ export default function BarVerificationAdminScreen() {
 
       setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], loadingMore: true } }));
       try {
-        if (tab === 'owner') {
+        if (tab === 'owner' || tab === 'ownerless') {
           const nextPage = current.page + 1;
-          const rows = await fetchOwnerPage(nextPage);
+          const rows = await singleTableFetcher(tab)(nextPage);
           setTabs((prev) => ({
             ...prev,
-            owner: { ...prev.owner, bars: [...prev.owner.bars, ...rows], page: nextPage, hasMore: rows.length === PAGE_SIZE, loadingMore: false },
+            [tab]: { ...prev[tab], bars: [...prev[tab].bars, ...rows], page: nextPage, hasMore: rows.length === PAGE_SIZE, loadingMore: false },
           }));
           return;
         }
@@ -313,18 +324,18 @@ export default function BarVerificationAdminScreen() {
         setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], loadingMore: false } }));
       }
     },
-    [fetchOwnerPage, fetchTwoPhasePage, twoPhaseFetchersForTab, tabs],
+    [singleTableFetcher, fetchTwoPhasePage, twoPhaseFetchersForTab, tabs],
   );
 
   const refresh = useCallback(
     async (tab: Tab) => {
       setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], refreshing: true } }));
       try {
-        if (tab === 'owner') {
-          const rows = await fetchOwnerPage(0);
+        if (tab === 'owner' || tab === 'ownerless') {
+          const rows = await singleTableFetcher(tab)(0);
           setTabs((prev) => ({
             ...prev,
-            owner: { ...prev.owner, bars: rows, page: 0, hasMore: rows.length === PAGE_SIZE, refreshing: false },
+            [tab]: { ...prev[tab], bars: rows, page: 0, hasMore: rows.length === PAGE_SIZE, refreshing: false },
           }));
           return;
         }
@@ -346,7 +357,7 @@ export default function BarVerificationAdminScreen() {
         setTabs((prev) => ({ ...prev, [tab]: { ...prev[tab], refreshing: false } }));
       }
     },
-    [fetchOwnerPage, fetchTwoPhasePage, twoPhaseFetchersForTab],
+    [singleTableFetcher, fetchTwoPhasePage, twoPhaseFetchersForTab],
   );
 
   useEffect(() => {
@@ -357,6 +368,7 @@ export default function BarVerificationAdminScreen() {
 
   useEffect(() => {
     if (isAdmin) {
+      loadFirstPage('ownerless');
       loadFirstPage('scraped');
       loadFirstPage('owner');
       loadFirstPage('archived');
@@ -373,14 +385,82 @@ export default function BarVerificationAdminScreen() {
 
   const tabState = tabs[activeTab];
 
+  // ─── Selección múltiple (solo pestaña "Sin dueño") ─────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [approving, setApproving] = useState(false);
+  const canSelect = activeTab === 'ownerless';
+  const selectionMode = canSelect && selectedIds.size > 0;
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const changeTab = useCallback((tab: Tab) => {
+    setSelectedIds(new Set());
+    setActiveTab(tab);
+  }, []);
+
+  const selectAllLoaded = useCallback(() => {
+    setSelectedIds(new Set(tabs.ownerless.bars.map((b) => b.id)));
+  }, [tabs.ownerless.bars]);
+
+  const runBulkApprove = useCallback(async () => {
+    const ids = [...selectedIds];
+    setApproving(true);
+    try {
+      const approved = await approveBars(ids);
+      const approvedSet = new Set(approved);
+      setTabs((prev) => ({
+        ...prev,
+        ownerless: { ...prev.ownerless, bars: prev.ownerless.bars.filter((b) => !approvedSet.has(b.id)) },
+      }));
+      setSelectedIds(new Set());
+
+      if (approved.length === ids.length) {
+        toast.success(`${approved.length} bares aprobados`, 'Ya son visibles para los usuarios');
+      } else {
+        toast.warning(
+          `${approved.length} de ${ids.length} bares aprobados`,
+          'El resto ya no estaba pendiente; refresca la lista'
+        );
+      }
+      // Los bares sin dueño también aparecen al final de la pestaña Scraper
+      refresh('scraped').catch(() => {});
+    } catch (e: any) {
+      toast.supabaseError(e, 'No se pudieron aprobar los bares');
+    } finally {
+      setApproving(false);
+    }
+  }, [selectedIds, refresh]);
+
+  const confirmBulkApprove = useCallback(() => {
+    const count = selectedIds.size;
+    Alert.alert(
+      `Aprobar ${count} ${count === 1 ? 'bar' : 'bares'}`,
+      'Pasarán a ser visibles para todos los usuarios en el mapa y la búsqueda.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Aprobar', onPress: runBulkApprove },
+      ]
+    );
+  }, [selectedIds, runBulkApprove]);
+
   const renderItem = ({ item }: { item: PendingBar }) => {
     const isScraped = item.source === 'scraped';
     const confidenceKey = item.confidence?.toUpperCase();
     const confidenceColor = (confidenceKey && CONFIDENCE_COLOR[confidenceKey]) || colors.text.muted;
+    const selected = selectedIds.has(item.id);
+    const openDetail = () => router.push(`/bar-verification-admin/${item.id}?source=${item.source}` as any);
     return (
       <AppCard
-        style={styles.card}
-        onPress={() => router.push(`/bar-verification-admin/${item.id}?source=${item.source}` as any)}
+        style={selected ? { ...styles.card, ...styles.cardSelected } : styles.card}
+        onPress={selectionMode ? () => toggleSelected(item.id) : openDetail}
+        onLongPress={canSelect ? () => toggleSelected(item.id) : undefined}
       >
         <View style={styles.cardRow}>
           <View style={styles.thumb}>
@@ -424,7 +504,15 @@ export default function BarVerificationAdminScreen() {
               </AppText>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
+          {selectionMode ? (
+            <Ionicons
+              name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={selected ? colors.status.success : colors.text.muted}
+            />
+          ) : (
+            <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
+          )}
         </View>
       </AppCard>
     );
@@ -484,7 +572,7 @@ export default function BarVerificationAdminScreen() {
             <TouchableOpacity
               key={tab.key}
               style={[styles.tab, active && styles.tabActive]}
-              onPress={() => setActiveTab(tab.key)}
+              onPress={() => changeTab(tab.key)}
               activeOpacity={0.8}
             >
               <Ionicons name={tab.icon} size={15} color={active ? colors.status.boost : colors.text.secondary} />
@@ -519,6 +607,13 @@ export default function BarVerificationAdminScreen() {
               </View>
             ) : null
           }
+          ListHeaderComponent={
+            canSelect && !selectionMode && tabState.bars.length > 0 ? (
+              <AppText variant="caption" color={colors.text.muted} style={styles.selectHint} maxScale={1.1}>
+                Mantén pulsado un bar para seleccionar varios y aprobarlos a la vez.
+              </AppText>
+            ) : null
+          }
           ListEmptyComponent={
             <EmptyState
               icon={activeTab === 'archived' ? 'archive-outline' : 'checkmark-done-outline'}
@@ -526,13 +621,44 @@ export default function BarVerificationAdminScreen() {
               subtitle={
                 activeTab === 'scraped'
                   ? 'Cuando el scraper encuentre candidatos o se importen bares sin dueño, aparecerán aquí.'
-                  : activeTab === 'owner'
+                  : activeTab === 'ownerless'
+                    ? 'Los bares sin dueño pendientes de revisar aparecerán aquí.'
+                    : activeTab === 'owner'
                     ? 'Cuando un propietario registre un bar nuevo, aparecerá aquí.'
                     : 'Los bares archivados aparecerán aquí.'
               }
             />
           }
         />
+      )}
+
+      {selectionMode && (
+        <View style={styles.selectionBar}>
+          <View style={styles.selectionInfo}>
+            <AppText variant="label" color={colors.text.primary} maxScale={1.0}>
+              {selectedIds.size} {selectedIds.size === 1 ? 'seleccionado' : 'seleccionados'}
+            </AppText>
+            <View style={styles.selectionLinks}>
+              <TouchableOpacity onPress={selectAllLoaded} disabled={approving}>
+                <AppText variant="caption" color={colors.brand.link} maxScale={1.0}>
+                  Seleccionar los {tabs.ownerless.bars.length} cargados
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSelectedIds(new Set())} disabled={approving}>
+                <AppText variant="caption" color={colors.text.secondary} maxScale={1.0}>
+                  Cancelar
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <AppButton
+            text={`Aprobar ${selectedIds.size}`}
+            onPress={confirmBulkApprove}
+            loading={approving}
+            disabled={approving}
+            fullWidth={false}
+          />
+        </View>
       )}
     </SafeAreaView>
   );
@@ -601,4 +727,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   confidenceBadgeText: { fontWeight: '700' },
+
+  cardSelected: { borderColor: colors.status.success },
+  selectHint: { marginBottom: spacing.sm },
+  selectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.bg.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+  },
+  selectionInfo: { flex: 1, gap: spacing.xxs },
+  selectionLinks: { flexDirection: 'row', gap: spacing.md },
 });

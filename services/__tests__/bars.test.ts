@@ -3,7 +3,12 @@ import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
 jest.mock('~/utils/supabase');
 
 import { supabase } from '~/utils/supabase';
-import { createAutoPreRegisterBar, fetchBarIdsByMatch, fetchBarIdsByTeam } from '~/services/bars';
+import {
+  approveBars,
+  createAutoPreRegisterBar,
+  fetchBarIdsByMatch,
+  fetchBarIdsByTeam,
+} from '~/services/bars';
 
 const mockedFrom = supabase.from as jest.Mock;
 const mockedRpc = supabase.rpc as jest.Mock;
@@ -132,5 +137,49 @@ describe('createAutoPreRegisterBar', () => {
     await expect(createAutoPreRegisterBar(basePayload)).rejects.toEqual({
       message: 'insert failed',
     });
+  });
+});
+
+describe('approveBars', () => {
+  it('aprueba los bares indicados y devuelve los ids actualizados', async () => {
+    mockedGetUser.mockResolvedValueOnce({ data: { user: { id: 'admin-1' } }, error: null });
+    const builder = createQueryBuilderMock({ data: [{ id: 'bar-1' }, { id: 'bar-2' }], error: null });
+    mockedFrom.mockReturnValueOnce(builder);
+
+    const result = await approveBars(['bar-1', 'bar-2']);
+
+    expect(mockedFrom).toHaveBeenCalledWith('bars');
+    expect(builder.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification_status: 'approved',
+        verified_by: 'admin-1',
+        verification_notes: null,
+      })
+    );
+    expect(builder.in).toHaveBeenCalledWith('id', ['bar-1', 'bar-2']);
+    // Solo se tocan bares que siguen pendientes (evita re-aprobar o pisar rechazos)
+    expect(builder.eq).toHaveBeenCalledWith('verification_status', 'pending');
+    expect(result).toEqual(['bar-1', 'bar-2']);
+  });
+
+  it('no llama a la base de datos con una lista vacía', async () => {
+    const result = await approveBars([]);
+
+    expect(result).toEqual([]);
+    expect(mockedFrom).not.toHaveBeenCalled();
+  });
+
+  it('lanza error si no hay usuario autenticado', async () => {
+    mockedGetUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+
+    await expect(approveBars(['bar-1'])).rejects.toThrow('No auth user');
+    expect(mockedFrom).not.toHaveBeenCalled();
+  });
+
+  it('propaga el error de Supabase', async () => {
+    mockedGetUser.mockResolvedValueOnce({ data: { user: { id: 'admin-1' } }, error: null });
+    mockedFrom.mockReturnValueOnce(createQueryBuilderMock({ data: null, error: { message: 'rls' } }));
+
+    await expect(approveBars(['bar-1'])).rejects.toEqual({ message: 'rls' });
   });
 });
