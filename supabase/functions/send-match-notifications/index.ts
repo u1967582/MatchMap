@@ -19,12 +19,25 @@ const SUPA_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const supabase = createClient(SUPA_URL, SUPA_KEY)
 
-// Las invocaciones legítimas (GitHub Actions) envían este secreto; la anon key
-// es pública y no sirve para autenticar un cron.
-const CRON_SECRET = Deno.env.get('CRON_SECRET')
+// pg_cron envía el secreto guardado en Vault en la cabecera x-cron-secret
+// (migración cron_jobs_pg_cron). Es la única autorización: la función se
+// despliega con verify_jwt = false.
+let cronSecret: string | null = null
 
-function isAuthorizedCron(req: Request): boolean {
-  return !!CRON_SECRET && req.headers.get('x-cron-secret') === CRON_SECRET
+async function isAuthorizedCron(req: Request): Promise<boolean> {
+  const provided = req.headers.get('x-cron-secret')
+  if (!provided) return false
+
+  if (!cronSecret) {
+    const { data, error } = await supabase.rpc('get_cron_secret')
+    if (error || typeof data !== 'string' || !data) {
+      console.error('No se pudo leer cron_secret:', error?.message)
+      return false
+    }
+    cronSecret = data
+  }
+
+  return provided === cronSecret
 }
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send'
@@ -126,7 +139,7 @@ async function sendExpoPushChunk(messages: ExpoMessage[]): Promise<ExpoTicket[]>
 
 Deno.serve(async (req) => {
   try {
-    if (!isAuthorizedCron(req)) {
+    if (!(await isAuthorizedCron(req))) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
