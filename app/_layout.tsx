@@ -15,6 +15,7 @@ import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import { useLikesStore } from '~/stores/likesStore';
 import { configureNotificationHandler, unregisterCurrentPushToken } from '~/services/notifications';
+import { parseAuthDeepLink } from '~/utils/authDeepLink';
 export default function Layout() {
   const router = useRouter();
   const setFavoritesUserId = useFavoritesStore((state) => state.setUserId);
@@ -103,80 +104,39 @@ export default function Layout() {
 
     // 🔥 NUEVO: Manejar deep links de autenticación de Supabase
     const handleDeepLink = async (event: { url: string }) => {
-      console.log('🔗 Deep link recibido:', event.url);
-
-      let access_token: string | null = null;
-      let refresh_token: string | null = null;
-      let isResetPassword = false;
-
       try {
-        // Los tokens pueden venir en el hash fragment (#) o en query params (?)
-        const url = new URL(event.url);
+        const link = parseAuthDeepLink(event.url);
+        if (!link) return;
 
-        // Intentar extraer del hash fragment primero (formato: #access_token=...&refresh_token=...)
-        let authType: string | null = null;
-
-        if (event.url.includes('#')) {
-          const hashFragment = event.url.split('#')[1];
-          if (hashFragment) {
-            const params = new URLSearchParams(hashFragment);
-            access_token = params.get('access_token');
-            refresh_token = params.get('refresh_token');
-            authType = params.get('type'); // 'recovery' para reset password
-            console.log('🔍 Tokens encontrados en hash fragment');
+        if (link.kind === 'callback') {
+          // Nunca reemplazar una sesión real ya iniciada con tokens de un enlace
+          const { data: current } = await supabase.auth.getSession();
+          if (current.session && !current.session.user.is_anonymous) {
+            console.log('ℹ️ Ya hay una sesión activa, se ignoran los tokens del enlace');
+            return;
           }
         }
 
-        // Si no están en el hash, intentar en query params
-        if (!access_token || !refresh_token) {
-          access_token = url.searchParams.get('access_token');
-          refresh_token = url.searchParams.get('refresh_token');
-          authType = url.searchParams.get('type');
-          if (access_token || refresh_token) {
-            console.log('🔍 Tokens encontrados en query params');
-          }
-        }
+        console.log('🔐 Estableciendo sesión desde deep link...', link.kind);
 
-        // Verificar si es un link de reset password (type=recovery)
-        isResetPassword =
-          authType === 'recovery' ||
-          event.url.includes('/auth/reset-password') ||
-          event.url.includes('reset-password');
-
-        console.log(
-          '🔍 Tipo de deep link:',
-          isResetPassword ? 'Reset Password (recovery)' : 'Otro'
-        );
-        console.log('🔍 Auth type:', authType);
-
-        console.log('📋 Tokens en URL:', {
-          hasAccessToken: !!access_token,
-          hasRefreshToken: !!refresh_token,
+        const { error } = await supabase.auth.setSession({
+          access_token: link.accessToken,
+          refresh_token: link.refreshToken,
         });
 
-        if (access_token && refresh_token) {
-          console.log('🔐 Estableciendo sesión desde deep link...');
+        if (error) {
+          console.error('❌ Error estableciendo sesión:', error);
+          return;
+        }
 
-          const { data, error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
+        console.log('✅ Sesión establecida exitosamente desde deep link');
 
-          if (error) {
-            console.error('❌ Error estableciendo sesión:', error);
-          } else {
-            console.log('✅ Sesión establecida exitosamente desde deep link');
-            console.log('   Usuario:', data.user?.email);
-
-            // 🚀 NAVEGACIÓN: Si es reset password, navegar a la pantalla correspondiente
-            if (isResetPassword) {
-              console.log('🧭 Navegando a pantalla de reset password...');
-              // Pequeño delay para asegurar que la sesión esté lista
-              setTimeout(() => {
-                router.push('/auth/reset-password');
-              }, 500);
-            }
-          }
+        // 🚀 NAVEGACIÓN: Si es reset password, navegar a la pantalla correspondiente
+        if (link.kind === 'recovery') {
+          // Pequeño delay para asegurar que la sesión esté lista
+          setTimeout(() => {
+            router.push('/auth/reset-password');
+          }, 500);
         }
       } catch (err) {
         console.error('❌ Error procesando deep link:', err);
@@ -189,7 +149,7 @@ export default function Layout() {
     // Verificar si la app se abrió con un deep link
     Linking.getInitialURL().then((url) => {
       if (url) {
-        console.log('🚀 App abierta con URL inicial:', url);
+        console.log('🚀 App abierta con URL inicial');
         handleDeepLink({ url });
       }
     });

@@ -168,10 +168,12 @@
         "backgroundColor": "#1C2A3A"
       },
       "package": "com.tuorg.matchmap",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO",
         "com.google.android.gms.permission.AD_ID"
       ],
       "intentFilters": [

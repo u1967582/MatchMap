@@ -19,6 +19,14 @@ const SUPA_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const supabase = createClient(SUPA_URL, SUPA_KEY)
 
+// Las invocaciones legítimas (GitHub Actions) envían este secreto; la anon key
+// es pública y no sirve para autenticar un cron.
+const CRON_SECRET = Deno.env.get('CRON_SECRET')
+
+function isAuthorizedCron(req: Request): boolean {
+  return !!CRON_SECRET && req.headers.get('x-cron-secret') === CRON_SECRET
+}
+
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send'
 const EXPO_PUSH_CHUNK_SIZE = 100
 
@@ -116,8 +124,15 @@ async function sendExpoPushChunk(messages: ExpoMessage[]): Promise<ExpoTicket[]>
   return (json.data ?? []) as ExpoTicket[]
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
   try {
+    if (!isAuthorizedCron(req)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     console.log('=== send-match-notifications START ===')
 
     const { data: rows, error: rpcError } = await supabase.rpc(

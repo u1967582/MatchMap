@@ -19,9 +19,17 @@ const API_KEY  = Deno.env.get('API_FOOTBALL_KEY')!
 const SUPA_URL = Deno.env.get('SUPABASE_URL')!
 const SUPA_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-const SEASON = '2025'  // ← año de inicio de la temporada actual
+const SEASON = '2026'  // ← año de inicio de la temporada actual
 
 const supabase = createClient(SUPA_URL, SUPA_KEY)
+
+// Las invocaciones legítimas (GitHub Actions) envían este secreto; la anon key
+// es pública y no sirve para autenticar un cron.
+const CRON_SECRET = Deno.env.get('CRON_SECRET')
+
+function isAuthorizedCron(req: Request): boolean {
+  return !!CRON_SECRET && req.headers.get('x-cron-secret') === CRON_SECRET
+}
 
 // ── Mapeo de status API-Football → tu esquema ────────────────
 // Valores confirmados de la documentación de API-Football v3
@@ -69,52 +77,70 @@ async function apiFetch(path: string) {
   return json.response as any[]
 }
 
+// ── Utilidad: partir un array en trozos ─────────────────
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
 // ── Sincronizar equipos de una liga ─────────────────────────
-async function syncTeams(leagueId: number, gender: string, season: string): Promise<number> {
+// Devuelve además un mapa api_football_id → UUID interno, para que
+// syncFixtures no tenga que hacer una consulta por cada equipo de cada
+// partido (evita el patrón N+1 que agotaba el timeout de la función).
+async function syncTeams(
+  leagueId: number,
+  gender: string,
+  season: string
+): Promise<{ count: number; idMap: Map<number, string> }> {
   console.log(`[teams] league=${leagueId} gender=${gender} season=${season}`)
 
   const response = await apiFetch(`/teams?league=${leagueId}&season=${season}`)
 
   if (!response?.length) {
     console.warn(`[teams] No results for league ${leagueId}`)
-    return 0
+    return { count: 0, idMap: new Map() }
   }
 
-  let count = 0
-  for (const item of response) {
-    const t = item.team
+  const rows = response.map((item) => ({
+    name:            item.team.name,
+    short_name:      item.team.code ?? null,
+    logo_url:        item.team.logo ?? null,
+    gender:          gender,
+    api_football_id: item.team.id,
+    // created_at lo gestiona Supabase automáticamente
+  }))
 
-    const { error } = await supabase
+  const idMap = new Map<number, string>()
+
+  for (const batch of chunk(rows, 300)) {
+    const { data, error } = await supabase
       .from('teams')
-      .upsert(
-        {
-          name:            t.name,
-          short_name:      t.code ?? null,
-          logo_url:        t.logo ?? null,
-          gender:          gender,
-          api_football_id: t.id,
-          // created_at lo gestiona Supabase automáticamente
-        },
-        { onConflict: 'api_football_id' }
-      )
+      .upsert(batch, { onConflict: 'api_football_id' })
+      .select('id, api_football_id')
 
     if (error) {
-      console.error(`[teams] Error team ${t.name} (${t.id}): ${error.message}`)
-    } else {
-      count++
+      console.error(`[teams] Error upserting batch (league ${leagueId}): ${error.message}`)
+      continue
     }
+
+    for (const row of data ?? []) idMap.set(row.api_football_id, row.id)
   }
 
-  console.log(`[teams] ✅ league=${leagueId}: ${count}/${response.length} ok`)
-  return count
+  console.log(`[teams] ✅ league=${leagueId}: ${idMap.size}/${response.length} ok`)
+  return { count: idMap.size, idMap }
 }
 
 // ── Sincronizar partidos de una liga ────────────────────────
+// Recibe el mapa api_football_id → UUID ya calculado por syncTeams para
+// resolver home/away sin consultas por partido, y hace el upsert de todos
+// los fixtures en lotes en vez de uno a uno (evita el timeout de la función).
 async function syncFixtures(
   leagueId: number,
   competitionUUID: string,
   competitionName: string,
   season: string,
+  idMap: Map<number, string>,
   isYearOnly: boolean = false
 ): Promise<{ synced: number; skipped: number }> {
   console.log(`[fixtures] league=${leagueId} season=${season}`)
@@ -126,27 +152,17 @@ async function syncFixtures(
     return { synced: 0, skipped: 0 }
   }
 
-  let synced = 0
+  const rows: Record<string, unknown>[] = []
   let skipped = 0
 
   for (const item of response) {
     const { fixture, league, teams, goals } = item
 
-    // Buscar los UUID de los equipos en tu base de datos
-    // usando el api_football_id que syncTeams ya habrá insertado
-    const { data: homeTeam } = await supabase
-      .from('teams')
-      .select('id')
-      .eq('api_football_id', teams.home.id)
-      .maybeSingle()
+    // Resolver los UUID de los equipos usando el mapa que syncTeams ya construyó
+    const homeTeamId = idMap.get(teams.home.id)
+    const awayTeamId = idMap.get(teams.away.id)
 
-    const { data: awayTeam } = await supabase
-      .from('teams')
-      .select('id')
-      .eq('api_football_id', teams.away.id)
-      .maybeSingle()
-
-    if (!homeTeam || !awayTeam) {
+    if (!homeTeamId || !awayTeamId) {
       // Puede pasar en fases previas (rondas de clasificación con equipos
       // de otras ligas). No es un error crítico, solo se omite.
       console.warn(
@@ -178,36 +194,39 @@ async function syncFixtures(
     const roundMatch = roundStr.match(/(\d+)\s*$/)
     const matchday   = roundMatch ? parseInt(roundMatch[1]) : null
 
+    rows.push({
+      competition_id:           competitionUUID,
+      old_competition:          competitionName,
+      season:                   isYearOnly ? season : `${season}/${parseInt(season) + 1}`,
+      matchday:                 matchday,
+      round_name:               roundStr || null,
+      group_name:               (league.group as string | undefined) ?? null,
+      date:                     dateStr,
+      time:                     timeStr,
+      datetime_utc:             fixture.date,          // timestamptz
+      home_team_id:             homeTeamId,
+      away_team_id:             awayTeamId,
+      home_score:               goals?.home ?? null,
+      away_score:               goals?.away ?? null,
+      stadium:                  fixture.venue?.name ?? null,
+      status:                   STATUS_MAP[fixture.status?.short] ?? 'scheduled',
+      api_football_fixture_id:  fixture.id,
+      // created_at lo gestiona Supabase automáticamente
+    })
+  }
+
+  let synced = 0
+
+  for (const batch of chunk(rows, 300)) {
     const { error } = await supabase
       .from('matches')
-      .upsert(
-        {
-          competition_id:           competitionUUID,
-          old_competition:          competitionName,
-          season:                   isYearOnly ? season : `${season}/${parseInt(season) + 1}`,
-          matchday:                 matchday,
-          round_name:               roundStr || null,
-          group_name:               (league.group as string | undefined) ?? null,
-          date:                     dateStr,
-          time:                     timeStr,
-          datetime_utc:             fixture.date,          // timestamptz
-          home_team_id:             homeTeam.id,
-          away_team_id:             awayTeam.id,
-          home_score:               goals?.home ?? null,
-          away_score:               goals?.away ?? null,
-          stadium:                  fixture.venue?.name ?? null,
-          status:                   STATUS_MAP[fixture.status?.short] ?? 'scheduled',
-          api_football_fixture_id:  fixture.id,
-          // created_at lo gestiona Supabase automáticamente
-        },
-        { onConflict: 'api_football_fixture_id' }
-      )
+      .upsert(batch, { onConflict: 'api_football_fixture_id' })
 
     if (error) {
-      console.error(`[fixtures] Error fixture ${fixture.id}: ${error.message}`)
-      skipped++
+      console.error(`[fixtures] Error upserting batch (league ${leagueId}): ${error.message}`)
+      skipped += batch.length
     } else {
-      synced++
+      synced += batch.length
     }
   }
 
@@ -220,6 +239,13 @@ async function syncFixtures(
 // ── Handler principal ────────────────────────────────────────
 Deno.serve(async (req) => {
   try {
+    if (!isAuthorizedCron(req)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     console.log('=== sync-football START ===')
 
     // Parámetro opcional: ?leagueId=1 (URL) o body { leagueId: 1 } (cliente)
@@ -271,7 +297,7 @@ Deno.serve(async (req) => {
         const season = comp.api_football_season?.toString() ?? SEASON
 
         // 1. Primero los equipos (fixtures dependen de que existan)
-        const teamsCount = await syncTeams(comp.api_football_id, gender, season)
+        const { count: teamsCount, idMap } = await syncTeams(comp.api_football_id, gender, season)
 
         // Pausa corta para no golpear la API
         await new Promise((r) => setTimeout(r, 600))
@@ -283,6 +309,7 @@ Deno.serve(async (req) => {
           comp.id,
           comp.name,
           season,
+          idMap,
           isYearOnly
         )
 
