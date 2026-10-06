@@ -166,3 +166,158 @@ describe('restorePurchases', () => {
     await expect(restorePurchases()).rejects.toThrow('restore failed');
   });
 });
+
+import {
+  getCustomerInfo,
+  identifyUser,
+  logoutUser,
+  getActiveSubscriptionInfo,
+  hasAnyActiveEntitlement,
+  getAllEntitlements,
+  generateAdImpressionId,
+  trackAdRevenue,
+} from '~/utils/revenuecat';
+
+const mockedLogIn = Purchases.logIn as jest.Mock;
+const mockedLogOut = Purchases.logOut as jest.Mock;
+const mockedTrackAdRevenue = (Purchases as any).adTracker.trackAdRevenue as jest.Mock;
+
+describe('getCustomerInfo', () => {
+  it('devuelve la info del cliente', async () => {
+    mockedGetCustomerInfo.mockResolvedValueOnce({ originalAppUserId: 'u1' });
+    await expect(getCustomerInfo()).resolves.toEqual({ originalAppUserId: 'u1' });
+  });
+
+  it('devuelve null (no lanza) si falla', async () => {
+    mockedGetCustomerInfo.mockRejectedValueOnce(new Error('offline'));
+    await expect(getCustomerInfo()).resolves.toBeNull();
+  });
+});
+
+describe('identifyUser / logoutUser', () => {
+  it('identifica al usuario con su id de Supabase', async () => {
+    mockedLogIn.mockResolvedValueOnce({});
+    await identifyUser('user-1');
+    expect(mockedLogIn).toHaveBeenCalledWith('user-1');
+  });
+
+  it('relanza si logIn falla', async () => {
+    mockedLogIn.mockRejectedValueOnce(new Error('x'));
+    await expect(identifyUser('user-1')).rejects.toThrow('x');
+  });
+
+  it('hace logout en RevenueCat', async () => {
+    mockedLogOut.mockResolvedValueOnce({});
+    await logoutUser();
+    expect(mockedLogOut).toHaveBeenCalled();
+  });
+
+  it('relanza si logOut falla (p.ej. usuario anónimo)', async () => {
+    mockedLogOut.mockRejectedValueOnce(new Error('anonymous'));
+    await expect(logoutUser()).rejects.toThrow('anonymous');
+  });
+});
+
+describe('getActiveSubscriptionInfo', () => {
+  it('isActive=false si no hay entitlements activos', async () => {
+    mockedGetCustomerInfo.mockResolvedValueOnce({ entitlements: { active: {}, all: {} } });
+    await expect(getActiveSubscriptionInfo()).resolves.toEqual({ isActive: false });
+  });
+
+  it('devuelve los datos del primer entitlement activo', async () => {
+    mockedGetCustomerInfo.mockResolvedValueOnce({
+      entitlements: {
+        active: {
+          boost_active: {
+            productIdentifier: 'boost_1m_v2',
+            expirationDate: '2026-11-06T00:00:00Z',
+            willRenew: true,
+          },
+        },
+      },
+    });
+    await expect(getActiveSubscriptionInfo()).resolves.toEqual({
+      isActive: true,
+      productIdentifier: 'boost_1m_v2',
+      expirationDate: '2026-11-06T00:00:00Z',
+      willRenew: true,
+    });
+  });
+
+  it('expirationDate null (lifetime) se devuelve como undefined', async () => {
+    mockedGetCustomerInfo.mockResolvedValueOnce({
+      entitlements: {
+        active: { lifetime: { productIdentifier: 'lifetime', expirationDate: null, willRenew: false } },
+      },
+    });
+    const info = await getActiveSubscriptionInfo();
+    expect(info?.expirationDate).toBeUndefined();
+  });
+
+  it('devuelve null si falla', async () => {
+    mockedGetCustomerInfo.mockRejectedValueOnce(new Error('x'));
+    await expect(getActiveSubscriptionInfo()).resolves.toBeNull();
+  });
+});
+
+describe('hasAnyActiveEntitlement / getAllEntitlements', () => {
+  it('true si hay algún entitlement activo', async () => {
+    mockedGetCustomerInfo.mockResolvedValueOnce({ entitlements: { active: { a: {} } } });
+    await expect(hasAnyActiveEntitlement()).resolves.toBe(true);
+  });
+
+  it('false si no hay o si falla', async () => {
+    mockedGetCustomerInfo.mockResolvedValueOnce({ entitlements: { active: {} } });
+    await expect(hasAnyActiveEntitlement()).resolves.toBe(false);
+    mockedGetCustomerInfo.mockRejectedValueOnce(new Error('x'));
+    await expect(hasAnyActiveEntitlement()).resolves.toBe(false);
+  });
+
+  it('getAllEntitlements devuelve todos o {} si falla', async () => {
+    mockedGetCustomerInfo.mockResolvedValueOnce({ entitlements: { all: { a: 1, b: 2 } } });
+    await expect(getAllEntitlements()).resolves.toEqual({ a: 1, b: 2 });
+    mockedGetCustomerInfo.mockRejectedValueOnce(new Error('x'));
+    await expect(getAllEntitlements()).resolves.toEqual({});
+  });
+});
+
+describe('generateAdImpressionId', () => {
+  it('genera ids distintos con formato timestamp-random', () => {
+    const ids = new Set(Array.from({ length: 50 }, generateAdImpressionId));
+    expect(ids.size).toBe(50);
+    for (const id of ids) expect(id).toMatch(/^\d+-[a-z0-9]+$/);
+  });
+});
+
+describe('trackAdRevenue', () => {
+  const base = { adUnitId: 'unit-1', adFormat: 'banner', placement: 'map', impressionId: 'imp-1' };
+
+  it('convierte el valor a micros y mapea la precisión de AdMob a RevenueCat', async () => {
+    await trackAdRevenue({
+      ...base,
+      event: { value: 0.0123, currency: 'EUR', precision: 3 } as any,
+    });
+    expect(mockedTrackAdRevenue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        revenueMicros: 12300,
+        currency: 'EUR',
+        precision: 'exact',
+        adUnitId: 'unit-1',
+        impressionId: 'imp-1',
+        placement: 'map',
+      })
+    );
+  });
+
+  it('usa precisión unknown si AdMob manda un valor desconocido', async () => {
+    await trackAdRevenue({ ...base, event: { value: 1, currency: 'USD', precision: 99 } as any });
+    expect(mockedTrackAdRevenue.mock.calls[0][0].precision).toBe('unknown');
+  });
+
+  it('no lanza si RevenueCat falla (no debe romper el anuncio)', async () => {
+    mockedTrackAdRevenue.mockRejectedValueOnce(new Error('x'));
+    await expect(
+      trackAdRevenue({ ...base, event: { value: 1, currency: 'USD', precision: 1 } as any })
+    ).resolves.toBeUndefined();
+  });
+});
