@@ -24,14 +24,17 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "MatchMap uses your location to show nearby bars and sports events on the map."
+          "locationWhenInUsePermission": "MatchMap usa tu ubicación para mostrarte los bares y partidos que tienes cerca en el mapa.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you share them with other users.",
-          "cameraPermission": "The app accesses your camera to let you take photos and share them with other users."
+          "photosPermission": "MatchMap accede a tus fotos para que puedas elegir imágenes para tu perfil, tu bar, la carta y las publicaciones.",
+          "cameraPermission": "MatchMap usa la cámara para que puedas hacer fotos para tu perfil, tu bar y las publicaciones.",
+          "microphonePermission": false
         }
       ],
       [
@@ -58,7 +61,12 @@
         }
       ],
       "expo-mail-composer",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       "expo-font",
       [
         "expo-notifications",
@@ -155,10 +163,9 @@
           "googlemail"
         ],
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "MatchMap uses your location to show nearby bars and sports events on the map.",
-        "NSCameraUsageDescription": "MatchMap needs camera access to let you take photos for your bar profile and posts.",
-        "NSPhotoLibraryUsageDescription": "MatchMap needs access to your photo library to let you select images for your bar profile, menus, and posts.",
-        "NSPhotoLibraryAddUsageDescription": "MatchMap would like to save photos to your photo library."
+        "NSLocationWhenInUseUsageDescription": "MatchMap usa tu ubicación para mostrarte los bares y partidos que tienes cerca en el mapa.",
+        "NSCameraUsageDescription": "MatchMap usa la cámara para que puedas hacer fotos para tu perfil, tu bar y las publicaciones.",
+        "NSPhotoLibraryUsageDescription": "MatchMap accede a tus fotos para que puedas elegir imágenes para tu perfil, tu bar, la carta y las publicaciones."
       }
     },
     "android": {
