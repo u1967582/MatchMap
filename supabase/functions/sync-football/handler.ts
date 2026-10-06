@@ -189,8 +189,10 @@ export function createHandler(deps: Deps) {
       // Ejemplo: "2025-09-20T20:00:00+02:00"
       const fixtureDate = new Date(fixture.date)
 
-      // date → YYYY-MM-DD (tu columna es tipo date)
-      const dateStr = fixtureDate.toISOString().split('T')[0]
+      // date → YYYY-MM-DD en hora de Madrid (tu columna es tipo date). Debe
+      // usar la misma zona que `time`: en UTC, un partido a las 00:30 de
+      // Madrid quedaría con la fecha del día anterior.
+      const dateStr = fixtureDate.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
 
       // time → HH:MM en hora de Madrid (tu columna es tipo time)
       const timeStr = fixtureDate.toLocaleTimeString('es-ES', {
