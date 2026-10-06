@@ -19,19 +19,22 @@ export function useCountdown(endAt: string | Date | null | undefined): Countdown
     calculateCountdown(endAt)
   );
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  // Dependemos del timestamp, no de la identidad: un `new Date()` inline
+  // cambiaría en cada render y relanzaría el efecto en bucle.
+  const endMs = endAt ? new Date(endAt).getTime() : null;
 
   useEffect(() => {
-    if (!endAt) {
+    if (endMs === null) {
       setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, totalSeconds: 0, expired: true });
       return;
     }
 
     // Update immediately
-    setCountdown(calculateCountdown(endAt));
+    setCountdown(calculateCountdown(new Date(endMs)));
 
     // Then update every second
     intervalRef.current = setInterval(() => {
-      const newCountdown = calculateCountdown(endAt);
+      const newCountdown = calculateCountdown(new Date(endMs));
       setCountdown(newCountdown);
 
       // Clear interval if expired
@@ -45,7 +48,7 @@ export function useCountdown(endAt: string | Date | null | undefined): Countdown
         clearInterval(intervalRef.current);
       }
     };
-  }, [endAt]);
+  }, [endMs]);
 
   return countdown;
 }
@@ -59,7 +62,8 @@ function calculateCountdown(endAt: string | Date | null | undefined): CountdownT
   const now = new Date();
   const diffMs = endDate.getTime() - now.getTime();
 
-  if (diffMs <= 0) {
+  // !(diffMs > 0) cubre también fechas inválidas (NaN)
+  if (!(diffMs > 0)) {
     return { days: 0, hours: 0, minutes: 0, seconds: 0, totalSeconds: 0, expired: true };
   }
 
