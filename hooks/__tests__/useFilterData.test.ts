@@ -8,7 +8,10 @@ import { useFilterData } from '~/hooks/useFilterData';
 const mockedFrom = supabase.from as jest.Mock;
 
 const tables: Record<string, any> = {
-  bar_categories: [{ id: 10, name: 'Bar deportivo' }, { id: 11, name: 'Desconocida' }],
+  bar_categories: [
+    { id: 10, name: 'Bar deportivo' },
+    { id: 11, name: 'Desconocida' },
+  ],
   food_types: [{ id: 20, name: 'Italiana' }],
   bar_features: [{ id: 30, name: 'Terraza' }],
   bar_tv_features: [{ id: 40, name: 'TV 4K' }],

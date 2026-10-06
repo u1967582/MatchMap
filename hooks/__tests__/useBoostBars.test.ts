@@ -1,10 +1,10 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
 
 jest.mock('~/utils/supabase');
 
 import { supabase } from '~/utils/supabase';
-import { useBoostBars } from '~/hooks/useBoostBars';
+import { useBarBoost, useBoostBars } from '~/hooks/useBoostBars';
 
 const mockedFrom = supabase.from as jest.Mock;
 
@@ -39,9 +39,7 @@ describe('useBoostBars - filtro de bares de test', () => {
   });
 
   it('no consulta nada si enabled=false', async () => {
-    const { result } = await renderHook(() =>
-      useBoostBars({ centerLatLng: null, enabled: false })
-    );
+    const { result } = await renderHook(() => useBoostBars({ centerLatLng: null, enabled: false }));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(mockedFrom).not.toHaveBeenCalled();
@@ -74,13 +72,18 @@ describe('useBoostBars - filtro de locales de apuestas deportivas', () => {
   });
 });
 
-import { act } from '@testing-library/react-native';
-import { useBarBoost } from '~/hooks/useBoostBars';
-
 const makeRow = (id: string, lat: number, lng: number, images: any[] = []) => ({
   bar_id: id,
   end_at: '2030-01-01T00:00:00Z',
-  bars: { id, name: `Bar ${id}`, latitude: lat, longitude: lng, rating: 4, review_count: 2, bar_images: images },
+  bars: {
+    id,
+    name: `Bar ${id}`,
+    latitude: lat,
+    longitude: lng,
+    rating: 4,
+    review_count: 2,
+    bar_images: images,
+  },
 });
 
 describe('useBoostBars - transformación y selección', () => {
@@ -121,14 +124,22 @@ describe('useBoostBars - transformación y selección', () => {
   it('con ubicación: top 5 más cercanos y 3 seleccionados de entre ellos', async () => {
     // 7 bares a distancias crecientes del centro
     const rows = Array.from({ length: 7 }, (_, i) => makeRow(`b${i}`, 41.38 + i * 0.01, 2.17));
-    (supabase.from as jest.Mock).mockReturnValueOnce(createQueryBuilderMock({ data: rows, error: null }));
+    (supabase.from as jest.Mock).mockReturnValueOnce(
+      createQueryBuilderMock({ data: rows, error: null })
+    );
 
     const { result } = await renderHook(() =>
       useBoostBars({ centerLatLng: { lat: 41.38, lng: 2.17 } })
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.top5NearestActive.map((b) => b.id)).toEqual(['b0', 'b1', 'b2', 'b3', 'b4']);
+    expect(result.current.top5NearestActive.map((b) => b.id)).toEqual([
+      'b0',
+      'b1',
+      'b2',
+      'b3',
+      'b4',
+    ]);
     expect(result.current.selected3Stable).toHaveLength(3);
     const top5 = new Set(result.current.top5NearestActive.map((b) => b.id));
     result.current.selected3Stable.forEach((id) => expect(top5.has(id)).toBe(true));
@@ -137,7 +148,9 @@ describe('useBoostBars - transformación y selección', () => {
 
   it('sin ubicación devuelve como mucho 3 bares aleatorios', async () => {
     const rows = Array.from({ length: 6 }, (_, i) => makeRow(`b${i}`, 41 + i, 2));
-    (supabase.from as jest.Mock).mockReturnValueOnce(createQueryBuilderMock({ data: rows, error: null }));
+    (supabase.from as jest.Mock).mockReturnValueOnce(
+      createQueryBuilderMock({ data: rows, error: null })
+    );
     const { result } = await renderHook(() => useBoostBars({ centerLatLng: null }));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.selected3Stable).toHaveLength(3);
@@ -145,7 +158,9 @@ describe('useBoostBars - transformación y selección', () => {
 
   it('la selección es estable entre renders con las mismas coordenadas', async () => {
     const rows = Array.from({ length: 5 }, (_, i) => makeRow(`b${i}`, 41.38 + i * 0.01, 2.17));
-    (supabase.from as jest.Mock).mockReturnValueOnce(createQueryBuilderMock({ data: rows, error: null }));
+    (supabase.from as jest.Mock).mockReturnValueOnce(
+      createQueryBuilderMock({ data: rows, error: null })
+    );
     const { result, rerender } = await renderHook(
       ({ c }: any) => useBoostBars({ centerLatLng: c }),
       { initialProps: { c: { lat: 41.38, lng: 2.17 } } }
@@ -188,7 +203,10 @@ describe('useBarBoost', () => {
   });
 
   it('boost activo', async () => {
-    const builder = createQueryBuilderMock({ data: { end_at: '2030-01-01', status: 'active' }, error: null });
+    const builder = createQueryBuilderMock({
+      data: { end_at: '2030-01-01', status: 'active' },
+      error: null,
+    });
     (supabase.from as jest.Mock).mockReturnValueOnce(builder);
     const { result } = await renderHook(() => useBarBoost('bar-1'));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -197,7 +215,9 @@ describe('useBarBoost', () => {
   });
 
   it('sin boost o con error → inactivo', async () => {
-    (supabase.from as jest.Mock).mockReturnValueOnce(createQueryBuilderMock({ data: null, error: null }));
+    (supabase.from as jest.Mock).mockReturnValueOnce(
+      createQueryBuilderMock({ data: null, error: null })
+    );
     const { result } = await renderHook(() => useBarBoost('bar-1'));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.boost).toEqual({ isActive: false, endAt: null });

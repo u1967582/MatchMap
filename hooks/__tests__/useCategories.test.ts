@@ -39,13 +39,17 @@ describe('useCategories', () => {
   });
 
   it('usa respaldo y expone el error si Supabase falla; refetch recupera', async () => {
-    mockedFrom.mockReturnValueOnce(createQueryBuilderMock({ data: null, error: { message: 'boom' } }));
+    mockedFrom.mockReturnValueOnce(
+      createQueryBuilderMock({ data: null, error: { message: 'boom' } })
+    );
     const { result } = await renderHook(() => useCategories());
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.usingFallback).toBe(true);
     expect(result.current.error).toContain('boom');
 
-    mockedFrom.mockReturnValueOnce(createQueryBuilderMock({ data: [{ id: 'c1', name: 'Pub' }], error: null }));
+    mockedFrom.mockReturnValueOnce(
+      createQueryBuilderMock({ data: [{ id: 'c1', name: 'Pub' }], error: null })
+    );
     await act(async () => {
       await result.current.refetch();
     });

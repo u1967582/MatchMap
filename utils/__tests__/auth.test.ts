@@ -92,7 +92,10 @@ describe('getOAuthRedirectUrl', () => {
 
 describe('getCurrentUser', () => {
   it('devuelve el usuario autenticado', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: session.user }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: session.user },
+      error: null,
+    });
     await expect(getCurrentUser()).resolves.toEqual(session.user);
   });
 
@@ -137,14 +140,20 @@ describe('deleteAccount', () => {
   });
 
   it('falla si no hay sesión activa', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: session.user }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: session.user },
+      error: null,
+    });
     const result = await deleteAccount();
     expect(result).toEqual({ success: false, error: 'No hay sesión activa.' });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('llama a la edge function con el token del usuario y cierra sesión al terminar', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: session.user }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: session.user },
+      error: null,
+    });
     mockedSupabase.auth.getSession.mockResolvedValueOnce({ data: { session }, error: null });
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: true }));
 
@@ -159,7 +168,10 @@ describe('deleteAccount', () => {
   });
 
   it('no cierra sesión y devuelve el error del servidor si la edge function falla', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: session.user }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: session.user },
+      error: null,
+    });
     mockedSupabase.auth.getSession.mockResolvedValueOnce({ data: { session }, error: null });
     fetchMock.mockResolvedValueOnce(
       jsonResponse({ success: false, error: 'Failed to delete user data' }, false, 500)
@@ -173,7 +185,10 @@ describe('deleteAccount', () => {
   });
 
   it('devuelve un error legible si la red falla', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: session.user }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: session.user },
+      error: null,
+    });
     mockedSupabase.auth.getSession.mockResolvedValueOnce({ data: { session }, error: null });
     fetchMock.mockRejectedValueOnce(new Error('Network request failed'));
 
@@ -405,7 +420,10 @@ describe('getIsGuest / showGuestLoginAlert', () => {
   });
 
   it('un usuario normal o sin sesión no es invitado', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: session.user }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: session.user },
+      error: null,
+    });
     await expect(getIsGuest()).resolves.toBe(false);
     await expect(getIsGuest()).resolves.toBe(false);
   });
@@ -529,10 +547,16 @@ describe('checkAndPromotePreRegisteredBar', () => {
     await checkAndPromotePreRegisteredBar('user-1', 'owner@bar.com');
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://test.supabase.co/functions/v1/promote_pre_registered_bar_with_images');
+    expect(url).toBe(
+      'https://test.supabase.co/functions/v1/promote_pre_registered_bar_with_images'
+    );
     expect(init.headers.Authorization).toBe('Bearer access-123');
     expect(JSON.parse(init.body)).toEqual({ preBarId: 'pre-1', ownerId: 'user-1' });
-    expect(alertSpy).toHaveBeenCalledWith('¡Bar Reclamado!', expect.stringContaining('3 imágenes'), expect.anything());
+    expect(alertSpy).toHaveBeenCalledWith(
+      '¡Bar Reclamado!',
+      expect.stringContaining('3 imágenes'),
+      expect.anything()
+    );
   });
 
   it('muestra aviso de soporte si la edge function falla', async () => {
@@ -551,7 +575,12 @@ describe('checkAndPromotePreRegisteredBar', () => {
   });
 
   it('si el bar ya está convertido y con imágenes, solo enlaza el usuario', async () => {
-    const converted = { ...preBar, status: 'converted', converted_bar_id: 'bar-9', __images: [{ id: 'i' }] };
+    const converted = {
+      ...preBar,
+      status: 'converted',
+      converted_bar_id: 'bar-9',
+      __images: [{ id: 'i' }],
+    };
     const builders = mockPreRegisterQueries({ simple: [converted], full: [converted] });
 
     await checkAndPromotePreRegisteredBar('user-1', 'owner@bar.com');

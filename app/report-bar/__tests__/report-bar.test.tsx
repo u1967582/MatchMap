@@ -33,7 +33,10 @@ beforeEach(() => {
   insertBuilder = createQueryBuilderMock({ data: null, error: null });
   mockedSupabase.from.mockImplementation((table: string) =>
     table === 'bars'
-      ? createQueryBuilderMock({ data: { id: 'bar-1', name: 'Bar Pepe', city: 'Barcelona' }, error: null })
+      ? createQueryBuilderMock({
+          data: { id: 'bar-1', name: 'Bar Pepe', city: 'Barcelona' },
+          error: null,
+        })
       : insertBuilder
   );
 });
@@ -59,11 +62,17 @@ describe('ReportBarScreen', () => {
   });
 
   it('envía el reporte con motivo y mensaje recortado', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'u1' } },
+      error: null,
+    });
     await renderScreen();
 
     await fireEvent.press(screen.getByText('Ha cerrado'));
-    await fireEvent.changeText(screen.getByPlaceholderText('Describe qué información está mal...'), '  Cerró en agosto  ');
+    await fireEvent.changeText(
+      screen.getByPlaceholderText('Describe qué información está mal...'),
+      '  Cerró en agosto  '
+    );
     await fireEvent.press(screen.getByText('Enviar reporte'));
 
     await waitFor(() => expect(insertBuilder.insert).toHaveBeenCalled());
@@ -78,7 +87,10 @@ describe('ReportBarScreen', () => {
   });
 
   it('mensaje vacío se guarda como null', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'u1' } },
+      error: null,
+    });
     await renderScreen();
     await fireEvent.press(screen.getByText('Otro'));
     await fireEvent.press(screen.getByText('Enviar reporte'));
@@ -95,7 +107,10 @@ describe('ReportBarScreen', () => {
   });
 
   it('si la base de datos rechaza el reporte, muestra el error y no navega', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'u1' } },
+      error: null,
+    });
     insertBuilder = createQueryBuilderMock({ data: null, error: { message: 'rls' } });
     await renderScreen();
     await fireEvent.press(screen.getByText('Otro'));

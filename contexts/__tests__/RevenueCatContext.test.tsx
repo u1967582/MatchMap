@@ -45,7 +45,10 @@ async function renderCtx() {
 
 describe('RevenueCatProvider', () => {
   it('inicializa RevenueCat con el usuario de Supabase y carga el estado del boost', async () => {
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: { id: 'u1' } },
+      error: null,
+    });
     rc.hasActiveBoost.mockResolvedValueOnce(true);
 
     const { result } = await renderCtx();
@@ -112,7 +115,11 @@ describe('RevenueCatProvider', () => {
 
   it('purchasePackage devuelve true y actualiza el boost; false si el usuario cancela', async () => {
     const { result } = await renderCtx();
-    rc.purchasePackage.mockResolvedValueOnce({ customerInfo: { id: 'new' } as any, transaction: {}, success: true });
+    rc.purchasePackage.mockResolvedValueOnce({
+      customerInfo: { id: 'new' } as any,
+      transaction: {},
+      success: true,
+    });
     rc.hasActiveBoost.mockResolvedValueOnce(true);
 
     let ok: boolean | undefined;

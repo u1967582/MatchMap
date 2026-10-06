@@ -35,6 +35,14 @@ import {
   purchasePackage,
   restorePurchases,
   ENTITLEMENTS,
+  getCustomerInfo,
+  identifyUser,
+  logoutUser,
+  getActiveSubscriptionInfo,
+  hasAnyActiveEntitlement,
+  getAllEntitlements,
+  generateAdImpressionId,
+  trackAdRevenue,
 } from '~/utils/revenuecat';
 
 const mockedIsConfigured = Purchases.isConfigured as jest.Mock;
@@ -125,7 +133,10 @@ describe('getOfferings', () => {
 describe('purchasePackage', () => {
   it('devuelve success=true y la info del cliente tras una compra correcta', async () => {
     const customerInfo = { entitlements: { active: {} } };
-    mockedPurchasePackage.mockResolvedValueOnce({ customerInfo, transaction: { transactionIdentifier: 'tx_1' } });
+    mockedPurchasePackage.mockResolvedValueOnce({
+      customerInfo,
+      transaction: { transactionIdentifier: 'tx_1' },
+    });
 
     const result = await purchasePackage({ identifier: 'pkg_1' } as any);
 
@@ -139,7 +150,9 @@ describe('purchasePackage', () => {
   it('relanza el error cuando la compra falla, para que el llamante pueda reaccionar', async () => {
     mockedPurchasePackage.mockRejectedValueOnce(new Error('payment declined'));
 
-    await expect(purchasePackage({ identifier: 'pkg_1' } as any)).rejects.toThrow('payment declined');
+    await expect(purchasePackage({ identifier: 'pkg_1' } as any)).rejects.toThrow(
+      'payment declined'
+    );
   });
 
   it('relanza también cuando el usuario cancela, preservando el flag userCancelled', async () => {
@@ -166,17 +179,6 @@ describe('restorePurchases', () => {
     await expect(restorePurchases()).rejects.toThrow('restore failed');
   });
 });
-
-import {
-  getCustomerInfo,
-  identifyUser,
-  logoutUser,
-  getActiveSubscriptionInfo,
-  hasAnyActiveEntitlement,
-  getAllEntitlements,
-  generateAdImpressionId,
-  trackAdRevenue,
-} from '~/utils/revenuecat';
 
 const mockedLogIn = Purchases.logIn as jest.Mock;
 const mockedLogOut = Purchases.logOut as jest.Mock;
@@ -247,7 +249,9 @@ describe('getActiveSubscriptionInfo', () => {
   it('expirationDate null (lifetime) se devuelve como undefined', async () => {
     mockedGetCustomerInfo.mockResolvedValueOnce({
       entitlements: {
-        active: { lifetime: { productIdentifier: 'lifetime', expirationDate: null, willRenew: false } },
+        active: {
+          lifetime: { productIdentifier: 'lifetime', expirationDate: null, willRenew: false },
+        },
       },
     });
     const info = await getActiveSubscriptionInfo();

@@ -22,7 +22,13 @@ describe('useCountdown', () => {
   it('descompone el tiempo restante en días/horas/minutos/segundos', async () => {
     const end = new Date(NOW + ((2 * 24 + 3) * 3600 + 4 * 60 + 5) * 1000).toISOString();
     const { result } = await renderHook(() => useCountdown(end));
-    expect(result.current).toMatchObject({ days: 2, hours: 3, minutes: 4, seconds: 5, expired: false });
+    expect(result.current).toMatchObject({
+      days: 2,
+      hours: 3,
+      minutes: 4,
+      seconds: 5,
+      expired: false,
+    });
   });
 
   it('acepta objetos Date', async () => {
@@ -86,6 +92,8 @@ describe('formatCountdown', () => {
   });
 
   it('añade los días cuando hay', () => {
-    expect(formatCountdown({ ...base, days: 3, hours: 10, minutes: 0, seconds: 9 })).toBe('3d 10:00:09');
+    expect(formatCountdown({ ...base, days: 3, hours: 10, minutes: 0, seconds: 9 })).toBe(
+      '3d 10:00:09'
+    );
   });
 });

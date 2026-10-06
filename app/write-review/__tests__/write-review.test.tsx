@@ -3,7 +3,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 jest.mock('~/utils/supabase');
-jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), ImpactFeedbackStyle: { Light: 'light' } }));
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'light' },
+}));
 jest.mock('@expo/vector-icons', () => {
   const { Text } = require('react-native');
   return { Ionicons: ({ name }: any) => <Text testID={`icon-${name}`}>{name}</Text> };
@@ -50,7 +53,10 @@ async function renderScreen() {
 
 const pressStar = async (n: number) => {
   // Las estrellas se renderizan en orden; pulsamos la n-ésima
-  const stars = [...screen.queryAllByTestId('icon-star-outline'), ...screen.queryAllByTestId('icon-star')];
+  const stars = [
+    ...screen.queryAllByTestId('icon-star-outline'),
+    ...screen.queryAllByTestId('icon-star'),
+  ];
   expect(stars.length).toBe(5);
   await fireEvent.press(screen.queryAllByTestId(/icon-star/)[n - 1]);
 };
@@ -64,7 +70,9 @@ describe('WriteReviewScreen', () => {
     await fireEvent.changeText(screen.getByPlaceholderText(PLACEHOLDER), '  Muy buen ambiente  ');
     await fireEvent.press(screen.getByText('Publicar'));
 
-    await waitFor(() => expect(mockCreateReview).toHaveBeenCalledWith('bar-1', 'u1', 4, 'Muy buen ambiente'));
+    await waitFor(() =>
+      expect(mockCreateReview).toHaveBeenCalledWith('bar-1', 'u1', 4, 'Muy buen ambiente')
+    );
     expect(toast.success).toHaveBeenCalledWith('Reseña publicada');
     expect(mockedRouter.back).toHaveBeenCalled();
   });

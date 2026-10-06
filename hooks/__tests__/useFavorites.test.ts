@@ -64,7 +64,9 @@ describe('useFavorites', () => {
 
   it('devuelve false si Supabase falla', async () => {
     const { result } = await renderWithUser();
-    mockedSupabase.from.mockReturnValue(createQueryBuilderMock({ data: null, error: { message: 'x' } }));
+    mockedSupabase.from.mockReturnValue(
+      createQueryBuilderMock({ data: null, error: { message: 'x' } })
+    );
     await expect(result.current.isFavorite('b')).resolves.toBe(false);
     await expect(result.current.addToFavorites('b')).resolves.toBe(false);
     await expect(result.current.removeFromFavorites('b')).resolves.toBe(false);

@@ -62,7 +62,13 @@ describe('ResetPasswordScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Confirmar contraseña'), 'nueva123');
     await fireEvent.press(getByText('Actualizar Contraseña'));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Contraseña Actualizada', expect.any(String), expect.anything()));
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Contraseña Actualizada',
+        expect.any(String),
+        expect.anything()
+      )
+    );
     expect(mockedUpdatePassword).toHaveBeenCalledWith('nueva123');
     expect(mockedSupabase.auth.signOut).toHaveBeenCalled();
     alertSpy.mock.calls.at(-1)[2][0].onPress();

@@ -65,7 +65,10 @@ describe('Registro de bar - paso 1 (información general)', () => {
     expect(screen.getByText('El email no es válido')).toBeTruthy();
     expect(mockedRouter.push).not.toHaveBeenCalled();
 
-    await fireEvent.changeText(screen.getByPlaceholderText('propietario@ejemplo.com'), 'dueno@bar.com');
+    await fireEvent.changeText(
+      screen.getByPlaceholderText('propietario@ejemplo.com'),
+      'dueno@bar.com'
+    );
     await fireEvent.press(screen.getByText('Siguiente'));
     expect(mockedRouter.push).toHaveBeenCalledWith('/register-bar/step2?mode=auto_pre_register');
   });
