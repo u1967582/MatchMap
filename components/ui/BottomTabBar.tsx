@@ -31,6 +31,15 @@ const BottomTabBar = () => {
     '/profile': new Animated.Value(1),
   }).current;
 
+  const isActiveTab = useCallback((route: string) => {
+    // Special handling for map route
+    if (route === '/(protected)/map') {
+      return pathname === '/(protected)/map' || pathname === '/map';
+    }
+    // Check if current pathname matches the tab route
+    return pathname === route || pathname.includes(route.replace('/', ''));
+  }, [pathname]);
+
   const handleTabPress = useCallback((route: string) => {
     // Don't navigate if already on the same tab
     if (isActiveTab(route)) {
@@ -53,15 +62,6 @@ const BottomTabBar = () => {
 
     router.push(route as any);
   }, [router, tabAnimations, isActiveTab]);
-
-  const isActiveTab = useCallback((route: string) => {
-    // Special handling for map route
-    if (route === '/(protected)/map') {
-      return pathname === '/(protected)/map' || pathname === '/map';
-    }
-    // Check if current pathname matches the tab route
-    return pathname === route || pathname.includes(route.replace('/', ''));
-  }, [pathname]);
 
   // Animate active indicator when tab changes
   useEffect(() => {

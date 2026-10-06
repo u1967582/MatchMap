@@ -1,6 +1,8 @@
 [functions.sync-football]
 enabled = true
-verify_jwt = true
+# Lo invoca pg_cron con x-cron-secret (ver migración cron_jobs_pg_cron);
+# esa cabecera es su autorización, no un JWT.
+verify_jwt = false
 import_map = "./functions/sync-football/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
@@ -17,3 +19,10 @@ enabled = true
 # REVENUECAT_WEBHOOK_SECRET.
 verify_jwt = false
 entrypoint = "./functions/revenuecat-webhook/index.ts"
+
+[functions.send-match-notifications]
+enabled = true
+# Lo invoca pg_cron con x-cron-secret (ver migración cron_jobs_pg_cron);
+# esa cabecera es su autorización, no un JWT.
+verify_jwt = false
+entrypoint = "./functions/send-match-notifications/index.ts"

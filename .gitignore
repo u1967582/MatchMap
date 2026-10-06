@@ -35,5 +35,14 @@ client_secret_*.json
 # Proyecto local de vídeos de marketing (Remotion) — no se versiona
 /marketing-videos/
 
+# Pipeline local de enriquecimiento de datos de bares (Outscraper) — no se versiona
+/outscraper-data/
+
 # Artefacto local de estado de la Supabase CLI
 supabase/.temp/
+
+# Informes de cobertura de jest (se generan localmente)
+coverage/
+
+# Configuración MCP local (puede contener credenciales)
+.mcp-config.json

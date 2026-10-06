@@ -50,6 +50,21 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // El owner debe ser el propio usuario autenticado (no anónimo y con email confirmado)
+    const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !caller || caller.is_anonymous || !caller.email || !caller.email_confirmed_at) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
+
+    if (caller.id !== ownerId) {
+      return new Response(
+        JSON.stringify({ error: "ownerId must match the authenticated user" }),
+        { status: 403 }
+      );
+    }
+
     const bucket = "bar-images";
 
     // ========================================
@@ -58,15 +73,26 @@ serve(async (req) => {
     console.log("[CHECK] Verifying pre-bar state...");
     const { data: preBarRow, error: preBarErr } = await supabase
       .from("auto_pre_register_bars")
-      .select("converted_bar_id, status, name")
+      .select("converted_bar_id, status, name, email")
       .eq("id", preBarId)
       .single();
 
     if (preBarErr) {
       console.error("[CHECK ERROR]", preBarErr);
       return new Response(
-        JSON.stringify({ error: preBarErr.message }), 
+        JSON.stringify({ error: preBarErr.message }),
         { status: 400 }
+      );
+    }
+
+    // Solo quien usa el email con el que se pre-registró el bar puede reclamarlo
+    if (
+      !preBarRow?.email ||
+      preBarRow.email.trim().toLowerCase() !== caller.email.trim().toLowerCase()
+    ) {
+      return new Response(
+        JSON.stringify({ error: "This pre-registered bar does not belong to the authenticated user" }),
+        { status: 403 }
       );
     }
 

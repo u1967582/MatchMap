@@ -135,11 +135,10 @@ export default function ResetPasswordScreen() {
         >
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.content}>
-              <ScreenTitle
-                title="Nueva Contraseña"
-                subtitle="Ingresa tu nueva contraseña"
-                color="#FFFFFF"
-              />
+              <ScreenTitle title="Nueva Contraseña" color="#FFFFFF" />
+              <AppText variant="body" style={styles.subtitle}>
+                Ingresa tu nueva contraseña
+              </AppText>
 
               <View style={styles.form}>
                 <InputField
@@ -192,6 +191,10 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
+  subtitle: {
+    textAlign: 'center',
+    marginBottom: 24,
+  },
   container: {
     flex: 1,
     backgroundColor: '#1C2A3A',

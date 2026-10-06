@@ -47,3 +47,29 @@ describe('useBoostBars - filtro de bares de test', () => {
     expect(mockedFrom).not.toHaveBeenCalled();
   });
 });
+
+describe('useBoostBars - filtro de locales de apuestas deportivas', () => {
+  it('excluye los locales de apuestas deportivas por defecto (includeBettingBars=false)', async () => {
+    const builder = createQueryBuilderMock({ data: [], error: null });
+    mockedFrom.mockReturnValueOnce(builder);
+
+    const { result } = await renderHook(() => useBoostBars({ centerLatLng: null }));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(builder.eq).toHaveBeenCalledWith('bars.is_betting_venue', false);
+  });
+
+  it('incluye los locales de apuestas deportivas cuando includeBettingBars=true', async () => {
+    const builder = createQueryBuilderMock({ data: [], error: null });
+    mockedFrom.mockReturnValueOnce(builder);
+
+    const { result } = await renderHook(() =>
+      useBoostBars({ centerLatLng: null, includeBettingBars: true })
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(builder.eq).not.toHaveBeenCalledWith('bars.is_betting_venue', false);
+  });
+});

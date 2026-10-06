@@ -1,6 +1,9 @@
 import { supabase } from '~/utils/supabase';
 
-export async function fetchBarIdsByTeam(teamId: string, onlyFuture: boolean = true): Promise<string[]> {
+export async function fetchBarIdsByTeam(
+  teamId: string,
+  onlyFuture: boolean = true
+): Promise<string[]> {
   const { data, error } = await supabase.rpc('fn_bar_ids_with_team_events', {
     _team: teamId,
     _future_only: onlyFuture,
@@ -10,22 +13,50 @@ export async function fetchBarIdsByTeam(teamId: string, onlyFuture: boolean = tr
 }
 
 /**
+ * Aprueba en bloque bares de la tabla `bars` (solo superadmin, por RLS).
+ * Solo afecta a los que siguen en 'pending', para no pisar rechazos o
+ * archivados hechos mientras tanto. Devuelve los ids realmente aprobados.
+ */
+export async function approveBars(barIds: string[]): Promise<string[]> {
+  if (barIds.length === 0) return [];
+
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
+  if (!user) throw new Error('No auth user');
+
+  const { data, error } = await supabase
+    .from('bars')
+    .update({
+      verification_status: 'approved',
+      verified_at: new Date().toISOString(),
+      verified_by: user.id,
+      verification_notes: null,
+    })
+    .in('id', barIds)
+    .eq('verification_status', 'pending')
+    .select('id');
+
+  if (error) throw error;
+  return (data ?? []).map((r: { id: string }) => r.id);
+}
+
+/**
  * Fetch bar IDs that have events for a specific match
  */
 export async function fetchBarIdsByMatch(matchId: string): Promise<string[]> {
   try {
     const now = new Date().toISOString();
-    
+
     const { data, error } = await supabase
       .from('events')
       .select('bar_id')
       .eq('match_id', matchId)
       .gte('start_time', now);
-    
+
     if (error) throw error;
-    
+
     // Return unique bar IDs
-    const barIds = [...new Set(data?.map(e => e.bar_id) || [])];
+    const barIds = [...new Set(data?.map((e) => e.bar_id) || [])];
     console.log(`📍 Found ${barIds.length} bars with events for match ${matchId}`);
     return barIds;
   } catch (error) {
@@ -55,7 +86,10 @@ export async function createAutoPreRegisterBar(payload: {
 }) {
   try {
     // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
     if (userError || !user) {
       throw new Error('Usuario no autenticado');
     }
@@ -103,12 +137,10 @@ export async function createAutoPreRegisterBar(payload: {
     console.log(`   Email guardado: "${data.email}"`);
     console.log(`   Status: ${data.status}`);
     console.log(`========================================\n`);
-    
+
     return data;
   } catch (error) {
     console.error('❌ Error in createAutoPreRegisterBar:', error);
     throw error;
   }
 }
-
-

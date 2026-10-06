@@ -14,6 +14,7 @@ import { springs, pressScale } from '../tokens/motion';
 interface AppCardProps {
   children: ReactNode;
   onPress?: () => void;
+  onLongPress?: () => void;
   style?: ViewStyle;
   pressable?: boolean;
 }
@@ -23,8 +24,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AppCard = forwardRef<any, AppCardProps>(function AppCard({
   children,
   onPress,
+  onLongPress,
   style,
-  pressable = !!onPress,
+  pressable = !!onPress || !!onLongPress,
 }, ref) {
   const scale = useSharedValue(1);
 
@@ -49,6 +51,7 @@ const AppCard = forwardRef<any, AppCardProps>(function AppCard({
       ref={ref}
       style={[styles.card, animatedStyle, style]}
       onPress={onPress}
+      onLongPress={onLongPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={!pressable}

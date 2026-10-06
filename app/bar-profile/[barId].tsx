@@ -15,6 +15,7 @@ import { useBarBoost } from '~/hooks/useBoostBars';
 import { AppText, colors, spacing, radius, BarProfileSkeleton, toast } from '~/components/ds';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import AdBanner from '~/components/ads/AdBanner';
+import { trackBarEvent } from '~/services/barAnalytics';
 // Plans removed: all bars are PRO
 
 interface BarProfile {
@@ -33,6 +34,7 @@ interface BarProfile {
   bar_food_types?: { food_type_id: number; food_type: { name: string } }[];
   bar_selected_tv_features?: { tv_feature_id: number; tv_feature: { name: string } }[];
   bar_selected_features?: { feature_id: number; feature: { name: string } }[];
+  is_betting_venue?: boolean;
 }
 
 interface BarPost {
@@ -92,6 +94,9 @@ export default function BarProfileScreen() {
 
   // Ref para scroll programático al FlatList
   const flatListRef = useRef<FlatList>(null);
+
+  // Ref para no duplicar el tracking de profile_view dentro del mismo montaje
+  const trackedProfileViewBarIdRef = useRef<string | null>(null);
 
   // Get boost status for countdown
   const { boost, isLoading: boostLoading, refresh: refreshBoost } = useBarBoost(barId);
@@ -185,6 +190,23 @@ export default function BarProfileScreen() {
     setInfoModalVisible(true);
   };
 
+  const showStatsInfo = () => {
+    setInfoModalContent({
+      title: '📊 Estadísticas del Bar',
+      content: (
+        <View>
+          <AppText variant="body" color={colors.text.light}>
+            Consulta cuánta gente ve la ficha de tu bar, abre tu carta o hace clic en tu teléfono, dirección o web.
+          </AppText>
+          <AppText variant="body" color={colors.text.light} style={{ marginTop: spacing.md }}>
+            También verás cuántos favoritos y reseñas acumulas, con gráficas de la evolución día a día — desde los últimos 30 días hasta todo el histórico desde que empezamos a registrar datos de tu bar.
+          </AppText>
+        </View>
+      ),
+    });
+    setInfoModalVisible(true);
+  };
+
   // Functions to copy to clipboard
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -195,21 +217,31 @@ export default function BarProfileScreen() {
     }
   };
 
+  const trackContactClick = useCallback(
+    (eventType: 'contact_click_phone' | 'contact_click_address' | 'contact_click_website') => {
+      trackBarEvent(barId, eventType, isOwner);
+    },
+    [isOwner, barId]
+  );
+
   const copyAddress = () => {
     if (bar?.address && bar?.city) {
       copyToClipboard(`${bar.address}, ${bar.city}`, 'Dirección');
+      trackContactClick('contact_click_address');
     }
   };
 
   const copyPhone = () => {
     if (bar?.phone) {
       copyToClipboard(bar.phone, 'Teléfono');
+      trackContactClick('contact_click_phone');
     }
   };
 
   const copyWebsite = () => {
     if (bar?.website) {
       copyToClipboard(bar.website, 'Sitio web');
+      trackContactClick('contact_click_website');
     }
   };
 
@@ -491,11 +523,12 @@ export default function BarProfileScreen() {
 
       case 'tags':
         return (
-          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_selected_tv_features?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0) ? (
+          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_selected_tv_features?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0 || bar?.is_betting_venue) ? (
             <View style={styles.tagsSection}>
               <FlatList
                 data={[
                   ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
+                  ...(bar?.is_betting_venue ? [{ type: 'betting', data: null, id: 'betting' }] : []),
                   ...(bar?.bar_food_types?.map((item) => ({ type: 'food', data: item, id: `food-${item.food_type_id}` })) || []),
                   ...(bar?.bar_selected_tv_features?.map((item) => ({ type: 'tv_feature', data: item, id: `tv-${item.tv_feature_id}` })) || []),
                   ...(bar?.bar_selected_features?.map((item) => ({ type: 'feature', data: item, id: `feature-${item.feature_id}` })) || [])
@@ -504,12 +537,17 @@ export default function BarProfileScreen() {
                   let backgroundColor = '#1976D2';
                   let icon = '📂';
                   let text = '';
-                  
+
                   switch (item.type) {
                     case 'category':
                       backgroundColor = colors.tags.category;
                       icon = '📂';
                       text = (item.data as { name: string }).name;
+                      break;
+                    case 'betting':
+                      backgroundColor = colors.tags.betting;
+                      icon = '🎰';
+                      text = 'Apuestas Deportivas';
                       break;
                     case 'food':
                       backgroundColor = colors.tags.food;
@@ -550,7 +588,10 @@ export default function BarProfileScreen() {
               <AppText variant="subtitle" style={styles.menuSectionTitleSpacing}>🍽️ La Carta</AppText>
               <TouchableOpacity
                 style={styles.menuButton}
-                onPress={() => router.push(`/bar-menu/${barId}` as any)}
+                onPress={() => {
+                  trackBarEvent(barId, 'menu_view', isOwner);
+                  router.push(`/bar-menu/${barId}` as any);
+                }}
               >
                 <AppText variant="label" color={colors.text.primary}>Ver Carta</AppText>
               </TouchableOpacity>
@@ -694,6 +735,32 @@ export default function BarProfileScreen() {
                 {boost?.isActive && boost?.endAt && (
                   <BoostCountdown endAt={boost.endAt} style={{ marginTop: spacing.md }} />
                 )}
+
+                {/* Ver estadísticas */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.barActionButton}
+                    onPress={() => router.push(`/bar-stats/${barId}` as any)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.barActionIcon, styles.barActionIconGreen]}>
+                      <Ionicons name="bar-chart-outline" size={18} color={colors.status.success} />
+                    </View>
+                    <View style={styles.barActionContent}>
+                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
+                        Ver estadísticas
+                      </AppText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.infoButton}
+                    onPress={showStatsInfo}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           ) : null
@@ -813,113 +880,6 @@ export default function BarProfileScreen() {
     }
   };
 
-  const fetchBarProfile = useCallback(async () => {
-    if (!barId) return;
-
-    try {
-      // Round 1: auth + bar data con joins anidados en paralelo
-      const [
-        { data: { user: authUser } },
-        { data: barData, error: barError },
-      ] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase
-          .from('bars')
-          .select(`
-            id,
-            name,
-            description,
-            address,
-            city,
-            phone,
-            website,
-            latitude,
-            longitude,
-            owner_id,
-            bar_images(image_url, image_order),
-            bar_categories(id, name),
-            bar_food_types(food_type_id, food_types(name)),
-            bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
-            bar_selected_features(feature_id, bar_features(name)),
-            verification_status,
-            verification_notes
-          `)
-          .eq('id', barId)
-          .single(),
-      ]);
-
-      setUser(authUser);
-
-      if (barError) {
-        console.error('Error fetching bar:', barError);
-        Alert.alert('Error', 'No se pudo cargar la información del bar');
-        return;
-      }
-
-      if (barData) {
-        setVerificationStatus((barData as any).verification_status || null);
-        setVerificationNotes((barData as any).verification_notes || null);
-        setCanShowMenuButton(true);
-
-        // Procesar joins directos (patrón Map.tsx)
-        const categoryRaw = Array.isArray((barData as any).bar_categories)
-          ? (barData as any).bar_categories[0]
-          : (barData as any).bar_categories;
-        const category = categoryRaw
-          ? { id: categoryRaw.id, name: categoryRaw.name }
-          : undefined;
-
-        setBar({
-          id: barData.id,
-          name: barData.name,
-          description: barData.description,
-          address: barData.address,
-          city: barData.city,
-          phone: barData.phone,
-          website: barData.website,
-          latitude: (barData as any).latitude,
-          longitude: (barData as any).longitude,
-          owner_id: (barData as any).owner_id ?? null,
-          images: (barData as any).bar_images
-            ?.sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))
-            .map((img: any) => img.image_url) || [],
-          category,
-          bar_food_types: ((barData as any).bar_food_types || []).map((item: any) => ({
-            food_type_id: item.food_type_id,
-            food_type: { name: item.food_types?.name || 'Unknown' },
-          })),
-          bar_selected_tv_features: ((barData as any).bar_selected_tv_features || []).map((item: any) => ({
-            tv_feature_id: item.tv_feature_id,
-            tv_feature: { name: item.bar_tv_features?.name || 'Unknown' },
-          })),
-          bar_selected_features: ((barData as any).bar_selected_features || []).map((item: any) => ({
-            feature_id: item.feature_id,
-            feature: { name: item.bar_features?.name || 'Unknown' },
-          })),
-        });
-
-        // Round 2: ownership primer, després posts + matches
-        const ownerResult = authUser
-          ? await supabase.from('users').select('bar_id, is_super_user').eq('id', authUser.id).single()
-          : { data: null, error: null };
-
-        const ownerCheck = !!(authUser && ownerResult.data && (ownerResult.data as any).bar_id === barData.id);
-        setIsOwner(ownerCheck);
-
-        await Promise.all([
-          fetchBarPosts(barData.id, authUser, ownerCheck),
-          fetchUpcomingMatches(barData.id),
-        ]);
-      }
-
-    } catch (error) {
-      console.error('Error in fetchBarProfile:', error);
-      Alert.alert('Error', 'Ocurrió un error al cargar el perfil del bar');
-    } finally {
-      setLoading(false);
-    }
-  }, [barId, fetchBarPosts, fetchUpcomingMatches]);
-
   const fetchBarPosts = useCallback(async (barId: string, authUser: any, isOwnerCheck: boolean) => {
     try {
       let query = supabase
@@ -1004,6 +964,115 @@ export default function BarProfileScreen() {
       console.error('Error in fetchUpcomingMatches:', error);
     }
   }, []);
+
+  const fetchBarProfile = useCallback(async () => {
+    if (!barId) return;
+
+    try {
+      // Round 1: auth + bar data con joins anidados en paralelo
+      const [
+        { data: { user: authUser } },
+        { data: barData, error: barError },
+      ] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase
+          .from('bars')
+          .select(`
+            id,
+            name,
+            description,
+            address,
+            city,
+            phone,
+            website,
+            latitude,
+            longitude,
+            owner_id,
+            bar_images(image_url, image_order),
+            bar_categories(id, name),
+            bar_food_types(food_type_id, food_types(name)),
+            bar_selected_tv_features(tv_feature_id, bar_tv_features(name)),
+            bar_selected_features(feature_id, bar_features(name)),
+            is_betting_venue,
+            verification_status,
+            verification_notes
+          `)
+          .eq('id', barId)
+          .single(),
+      ]);
+
+      setUser(authUser);
+
+      if (barError) {
+        console.error('Error fetching bar:', barError);
+        Alert.alert('Error', 'No se pudo cargar la información del bar');
+        return;
+      }
+
+      if (barData) {
+        setVerificationStatus((barData as any).verification_status || null);
+        setVerificationNotes((barData as any).verification_notes || null);
+        setCanShowMenuButton(true);
+
+        // Procesar joins directos (patrón Map.tsx)
+        const categoryRaw = Array.isArray((barData as any).bar_categories)
+          ? (barData as any).bar_categories[0]
+          : (barData as any).bar_categories;
+        const category = categoryRaw
+          ? { id: categoryRaw.id, name: categoryRaw.name }
+          : undefined;
+
+        setBar({
+          id: barData.id,
+          name: barData.name,
+          description: barData.description,
+          address: barData.address,
+          city: barData.city,
+          phone: barData.phone,
+          website: barData.website,
+          latitude: (barData as any).latitude,
+          longitude: (barData as any).longitude,
+          owner_id: (barData as any).owner_id ?? null,
+          images: (barData as any).bar_images
+            ?.sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))
+            .map((img: any) => img.image_url) || [],
+          category,
+          bar_food_types: ((barData as any).bar_food_types || []).map((item: any) => ({
+            food_type_id: item.food_type_id,
+            food_type: { name: item.food_types?.name || 'Unknown' },
+          })),
+          bar_selected_tv_features: ((barData as any).bar_selected_tv_features || []).map((item: any) => ({
+            tv_feature_id: item.tv_feature_id,
+            tv_feature: { name: item.bar_tv_features?.name || 'Unknown' },
+          })),
+          bar_selected_features: ((barData as any).bar_selected_features || []).map((item: any) => ({
+            feature_id: item.feature_id,
+            feature: { name: item.bar_features?.name || 'Unknown' },
+          })),
+          is_betting_venue: (barData as any).is_betting_venue ?? false,
+        });
+
+        // Round 2: ownership primer, després posts + matches
+        const ownerResult = authUser
+          ? await supabase.from('users').select('bar_id, is_super_user').eq('id', authUser.id).single()
+          : { data: null, error: null };
+
+        const ownerCheck = !!(authUser && ownerResult.data && (ownerResult.data as any).bar_id === barData.id);
+        setIsOwner(ownerCheck);
+
+        await Promise.all([
+          fetchBarPosts(barData.id, authUser, ownerCheck),
+          fetchUpcomingMatches(barData.id),
+        ]);
+      }
+
+    } catch (error) {
+      console.error('Error in fetchBarProfile:', error);
+      Alert.alert('Error', 'Ocurrió un error al cargar el perfil del bar');
+    } finally {
+      setLoading(false);
+    }
+  }, [barId, fetchBarPosts, fetchUpcomingMatches]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -1269,6 +1338,15 @@ export default function BarProfileScreen() {
       fetchBarProfile();
     }, [fetchBarProfile])
   );
+
+  // Trackear vista de perfil (excluye al propio dueño, deduplicado 1 vez por montaje)
+  useEffect(() => {
+    if (loading || !bar || !barId) return;
+    if (trackedProfileViewBarIdRef.current === barId) return;
+    trackedProfileViewBarIdRef.current = barId;
+
+    trackBarEvent(barId, 'profile_view', isOwner);
+  }, [loading, bar, isOwner, barId]);
 
   // Tier loading removed
 
@@ -1926,6 +2004,9 @@ const styles = StyleSheet.create({
   },
   barActionIconBoost: {
     backgroundColor: 'rgba(255, 215, 0, 0.12)',
+  },
+  barActionIconGreen: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
   },
   barActionContent: {
     flex: 1,

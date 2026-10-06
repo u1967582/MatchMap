@@ -8,15 +8,17 @@ import {
   ScrollView,
   Image,
   Platform,
+  Switch,
 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeForUpload } from '~/utils/imageResize';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '~/utils/supabase';
-import { toast, EditBarSkeleton, AppText } from '~/components/ds';
+import { toast, EditBarSkeleton, AppText, colors } from '~/components/ds';
 import { DraggableImageGrid } from '~/components/images';
 // Subscriptions removed; use fixed limits
 
@@ -33,6 +35,7 @@ interface Bar {
   longitude?: number;
   postal_code?: string;
   owner_id: string;
+  is_betting_venue?: boolean;
 }
 
 interface BarImage {
@@ -74,6 +77,7 @@ export default function EditBarInfoScreen() {
   const [phone, setPhone] = React.useState('');
   const [website, setWebsite] = React.useState('');
   const [selectedCategoryId, setSelectedCategoryId] = React.useState<number | null>(null);
+  const [isBettingVenue, setIsBettingVenue] = React.useState(false);
   
   // Images state
   const [barImages, setBarImages] = React.useState<BarImage[]>([]);
@@ -142,6 +146,7 @@ export default function EditBarInfoScreen() {
         setPhone(barData.phone || '');
         setWebsite(barData.website || '');
         setSelectedCategoryId(barData.category_id || null);
+        setIsBettingVenue(barData.is_betting_venue || false);
 
         // Load bar images
         const { data: barImagesData, error: barImagesError } = await supabase
@@ -340,12 +345,10 @@ export default function EditBarInfoScreen() {
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.75,
-        width: 1400,
-        height: 788,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
+        const imageUri = await resizeForUpload(result.assets[0], 'bar');
         await uploadBarImage(imageUri, 'bar');
       }
     } catch (error) {
@@ -376,12 +379,10 @@ export default function EditBarInfoScreen() {
         allowsEditing: true,
         aspect: [3, 4],
         quality: 0.75,
-        width: 900,
-        height: 1200,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
+        const imageUri = await resizeForUpload(result.assets[0], 'menu');
         await uploadBarImage(imageUri, 'menu');
       }
     } catch (error) {
@@ -735,6 +736,7 @@ export default function EditBarInfoScreen() {
           phone: phone.trim() || null,
           website: website.trim() || null,
           category_id: selectedCategoryId,
+          is_betting_venue: isBettingVenue,
           updated_at: new Date().toISOString(),
         })
         .eq('id', barId);
@@ -930,6 +932,24 @@ export default function EditBarInfoScreen() {
           </View>
         </View>
 
+        {/* Betting Venue Toggle */}
+        <View style={styles.inputContainer}>
+          <View style={styles.bettingVenueRow}>
+            <View style={styles.bettingVenueTextContainer}>
+              <AppText style={styles.inputLabel}>Es un local de apuestas deportivas</AppText>
+              <AppText style={styles.helperText}>
+                Se ocultará por defecto en el mapa y la búsqueda; solo lo verán los usuarios que
+                hayan optado por ver este tipo de locales.
+              </AppText>
+            </View>
+            <Switch
+              value={isBettingVenue}
+              onValueChange={setIsBettingVenue}
+              trackColor={{ true: colors.brand.primary }}
+            />
+          </View>
+        </View>
+
         {/* Phone Input */}
         <View style={styles.inputContainer}>
           <AppText style={styles.inputLabel}>Teléfono</AppText>
@@ -996,7 +1016,7 @@ export default function EditBarInfoScreen() {
           {barImages.length > 0 ? (
             <DraggableImageGrid
               images={barImages}
-              onReorder={handleReorderBarImages}
+              onReorder={(images) => handleReorderBarImages(images as BarImage[])}
               onDelete={(imageId) => handleDeleteImage(imageId, 'bar')}
               columns={4}
               itemSize={80}
@@ -1029,7 +1049,7 @@ export default function EditBarInfoScreen() {
             {menuImages.length > 0 ? (
               <DraggableImageGrid
                 images={menuImages}
-                onReorder={handleReorderMenuImages}
+                onReorder={(images) => handleReorderMenuImages(images as BarImage[])}
                 onDelete={(imageId) => handleDeleteImage(imageId, 'menu')}
                 columns={4}
                 itemSize={80}
@@ -1274,6 +1294,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  bettingVenueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  bettingVenueTextContainer: {
+    flex: 1,
   },
   draggableContainer: {
     marginBottom: 12,

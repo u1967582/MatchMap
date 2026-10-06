@@ -13,6 +13,11 @@ export { default as AppInput } from './primitives/AppInput';
 export { default as AppCard } from './primitives/AppCard';
 export { default as AppChip } from './primitives/AppChip';
 export { default as Divider } from './primitives/Divider';
+export { default as SegmentedControl } from './primitives/SegmentedControl';
+export type { SegmentedControlOption } from './primitives/SegmentedControl';
+
+// Charts
+export { default as StatsAreaChart } from './charts/StatsAreaChart';
 
 // Feedback
 export { toast } from './feedback/Toast';

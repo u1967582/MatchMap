@@ -21,13 +21,22 @@ interface BarSummary {
   city?: string;
 }
 
-type ReportReason = 'info_incorrecta' | 'cerrado' | 'ubicacion_incorrecta' | 'fotos_incorrectas' | 'otro';
+type ReportReason =
+  | 'info_incorrecta'
+  | 'cerrado'
+  | 'ubicacion_incorrecta'
+  | 'fotos_incorrectas'
+  | 'sin_television'
+  | 'no_dan_partido'
+  | 'otro';
 
 const REASON_OPTIONS: { value: ReportReason; label: string }[] = [
   { value: 'info_incorrecta', label: 'Información incorrecta' },
   { value: 'cerrado', label: 'Ha cerrado' },
   { value: 'ubicacion_incorrecta', label: 'Ubicación incorrecta' },
   { value: 'fotos_incorrectas', label: 'Fotos incorrectas' },
+  { value: 'sin_television', label: 'No tienen televisión' },
+  { value: 'no_dan_partido', label: 'No aparece el partido en la televisión' },
   { value: 'otro', label: 'Otro' },
 ];
 

@@ -8,6 +8,7 @@ import { useBarRegisterStore } from '~/stores/barRegisterStore';
 import PrimaryButton from '~/components/ui/PrimaryButton';
 import { supabase } from '~/utils/supabase';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeForUpload } from '~/utils/imageResize';
 import * as FileSystem from 'expo-file-system/legacy';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DraggableImageGrid } from '~/components/images';
@@ -269,8 +270,6 @@ const Step4Photos: React.FC = () => {
         allowsMultipleSelection: true,
         quality: 0.75,
         aspect: type === 'bar' ? [16, 9] : [3, 4],
-        width: type === 'bar' ? 1400 : 900,
-        height: type === 'bar' ? 788 : 1200,
         allowsEditing: false,
       });
 
@@ -310,9 +309,13 @@ const Step4Photos: React.FC = () => {
           }
         }
 
+        const resizedUris = await Promise.all(
+          validImages.map((asset) => resizeForUpload(asset, type))
+        );
+
         const newImages = validImages.map((asset, index) => ({
           id: generateId(),
-          uri: asset.uri,
+          uri: resizedUris[index],
           uploading: false,
           order: currentImages.length + index + 1,
         }));

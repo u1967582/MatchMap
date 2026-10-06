@@ -58,6 +58,25 @@ export function haversineDistanceMeters(
 }
 
 /**
+ * Filtra qué bares (con lat/lng) están dentro de un radio en metros desde
+ * un punto dado. Usado para la detección de proximidad (ver
+ * checkBarProximity en components/Map.tsx).
+ */
+export function getNearbyBarIds(
+  coords: { latitude: number; longitude: number },
+  bars: { id: string; latitude: number; longitude: number }[],
+  radiusMeters: number
+): string[] {
+  return bars
+    .filter(
+      (bar) =>
+        haversineDistanceMeters(coords.latitude, coords.longitude, bar.latitude, bar.longitude) <=
+        radiusMeters
+    )
+    .map((bar) => bar.id);
+}
+
+/**
  * Create a deterministic key from coordinates for stable random selection
  */
 export function coordsToKey(coords: LatLng, decimals: number = 3): string {

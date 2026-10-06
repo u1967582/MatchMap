@@ -5,7 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { makeRedirectUri } from 'expo-auth-session';
 import Constants from 'expo-constants';
-import { supabase } from './supabase';
+import { supabase, supabaseUrl } from './supabase';
 import * as Crypto from 'expo-crypto';
 
 // ============================================
@@ -348,7 +348,6 @@ export const checkAndPromotePreRegisteredBar = async (userId: string, userEmail:
     }
 
     // Call Edge Function to promote the bar
-    const supabaseUrl = supabase.supabaseUrl;
     const functionUrl = `${supabaseUrl}/functions/v1/promote_pre_registered_bar_with_images`;
 
     console.log(`\n🚀 LLAMANDO A EDGE FUNCTION`);
@@ -918,7 +917,6 @@ export async function deleteAccount(): Promise<{
       return { success: false, error: 'No hay sesión activa.' };
     }
 
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://hmtfxpihkoisncglllmq.supabase.co';
     const functionUrl = `${supabaseUrl}/functions/v1/delete-user-account`;
 
     const response = await fetch(functionUrl, {
