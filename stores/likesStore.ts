@@ -83,8 +83,8 @@ export const useLikesStore = create<LikesState>((set, get) => ({
 
       if (error) {
         console.error('❌ Error adding like:', error);
-        // Rollback optimistic update
-        const rolledBackLikes = new Set(likes);
+        // Rollback optimistic update (sobre el estado actual, no el capturado)
+        const rolledBackLikes = new Set(get().likes);
         rolledBackLikes.delete(reviewId);
         set({ likes: rolledBackLikes });
         console.log('↩️ Rolled back like add:', reviewId);
@@ -95,8 +95,8 @@ export const useLikesStore = create<LikesState>((set, get) => ({
       return true;
     } catch (error) {
       console.error('❌ Error in addLike:', error);
-      // Rollback optimistic update
-      const rolledBackLikes = new Set(likes);
+      // Rollback optimistic update (sobre el estado actual, no el capturado)
+      const rolledBackLikes = new Set(get().likes);
       rolledBackLikes.delete(reviewId);
       set({ likes: rolledBackLikes });
       console.log('↩️ Rolled back like add:', reviewId);
@@ -127,8 +127,8 @@ export const useLikesStore = create<LikesState>((set, get) => ({
 
       if (error) {
         console.error('❌ Error removing like:', error);
-        // Rollback optimistic update
-        const rolledBackLikes = new Set(likes);
+        // Rollback optimistic update (sobre el estado actual, no el capturado)
+        const rolledBackLikes = new Set(get().likes);
         rolledBackLikes.add(reviewId);
         set({ likes: rolledBackLikes });
         console.log('↩️ Rolled back like remove:', reviewId);
@@ -139,8 +139,8 @@ export const useLikesStore = create<LikesState>((set, get) => ({
       return true;
     } catch (error) {
       console.error('❌ Error in removeLike:', error);
-      // Rollback optimistic update
-      const rolledBackLikes = new Set(likes);
+      // Rollback optimistic update (sobre el estado actual, no el capturado)
+      const rolledBackLikes = new Set(get().likes);
       rolledBackLikes.add(reviewId);
       set({ likes: rolledBackLikes });
       console.log('↩️ Rolled back like remove:', reviewId);
