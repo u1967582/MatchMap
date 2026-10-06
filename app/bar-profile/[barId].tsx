@@ -170,8 +170,7 @@ export default function BarProfileScreen() {
             <Ionicons name="trending-up" size={14} color="#4ADE80" />
             <View style={styles.boostRoiText}>
               <AppText variant="caption" color={colors.text.secondary}>Cada cliente gasta ~13€ de media</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Desde 19,99€</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Sin suscripción</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>Pago único, sin suscripción</AppText>
             </View>
           </View>
         </View>
@@ -1415,6 +1414,7 @@ export default function BarProfileScreen() {
           isVisible={paywallVisible}
           onClose={() => setPaywallVisible(false)}
           onPurchaseComplete={refreshBoost}
+          activeUntil={boost?.isActive ? boost.endAt : null}
           barId={barId}
           userId={user.id}
         />

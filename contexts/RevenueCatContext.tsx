@@ -1,141 +1,67 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { AppText } from '~/components/ds';
-import { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as RevenueCatService from '~/utils/revenuecat';
 import { supabase } from '~/utils/supabase';
 
 interface RevenueCatContextType {
-  customerInfo: CustomerInfo | null;
-  isLoading: boolean;
-  hasActiveBoost: boolean;
-  refreshCustomerInfo: () => Promise<void>;
-  purchasePackage: (pkg: PurchasesPackage) => Promise<boolean>;
-  restorePurchases: () => Promise<void>;
-  showPaywall: () => void;
-  showCustomerCenter: () => void;
+  isReady: boolean;
 }
 
 const RevenueCatContext = createContext<RevenueCatContextType | undefined>(undefined);
 
+/**
+ * Configura RevenueCat y mantiene su App User ID sincronizado con la sesión
+ * de Supabase (login, logout y cambio de cuenta). Las sesiones anónimas
+ * (invitado) no se identifican: un invitado no puede tener bar ni comprar.
+ *
+ * No bloquea el render: `configure` es síncrono y la sesión se lee de
+ * almacenamiento local, así que la app arranca sin esperar a la red.
+ */
 export function RevenueCatProvider({ children }: { children: React.ReactNode }) {
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasActiveBoost, setHasActiveBoost] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
-  // Initialize RevenueCat
   useEffect(() => {
+    let isMounted = true;
+
     const initialize = async () => {
       try {
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-
-        // Initialize RevenueCat with user ID if available
-        await RevenueCatService.initializeRevenueCat(user?.id);
-
-        // Fetch initial customer info
-        const info = await RevenueCatService.getCustomerInfo();
-        setCustomerInfo(info);
-
-        // Check boost entitlement
-        const boostActive = await RevenueCatService.hasActiveBoost();
-        setHasActiveBoost(boostActive);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const user = session?.user;
+        await RevenueCatService.initializeRevenueCat(user && !user.is_anonymous ? user.id : null);
       } catch (error) {
-        console.error('Failed to initialize RevenueCat:', error);
-        // ⚠️ IMPORTANT: Mark as initialized EVEN IF IT FAILS
-        // This allows the app to continue functioning without RevenueCat blocking it
+        // La app sigue funcionando sin RevenueCat; el paywall mostrará el error.
+        console.error('[RevenueCat] Failed to initialize:', error);
       } finally {
-        setIsInitialized(true);
-        setIsLoading(false);
+        if (isMounted) setIsReady(true);
       }
     };
 
     initialize();
-  }, []);
 
-  // Refresh customer info
-  const refreshCustomerInfo = useCallback(async () => {
-    try {
-      const info = await RevenueCatService.getCustomerInfo();
-      setCustomerInfo(info);
-
-      const boostActive = await RevenueCatService.hasActiveBoost();
-      setHasActiveBoost(boostActive);
-    } catch (error) {
-      console.error('Failed to refresh customer info:', error);
-    }
-  }, []);
-
-  // Purchase package
-  const purchasePackage = useCallback(async (pkg: PurchasesPackage): Promise<boolean> => {
-    try {
-      const { customerInfo: newCustomerInfo } = await RevenueCatService.purchasePackage(pkg);
-      setCustomerInfo(newCustomerInfo);
-
-      // Refresh boost status
-      const boostActive = await RevenueCatService.hasActiveBoost();
-      setHasActiveBoost(boostActive);
-
-      return true;
-    } catch (error: any) {
-      if (!error.userCancelled) {
-        console.error('Purchase failed:', error);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const user = session?.user;
+      // INITIAL_SESSION lo cubre initialize(); USER_UPDATED = invitado que se registra
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && user && !user.is_anonymous) {
+        RevenueCatService.syncRevenueCatUser(user.id).catch((error) =>
+          console.error('[RevenueCat] logIn failed:', error),
+        );
+      } else if (event === 'SIGNED_OUT') {
+        RevenueCatService.logoutRevenueCatUser().catch((error) =>
+          console.error('[RevenueCat] logOut failed:', error),
+        );
       }
-      return false;
-    }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Restore purchases
-  const restorePurchases = useCallback(async () => {
-    try {
-      const restoredInfo = await RevenueCatService.restorePurchases();
-      setCustomerInfo(restoredInfo);
-
-      const boostActive = await RevenueCatService.hasActiveBoost();
-      setHasActiveBoost(boostActive);
-    } catch (error) {
-      console.error('Failed to restore purchases:', error);
-      throw error;
-    }
-  }, []);
-
-  // Placeholder for paywall - will be implemented separately
-  const showPaywall = useCallback(() => {
-    console.log('Show paywall - to be implemented');
-  }, []);
-
-  // Placeholder for customer center - will be implemented separately
-  const showCustomerCenter = useCallback(() => {
-    console.log('Show customer center - to be implemented');
-  }, []);
-
-  const value: RevenueCatContextType = {
-    customerInfo,
-    isLoading,
-    hasActiveBoost,
-    refreshCustomerInfo,
-    purchasePackage,
-    restorePurchases,
-    showPaywall,
-    showCustomerCenter,
-  };
-
-  // Show loading screen while initializing
-  if (!isInitialized) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1C2A3A' }}>
-        <ActivityIndicator size="large" color="#1976D2" />
-        <AppText style={{ color: '#FFFFFF', marginTop: 16, fontSize: 16 }}>Iniciando MatchMap...</AppText>
-      </View>
-    );
-  }
-
-  return (
-    <RevenueCatContext.Provider value={value}>
-      {children}
-    </RevenueCatContext.Provider>
-  );
+  return <RevenueCatContext.Provider value={{ isReady }}>{children}</RevenueCatContext.Provider>;
 }
 
 export function useRevenueCat() {

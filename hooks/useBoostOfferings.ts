@@ -1,91 +1,100 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import { supabase } from '~/utils/supabase';
-import { toast } from '~/components/ds';
+import { useRevenueCat } from '~/contexts/RevenueCatContext';
+import { BOOST_BAR_ATTRIBUTE, syncRevenueCatUser } from '~/utils/revenuecat';
+import {
+  BOOST_PLAN_ORDER,
+  BoostPlan,
+  PurchaseErrorKind,
+  classifyPurchaseError,
+  formatPrice,
+  getBoostEndAt,
+  getPlanFromProductId,
+  getSavingsVsWeekly,
+  getWeeklyPrice,
+} from '~/utils/boostPlans';
 
 export interface BoostPackageInfo {
   pkg: PurchasesPackage;
-  plan: '7d' | '1m' | '1y';
-  title: string;
-  price: string;
-  isPopular: boolean;
-  duration: string;
-  amortization: string;
-  savingsBadge?: string;
-  icon: 'flash' | 'trending-up' | 'sparkles';
-  buttonColors: [string, string];
+  plan: BoostPlan;
+  priceString: string;
+  /** Precio por semana formateado; null en el plan semanal. */
+  weeklyPriceString: string | null;
+  /** % de ahorro frente a comprar semanas sueltas, calculado con precios reales. */
+  savingsPct: number | null;
 }
+
+export type BoostPurchaseResult =
+  /** El webhook ya ha confirmado el pago: el boost está activo. */
+  | { outcome: 'active'; endAt: string | null }
+  /** Pago hecho, el servidor aún no lo ha confirmado (suele tardar segundos). */
+  | { outcome: 'processing' }
+  /** La tienda deja el pago pendiente (Ask to Buy, pago en efectivo en Android…). */
+  | { outcome: 'pending_payment' }
+  | { outcome: 'cancelled' }
+  | { outcome: 'failed'; errorKind: PurchaseErrorKind };
 
 interface UseBoostOfferingsResult {
   packages: BoostPackageInfo[];
   isLoading: boolean;
   error: Error | null;
-  purchaseBoost: (pkg: PurchasesPackage, barId: string, userId: string) => Promise<boolean>;
+  reload: () => void;
+  purchaseBoost: (pkg: PurchasesPackage, barId: string, userId: string) => Promise<BoostPurchaseResult>;
   isPurchasing: boolean;
-  purchasingId: string | null;
 }
 
-function getPlanFromProductId(productId: string): '7d' | '1m' | '1y' | null {
-  if (productId.includes('boost_7d')) return '7d';
-  if (productId.includes('boost_1m')) return '1m';
-  if (productId.includes('boost_1y')) return '1y';
-  return null;
+const CONFIRM_POLL_ATTEMPTS = 8;
+const CONFIRM_POLL_INTERVAL_MS = 1500;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export function mapBoostPackages(available: PurchasesPackage[]): BoostPackageInfo[] {
+  const withPlan = available
+    .map((pkg) => ({ pkg, plan: getPlanFromProductId(pkg.product.identifier) }))
+    .filter((p): p is { pkg: PurchasesPackage; plan: BoostPlan } => p.plan !== null)
+    .sort((a, b) => BOOST_PLAN_ORDER[a.plan] - BOOST_PLAN_ORDER[b.plan]);
+
+  const weeklyPrice = withPlan.find((p) => p.plan === '7d')?.pkg.product.price ?? null;
+
+  return withPlan.map(({ pkg, plan }) => ({
+    pkg,
+    plan,
+    priceString: pkg.product.priceString,
+    weeklyPriceString:
+      plan === '7d' ? null : formatPrice(getWeeklyPrice(plan, pkg.product.price), pkg.product.currencyCode),
+    savingsPct: getSavingsVsWeekly(plan, pkg.product.price, weeklyPrice),
+  }));
 }
 
-function getEndAt(plan: '7d' | '1m' | '1y'): Date {
-  const end = new Date();
-  if (plan === '7d') {
-    end.setDate(end.getDate() + 7);
-  } else if (plan === '1m') {
-    end.setMonth(end.getMonth() + 1);
-  } else {
-    end.setFullYear(end.getFullYear() + 1);
+/**
+ * Espera a que el webhook de RevenueCat marque el boost como activo.
+ * Es el único que puede hacerlo (RLS): el cliente solo crea filas 'pending'.
+ */
+async function waitForActivation(transactionId: string): Promise<string | null | undefined> {
+  for (let i = 0; i < CONFIRM_POLL_ATTEMPTS; i++) {
+    const { data } = await supabase
+      .from('bar_boosts')
+      .select('status, end_at')
+      .eq('revenuecat_transaction_id', transactionId)
+      .maybeSingle();
+    if (data?.status === 'active') return data.end_at ?? null;
+    await sleep(CONFIRM_POLL_INTERVAL_MS);
   }
-  return end;
+  return undefined;
 }
-
-const PLAN_META: Record<'7d' | '1m' | '1y', {
-  title: string;
-  duration: string;
-  amortization: string;
-  savingsBadge?: string;
-  icon: 'flash' | 'trending-up' | 'sparkles';
-  buttonColors: [string, string];
-}> = {
-  '7d': {
-    title: 'Boost Semanal',
-    duration: '7 días',
-    amortization: 'Se amortiza con solo 2 clientes nuevos',
-    icon: 'flash',
-    buttonColors: ['#3B82F6', '#1976D2'],
-  },
-  '1m': {
-    title: 'Boost Mensual',
-    duration: '1 mes',
-    amortization: 'Se amortiza con solo 5 clientes nuevos',
-    icon: 'trending-up',
-    buttonColors: ['#D4AF37', '#B8956A'],
-  },
-  '1y': {
-    title: 'Boost de Temporada',
-    duration: '1 año',
-    amortization: 'La opción de más valor (~44€/mes)',
-    savingsBadge: 'Ahorra ~81%',
-    icon: 'sparkles',
-    buttonColors: ['#10B981', '#059669'],
-  },
-};
-
-const PLAN_ORDER: Record<'7d' | '1m' | '1y', number> = { '7d': 0, '1m': 1, '1y': 2 };
 
 export function useBoostOfferings(): UseBoostOfferingsResult {
+  const { isReady } = useRevenueCat();
   const [packages, setPackages] = useState<BoostPackageInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
-  const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const purchasingRef = useRef(false);
 
   useEffect(() => {
+    if (!isReady) return;
     let isMounted = true;
 
     async function fetchOfferings() {
@@ -94,35 +103,13 @@ export function useBoostOfferings(): UseBoostOfferingsResult {
         setError(null);
 
         const offerings = await Purchases.getOfferings();
-        const current = offerings.current;
+        const mapped = mapBoostPackages(offerings.current?.availablePackages ?? []);
 
-        if (!current) {
-          if (isMounted) setError(new Error('No hay ofertas disponibles'));
-          return;
+        if (!isMounted) return;
+        if (mapped.length === 0) {
+          setError(new Error('No hay planes disponibles'));
         }
-
-        const mapped = current.availablePackages
-          .reduce<BoostPackageInfo[]>((acc, pkg) => {
-            const plan = getPlanFromProductId(pkg.product.identifier);
-            if (!plan) return acc;
-            const meta = PLAN_META[plan];
-            acc.push({
-              pkg,
-              plan,
-              title: meta.title,
-              price: pkg.product.priceString,
-              isPopular: plan === '1m',
-              duration: meta.duration,
-              amortization: meta.amortization,
-              savingsBadge: meta.savingsBadge,
-              icon: meta.icon,
-              buttonColors: meta.buttonColors,
-            });
-            return acc;
-          }, [])
-          .sort((a, b) => PLAN_ORDER[a.plan] - PLAN_ORDER[b.plan]);
-
-        if (isMounted) setPackages(mapped);
+        setPackages(mapped);
       } catch (err) {
         if (isMounted) {
           setError(err instanceof Error ? err : new Error('Error al cargar los productos'));
@@ -133,66 +120,70 @@ export function useBoostOfferings(): UseBoostOfferingsResult {
     }
 
     fetchOfferings();
-    return () => { isMounted = false; };
-  }, []);
+    return () => {
+      isMounted = false;
+    };
+  }, [isReady, reloadKey]);
 
-  const purchaseBoost = useCallback(async (
-    pkg: PurchasesPackage,
-    barId: string,
-    userId: string,
-  ): Promise<boolean> => {
-    const plan = getPlanFromProductId(pkg.product.identifier);
-    if (!plan) return false;
+  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
 
-    try {
+  const purchaseBoost = useCallback(
+    async (pkg: PurchasesPackage, barId: string, userId: string): Promise<BoostPurchaseResult> => {
+      const plan = getPlanFromProductId(pkg.product.identifier);
+      if (!plan) return { outcome: 'failed', errorKind: 'store' };
+      if (purchasingRef.current) return { outcome: 'cancelled' };
+
+      purchasingRef.current = true;
       setIsPurchasing(true);
-      setPurchasingId(pkg.identifier);
+      try {
+        // 1. La compra tiene que quedar a nombre del dueño del bar, no de un
+        //    $RCAnonymousID, y llevar el bar para que el webhook la asigne.
+        await syncRevenueCatUser(userId);
+        await Purchases.setAttributes({ [BOOST_BAR_ATTRIBUTE]: barId });
 
-      const { transaction } = await Purchases.purchasePackage(pkg);
+        // 2. Compra en App Store / Google Play.
+        const { transaction } = await Purchases.purchasePackage(pkg);
+        const transactionId = transaction?.transactionIdentifier || null;
 
-      const startAt = new Date();
-      const endAt = getEndAt(plan);
-      const amountCents = Math.round(pkg.product.price * 100);
-      const currency = (pkg.product.currencyCode ?? 'eur').toLowerCase();
+        // 3. Fila 'pending' para enlazar transacción ↔ bar. El webhook la pasa a
+        //    'active' (o la crea él si llega antes: entonces este insert choca
+        //    con el UNIQUE de revenuecat_transaction_id y no pasa nada).
+        if (transactionId) {
+          const startAt = new Date();
+          const { error: insertError } = await supabase.from('bar_boosts').insert({
+            bar_id: barId,
+            user_id: userId,
+            plan,
+            start_at: startAt.toISOString(),
+            end_at: getBoostEndAt(plan, startAt).toISOString(),
+            status: 'pending',
+            amount_cents: Math.round(pkg.product.price * 100),
+            currency: (pkg.product.currencyCode ?? 'eur').toLowerCase(),
+            revenuecat_transaction_id: transactionId,
+          });
+          if (insertError && insertError.code !== '23505') {
+            // No es grave: el webhook crea la fila a partir del atributo boost_bar_id.
+            console.warn('[useBoostOfferings] Pending insert failed:', insertError.message);
+          }
 
-      // status='pending': la activación real (status='active') la hace
-      // el webhook de RevenueCat (service_role) tras confirmar el pago,
-      // no el cliente. Ver supabase/functions/revenuecat-webhook y la
-      // migración 20260806050000_fix_bar_boosts_payment_integrity.
-      const { error: insertError } = await supabase
-        .from('bar_boosts')
-        .insert({
-          bar_id: barId,
-          user_id: userId,
-          plan,
-          start_at: startAt.toISOString(),
-          end_at: endAt.toISOString(),
-          status: 'pending',
-          amount_cents: amountCents,
-          currency,
-          revenuecat_transaction_id: transaction?.transactionIdentifier ?? null,
-        });
+          const endAt = await waitForActivation(transactionId);
+          if (endAt !== undefined) return { outcome: 'active', endAt };
+        }
 
-      if (insertError) {
-        console.error('[useBoostOfferings] Error inserting boost:', insertError);
-        toast.warning('Boost comprado, pero no se pudo registrar. Contacta con soporte.');
-        return true;
+        return { outcome: 'processing' };
+      } catch (err: any) {
+        const errorKind = classifyPurchaseError(err);
+        if (errorKind === 'cancelled') return { outcome: 'cancelled' };
+        if (errorKind === 'pending') return { outcome: 'pending_payment' };
+        console.error('[useBoostOfferings] Purchase failed:', err);
+        return { outcome: 'failed', errorKind };
+      } finally {
+        purchasingRef.current = false;
+        setIsPurchasing(false);
       }
+    },
+    [],
+  );
 
-      toast.success('¡Compra exitosa!', 'Tu boost se activará en unos instantes');
-      return true;
-    } catch (err: any) {
-      if (err.userCancelled) {
-        return false;
-      }
-      console.error('[useBoostOfferings] Purchase failed:', err);
-      toast.error('Error en la compra', 'Vuelve a intentarlo');
-      return false;
-    } finally {
-      setIsPurchasing(false);
-      setPurchasingId(null);
-    }
-  }, []);
-
-  return { packages, isLoading, error, purchaseBoost, isPurchasing, purchasingId };
+  return { packages, isLoading, error, reload, purchaseBoost, isPurchasing };
 }

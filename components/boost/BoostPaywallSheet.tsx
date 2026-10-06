@@ -1,42 +1,66 @@
-import React, { useRef, useEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetBackdrop,
+  BottomSheetFooter,
+  BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetDefaultBackdropProps } from '@gorhom/bottom-sheet/lib/typescript/components/bottomSheetBackdrop/types';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, colors, spacing, radius } from '~/components/ds';
-import { useBoostOfferings } from '~/hooks/useBoostOfferings';
-import Gradient from '~/components/ui/Gradient';
+import { AppText, ErrorState, SkeletonBox, colors, spacing, radius, toast } from '~/components/ds';
+import { BoostPackageInfo, BoostPurchaseResult, useBoostOfferings } from '~/hooks/useBoostOfferings';
+import type { BoostPlan } from '~/utils/boostPlans';
 
 interface BoostPaywallSheetProps {
   isVisible: boolean;
   onClose: () => void;
   barId: string;
   userId: string;
+  /** Fin del boost activo, si lo hay: el nuevo se suma a continuación. */
+  activeUntil?: string | null;
   onPurchaseComplete?: () => void;
 }
 
-const SNAP_POINTS = ['95%'];
+const SNAP_POINTS = ['92%'];
+
+const BLUE = colors.brand.primary;
+const GOLD = colors.status.boost;
+const GOLD_DEEP = colors.status.warning;
+const GO = colors.status.success;
+
+const PLAN_COPY: Record<BoostPlan, { title: string; duration: string; hint: string }> = {
+  '7d': { title: '1 semana', duration: '7 días', hint: 'Para un partido gordo' },
+  '1m': { title: '1 mes', duration: '30 días', hint: 'Toda una jornada de liga' },
+  '1y': { title: 'Temporada', duration: '12 meses', hint: 'Arriba todo el año' },
+};
+
+const POPULAR_PLAN: BoostPlan = '1m';
 
 const BENEFITS = [
-  { icon: 'arrow-up-circle' as const, label: 'Primero en\nbúsquedas', color: '#4ADE80' },
-  { icon: 'star' as const, label: 'Badge\ndestacado', color: '#FFD700' },
-  { icon: 'people' as const, label: 'Más\nclientes', color: '#60A5FA' },
-  { icon: 'bar-chart' as const, label: 'Mayor\nvisibilidad', color: '#A78BFA' },
+  { icon: 'arrow-up-circle' as const, title: 'Sales arriba', text: 'Antes que el resto en el mapa y en la búsqueda.' },
+  { icon: 'star' as const, title: 'Insignia «Destacado»', text: 'Tu ficha se ve distinta y llama más la atención.' },
+  { icon: 'football' as const, title: 'Más gente los días de partido', text: 'Te encuentran quienes buscan bar en ese momento.' },
 ];
 
-const PLAN_FEATURES: Record<string, string[]> = {
-  flash: ['Posición prioritaria en el mapa', 'Badge "Destacado" visible', 'Apareces antes en búsquedas'],
-  'trending-up': ['Todo lo del plan semanal', 'Mayor prioridad en resultados', 'Ideal para eventos y partidos', 'Mejor relación calidad-precio'],
-  sparkles: ['Todo lo del plan mensual', 'Prioridad máxima todo el año', 'Ideal para bares de temporada', 'Ahorro del 44% vs mensual'],
+const STORE_NAME = Platform.OS === 'ios' ? 'Apple' : 'Google Play';
+
+type Result = Exclude<BoostPurchaseResult, { outcome: 'cancelled' } | { outcome: 'failed' }>;
+
+function formatDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
+
+const ERROR_COPY: Record<string, [string, string]> = {
+  network: ['Sin conexión', 'Revisa tu conexión y vuelve a intentarlo.'],
+  not_allowed: ['Compras desactivadas', 'Este dispositivo no permite compras dentro de apps.'],
+  store: ['La tienda no responde', `No se pudo completar con ${STORE_NAME}. Prueba en un momento.`],
+  unknown: ['No se pudo completar la compra', 'No se te ha cobrado. Vuelve a intentarlo.'],
 };
 
 export default function BoostPaywallSheet({
@@ -44,14 +68,23 @@ export default function BoostPaywallSheet({
   onClose,
   barId,
   userId,
+  activeUntil,
   onPurchaseComplete,
 }: BoostPaywallSheetProps) {
   const sheetRef = useRef<BottomSheetModal>(null);
-  const { packages, isLoading, error, purchaseBoost, isPurchasing, purchasingId } =
-    useBoostOfferings();
+  const insets = useSafeAreaInsets();
+  const { packages, isLoading, error, reload, purchaseBoost, isPurchasing } = useBoostOfferings();
+  const [selectedPlan, setSelectedPlan] = useState<BoostPlan>(POPULAR_PLAN);
+  const [result, setResult] = useState<Result | null>(null);
+
+  const selected = useMemo<BoostPackageInfo | undefined>(
+    () => packages.find((p) => p.plan === selectedPlan) ?? packages[0],
+    [packages, selectedPlan],
+  );
 
   useEffect(() => {
     if (isVisible) {
+      setResult(null);
       sheetRef.current?.present();
     } else {
       sheetRef.current?.dismiss();
@@ -64,21 +97,86 @@ export default function BoostPaywallSheet({
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
-        opacity={0.6}
+        opacity={0.65}
+        pressBehavior={isPurchasing ? 'none' : 'close'}
       />
     ),
-    [],
+    [isPurchasing],
   );
 
-  const handlePurchase = useCallback(
-    async (pkgInfo: typeof packages[number]) => {
-      const success = await purchaseBoost(pkgInfo.pkg, barId, userId);
-      if (success) {
-        sheetRef.current?.dismiss();
-        onPurchaseComplete?.();
+  const handleSelect = useCallback((plan: BoostPlan) => {
+    Haptics.selectionAsync().catch(() => {});
+    setSelectedPlan(plan);
+  }, []);
+
+  const handlePurchase = useCallback(async () => {
+    if (!selected || isPurchasing) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+
+    const res = await purchaseBoost(selected.pkg, barId, userId);
+    switch (res.outcome) {
+      case 'cancelled':
+        return;
+      case 'failed': {
+        const [title, message] = ERROR_COPY[res.errorKind] ?? ERROR_COPY.unknown;
+        toast.error(title, message);
+        return;
       }
+      default:
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        setResult(res);
+        onPurchaseComplete?.();
+    }
+  }, [selected, isPurchasing, purchaseBoost, barId, userId, onPurchaseComplete]);
+
+  const handleClose = useCallback(() => {
+    if (isPurchasing) return;
+    sheetRef.current?.dismiss();
+  }, [isPurchasing]);
+
+  const renderFooter = useCallback(
+    (props: BottomSheetFooterProps) => {
+      if (result || error || (!isLoading && !selected)) return null;
+      return (
+        <BottomSheetFooter {...props} bottomInset={0}>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+            <TouchableOpacity
+              onPress={handlePurchase}
+              disabled={isLoading || isPurchasing || !selected}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={selected ? `Activar boost de ${PLAN_COPY[selected.plan].title} por ${selected.priceString}` : 'Activar boost'}
+              style={[styles.cta, (isLoading || !selected) && styles.ctaDisabled]}
+            >
+              <LinearGradient
+                colors={[GOLD, GOLD_DEEP]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.ctaGradient}
+              >
+                {isPurchasing ? (
+                  <>
+                    <ActivityIndicator size="small" color={colors.bg.primary} />
+                    <AppText maxScale={1.0} style={styles.ctaText}>Procesando pago…</AppText>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="flash" size={18} color={colors.bg.primary} />
+                    <AppText maxScale={1.0} style={styles.ctaText} numberOfLines={1}>
+                      {selected ? `Activar · ${selected.priceString}` : 'Activar Boost'}
+                    </AppText>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+            <AppText variant="caption" color={colors.text.muted} align="center" maxScale={1.0} style={styles.legal}>
+              Pago único con tu cuenta de {STORE_NAME}. Sin suscripción ni renovación automática.
+            </AppText>
+          </View>
+        </BottomSheetFooter>
+      );
     },
-    [purchaseBoost, barId, userId, onPurchaseComplete],
+    [result, error, isLoading, selected, isPurchasing, insets.bottom, handlePurchase],
   );
 
   return (
@@ -86,495 +184,511 @@ export default function BoostPaywallSheet({
       ref={sheetRef}
       index={0}
       snapPoints={SNAP_POINTS}
-      enablePanDownToClose
+      enablePanDownToClose={!isPurchasing}
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
+      footerComponent={renderFooter}
       backgroundStyle={styles.sheetBackground}
       handleIndicatorStyle={styles.handleIndicator}
     >
-      <BottomSheetScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(25,118,210,0.22)', 'rgba(25,118,210,0.06)', 'transparent']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.6, y: 0.5 }}
+        style={styles.glow}
+      />
+
+      <TouchableOpacity
+        onPress={handleClose}
+        style={styles.closeButton}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Cerrar"
+        disabled={isPurchasing}
       >
-        {/* Close button */}
-        <TouchableOpacity onPress={onClose} style={styles.closeButton} hitSlop={12}>
-          <Ionicons name="close" size={20} color={colors.text.secondary} />
-        </TouchableOpacity>
+        <Ionicons name="close" size={18} color={colors.text.secondary} />
+      </TouchableOpacity>
 
-        {/* Hero */}
-        <View style={styles.hero}>
-          <View style={styles.heroIconWrap}>
-            <Gradient
-              colors={['#F59E0B', '#D97706']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.heroIconGradient}
-            >
-              <Ionicons name="flash" size={32} color="#fff" />
-            </Gradient>
+      {result ? (
+        <SuccessView result={result} onDone={handleClose} bottomInset={insets.bottom} />
+      ) : (
+        <BottomSheetScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Hero */}
+          <View style={styles.hero}>
+            <View style={styles.heroIconShadow}>
+              <LinearGradient colors={[GOLD, GOLD_DEEP]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroIcon}>
+                <Ionicons name="flash" size={30} color={colors.bg.primary} />
+              </LinearGradient>
+            </View>
+            <AppText maxScale={1.0} style={styles.eyebrow}>BOOST DE VISIBILIDAD</AppText>
+            <AppText variant="h1" align="center" maxScale={1.1} style={styles.heroTitle}>
+              Pon tu bar <AppText variant="h1" maxScale={1.1} style={styles.heroTitleAccent}>primero</AppText>
+            </AppText>
+            <AppText variant="body" align="center" maxScale={1.2} style={styles.heroSubtitle}>
+              Cuando alguien busque dónde ver el partido cerca, tu bar sale arriba.
+            </AppText>
           </View>
-          <AppText variant="h1" color={colors.text.primary} align="center" maxScale={1.1} style={styles.heroTitle}>
-            Impulsa tu bar
-          </AppText>
-          <AppText variant="body" color={colors.text.secondary} align="center" maxScale={1.1} style={styles.heroSubtitle}>
-            Aparece primero cuando los usuarios buscan dónde ver el partido
-          </AppText>
-        </View>
 
-        {/* Benefits strip */}
-        <View style={styles.benefitsRow}>
-          {BENEFITS.map((b) => (
-            <View key={b.label} style={styles.benefitPill}>
-              <Ionicons name={b.icon} size={20} color={b.color} />
-              <AppText maxScale={1.0} style={[styles.benefitLabel, { color: b.color }]}>
-                {b.label}
+          {activeUntil && (
+            <View style={styles.activeBanner}>
+              <Ionicons name="flash" size={16} color={GOLD} />
+              <AppText variant="caption" color={colors.text.light} maxScale={1.2} style={styles.flex}>
+                Tienes un boost activo hasta el <AppText variant="caption" color={GOLD} style={styles.bold}>{formatDate(activeUntil)}</AppText>. Si compras otro, se suma a continuación.
               </AppText>
             </View>
-          ))}
-        </View>
+          )}
 
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Plans */}
-        <AppText variant="subtitle" color={colors.text.primary} style={styles.sectionTitle} maxScale={1.1}>
-          Elige tu plan
-        </AppText>
-
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.brand.primary} />
-            <AppText variant="caption" color={colors.text.muted} style={styles.loadingText}>
-              Cargando productos...
-            </AppText>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={32} color={colors.status.error} />
-            <AppText variant="body" color={colors.text.secondary} style={styles.errorText}>
-              No se han podido cargar los productos. Comprueba la conexión.
-            </AppText>
-          </View>
-        ) : (
-          packages.map((item) => {
-            const isThisPurchasing = isPurchasing && purchasingId === item.pkg.identifier;
-            const isOtherPurchasing = isPurchasing && purchasingId !== item.pkg.identifier;
-            const accentColor = item.isPopular ? '#A78BFA' : colors.brand.primary;
-            const features = PLAN_FEATURES[item.icon] ?? [];
-
-            return (
-              <View
-                key={item.pkg.identifier}
-                style={[styles.card, item.isPopular && styles.cardPopular]}
-              >
-                {item.isPopular && (
-                  <View style={styles.popularBadge}>
-                    <Ionicons name="star" size={11} color="#fff" />
-                    <AppText maxScale={1.0} style={styles.popularText}>
-                      MÁS POPULAR
-                    </AppText>
-                  </View>
-                )}
-
-                {/* Card header */}
-                <View style={styles.cardHeader}>
-                  <View style={[styles.cardIconWrap, { backgroundColor: `${accentColor}18` }]}>
-                    <Ionicons
-                      name={`${item.icon}-outline` as any}
-                      size={20}
-                      color={accentColor}
-                    />
-                  </View>
-                  <View style={styles.cardHeaderText}>
-                    <AppText variant="subtitle" color={colors.text.primary} maxScale={1.1}>
-                      {item.title}
-                    </AppText>
-                    <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>
-                      {item.duration}
-                    </AppText>
-                  </View>
-                  {item.savingsBadge && (
-                    <View style={styles.savingsBadge}>
-                      <AppText maxScale={1.0} style={styles.savingsText}>
-                        {item.savingsBadge}
-                      </AppText>
-                    </View>
-                  )}
+          {/* Benefits */}
+          <View style={styles.benefits}>
+            {BENEFITS.map((b) => (
+              <View key={b.title} style={styles.benefitRow}>
+                <View style={styles.benefitIcon}>
+                  <Ionicons name={b.icon} size={18} color={GOLD} />
                 </View>
-
-                {/* Price */}
-                <View style={styles.priceRow}>
-                  <AppText style={[styles.price, { color: accentColor }]} maxScale={1.0}>
-                    {item.price}
-                  </AppText>
-                  <View style={styles.roiPill}>
-                    <Ionicons name="trending-up-outline" size={13} color="#4ADE80" />
-                    <AppText maxScale={1.0} style={styles.roiText}>
-                      {item.amortization}
-                    </AppText>
-                  </View>
+                <View style={styles.flex}>
+                  <AppText variant="label" color={colors.text.primary} maxScale={1.2}>{b.title}</AppText>
+                  <AppText variant="caption" color={colors.text.secondary} maxScale={1.2}>{b.text}</AppText>
                 </View>
-
-                {/* Features list */}
-                <View style={styles.featuresList}>
-                  {features.map((feat) => (
-                    <View key={feat} style={styles.featureItem}>
-                      <Ionicons name="checkmark-circle" size={15} color={accentColor} />
-                      <AppText variant="caption" color={colors.text.secondary} maxScale={1.0} style={styles.featureText}>
-                        {feat}
-                      </AppText>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Buy button */}
-                <TouchableOpacity
-                  onPress={() => handlePurchase(item)}
-                  disabled={isPurchasing}
-                  activeOpacity={0.85}
-                  style={[styles.buyButton, isOtherPurchasing && styles.buyButtonDisabled]}
-                >
-                  {isThisPurchasing ? (
-                    <View style={[styles.buyButtonLoading, { backgroundColor: item.buttonColors[0] }]}>
-                      <ActivityIndicator size="small" color="#fff" />
-                    </View>
-                  ) : (
-                    <Gradient
-                      colors={item.buttonColors}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.buyButtonGradient}
-                    >
-                      <Ionicons name="flash-outline" size={16} color="#fff" />
-                      <AppText maxScale={1.0} style={styles.buyButtonText}>
-                        Activar Boost
-                      </AppText>
-                    </Gradient>
-                  )}
-                </TouchableOpacity>
               </View>
-            );
-          })
-        )}
-
-        {/* ROI note */}
-        <View style={styles.roiNote}>
-          <Ionicons name="information-circle-outline" size={14} color={colors.text.muted} />
-          <AppText variant="caption" color={colors.text.muted} style={styles.roiNoteText} maxScale={1.0}>
-            Cada cliente nuevo genera ~13€ de beneficio medio. El Boost se amortiza rápidamente.
-          </AppText>
-        </View>
-
-        {/* Trust row */}
-        <View style={styles.trustRow}>
-          <View style={styles.trustItem}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={colors.text.muted} />
-            <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>Sin suscripción</AppText>
+            ))}
           </View>
-          <View style={styles.trustDot} />
-          <View style={styles.trustItem}>
-            <Ionicons name="lock-closed-outline" size={16} color={colors.text.muted} />
-            <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>Pago seguro</AppText>
-          </View>
-          <View style={styles.trustDot} />
-          <View style={styles.trustItem}>
-            <Ionicons name="flash-outline" size={16} color={colors.text.muted} />
-            <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>Activo al instante</AppText>
-          </View>
-        </View>
 
-        <AppText variant="caption" color={colors.text.muted} style={styles.legalText} maxScale={1.0}>
-          El pago se cargará en tu cuenta de Apple / Google. Sin renovación automática.
-        </AppText>
-      </BottomSheetScrollView>
+          {/* Plans */}
+          <AppText maxScale={1.0} style={styles.sectionLabel}>ELIGE CUÁNTO TIEMPO</AppText>
+
+          {isLoading ? (
+            <View style={styles.plans}>
+              {[0, 1, 2].map((i) => (
+                <SkeletonBox key={i} width="100%" height={76} borderRadius={radius.xxl} />
+              ))}
+            </View>
+          ) : error || packages.length === 0 ? (
+            <ErrorState
+              title="No hemos podido cargar los planes"
+              subtitle="Comprueba tu conexión y vuelve a intentarlo."
+              onRetry={reload}
+            />
+          ) : (
+            <View style={styles.plans} accessibilityRole="radiogroup">
+              {packages.map((item) => (
+                <PlanCard
+                  key={item.pkg.identifier}
+                  item={item}
+                  selected={selected?.plan === item.plan}
+                  popular={item.plan === POPULAR_PLAN}
+                  disabled={isPurchasing}
+                  onPress={() => handleSelect(item.plan)}
+                />
+              ))}
+            </View>
+          )}
+
+          <View style={styles.trustRow}>
+            {[
+              { icon: 'lock-closed-outline' as const, label: 'Pago seguro' },
+              { icon: 'refresh-circle-outline' as const, label: 'Sin renovación' },
+              { icon: 'flash-outline' as const, label: 'Activo en segundos' },
+            ].map((t) => (
+              <View key={t.label} style={styles.trustItem}>
+                <Ionicons name={t.icon} size={14} color={colors.text.muted} />
+                <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>{t.label}</AppText>
+              </View>
+            ))}
+          </View>
+        </BottomSheetScrollView>
+      )}
     </BottomSheetModal>
   );
 }
 
+function PlanCard({
+  item,
+  selected,
+  popular,
+  disabled,
+  onPress,
+}: {
+  item: BoostPackageInfo;
+  selected: boolean;
+  popular: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const copy = PLAN_COPY[item.plan];
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.85}
+      accessibilityRole="radio"
+      accessibilityState={{ selected, disabled }}
+      accessibilityLabel={`${copy.title}, ${item.priceString}${item.savingsPct ? `, ahorras un ${item.savingsPct} por ciento` : ''}`}
+      style={[styles.planCard, selected && styles.planCardSelected]}
+    >
+      {popular && (
+        <View style={styles.sticker}>
+          <AppText maxScale={1.0} style={styles.stickerText}>EL MÁS ELEGIDO</AppText>
+        </View>
+      )}
+
+      <View style={[styles.radio, selected && styles.radioSelected]}>
+        {selected && <View style={styles.radioDot} />}
+      </View>
+
+      <View style={styles.flex}>
+        <View style={styles.planTitleRow}>
+          <AppText variant="subtitle" color={colors.text.primary} maxScale={1.1}>{copy.title}</AppText>
+          {item.savingsPct !== null && (
+            <View style={styles.savingsChip}>
+              <AppText maxScale={1.0} style={styles.savingsText}>−{item.savingsPct}%</AppText>
+            </View>
+          )}
+        </View>
+        <AppText variant="caption" color={colors.text.secondary} maxScale={1.1}>
+          {copy.duration} · {copy.hint}
+        </AppText>
+      </View>
+
+      <View style={styles.priceCol}>
+        <AppText maxScale={1.0} style={styles.price}>{item.priceString}</AppText>
+        {item.weeklyPriceString && (
+          <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>
+            {item.weeklyPriceString}/sem
+          </AppText>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function SuccessView({ result, onDone, bottomInset }: { result: Result; onDone: () => void; bottomInset: number }) {
+  const content =
+    result.outcome === 'active'
+      ? {
+          icon: 'checkmark' as const,
+          tint: GO,
+          title: '¡Tu bar ya está arriba!',
+          text: result.endAt
+            ? `El boost está activo hasta el ${formatDate(result.endAt)}. A por el próximo partido.`
+            : 'El boost ya está activo. A por el próximo partido.',
+        }
+      : result.outcome === 'processing'
+        ? {
+            icon: 'checkmark' as const,
+            tint: GO,
+            title: 'Pago recibido',
+            text: 'Estamos activando tu boost. Tardará unos segundos en verse en el mapa.',
+          }
+        : {
+            icon: 'time-outline' as const,
+            tint: GOLD,
+            title: 'Pago pendiente',
+            text: `${STORE_NAME} tiene que aprobar el pago. Lo activamos solo en cuanto llegue; no tienes que hacer nada.`,
+          };
+
+  return (
+    <View style={[styles.success, { paddingBottom: Math.max(bottomInset, spacing.lg) }]}>
+      <View style={styles.successBody}>
+        <View style={[styles.successIcon, { backgroundColor: `${content.tint}22`, borderColor: `${content.tint}55` }]}>
+          <Ionicons name={content.icon} size={44} color={content.tint} />
+        </View>
+        <AppText variant="h2" align="center" maxScale={1.1}>{content.title}</AppText>
+        <AppText variant="body" align="center" maxScale={1.2} style={styles.successText}>{content.text}</AppText>
+      </View>
+      <TouchableOpacity onPress={onDone} activeOpacity={0.85} style={styles.doneButton} accessibilityRole="button">
+        <AppText maxScale={1.0} style={styles.doneText}>Listo</AppText>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  bold: { fontWeight: '700' },
   sheetBackground: {
     backgroundColor: colors.bg.primary,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
   handleIndicator: {
     backgroundColor: colors.border.medium,
     width: 36,
   },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxxl,
+  glow: {
+    ...StyleSheet.absoluteFillObject,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
   closeButton: {
-    alignSelf: 'flex-end',
-    padding: spacing.xs,
-    marginTop: spacing.xs,
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.lg,
+    zIndex: 2,
+    width: 32,
+    height: 32,
+    borderRadius: radius.round,
+    backgroundColor: colors.bg.element,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 150, // hueco para el footer fijo
   },
 
   // Hero
   hero: {
     alignItems: 'center',
+    paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
-    paddingTop: spacing.xs,
   },
-  heroIconWrap: {
-    marginBottom: spacing.md,
-    shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
+  heroIconShadow: {
+    marginBottom: spacing.lg,
+    shadowColor: GOLD_DEEP,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    elevation: 10,
   },
-  heroIconGradient: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  heroIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    transform: [{ rotate: '-6deg' }],
+  },
+  eyebrow: {
+    color: colors.text.soft,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 2,
+    marginBottom: spacing.xs,
   },
   heroTitle: {
+    letterSpacing: -0.5,
     marginBottom: spacing.sm,
-    letterSpacing: -0.3,
+  },
+  heroTitleAccent: {
+    color: GOLD,
+    fontStyle: 'italic',
   },
   heroSubtitle: {
-    lineHeight: 22,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+
+  // Active boost
+  activeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    borderWidth: 1,
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
   },
 
   // Benefits
-  benefitsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-  benefitPill: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.bg.card,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-  },
-  benefitLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 13,
-  },
-
-  // Divider
-  divider: {
-    height: 1,
-    backgroundColor: colors.border.subtle,
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    marginBottom: spacing.md,
-  },
-
-  // Loading / Error
-  loadingContainer: {
-    paddingVertical: spacing.xxxl,
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  loadingText: {
-    marginTop: spacing.sm,
-  },
-  errorContainer: {
-    paddingVertical: spacing.xxxl,
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  errorText: {
-    textAlign: 'center',
-  },
-
-  // Card
-  card: {
+  benefits: {
     backgroundColor: colors.bg.card,
     borderRadius: radius.xxl,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1.5,
-    borderColor: colors.border.medium,
-    position: 'relative',
-  },
-  cardPopular: {
-    borderColor: '#A78BFA',
-    backgroundColor: 'rgba(167, 139, 250, 0.05)',
-    shadowColor: '#A78BFA',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 6,
-    marginTop: spacing.sm,
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: -13,
-    right: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 5,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  popularText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  cardIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardHeaderText: {
-    flex: 1,
-    gap: 2,
-  },
-  savingsBadge: {
-    backgroundColor: colors.status.success,
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  savingsText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  price: {
-    fontSize: 34,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    lineHeight: 40,
-  },
-  roiPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: 'rgba(74, 222, 128, 0.1)',
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  roiText: {
-    color: '#4ADE80',
-    fontSize: 12,
-    fontWeight: '600',
-    maxWidth: 130,
-  },
-
-  // Features
-  featuresList: {
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-    paddingTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  featureText: {
-    flex: 1,
-    lineHeight: 18,
-  },
-
-  // Buy button
-  buyButton: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    height: 50,
-  },
-  buyButtonDisabled: {
-    opacity: 0.4,
-  },
-  buyButtonLoading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
-  },
-  buyButtonGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  buyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-
-  // ROI note
-  roiNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.bg.card,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border.subtle,
+    padding: spacing.lg,
+    gap: spacing.lg,
+    marginBottom: spacing.xxl,
   },
-  roiNoteText: {
-    flex: 1,
-    lineHeight: 18,
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  benefitIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Plans
+  sectionLabel: {
+    color: colors.text.secondary,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    marginBottom: spacing.md,
+  },
+  plans: {
+    gap: spacing.md,
+  },
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.xxl,
+    borderWidth: 1.5,
+    borderColor: colors.border.medium,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  planCardSelected: {
+    borderColor: BLUE,
+    backgroundColor: 'rgba(25, 118, 210, 0.12)',
+  },
+  sticker: {
+    position: 'absolute',
+    top: -11,
+    right: spacing.lg,
+    backgroundColor: GOLD_DEEP,
+    borderRadius: radius.sm,
+    paddingVertical: 3,
+    paddingHorizontal: spacing.sm,
+    transform: [{ rotate: '-3deg' }],
+  },
+  stickerText: {
+    color: colors.bg.primary,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.border.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioSelected: {
+    borderColor: BLUE,
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: BLUE,
+  },
+  planTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: 2,
+  },
+  savingsChip: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderRadius: radius.pill,
+    paddingVertical: 2,
+    paddingHorizontal: spacing.sm,
+  },
+  savingsText: {
+    color: GO,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  priceCol: {
+    alignItems: 'flex-end',
+  },
+  price: {
+    color: colors.text.primary,
+    fontSize: 18,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
 
   // Trust
   trustRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
     flexWrap: 'wrap',
+    gap: spacing.lg,
+    marginTop: spacing.xl,
   },
   trustItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xxs,
+    gap: spacing.xs,
   },
-  trustDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.border.medium,
+
+  // Footer
+  footer: {
+    backgroundColor: colors.bg.primary,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
-  legalText: {
-    textAlign: 'center',
-    lineHeight: 16,
+  cta: {
+    height: 54,
+    borderRadius: radius.xxl,
+    overflow: 'hidden',
+    shadowColor: GOLD_DEEP,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  ctaDisabled: {
+    opacity: 0.5,
+  },
+  ctaGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  ctaText: {
+    color: colors.bg.primary,
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  legal: {
+    marginTop: spacing.sm,
+    lineHeight: 17,
+  },
+
+  // Success
+  success: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'space-between',
+  },
+  successBody: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  successIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  successText: {
+    paddingHorizontal: spacing.lg,
+  },
+  doneButton: {
+    height: 54,
+    borderRadius: radius.xxl,
+    backgroundColor: BLUE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneText: {
+    color: colors.text.primary,
+    fontSize: 17,
+    fontWeight: '700',
   },
 });

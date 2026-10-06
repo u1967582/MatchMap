@@ -1,9 +1,4 @@
-import Purchases, {
-  PurchasesPackage,
-  CustomerInfo,
-  PurchasesOffering,
-  LOG_LEVEL,
-} from 'react-native-purchases';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { Platform } from 'react-native';
 
 // RevenueCat API Keys - Use environment variable with fallback
@@ -13,220 +8,59 @@ const REVENUECAT_API_KEY = Platform.select({
   default: 'appl_CRtAAkRCMobOPrYXnEvjgHHLGZJ',
 }) as string;
 
-// Entitlement identifiers
-export const ENTITLEMENTS = {
-  BOOST_ACTIVE: 'boost_active',
-} as const;
-
-// Product identifiers - Must match App Store Connect + RevenueCat
+// Product identifiers - Must match App Store Connect / Google Play + RevenueCat.
+// Son productos de pago único (consumibles): se pueden comprar varias veces.
 export const PRODUCT_IDS = {
-  LIFETIME: 'lifetime',
   BOOST_7D: 'boost_7d_v2',
   BOOST_1M: 'boost_1m_v2',
   BOOST_1Y: 'boost_1y_v2',
 } as const;
 
 /**
- * Initialize RevenueCat SDK
- * Should be called once when the app starts
+ * Atributo de suscriptor con el bar al que va el boost. Viaja en el webhook
+ * (`event.subscriber_attributes`) y permite al servidor asignar la compra
+ * aunque el insert del cliente no llegue.
  */
-export async function initializeRevenueCat(userId?: string): Promise<void> {
-  try {
-    if (__DEV__) {
-      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-    }
+export const BOOST_BAR_ATTRIBUTE = 'boost_bar_id';
 
-    const alreadyConfigured = await Purchases.isConfigured();
-    if (alreadyConfigured) {
-      return;
-    }
-
-    Purchases.configure({
-      apiKey: REVENUECAT_API_KEY,
-      appUserID: userId,
-    });
-
-    console.log('✅ RevenueCat initialized successfully');
-  } catch (error) {
-    console.error('❌ Failed to initialize RevenueCat:', error);
-    throw error;
+/**
+ * Initialize RevenueCat SDK. Should be called once when the app starts.
+ * `configure` es síncrono: después de esta llamada el SDK ya se puede usar.
+ */
+export async function initializeRevenueCat(userId?: string | null): Promise<void> {
+  if (__DEV__) {
+    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
   }
+
+  if (await Purchases.isConfigured()) {
+    return;
+  }
+
+  Purchases.configure({
+    apiKey: REVENUECAT_API_KEY,
+    appUserID: userId ?? undefined,
+  });
 }
 
 /**
- * Get current customer info including entitlements and active subscriptions
+ * Asegura que el App User ID de RevenueCat es el id del usuario de Supabase.
+ * Sin esto la compra queda en un `$RCAnonymousID` y el webhook no puede
+ * relacionarla con el dueño del bar.
  */
-export async function getCustomerInfo(): Promise<CustomerInfo | null> {
-  try {
-    const customerInfo = await Purchases.getCustomerInfo();
-    return customerInfo;
-  } catch (error) {
-    console.error('❌ Failed to get customer info:', error);
-    return null;
+export async function syncRevenueCatUser(userId: string): Promise<void> {
+  if (!(await Purchases.isConfigured())) {
+    await initializeRevenueCat(userId);
+    return;
   }
-}
-
-/**
- * Check if user has active boost entitlement
- */
-export async function hasActiveBoost(): Promise<boolean> {
-  try {
-    const customerInfo = await Purchases.getCustomerInfo();
-    const entitlement = customerInfo.entitlements.active[ENTITLEMENTS.BOOST_ACTIVE];
-    return entitlement !== undefined;
-  } catch (error) {
-    console.error('❌ Failed to check boost entitlement:', error);
-    return false;
-  }
-}
-
-/**
- * Get available offerings (products configured in RevenueCat dashboard)
- */
-export async function getOfferings(): Promise<PurchasesOffering | null> {
-  try {
-    const offerings = await Purchases.getOfferings();
-
-    console.log('[RC] All offerings keys:', Object.keys(offerings.all));
-    console.log('[RC] Current offering:', offerings.current?.identifier ?? 'null');
-
-    if (offerings.current !== null) {
-      const pkgs = offerings.current.availablePackages;
-      console.log(`[RC] Packages in current offering (${pkgs.length}):`);
-      pkgs.forEach((pkg, i) => {
-        console.log(
-          `[RC]   [${i}] identifier=${pkg.identifier}` +
-            ` | productId=${pkg.product.identifier}` +
-            ` | title=${pkg.product.title}` +
-            ` | price=${pkg.product.priceString}` +
-            ` | type=${pkg.packageType}`
-        );
-      });
-      return offerings.current;
-    }
-
-    console.warn('[RC] ⚠️ No current offering available');
-    return null;
-  } catch (error) {
-    console.error('[RC] ❌ Failed to get offerings:', error);
-    return null;
-  }
-}
-
-/**
- * Purchase a package
- */
-export async function purchasePackage(
-  packageToPurchase: PurchasesPackage
-): Promise<{ customerInfo: CustomerInfo; transaction: any; success: boolean }> {
-  try {
-    const { customerInfo, transaction } = await Purchases.purchasePackage(packageToPurchase);
-    console.log('✅ Purchase successful:', customerInfo);
-    return { customerInfo, transaction, success: true };
-  } catch (error: any) {
-    if (error.userCancelled) {
-      console.log('ℹ️ User cancelled purchase');
-    } else {
-      console.error('❌ Purchase failed:', error);
-    }
-    throw error;
-  }
-}
-
-/**
- * Restore purchases
- */
-export async function restorePurchases(): Promise<CustomerInfo> {
-  try {
-    const customerInfo = await Purchases.restorePurchases();
-    console.log('✅ Purchases restored:', customerInfo);
-    return customerInfo;
-  } catch (error) {
-    console.error('❌ Failed to restore purchases:', error);
-    throw error;
-  }
-}
-
-/**
- * Set user ID for RevenueCat
- */
-export async function identifyUser(userId: string): Promise<void> {
-  try {
+  const current = await Purchases.getAppUserID();
+  if (current !== userId) {
     await Purchases.logIn(userId);
-    console.log('✅ User identified:', userId);
-  } catch (error) {
-    console.error('❌ Failed to identify user:', error);
-    throw error;
   }
 }
 
-/**
- * Logout current user
- */
-export async function logoutUser(): Promise<void> {
-  try {
-    await Purchases.logOut();
-    console.log('✅ User logged out');
-  } catch (error) {
-    console.error('❌ Failed to logout user:', error);
-    throw error;
-  }
-}
-
-/**
- * Get active subscription info
- */
-export async function getActiveSubscriptionInfo(): Promise<{
-  isActive: boolean;
-  productIdentifier?: string;
-  expirationDate?: string;
-  willRenew?: boolean;
-} | null> {
-  try {
-    const customerInfo = await Purchases.getCustomerInfo();
-    const activeEntitlements = customerInfo.entitlements.active;
-
-    if (Object.keys(activeEntitlements).length === 0) {
-      return { isActive: false };
-    }
-
-    // Get the first active entitlement
-    const firstEntitlement = Object.values(activeEntitlements)[0];
-
-    return {
-      isActive: true,
-      productIdentifier: firstEntitlement.productIdentifier,
-      expirationDate: firstEntitlement.expirationDate,
-      willRenew: firstEntitlement.willRenew,
-    };
-  } catch (error) {
-    console.error('❌ Failed to get subscription info:', error);
-    return null;
-  }
-}
-
-/**
- * Check if user has any active entitlement
- */
-export async function hasAnyActiveEntitlement(): Promise<boolean> {
-  try {
-    const customerInfo = await Purchases.getCustomerInfo();
-    return Object.keys(customerInfo.entitlements.active).length > 0;
-  } catch (error) {
-    console.error('❌ Failed to check entitlements:', error);
-    return false;
-  }
-}
-
-/**
- * Get all entitlements (active and inactive)
- */
-export async function getAllEntitlements(): Promise<Record<string, any>> {
-  try {
-    const customerInfo = await Purchases.getCustomerInfo();
-    return customerInfo.entitlements.all;
-  } catch (error) {
-    console.error('❌ Failed to get all entitlements:', error);
-    return {};
-  }
+/** Vuelve a un usuario anónimo de RevenueCat al cerrar sesión. */
+export async function logoutRevenueCatUser(): Promise<void> {
+  if (!(await Purchases.isConfigured())) return;
+  if (await Purchases.isAnonymous()) return; // logOut lanza error si ya es anónimo
+  await Purchases.logOut();
 }
