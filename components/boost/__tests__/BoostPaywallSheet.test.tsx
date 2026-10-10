@@ -48,9 +48,21 @@ const PACKAGE_1M: BoostPackageInfo = {
   price: '19,99 €',
   isPopular: true,
   duration: '1 mes',
-  amortization: 'Se amortiza con solo 5 clientes nuevos',
+  amortization: 'Se amortiza con 2 clientes nuevos',
   icon: 'trending-up',
-  buttonColors: ['#D4AF37', '#B8956A'],
+};
+
+const PACKAGE_1Y: BoostPackageInfo = {
+  pkg: { identifier: 'boost_1y_v2_pkg', product: { identifier: 'boost_1y_v2' } } as any,
+  plan: '1y',
+  title: 'Boost de Temporada',
+  price: '119,99 €',
+  isPopular: false,
+  duration: '1 año',
+  amortization: 'Se amortiza con 10 clientes nuevos',
+  pricePerMonth: '10,00 €/mes',
+  savingsBadge: 'Ahorra 50%',
+  icon: 'sparkles',
 };
 
 function baseHookState(overrides: Partial<ReturnType<typeof useBoostOfferings>> = {}) {
@@ -137,6 +149,26 @@ describe('BoostPaywallSheet - estados de carga', () => {
     expect(getByText('Boost Mensual')).toBeTruthy();
     expect(getByText('19,99 €')).toBeTruthy();
     expect(getByText('Activar Boost')).toBeTruthy();
+  });
+
+  it('muestra el ahorro y el precio mensual equivalente calculados por el hook', async () => {
+    mockedUseBoostOfferings.mockReturnValue(baseHookState({ packages: [PACKAGE_1M, PACKAGE_1Y] }));
+
+    const { getByText } = await render(
+      <BoostPaywallSheet isVisible userId="user-1" barId="bar-1" onClose={jest.fn()} />
+    );
+
+    expect(getByText('Ahorra 50%')).toBeTruthy();
+    expect(getByText('Equivale a 10,00 €/mes')).toBeTruthy();
+  });
+
+  it('no promete una activación instantánea (la hace el webhook en segundos)', async () => {
+    const { getByText, queryByText } = await render(
+      <BoostPaywallSheet isVisible userId="user-1" barId="bar-1" onClose={jest.fn()} />
+    );
+
+    expect(getByText('Se activa en segundos')).toBeTruthy();
+    expect(queryByText('Activo al instante')).toBeNull();
   });
 });
 
