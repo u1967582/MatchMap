@@ -245,3 +245,73 @@ describe('getFavoriteBars', () => {
     expect(bars).toEqual([]);
   });
 });
+
+describe('robustez', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('getFavoriteBars ignora favoritos cuyo bar ya no es visible (RLS devuelve bars: null)', async () => {
+    useFavoritesStore.setState({ userId: 'user-1' });
+    mockedFrom.mockReturnValueOnce(
+      createQueryBuilderMock({
+        data: [
+          { bar_id: 'oculto', bars: null },
+          { bar_id: 'bar-1', bars: { id: 'bar-1', name: 'Bar Uno', bar_images: [] } },
+        ],
+        error: null,
+      })
+    );
+
+    const bars = await useFavoritesStore.getState().getFavoriteBars();
+    expect(bars.map((b) => b.id)).toEqual(['bar-1']);
+  });
+
+  it('addFavorite captura excepciones de red y revierte', async () => {
+    useFavoritesStore.setState({ userId: 'user-1' });
+    const builder: any = createQueryBuilderMock();
+    builder.insert = jest.fn(() => Promise.reject(new Error('offline')));
+    mockedFrom.mockReturnValueOnce(builder);
+
+    await expect(useFavoritesStore.getState().addFavorite('bar-1')).resolves.toBe(false);
+    expect(useFavoritesStore.getState().isFavorite('bar-1')).toBe(false);
+  });
+
+  it('el rollback de un favorito fallido no borra otros favoritos añadidos mientras tanto', async () => {
+    useFavoritesStore.setState({ userId: 'user-1' });
+    let resolveFirst!: (v: any) => void;
+    const slowFailing: any = createQueryBuilderMock();
+    slowFailing.insert = jest.fn(() => new Promise((r) => (resolveFirst = r)));
+    mockedFrom
+      .mockReturnValueOnce(slowFailing)
+      .mockReturnValueOnce(createQueryBuilderMock({ data: null, error: null }));
+
+    const first = useFavoritesStore.getState().addFavorite('bar-1');
+    await useFavoritesStore.getState().addFavorite('bar-2');
+    resolveFirst({ error: { message: 'x' } });
+    await first;
+
+    expect(useFavoritesStore.getState().isFavorite('bar-1')).toBe(false);
+    expect(useFavoritesStore.getState().isFavorite('bar-2')).toBe(true);
+  });
+
+  it('el rollback de un borrado fallido no resucita favoritos quitados mientras tanto', async () => {
+    useFavoritesStore.setState({ userId: 'user-1', favorites: new Set(['bar-1', 'bar-2']) });
+    let resolveFirst!: (v: any) => void;
+    const slowFailing: any = createQueryBuilderMock();
+    slowFailing.then = (f: any, r: any) => new Promise((res) => (resolveFirst = res)).then(f, r);
+    mockedFrom
+      .mockReturnValueOnce(slowFailing)
+      .mockReturnValueOnce(createQueryBuilderMock({ data: null, error: null }));
+
+    const first = useFavoritesStore.getState().removeFavorite('bar-1');
+    await useFavoritesStore.getState().removeFavorite('bar-2');
+    resolveFirst({ error: { message: 'x' } });
+    await first;
+
+    expect(useFavoritesStore.getState().isFavorite('bar-1')).toBe(true);
+    expect(useFavoritesStore.getState().isFavorite('bar-2')).toBe(false);
+  });
+});

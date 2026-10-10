@@ -97,8 +97,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
       if (error) {
         console.error('❌ Error adding favorite:', error);
-        // Rollback optimistic update
-        const rolledBackFavorites = new Set(favorites);
+        // Rollback optimistic update (sobre el estado actual, no el capturado)
+        const rolledBackFavorites = new Set(get().favorites);
         rolledBackFavorites.delete(barId);
         set({ favorites: rolledBackFavorites });
         console.log('↩️ Rolled back favorite add:', barId);
@@ -109,8 +109,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
       return true;
     } catch (error) {
       console.error('❌ Error in addFavorite:', error);
-      // Rollback optimistic update
-      const rolledBackFavorites = new Set(favorites);
+      // Rollback optimistic update (sobre el estado actual, no el capturado)
+      const rolledBackFavorites = new Set(get().favorites);
       rolledBackFavorites.delete(barId);
       set({ favorites: rolledBackFavorites });
       console.log('↩️ Rolled back favorite add:', barId);
@@ -141,8 +141,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
       if (error) {
         console.error('❌ Error removing favorite:', error);
-        // Rollback optimistic update
-        const rolledBackFavorites = new Set(favorites);
+        // Rollback optimistic update (sobre el estado actual, no el capturado)
+        const rolledBackFavorites = new Set(get().favorites);
         rolledBackFavorites.add(barId);
         set({ favorites: rolledBackFavorites });
         console.log('↩️ Rolled back favorite remove:', barId);
@@ -153,8 +153,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
       return true;
     } catch (error) {
       console.error('❌ Error in removeFavorite:', error);
-      // Rollback optimistic update
-      const rolledBackFavorites = new Set(favorites);
+      // Rollback optimistic update (sobre el estado actual, no el capturado)
+      const rolledBackFavorites = new Set(get().favorites);
       rolledBackFavorites.add(barId);
       set({ favorites: rolledBackFavorites });
       console.log('↩️ Rolled back favorite remove:', barId);
@@ -201,7 +201,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         return [];
       }
 
-      return data?.map((item: any) => ({
+      // Si un bar favorito deja de ser visible (RLS), el join devuelve bars: null
+      return data?.filter((item: any) => item.bars).map((item: any) => ({
         ...item.bars,
         image_url: item.bars.bar_images
           ?.find((img: any) => img.image_order === 1)?.image_url ||

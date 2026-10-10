@@ -2,7 +2,13 @@
 module.exports = {
   preset: 'jest-expo',
   setupFiles: ['<rootDir>/jest.setup.ts'],
-  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.expo/'],
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/.expo/',
+    // Las edge functions se testean con Deno (npm run test:functions)
+    '<rootDir>/supabase/',
+    '<rootDir>/marketing-videos/',
+  ],
   // react-native-purchases >=10 trae @revenuecat/purchases-js-hybrid-mappings
   // como dependencia, publicado en ESM sin transpilar. Mismo patrón que usa
   // el preset jest-expo (jest-expo/jest-preset.js), añadiendo @revenuecat.

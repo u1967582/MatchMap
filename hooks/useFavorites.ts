@@ -129,7 +129,8 @@ export const useFavorites = () => {
         return [];
       }
 
-      return data?.map(item => ({
+      // Si un bar favorito deja de ser visible (RLS), el join devuelve bars: null
+      return data?.filter(item => item.bars).map(item => ({
         ...item.bars,
         image_url: (item.bars as any).bar_images
           ?.find((img: any) => img.image_order === 1)?.image_url || 
