@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Image } from 'react-native';
 import { supabase } from '~/utils/supabase';
 import { haversineDistance, type LatLng } from '~/utils/geo';
@@ -215,6 +215,9 @@ export function useBoostBars({
   };
 }
 
+export const ACTIVATION_POLL_INTERVAL_MS = 2000;
+export const ACTIVATION_MAX_ATTEMPTS = 8;
+
 /**
  * Hook to get boost status for a specific bar
  */
@@ -287,5 +290,42 @@ export function useBarBoost(barId: string | null) {
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
-  return { boost, isLoading, refresh };
+  // Tras una compra, el boost lo activa el webhook de RevenueCat unos
+  // segundos después. Reconsultamos hasta ver un end_at nuevo (o agotar
+  // intentos). undefined = no estamos esperando ninguna activación.
+  const [activationBaseline, setActivationBaseline] = useState<string | null | undefined>(undefined);
+  const activationAttemptsRef = useRef(0);
+
+  const waitForActivation = useCallback(() => {
+    activationAttemptsRef.current = 0;
+    setActivationBaseline(boost?.isActive ? boost.endAt : null);
+    setRefreshKey((k) => k + 1);
+  }, [boost]);
+
+  useEffect(() => {
+    if (activationBaseline === undefined || isLoading) return;
+
+    if (boost?.isActive && boost.endAt !== activationBaseline) {
+      setActivationBaseline(undefined);
+      return;
+    }
+    if (activationAttemptsRef.current >= ACTIVATION_MAX_ATTEMPTS) {
+      setActivationBaseline(undefined);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      activationAttemptsRef.current += 1;
+      setRefreshKey((k) => k + 1);
+    }, ACTIVATION_POLL_INTERVAL_MS);
+    return () => clearTimeout(timer);
+  }, [activationBaseline, isLoading, boost]);
+
+  return {
+    boost,
+    isLoading,
+    refresh,
+    waitForActivation,
+    isActivating: activationBaseline !== undefined,
+  };
 }

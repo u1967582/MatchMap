@@ -100,7 +100,7 @@ export default function EditProfileScreen() {
       
       if (authError || !authUser) {
         console.error('Error getting user:', authError);
-        router.replace('/login');
+        router.replace('/');
         return;
       }
 

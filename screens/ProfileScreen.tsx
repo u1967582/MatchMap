@@ -160,7 +160,7 @@ export default function ProfileScreen() {
 
       if (authError || !authUser) {
         console.error('Error getting user:', authError);
-        router.replace('/login');
+        router.replace('/');
         return;
       }
 

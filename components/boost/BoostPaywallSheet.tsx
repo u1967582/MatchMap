@@ -1,10 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -12,9 +7,12 @@ import {
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetDefaultBackdropProps } from '@gorhom/bottom-sheet/lib/typescript/components/bottomSheetBackdrop/types';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, colors, spacing, radius } from '~/components/ds';
-import { useBoostOfferings } from '~/hooks/useBoostOfferings';
-import Gradient from '~/components/ui/Gradient';
+import { AppText, AppButton, colors, spacing, radius, typography } from '~/components/ds';
+import {
+  useBoostOfferings,
+  AVG_PROFIT_PER_CUSTOMER_EUR,
+  type BoostPackageInfo,
+} from '~/hooks/useBoostOfferings';
 
 interface BoostPaywallSheetProps {
   isVisible: boolean;
@@ -26,17 +24,21 @@ interface BoostPaywallSheetProps {
 
 const SNAP_POINTS = ['95%'];
 
+// Tinte suave del oro de boost para fondos (colors.status.boost al ~8%).
+const BOOST_TINT = 'rgba(255, 215, 0, 0.08)';
+const SUCCESS_TINT = 'rgba(16, 185, 129, 0.12)';
+
 const BENEFITS = [
-  { icon: 'arrow-up-circle' as const, label: 'Primero en\nbúsquedas', color: '#4ADE80' },
-  { icon: 'star' as const, label: 'Badge\ndestacado', color: '#FFD700' },
-  { icon: 'people' as const, label: 'Más\nclientes', color: '#60A5FA' },
-  { icon: 'bar-chart' as const, label: 'Mayor\nvisibilidad', color: '#A78BFA' },
+  { icon: 'arrow-up-circle' as const, label: 'Primero en\nbúsquedas' },
+  { icon: 'star' as const, label: 'Badge\ndestacado' },
+  { icon: 'people' as const, label: 'Más\nclientes' },
+  { icon: 'bar-chart' as const, label: 'Mayor\nvisibilidad' },
 ];
 
-const PLAN_FEATURES: Record<string, string[]> = {
-  flash: ['Posición prioritaria en el mapa', 'Badge "Destacado" visible', 'Apareces antes en búsquedas'],
-  'trending-up': ['Todo lo del plan semanal', 'Mayor prioridad en resultados', 'Ideal para eventos y partidos', 'Mejor relación calidad-precio'],
-  sparkles: ['Todo lo del plan mensual', 'Prioridad máxima todo el año', 'Ideal para bares de temporada', 'Ahorro del 44% vs mensual'],
+const PLAN_FEATURES: Record<BoostPackageInfo['plan'], string[]> = {
+  '7d': ['Posición prioritaria en el mapa', 'Badge "Destacado" visible', 'Apareces antes en búsquedas'],
+  '1m': ['Todo lo del plan semanal', 'Ideal para jornadas y partidos clave', 'Mejor relación calidad-precio'],
+  '1y': ['Todo lo del plan mensual', 'Destacado durante toda la temporada', 'El precio por mes más bajo'],
 };
 
 export default function BoostPaywallSheet({
@@ -71,7 +73,7 @@ export default function BoostPaywallSheet({
   );
 
   const handlePurchase = useCallback(
-    async (pkgInfo: typeof packages[number]) => {
+    async (pkgInfo: BoostPackageInfo) => {
       const success = await purchaseBoost(pkgInfo.pkg, barId, userId);
       if (success) {
         sheetRef.current?.dismiss();
@@ -98,26 +100,25 @@ export default function BoostPaywallSheet({
         showsVerticalScrollIndicator={false}
       >
         {/* Close button */}
-        <TouchableOpacity onPress={onClose} style={styles.closeButton} hitSlop={12}>
+        <TouchableOpacity
+          onPress={onClose}
+          style={styles.closeButton}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar"
+        >
           <Ionicons name="close" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
 
         {/* Hero */}
         <View style={styles.hero}>
-          <View style={styles.heroIconWrap}>
-            <Gradient
-              colors={['#F59E0B', '#D97706']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.heroIconGradient}
-            >
-              <Ionicons name="flash" size={32} color="#fff" />
-            </Gradient>
+          <View style={styles.heroIcon}>
+            <Ionicons name="flash" size={32} color={colors.status.boost} />
           </View>
-          <AppText variant="h1" color={colors.text.primary} align="center" maxScale={1.1} style={styles.heroTitle}>
+          <AppText variant="h1" align="center" maxScale={1.1} style={styles.heroTitle}>
             Impulsa tu bar
           </AppText>
-          <AppText variant="body" color={colors.text.secondary} align="center" maxScale={1.1} style={styles.heroSubtitle}>
+          <AppText variant="body" align="center" maxScale={1.1} style={styles.heroSubtitle}>
             Aparece primero cuando los usuarios buscan dónde ver el partido
           </AppText>
         </View>
@@ -126,42 +127,34 @@ export default function BoostPaywallSheet({
         <View style={styles.benefitsRow}>
           {BENEFITS.map((b) => (
             <View key={b.label} style={styles.benefitPill}>
-              <Ionicons name={b.icon} size={20} color={b.color} />
-              <AppText maxScale={1.0} style={[styles.benefitLabel, { color: b.color }]}>
+              <Ionicons name={b.icon} size={20} color={colors.status.boost} />
+              <AppText variant="caption" color={colors.text.light} align="center" maxScale={1.0} style={styles.benefitLabel}>
                 {b.label}
               </AppText>
             </View>
           ))}
         </View>
 
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Plans */}
-        <AppText variant="subtitle" color={colors.text.primary} style={styles.sectionTitle} maxScale={1.1}>
+        <AppText variant="subtitle" maxScale={1.1} style={styles.sectionTitle}>
           Elige tu plan
         </AppText>
 
         {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.brand.primary} />
-            <AppText variant="caption" color={colors.text.muted} style={styles.loadingText}>
-              Cargando productos...
-            </AppText>
+          <View style={styles.stateContainer}>
+            <ActivityIndicator size="large" color={colors.status.boost} />
+            <AppText variant="caption">Cargando productos...</AppText>
           </View>
         ) : error ? (
-          <View style={styles.errorContainer}>
+          <View style={styles.stateContainer}>
             <Ionicons name="alert-circle-outline" size={32} color={colors.status.error} />
-            <AppText variant="body" color={colors.text.secondary} style={styles.errorText}>
+            <AppText variant="body" align="center">
               No se han podido cargar los productos. Comprueba la conexión.
             </AppText>
           </View>
         ) : (
           packages.map((item) => {
             const isThisPurchasing = isPurchasing && purchasingId === item.pkg.identifier;
-            const isOtherPurchasing = isPurchasing && purchasingId !== item.pkg.identifier;
-            const accentColor = item.isPopular ? '#A78BFA' : colors.brand.primary;
-            const features = PLAN_FEATURES[item.icon] ?? [];
+            const features = PLAN_FEATURES[item.plan] ?? [];
 
             return (
               <View
@@ -170,7 +163,7 @@ export default function BoostPaywallSheet({
               >
                 {item.isPopular && (
                   <View style={styles.popularBadge}>
-                    <Ionicons name="star" size={11} color="#fff" />
+                    <Ionicons name="star" size={11} color={colors.text.inverse} />
                     <AppText maxScale={1.0} style={styles.popularText}>
                       MÁS POPULAR
                     </AppText>
@@ -179,24 +172,24 @@ export default function BoostPaywallSheet({
 
                 {/* Card header */}
                 <View style={styles.cardHeader}>
-                  <View style={[styles.cardIconWrap, { backgroundColor: `${accentColor}18` }]}>
+                  <View style={styles.cardIconWrap}>
                     <Ionicons
                       name={`${item.icon}-outline` as any}
                       size={20}
-                      color={accentColor}
+                      color={colors.status.boost}
                     />
                   </View>
                   <View style={styles.cardHeaderText}>
-                    <AppText variant="subtitle" color={colors.text.primary} maxScale={1.1}>
+                    <AppText variant="subtitle" maxScale={1.1}>
                       {item.title}
                     </AppText>
-                    <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>
+                    <AppText variant="caption" maxScale={1.0}>
                       {item.duration}
                     </AppText>
                   </View>
                   {item.savingsBadge && (
                     <View style={styles.savingsBadge}>
-                      <AppText maxScale={1.0} style={styles.savingsText}>
+                      <AppText variant="label" color={colors.status.success} maxScale={1.0}>
                         {item.savingsBadge}
                       </AppText>
                     </View>
@@ -205,12 +198,19 @@ export default function BoostPaywallSheet({
 
                 {/* Price */}
                 <View style={styles.priceRow}>
-                  <AppText style={[styles.price, { color: accentColor }]} maxScale={1.0}>
-                    {item.price}
-                  </AppText>
+                  <View>
+                    <AppText style={styles.price} maxScale={1.0}>
+                      {item.price}
+                    </AppText>
+                    {item.pricePerMonth && (
+                      <AppText variant="caption" maxScale={1.0}>
+                        Equivale a {item.pricePerMonth}
+                      </AppText>
+                    )}
+                  </View>
                   <View style={styles.roiPill}>
-                    <Ionicons name="trending-up-outline" size={13} color="#4ADE80" />
-                    <AppText maxScale={1.0} style={styles.roiText}>
+                    <Ionicons name="trending-up-outline" size={13} color={colors.status.success} />
+                    <AppText variant="caption" color={colors.status.success} maxScale={1.0} style={styles.roiText}>
                       {item.amortization}
                     </AppText>
                   </View>
@@ -220,7 +220,7 @@ export default function BoostPaywallSheet({
                 <View style={styles.featuresList}>
                   {features.map((feat) => (
                     <View key={feat} style={styles.featureItem}>
-                      <Ionicons name="checkmark-circle" size={15} color={accentColor} />
+                      <Ionicons name="checkmark-circle" size={15} color={colors.status.boost} />
                       <AppText variant="caption" color={colors.text.secondary} maxScale={1.0} style={styles.featureText}>
                         {feat}
                       </AppText>
@@ -228,31 +228,13 @@ export default function BoostPaywallSheet({
                   ))}
                 </View>
 
-                {/* Buy button */}
-                <TouchableOpacity
+                <AppButton
+                  text="Activar Boost"
+                  variant={item.isPopular ? 'primary' : 'dark'}
                   onPress={() => handlePurchase(item)}
+                  loading={isThisPurchasing}
                   disabled={isPurchasing}
-                  activeOpacity={0.85}
-                  style={[styles.buyButton, isOtherPurchasing && styles.buyButtonDisabled]}
-                >
-                  {isThisPurchasing ? (
-                    <View style={[styles.buyButtonLoading, { backgroundColor: item.buttonColors[0] }]}>
-                      <ActivityIndicator size="small" color="#fff" />
-                    </View>
-                  ) : (
-                    <Gradient
-                      colors={item.buttonColors}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.buyButtonGradient}
-                    >
-                      <Ionicons name="flash-outline" size={16} color="#fff" />
-                      <AppText maxScale={1.0} style={styles.buyButtonText}>
-                        Activar Boost
-                      </AppText>
-                    </Gradient>
-                  )}
-                </TouchableOpacity>
+                />
               </View>
             );
           })
@@ -261,8 +243,8 @@ export default function BoostPaywallSheet({
         {/* ROI note */}
         <View style={styles.roiNote}>
           <Ionicons name="information-circle-outline" size={14} color={colors.text.muted} />
-          <AppText variant="caption" color={colors.text.muted} style={styles.roiNoteText} maxScale={1.0}>
-            Cada cliente nuevo genera ~13€ de beneficio medio. El Boost se amortiza rápidamente.
+          <AppText variant="caption" maxScale={1.0} style={styles.roiNoteText}>
+            Cada cliente nuevo genera ~{AVG_PROFIT_PER_CUSTOMER_EUR}€ de beneficio medio. El Boost se amortiza rápidamente.
           </AppText>
         </View>
 
@@ -270,22 +252,22 @@ export default function BoostPaywallSheet({
         <View style={styles.trustRow}>
           <View style={styles.trustItem}>
             <Ionicons name="shield-checkmark-outline" size={16} color={colors.text.muted} />
-            <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>Sin suscripción</AppText>
+            <AppText variant="caption" maxScale={1.0}>Sin suscripción</AppText>
           </View>
           <View style={styles.trustDot} />
           <View style={styles.trustItem}>
             <Ionicons name="lock-closed-outline" size={16} color={colors.text.muted} />
-            <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>Pago seguro</AppText>
+            <AppText variant="caption" maxScale={1.0}>Pago seguro</AppText>
           </View>
           <View style={styles.trustDot} />
           <View style={styles.trustItem}>
             <Ionicons name="flash-outline" size={16} color={colors.text.muted} />
-            <AppText variant="caption" color={colors.text.muted} maxScale={1.0}>Activo al instante</AppText>
+            <AppText variant="caption" maxScale={1.0}>Se activa en segundos</AppText>
           </View>
         </View>
 
-        <AppText variant="caption" color={colors.text.muted} style={styles.legalText} maxScale={1.0}>
-          El pago se cargará en tu cuenta de Apple / Google. Sin renovación automática.
+        <AppText variant="caption" align="center" maxScale={1.0} style={styles.legalText}>
+          Pago único con tu cuenta de Apple / Google. Sin renovación automática.
         </AppText>
       </BottomSheetScrollView>
     </BottomSheetModal>
@@ -295,8 +277,8 @@ export default function BoostPaywallSheet({
 const styles = StyleSheet.create({
   sheetBackground: {
     backgroundColor: colors.bg.primary,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
   },
   handleIndicator: {
     backgroundColor: colors.border.medium,
@@ -318,27 +300,21 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     paddingTop: spacing.xs,
   },
-  heroIconWrap: {
-    marginBottom: spacing.md,
-    shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  heroIconGradient: {
+  heroIcon: {
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: radius.round,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.md,
+    backgroundColor: BOOST_TINT,
+    borderWidth: 1,
+    borderColor: colors.alpha.boostGlow,
   },
   heroTitle: {
     marginBottom: spacing.sm,
-    letterSpacing: -0.3,
   },
   heroSubtitle: {
-    lineHeight: 22,
     paddingHorizontal: spacing.md,
   },
 
@@ -361,38 +337,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border.subtle,
   },
   benefitLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 13,
+    fontSize: typography.size.sm,
   },
 
-  // Divider
-  divider: {
-    height: 1,
-    backgroundColor: colors.border.subtle,
-    marginBottom: spacing.lg,
-  },
   sectionTitle: {
     marginBottom: spacing.md,
   },
 
   // Loading / Error
-  loadingContainer: {
+  stateContainer: {
     paddingVertical: spacing.xxxl,
     alignItems: 'center',
     gap: spacing.md,
-  },
-  loadingText: {
-    marginTop: spacing.sm,
-  },
-  errorContainer: {
-    paddingVertical: spacing.xxxl,
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  errorText: {
-    textAlign: 'center',
   },
 
   // Card
@@ -401,36 +357,30 @@ const styles = StyleSheet.create({
     borderRadius: radius.xxl,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    borderWidth: 1.5,
-    borderColor: colors.border.medium,
-    position: 'relative',
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   cardPopular: {
-    borderColor: '#A78BFA',
-    backgroundColor: 'rgba(167, 139, 250, 0.05)',
-    shadowColor: '#A78BFA',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 6,
+    borderColor: colors.status.boost,
+    backgroundColor: colors.bg.surface,
     marginTop: spacing.sm,
   },
   popularBadge: {
     position: 'absolute',
-    top: -13,
+    top: -12,
     right: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xxs,
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 5,
+    backgroundColor: colors.status.boost,
+    paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.sm,
     borderRadius: radius.pill,
   },
   popularText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
+    color: colors.text.inverse,
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold,
     letterSpacing: 0.5,
   },
   cardHeader: {
@@ -445,47 +395,42 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: BOOST_TINT,
   },
   cardHeaderText: {
     flex: 1,
     gap: 2,
   },
   savingsBadge: {
-    backgroundColor: colors.status.success,
-    paddingVertical: 4,
+    backgroundColor: SUCCESS_TINT,
+    paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.sm,
     borderRadius: radius.pill,
-  },
-  savingsText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.md,
+    gap: spacing.sm,
   },
   price: {
-    fontSize: 34,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    lineHeight: 40,
+    color: colors.text.primary,
+    fontSize: typography.size.h1,
+    fontWeight: typography.weight.bold,
+    lineHeight: typography.lineHeight.heading,
   },
   roiPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: 'rgba(74, 222, 128, 0.1)',
+    backgroundColor: SUCCESS_TINT,
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    flexShrink: 1,
   },
   roiText: {
-    color: '#4ADE80',
-    fontSize: 12,
-    fontWeight: '600',
     maxWidth: 130,
   },
 
@@ -493,7 +438,7 @@ const styles = StyleSheet.create({
   featuresList: {
     gap: spacing.sm,
     marginBottom: spacing.lg,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border.subtle,
   },
@@ -504,36 +449,7 @@ const styles = StyleSheet.create({
   },
   featureText: {
     flex: 1,
-    lineHeight: 18,
-  },
-
-  // Buy button
-  buyButton: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    height: 50,
-  },
-  buyButtonDisabled: {
-    opacity: 0.4,
-  },
-  buyButtonLoading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
-  },
-  buyButtonGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  buyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    lineHeight: typography.lineHeight.tight,
   },
 
   // ROI note
@@ -551,7 +467,7 @@ const styles = StyleSheet.create({
   },
   roiNoteText: {
     flex: 1,
-    lineHeight: 18,
+    lineHeight: typography.lineHeight.tight,
   },
 
   // Trust
@@ -571,11 +487,10 @@ const styles = StyleSheet.create({
   trustDot: {
     width: 3,
     height: 3,
-    borderRadius: 2,
+    borderRadius: radius.round,
     backgroundColor: colors.border.medium,
   },
   legalText: {
-    textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: typography.lineHeight.tight,
   },
 });

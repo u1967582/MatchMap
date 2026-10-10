@@ -28,7 +28,7 @@ export default function Step1() {
         setCanProceed(true);
         setIsLoading(false);
       } else {
-        router.replace('/login');
+        router.replace('/');
       }
     };
     getUser();

@@ -54,6 +54,25 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
     initialize();
   }, []);
 
+  // Mantener el appUserID de RevenueCat sincronizado con la sesión de Supabase
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT' && event !== 'INITIAL_SESSION') return;
+      // Fuera del callback de auth para no bloquear a supabase-js
+      setTimeout(async () => {
+        await RevenueCatService.syncRevenueCatUser(session?.user?.id ?? null);
+        const info = await RevenueCatService.getCustomerInfo();
+        setCustomerInfo(info);
+      }, 0);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [isInitialized]);
+
   // Refresh customer info
   const refreshCustomerInfo = useCallback(async () => {
     try {
