@@ -10,6 +10,8 @@ jest.mock('react-native-purchases', () => ({
     restorePurchases: jest.fn(),
     logIn: jest.fn(),
     logOut: jest.fn(),
+    getAppUserID: jest.fn(),
+    isAnonymous: jest.fn(),
     adTracker: { trackAdRevenue: jest.fn() },
   },
   LOG_LEVEL: { DEBUG: 'DEBUG' },
@@ -34,6 +36,7 @@ import {
   getOfferings,
   purchasePackage,
   restorePurchases,
+  syncRevenueCatUser,
   ENTITLEMENTS,
   getCustomerInfo,
   identifyUser,
@@ -133,10 +136,7 @@ describe('getOfferings', () => {
 describe('purchasePackage', () => {
   it('devuelve success=true y la info del cliente tras una compra correcta', async () => {
     const customerInfo = { entitlements: { active: {} } };
-    mockedPurchasePackage.mockResolvedValueOnce({
-      customerInfo,
-      transaction: { transactionIdentifier: 'tx_1' },
-    });
+    mockedPurchasePackage.mockResolvedValueOnce({ customerInfo, transaction: { transactionIdentifier: 'tx_1' } });
 
     const result = await purchasePackage({ identifier: 'pkg_1' } as any);
 
@@ -150,9 +150,7 @@ describe('purchasePackage', () => {
   it('relanza el error cuando la compra falla, para que el llamante pueda reaccionar', async () => {
     mockedPurchasePackage.mockRejectedValueOnce(new Error('payment declined'));
 
-    await expect(purchasePackage({ identifier: 'pkg_1' } as any)).rejects.toThrow(
-      'payment declined'
-    );
+    await expect(purchasePackage({ identifier: 'pkg_1' } as any)).rejects.toThrow('payment declined');
   });
 
   it('relanza también cuando el usuario cancela, preservando el flag userCancelled', async () => {
@@ -177,6 +175,66 @@ describe('restorePurchases', () => {
     mockedRestorePurchases.mockRejectedValueOnce(new Error('restore failed'));
 
     await expect(restorePurchases()).rejects.toThrow('restore failed');
+  });
+});
+
+describe('syncRevenueCatUser', () => {
+  const mockedGetAppUserID = Purchases.getAppUserID as jest.Mock;
+  const mockedIsAnonymous = Purchases.isAnonymous as jest.Mock;
+  const mockedLogIn = Purchases.logIn as jest.Mock;
+  const mockedLogOut = Purchases.logOut as jest.Mock;
+
+  it('no hace nada si el SDK no está configurado', async () => {
+    mockedIsConfigured.mockResolvedValueOnce(false);
+
+    await syncRevenueCatUser('user-1');
+
+    expect(mockedLogIn).not.toHaveBeenCalled();
+    expect(mockedLogOut).not.toHaveBeenCalled();
+  });
+
+  it('hace logIn cuando el appUserID no coincide con el usuario de Supabase', async () => {
+    mockedIsConfigured.mockResolvedValueOnce(true);
+    mockedGetAppUserID.mockResolvedValueOnce('$RCAnonymousID:abc');
+
+    await syncRevenueCatUser('user-1');
+
+    expect(mockedLogIn).toHaveBeenCalledWith('user-1');
+  });
+
+  it('no repite logIn si ya está identificado con ese usuario', async () => {
+    mockedIsConfigured.mockResolvedValueOnce(true);
+    mockedGetAppUserID.mockResolvedValueOnce('user-1');
+
+    await syncRevenueCatUser('user-1');
+
+    expect(mockedLogIn).not.toHaveBeenCalled();
+  });
+
+  it('hace logOut al cerrar sesión si el usuario de RevenueCat no es anónimo', async () => {
+    mockedIsConfigured.mockResolvedValueOnce(true);
+    mockedIsAnonymous.mockResolvedValueOnce(false);
+
+    await syncRevenueCatUser(null);
+
+    expect(mockedLogOut).toHaveBeenCalled();
+  });
+
+  it('no llama a logOut si ya es anónimo (RevenueCat lanzaría un error)', async () => {
+    mockedIsConfigured.mockResolvedValueOnce(true);
+    mockedIsAnonymous.mockResolvedValueOnce(true);
+
+    await syncRevenueCatUser(null);
+
+    expect(mockedLogOut).not.toHaveBeenCalled();
+  });
+
+  it('no lanza si RevenueCat falla', async () => {
+    mockedIsConfigured.mockResolvedValueOnce(true);
+    mockedGetAppUserID.mockResolvedValueOnce('other');
+    mockedLogIn.mockRejectedValueOnce(new Error('network'));
+
+    await expect(syncRevenueCatUser('user-1')).resolves.toBeUndefined();
   });
 });
 

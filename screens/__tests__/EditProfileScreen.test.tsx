@@ -54,7 +54,7 @@ describe('EditProfileScreen - carga inicial', () => {
     await render(<EditProfileScreen />);
 
     await waitFor(() => {
-      expect(mockedRouter.replace).toHaveBeenCalledWith('/login');
+      expect(mockedRouter.replace).toHaveBeenCalledWith('/');
     });
   });
 

@@ -5,8 +5,7 @@ jest.mock('~/utils/revenuecat', () => ({
   hasActiveBoost: jest.fn(async () => false),
   purchasePackage: jest.fn(),
   restorePurchases: jest.fn(),
-  identifyUser: jest.fn(async () => {}),
-  logoutUser: jest.fn(async () => {}),
+  syncRevenueCatUser: jest.fn(async () => {}),
 }));
 
 import React from 'react';
@@ -19,7 +18,7 @@ import { RevenueCatProvider, useRevenueCat } from '~/contexts/RevenueCatContext'
 const mockedSupabase = supabase as any;
 const rc = RC as jest.Mocked<typeof RC>;
 
-let authListener: ((event: string, session: any) => Promise<void>) | undefined;
+let authListener: ((event: string, session: any) => void) | undefined;
 let unsubscribe: jest.Mock;
 
 beforeEach(() => {
@@ -68,43 +67,31 @@ describe('RevenueCatProvider', () => {
     await waitFor(() => expect(screen.getByText('contenido')).toBeTruthy());
   });
 
-  it('identifica en RevenueCat al usuario que inicia sesión después del arranque', async () => {
+  // El provider difiere la sincronización con setTimeout(0) para no bloquear supabase-js
+  const emit = async (event: string, session: any) => {
+    await act(async () => {
+      authListener!(event, session);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  };
+
+  it('sincroniza RevenueCat con el usuario que inicia sesión después del arranque', async () => {
     await renderCtx();
     expect(authListener).toBeDefined();
-
-    rc.hasActiveBoost.mockResolvedValueOnce(true);
-    await act(async () => {
-      await authListener!('SIGNED_IN', { user: { id: 'owner-1' } });
-    });
-
-    expect(rc.identifyUser).toHaveBeenCalledWith('owner-1');
+    await emit('SIGNED_IN', { user: { id: 'owner-1' } });
+    await waitFor(() => expect(rc.syncRevenueCatUser).toHaveBeenCalledWith('owner-1'));
   });
 
-  it('hace logout en RevenueCat al cerrar sesión (no comparte compras entre cuentas)', async () => {
-    const { result } = await renderCtx();
-    rc.hasActiveBoost.mockResolvedValueOnce(false);
-    await act(async () => {
-      await authListener!('SIGNED_OUT', null);
-    });
-    expect(rc.logoutUser).toHaveBeenCalled();
-    expect(result.current.hasActiveBoost).toBe(false);
-  });
-
-  it('un fallo de logout (usuario anónimo) no rompe nada', async () => {
+  it('al cerrar sesión sincroniza con null (no comparte compras entre cuentas)', async () => {
     await renderCtx();
-    rc.logoutUser.mockRejectedValueOnce(new Error('anonymous'));
-    await act(async () => {
-      await expect(authListener!('SIGNED_OUT', null)).resolves.toBeUndefined();
-    });
+    await emit('SIGNED_OUT', null);
+    await waitFor(() => expect(rc.syncRevenueCatUser).toHaveBeenCalledWith(null));
   });
 
   it('ignora otros eventos de auth', async () => {
     await renderCtx();
-    await act(async () => {
-      await authListener!('TOKEN_REFRESHED', { user: { id: 'u1' } });
-    });
-    expect(rc.identifyUser).not.toHaveBeenCalled();
-    expect(rc.logoutUser).not.toHaveBeenCalled();
+    await emit('TOKEN_REFRESHED', { user: { id: 'u1' } });
+    expect(rc.syncRevenueCatUser).not.toHaveBeenCalled();
   });
 
   it('se desuscribe al desmontar', async () => {

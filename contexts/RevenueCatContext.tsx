@@ -54,35 +54,20 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
     initialize();
   }, []);
 
-  // Mantener el cliente de RevenueCat ligado al usuario de Supabase: si el
-  // login ocurre después del arranque (o se cambia de cuenta en el mismo
-  // dispositivo), las compras deben quedar a nombre del usuario correcto.
+  // Mantener el appUserID de RevenueCat sincronizado con la sesión de Supabase
   useEffect(() => {
     if (!isInitialized) return;
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      try {
-        if (event === 'SIGNED_IN' && session?.user) {
-          await RevenueCatService.identifyUser(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          await RevenueCatService.logoutUser();
-        } else {
-          return;
-        }
-      } catch (error) {
-        // p.ej. logOut de un usuario anónimo o SDK sin configurar
-        console.error('Failed to sync RevenueCat user:', error);
-      }
-
-      try {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT' && event !== 'INITIAL_SESSION') return;
+      // Fuera del callback de auth para no bloquear a supabase-js
+      setTimeout(async () => {
+        await RevenueCatService.syncRevenueCatUser(session?.user?.id ?? null);
         const info = await RevenueCatService.getCustomerInfo();
         setCustomerInfo(info);
-        setHasActiveBoost(await RevenueCatService.hasActiveBoost());
-      } catch (error) {
-        console.error('Failed to refresh customer info:', error);
-      }
+      }, 0);
     });
 
     return () => subscription.unsubscribe();

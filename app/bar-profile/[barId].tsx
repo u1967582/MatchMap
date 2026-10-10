@@ -1,4 +1,4 @@
-import { View, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard, Modal, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard, Modal, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -99,7 +99,12 @@ export default function BarProfileScreen() {
   const trackedProfileViewBarIdRef = useRef<string | null>(null);
 
   // Get boost status for countdown
-  const { boost, isLoading: boostLoading, refresh: refreshBoost } = useBarBoost(barId);
+  const {
+    boost,
+    isLoading: boostLoading,
+    waitForActivation: waitForBoostActivation,
+    isActivating: isBoostActivating,
+  } = useBarBoost(barId);
 
   // Functions to show info modals
   const showManualMatchInfo = () => {
@@ -732,8 +737,17 @@ export default function BarProfileScreen() {
                 </View>
 
                 {/* Boost Countdown - shown when boost is active */}
-                {boost?.isActive && boost?.endAt && (
-                  <BoostCountdown endAt={boost.endAt} style={{ marginTop: spacing.md }} />
+                {isBoostActivating ? (
+                  <View style={styles.boostActivatingRow}>
+                    <ActivityIndicator size="small" color={colors.status.boost} />
+                    <AppText variant="caption" color={colors.text.secondary}>
+                      Activando tu boost…
+                    </AppText>
+                  </View>
+                ) : (
+                  boost?.isActive && boost?.endAt && (
+                    <BoostCountdown endAt={boost.endAt} style={{ marginTop: spacing.md }} />
+                  )
                 )}
 
                 {/* Ver estadísticas */}
@@ -1492,7 +1506,7 @@ export default function BarProfileScreen() {
         <BoostPaywallSheet
           isVisible={paywallVisible}
           onClose={() => setPaywallVisible(false)}
-          onPurchaseComplete={refreshBoost}
+          onPurchaseComplete={waitForBoostActivation}
           barId={barId}
           userId={user.id}
         />
@@ -2285,6 +2299,18 @@ const styles = StyleSheet.create({
   },
   boostStatLabel: {
     lineHeight: 14,
+  },
+  boostActivatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.bg.card,
+    borderWidth: 1,
+    borderColor: colors.alpha.boostGlow,
   },
   boostRoiCard: {
     flexDirection: 'row',

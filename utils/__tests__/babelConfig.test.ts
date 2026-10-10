@@ -10,7 +10,7 @@ console.error('error');
 
 function transformWithNodeEnv(nodeEnv: string): string {
   const previous = process.env.NODE_ENV;
-  process.env.NODE_ENV = nodeEnv;
+  (process.env as Record<string, string | undefined>).NODE_ENV = nodeEnv;
   try {
     jest.resetModules();
     const babel = require('@babel/core');
@@ -22,7 +22,7 @@ function transformWithNodeEnv(nodeEnv: string): string {
     });
     return result?.code ?? '';
   } finally {
-    process.env.NODE_ENV = previous;
+    (process.env as Record<string, string | undefined>).NODE_ENV = previous;
   }
 }
 

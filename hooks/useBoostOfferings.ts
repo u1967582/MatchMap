@@ -11,9 +11,9 @@ export interface BoostPackageInfo {
   isPopular: boolean;
   duration: string;
   amortization: string;
+  pricePerMonth?: string;
   savingsBadge?: string;
   icon: 'flash' | 'trending-up' | 'sparkles';
-  buttonColors: [string, string];
 }
 
 interface UseBoostOfferingsResult {
@@ -24,6 +24,13 @@ interface UseBoostOfferingsResult {
   isPurchasing: boolean;
   purchasingId: string | null;
 }
+
+// Beneficio medio estimado por cliente nuevo (ver nota ROI del paywall).
+export const AVG_PROFIT_PER_CUSTOMER_EUR = 13;
+
+// Atributo de RevenueCat que el webhook usa para saber a qué bar va el boost.
+// Debe coincidir con BOOST_BAR_ATTRIBUTE en supabase/functions/revenuecat-webhook/logic.ts.
+export const BOOST_BAR_ATTRIBUTE = 'boost_bar_id';
 
 function getPlanFromProductId(productId: string): '7d' | '1m' | '1y' | null {
   if (productId.includes('boost_7d')) return '7d';
@@ -44,36 +51,37 @@ function getEndAt(plan: '7d' | '1m' | '1y'): Date {
   return end;
 }
 
+export function formatPrice(amount: number, currencyCode: string | null | undefined): string {
+  try {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: currencyCode || 'EUR',
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currencyCode || 'EUR'}`;
+  }
+}
+
+export function getCustomersToBreakEven(price: number): number {
+  return Math.max(1, Math.ceil(price / AVG_PROFIT_PER_CUSTOMER_EUR));
+}
+
+// Ahorro del plan anual frente a pagar 12 meses sueltos. null si no aplica.
+export function getYearlySavingsPercent(yearlyPrice: number, monthlyPrice: number): number | null {
+  if (!(yearlyPrice > 0) || !(monthlyPrice > 0)) return null;
+  const pct = Math.round((1 - yearlyPrice / (monthlyPrice * 12)) * 100);
+  return pct > 0 ? pct : null;
+}
+
 const PLAN_META: Record<'7d' | '1m' | '1y', {
   title: string;
   duration: string;
-  amortization: string;
-  savingsBadge?: string;
   icon: 'flash' | 'trending-up' | 'sparkles';
-  buttonColors: [string, string];
 }> = {
-  '7d': {
-    title: 'Boost Semanal',
-    duration: '7 días',
-    amortization: 'Se amortiza con solo 2 clientes nuevos',
-    icon: 'flash',
-    buttonColors: ['#3B82F6', '#1976D2'],
-  },
-  '1m': {
-    title: 'Boost Mensual',
-    duration: '1 mes',
-    amortization: 'Se amortiza con solo 5 clientes nuevos',
-    icon: 'trending-up',
-    buttonColors: ['#D4AF37', '#B8956A'],
-  },
-  '1y': {
-    title: 'Boost de Temporada',
-    duration: '1 año',
-    amortization: 'La opción de más valor (~44€/mes)',
-    savingsBadge: 'Ahorra ~81%',
-    icon: 'sparkles',
-    buttonColors: ['#10B981', '#059669'],
-  },
+  '7d': { title: 'Boost Semanal', duration: '7 días', icon: 'flash' },
+  '1m': { title: 'Boost Mensual', duration: '1 mes', icon: 'trending-up' },
+  '1y': { title: 'Boost de Temporada', duration: '1 año', icon: 'sparkles' },
 };
 
 const PLAN_ORDER: Record<'7d' | '1m' | '1y', number> = { '7d': 0, '1m': 1, '1y': 2 };
@@ -106,6 +114,7 @@ export function useBoostOfferings(): UseBoostOfferingsResult {
             const plan = getPlanFromProductId(pkg.product.identifier);
             if (!plan) return acc;
             const meta = PLAN_META[plan];
+            const customers = getCustomersToBreakEven(pkg.product.price);
             acc.push({
               pkg,
               plan,
@@ -113,14 +122,22 @@ export function useBoostOfferings(): UseBoostOfferingsResult {
               price: pkg.product.priceString,
               isPopular: plan === '1m',
               duration: meta.duration,
-              amortization: meta.amortization,
-              savingsBadge: meta.savingsBadge,
+              amortization: `Se amortiza con ${customers} ${customers === 1 ? 'cliente nuevo' : 'clientes nuevos'}`,
+              pricePerMonth: plan === '1y'
+                ? `${formatPrice(pkg.product.price / 12, pkg.product.currencyCode)}/mes`
+                : undefined,
               icon: meta.icon,
-              buttonColors: meta.buttonColors,
             });
             return acc;
           }, [])
           .sort((a, b) => PLAN_ORDER[a.plan] - PLAN_ORDER[b.plan]);
+
+        const monthly = mapped.find((p) => p.plan === '1m');
+        const yearly = mapped.find((p) => p.plan === '1y');
+        if (monthly && yearly) {
+          const pct = getYearlySavingsPercent(yearly.pkg.product.price, monthly.pkg.product.price);
+          if (pct) yearly.savingsBadge = `Ahorra ${pct}%`;
+        }
 
         if (isMounted) setPackages(mapped);
       } catch (err) {
@@ -148,6 +165,14 @@ export function useBoostOfferings(): UseBoostOfferingsResult {
       setIsPurchasing(true);
       setPurchasingId(pkg.identifier);
 
+      // Para que el webhook sepa a qué bar va el boost aunque el insert del
+      // cliente falle o llegue tarde. No bloquea la compra si falla.
+      try {
+        await Purchases.setAttributes({ [BOOST_BAR_ATTRIBUTE]: barId });
+      } catch (attrErr) {
+        console.warn('[useBoostOfferings] No se pudo fijar boost_bar_id:', attrErr);
+      }
+
       const { transaction } = await Purchases.purchasePackage(pkg);
 
       const startAt = new Date();
@@ -158,10 +183,12 @@ export function useBoostOfferings(): UseBoostOfferingsResult {
       // status='pending': la activación real (status='active') la hace
       // el webhook de RevenueCat (service_role) tras confirmar el pago,
       // no el cliente. Ver supabase/functions/revenuecat-webhook y la
-      // migración 20260806050000_fix_bar_boosts_payment_integrity.
+      // migración 20260806161426_fix_bar_boosts_payment_integrity.
+      // ignoreDuplicates: si el webhook llegó antes y ya activó la fila,
+      // no la pisamos (ON CONFLICT DO NOTHING).
       const { error: insertError } = await supabase
         .from('bar_boosts')
-        .insert({
+        .upsert({
           bar_id: barId,
           user_id: userId,
           plan,
@@ -171,15 +198,16 @@ export function useBoostOfferings(): UseBoostOfferingsResult {
           amount_cents: amountCents,
           currency,
           revenuecat_transaction_id: transaction?.transactionIdentifier ?? null,
-        });
+        }, { onConflict: 'revenuecat_transaction_id', ignoreDuplicates: true });
 
       if (insertError) {
         console.error('[useBoostOfferings] Error inserting boost:', insertError);
-        toast.warning('Boost comprado, pero no se pudo registrar. Contacta con soporte.');
+        // El webhook activa el boost igualmente con el atributo boost_bar_id.
+        toast.success('¡Compra exitosa!', 'Tu boost se activará en unos segundos');
         return true;
       }
 
-      toast.success('¡Compra exitosa!', 'Tu boost se activará en unos instantes');
+      toast.success('¡Compra exitosa!', 'Tu boost se activará en unos segundos');
       return true;
     } catch (err: any) {
       if (err.userCancelled) {

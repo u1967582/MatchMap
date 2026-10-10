@@ -177,6 +177,28 @@ export async function logoutUser(): Promise<void> {
 }
 
 /**
+ * Alinea el appUserID de RevenueCat con el usuario de Supabase.
+ * Sin esto, si el usuario inicia sesión después de arrancar la app, sus
+ * compras quedan en un $RCAnonymousID y el webhook no puede asociarlas.
+ */
+export async function syncRevenueCatUser(userId: string | null): Promise<void> {
+  try {
+    if (!(await Purchases.isConfigured())) return;
+
+    if (userId) {
+      const current = await Purchases.getAppUserID();
+      if (current !== userId) {
+        await Purchases.logIn(userId);
+      }
+    } else if (!(await Purchases.isAnonymous())) {
+      await Purchases.logOut();
+    }
+  } catch (error) {
+    console.error('❌ Failed to sync RevenueCat user:', error);
+  }
+}
+
+/**
  * Get active subscription info
  */
 export async function getActiveSubscriptionInfo(): Promise<{
