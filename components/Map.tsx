@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing, Platform, ActivityIndicator, Image, AppState } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing, Platform, ActivityIndicator, Image, AppState, Linking } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +19,9 @@ import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilitySto
 import { useMapboxDirections } from '~/hooks/useMapboxDirections';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { fetchMatchById } from '~/services/matches';
-import { AppText, MapSkeleton } from '~/components/ds';
+import { AppText, AppButton, ErrorState, MapSkeleton, colors, spacing, radius, toast } from '~/components/ds';
+import { openInMaps } from '~/utils/openInMaps';
+import { formatMatchTime } from '~/utils/dateFormat';
 import { getNearbyBarIds } from '~/utils/geo';
 import { trackBarProximity } from '~/services/barAnalytics';
 
@@ -39,6 +41,11 @@ const PROXIMITY_RADIUS_METERS = 150;
 const PROXIMITY_CHECK_COOLDOWN_MS = 5 * 60 * 1000;
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
+
+// Centro por defecto cuando no hay permiso de ubicación (o falla el GPS):
+// Madrid, con zoom de ciudad para que se vean bares al abrir la app.
+export const DEFAULT_MAP_CENTER: [number, number] = [-3.7038, 40.4168];
+export const DEFAULT_MAP_ZOOM = 11;
 
 // Helper function to get icon based on maneuver instruction
 const getManeuverIcon = (instruction: string): keyof typeof Ionicons.glyphMap => {
@@ -135,6 +142,8 @@ const Map: React.FC<MapProps> = ({
   const [userLocation, setUserLocation] = React.useState<Location.LocationObject | null>(null);
   const [bars, setBars] = React.useState<Bar[]>([]);
   const [loadingBars, setLoadingBars] = React.useState(true);
+  const [barsError, setBarsError] = React.useState(false);
+  const [barsReloadKey, setBarsReloadKey] = React.useState(0);
   const [searchText, setSearchText] = React.useState('');
   const [selectedBar, setSelectedBar] = React.useState<Bar | null>(null);
   const [showBarCard, setShowBarCard] = React.useState(false);
@@ -299,11 +308,16 @@ const Map: React.FC<MapProps> = ({
     setFilterModalVisible(false);
   }, []);
 
-  // Handle navigate to bar
-  const handleNavigateToBar = React.useCallback((barId: string) => {
-    // TODO: Implement navigation functionality
-    // This could open Google Maps or Apple Maps with directions
-  }, []);
+  // Abrir la app de mapas nativa (Apple Maps / Google Maps) con el bar como destino
+  const handleNavigateToBar = React.useCallback(
+    async (destination: { latitude: number; longitude: number; name: string }) => {
+      const opened = await openInMaps(destination);
+      if (!opened) {
+        toast.error('No se pudo abrir la app de mapas');
+      }
+    },
+    []
+  );
 
   // Handle start navigation
   const handleStartNavigation = React.useCallback(async (destination: {
@@ -624,6 +638,7 @@ const Map: React.FC<MapProps> = ({
     const fetchBars = async () => {
       try {
         setLoadingBars(true);
+        setBarsError(false);
 
         // Step 1: If match filter is active, get bar IDs that have events for that match
         let barIdsFilter: string[] | null = null;
@@ -687,6 +702,7 @@ const Map: React.FC<MapProps> = ({
 
         if (error) {
           console.error('❌ Error fetching bars:', error);
+          setBarsError(true);
           return;
         }
 
@@ -729,13 +745,14 @@ const Map: React.FC<MapProps> = ({
         }
       } catch (error) {
         console.error('❌ Error fetching bars:', error);
+        setBarsError(true);
       } finally {
         setLoadingBars(false);
       }
     };
 
     fetchBars();
-  }, [selectedMatch, includeTestBars, includeBettingBars]);
+  }, [selectedMatch, includeTestBars, includeBettingBars, barsReloadKey]);
 
   // Search for locations using Mapbox Geocoding API
   const searchLocations = React.useCallback(async (query: string) => {
@@ -816,30 +833,39 @@ const Map: React.FC<MapProps> = ({
     setIsSearching(false);
   }, []);
 
-  if (!hasPermission) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.permissionContainer}>
-          <SearchBarWithResults 
-            value={searchText} 
-            onChangeText={handleSearchChange}
-            searchResults={[]}
-            isSearching={false}
-            onLocationSelect={() => {}}
-          />
-        </View>
-      </View>
-    );
-  }
-
-  // Show skeleton while loading bars
-  if (loadingBars) {
+  // Mientras se resuelve el permiso de ubicación o se cargan los bares.
+  // Si el permiso se deniega, el mapa sigue funcionando centrado en
+  // DEFAULT_MAP_CENTER y se muestra un aviso para activarlo.
+  if (hasPermission === null || loadingBars) {
     return (
       <View style={styles.container}>
         <MapSkeleton />
       </View>
     );
   }
+
+  // Error de red / Supabase sin bares cargados: no dejar el mapa vacío sin explicación
+  if (barsError && bars.length === 0) {
+    return (
+      <View style={[styles.container, styles.errorContainer]}>
+        <ErrorState
+          title="No se pudieron cargar los bares"
+          subtitle="Comprueba tu conexión e inténtalo de nuevo."
+          onRetry={() => setBarsReloadKey((key) => key + 1)}
+        />
+      </View>
+    );
+  }
+
+  const noBarsMessage =
+    filteredBars.length > 0
+      ? null
+      : selectedMatch
+        ? 'Ningún bar emite este partido todavía'
+        : selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 ||
+            selectedFeatures.length > 0 || selectedTvFeatures.length > 0
+          ? 'No hay bares con estos filtros'
+          : 'No hay bares disponibles todavía';
 
   return (
     <View style={styles.container}>
@@ -855,9 +881,9 @@ const Map: React.FC<MapProps> = ({
           centerCoordinate={
             cameraCenter || (userLocation
               ? [userLocation.coords.longitude, userLocation.coords.latitude]
-              : undefined)
+              : DEFAULT_MAP_CENTER)
           }
-          zoomLevel={cameraZoom}
+          zoomLevel={cameraCenter || userLocation ? cameraZoom : DEFAULT_MAP_ZOOM}
           animationMode="flyTo"
           animationDuration={1000}
         />
@@ -1037,6 +1063,42 @@ const Map: React.FC<MapProps> = ({
           onExpandChange={setIsSearchExpanded}
         />
       </View>
+
+      {/* Aviso: sin permiso de ubicación (el mapa sigue funcionando) */}
+      {hasPermission === false && !isSearchExpanded && !isNavigating && !showBarCard && (
+        <View style={styles.locationNotice} accessibilityRole="alert">
+          <Ionicons name="location-outline" size={20} color={colors.text.primary} />
+          <View style={styles.locationNoticeText}>
+            <AppText variant="label">Ubicación desactivada</AppText>
+            <AppText variant="caption" color={colors.text.secondary}>
+              Actívala en Ajustes para ver los bares más cercanos. Mientras, puedes buscar una zona o moverte por el mapa.
+            </AppText>
+          </View>
+          <AppButton
+            text="Activar"
+            variant="primary"
+            fullWidth={false}
+            onPress={() => {
+              Linking.openSettings().catch(() =>
+                toast.error('No se pudieron abrir los Ajustes')
+              );
+            }}
+          />
+        </View>
+      )}
+
+      {/* Sin resultados con el partido o filtros elegidos */}
+      {noBarsMessage && !isSearchExpanded && !isNavigating && !showBarCard && (
+        <View
+          style={[
+            styles.noBarsNotice,
+            selectedMatch ? { bottom: 216 } : { bottom: 128 },
+          ]}
+          pointerEvents="none"
+        >
+          <AppText variant="caption" align="center">{noBarsMessage}</AppText>
+        </View>
+      )}
 
       {/* Center on user location button */}
       {userLocation && (
@@ -1249,7 +1311,7 @@ const Map: React.FC<MapProps> = ({
               <AppText style={styles.bannerVs}>VS</AppText>
               {selectedMatch.time && (
                 <AppText style={styles.bannerTime}>
-                  {selectedMatch.time.slice(0, 5)}
+                  {formatMatchTime(selectedMatch.date, selectedMatch.time)}
                 </AppText>
               )}
             </View>
@@ -1345,11 +1407,38 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  permissionContainer: {
-    flex: 1,
+  errorContainer: {
+    backgroundColor: colors.bg.primary,
     justifyContent: 'center',
+  },
+  locationNotice: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 124 : 104,
+    left: spacing.lg,
+    right: spacing.lg,
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(26,35,50,0.95)',
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    zIndex: 998,
+  },
+  locationNoticeText: {
+    flex: 1,
+    gap: 2,
+  },
+  noBarsNotice: {
+    position: 'absolute',
+    alignSelf: 'center',
+    left: spacing.xxl,
+    right: spacing.xxl,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(26,35,50,0.92)',
   },
   userLocationMarker: {
     width: 20,

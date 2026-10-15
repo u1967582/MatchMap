@@ -6,7 +6,6 @@ import {
   Pressable,
   Image as RNImage,
   TextInput,
-  Alert,
   Dimensions,
   Platform,
   type NativeScrollEvent,
@@ -37,13 +36,14 @@ import { useBoostSelection } from '~/context/BoostSelectionContext';
 import AdBanner from '~/components/ads/AdBanner';
 import { interleaveWithAds } from '~/utils/adListInterleave';
 import { useFavoritesStore } from '~/stores/favoritesStore';
+import { madridWallTimeToDate } from '~/utils/dateFormat';
 import {
   AppText,
   AppCard,
   AppButton,
   SkeletonList,
   EmptyState,
-  toast,
+  ErrorState,
   colors,
   spacing,
   radius,
@@ -70,7 +70,6 @@ interface Bar {
   is_betting_venue?: boolean;
   next_match?: {
     date: string;
-    time: string;
   };
 }
 
@@ -100,8 +99,13 @@ export default function SearchScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [allBars, setAllBars] = useState<Bar[]>([]);
-  const [loading, setLoading] = useState(false);
+  // true desde el inicio: evita mostrar "No se encontraron bares" antes de la primera carga
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  // 'pending' mientras se pide el permiso; con 'denied' se buscan bares igualmente
+  // (sin distancia), para que la búsqueda funcione sin ubicación.
+  const [locationStatus, setLocationStatus] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [regularPage, setRegularPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -206,11 +210,7 @@ export default function SearchScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permiso de ubicación',
-          'Necesitamos acceso a tu ubicación para mostrar bares cercanos.',
-          [{ text: 'OK' }]
-        );
+        setLocationStatus('denied');
         return;
       }
 
@@ -219,19 +219,17 @@ export default function SearchScreen() {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
+      setLocationStatus('granted');
     } catch (error) {
       console.error('Error getting location:', error);
+      setLocationStatus('denied');
     }
   }, []);
 
   // Search bars
   const searchBars = useCallback(async () => {
-    if (!userLocation) {
-      await getUserLocation();
-      return;
-    }
-
     setLoading(true);
+    setLoadError(false);
 
     try {
       // Paso 1. Si hay filtro por partido, obtener barIds con eventos de ese partido
@@ -302,7 +300,7 @@ export default function SearchScreen() {
 
       if (error) {
         console.error('❌ Error fetching bars:', error);
-        toast.error('Error', 'No se pudieron cargar los bares');
+        setLoadError(true);
         return;
       }
 
@@ -370,7 +368,7 @@ export default function SearchScreen() {
       // Calculate distances and add next match info
       const barsWithDistance = (enrichedBars || []).map((bar) => {
           let distance = null;
-          if (bar.latitude && bar.longitude) {
+          if (userLocation && bar.latitude && bar.longitude) {
             distance = calculateDistance(
               userLocation.latitude,
               userLocation.longitude,
@@ -397,7 +395,6 @@ export default function SearchScreen() {
             review_count: bar.review_count || 0, // Use real review count from database
             next_match: nextMatch ? {
               date: nextMatch.start_date,
-              time: '18:00', // Default time, you might want to store this in your posts
             } : undefined,
           };
         });
@@ -459,11 +456,11 @@ export default function SearchScreen() {
       setRegularPage(1);
     } catch (error) {
       console.error('❌ Error in searchBars:', error);
-      toast.error('Error', 'Ocurrió un error al buscar bares');
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, getUserLocation, selectedMatch, includeTestBars, includeBettingBars]);
+  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, selectedMatch, includeTestBars, includeBettingBars]);
 
   // La cabecera sigue el scroll 1:1 (misma velocidad/distancia que el dedo), sin easing:
   // se traduce exactamente lo que avanza el scroll, con clamp entre 0 (visible) y -headerHeight (oculta).
@@ -668,11 +665,11 @@ export default function SearchScreen() {
             )}
           </View>
 
-          {item.next_match?.date && item.next_match?.time && (
+          {item.next_match?.date && (
             <View style={styles.nextMatchContainer}>
               <Ionicons name="calendar" size={14} color={colors.brand.accent} />
               <AppText variant="body" color={colors.brand.accent} style={styles.nextMatchText}>
-                Próximo partido: {new Date(item.next_match.date).toLocaleDateString('es-ES')} {item.next_match.time}
+                Próximo evento: {(madridWallTimeToDate(item.next_match.date, '12:00') ?? new Date(item.next_match.date)).toLocaleDateString('es-ES')}
               </AppText>
             </View>
           )}
@@ -749,12 +746,12 @@ export default function SearchScreen() {
     getUserLocation();
   }, [getUserLocation]);
 
-  // Search when filters change
+  // Search when filters change (con o sin ubicación, una vez resuelto el permiso)
   useEffect(() => {
-    if (userLocation) {
+    if (locationStatus !== 'pending') {
       searchBars();
     }
-  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, selectedMatch, userLocation, searchBars]);
+  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, selectedMatch, locationStatus, searchBars]);
 
 
   return (
@@ -766,6 +763,14 @@ export default function SearchScreen() {
         {loading ? (
           <View style={{ paddingTop: headerHeight }}>
             <SkeletonList count={3} />
+          </View>
+        ) : loadError ? (
+          <View style={[styles.emptyWrapper, { paddingTop: headerHeight }]}>
+            <ErrorState
+              title="No se pudieron cargar los bares"
+              subtitle="Comprueba tu conexión e inténtalo de nuevo."
+              onRetry={searchBars}
+            />
           </View>
         ) : allBars.length > 0 ? (
           <FlashList

@@ -12,7 +12,9 @@ import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
 import BoostPaywallSheet from '~/components/boost/BoostPaywallSheet';
 import { useBarBoost } from '~/hooks/useBoostBars';
-import { AppText, colors, spacing, radius, BarProfileSkeleton, toast } from '~/components/ds';
+import { AppText, colors, spacing, radius, BarProfileSkeleton, ErrorState, toast } from '~/components/ds';
+import { formatMatchDateTime } from '~/utils/dateFormat';
+import { openInMaps, openPhoneDialer } from '~/utils/openInMaps';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import AdBanner from '~/components/ads/AdBanner';
 import { trackBarEvent } from '~/services/barAnalytics';
@@ -80,6 +82,7 @@ export default function BarProfileScreen() {
   const [bar, setBar] = useState<BarProfile | null>(null);
   const [posts, setPosts] = useState<BarPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -241,6 +244,24 @@ export default function BarProfileScreen() {
       copyToClipboard(bar.phone, 'Teléfono');
       trackContactClick('contact_click_phone');
     }
+  };
+
+  const handleOpenInMaps = async () => {
+    if (typeof bar?.latitude !== 'number' || typeof bar?.longitude !== 'number') return;
+    trackContactClick('contact_click_address');
+    const opened = await openInMaps({
+      latitude: bar.latitude,
+      longitude: bar.longitude,
+      name: bar.name,
+    });
+    if (!opened) toast.error('No se pudo abrir la app de mapas');
+  };
+
+  const handleCallPhone = async () => {
+    if (!bar?.phone) return;
+    trackContactClick('contact_click_phone');
+    const opened = await openPhoneDialer(bar.phone);
+    if (!opened) toast.error('No se pudo abrir el teléfono');
   };
 
   const copyWebsite = () => {
@@ -493,6 +514,16 @@ export default function BarProfileScreen() {
                 <AppText variant="label" color={colors.text.secondary}>Dirección</AppText>
                 <AppText variant="body" color={colors.text.primary}>{bar?.address}, {bar?.city}</AppText>
               </View>
+              {typeof bar?.latitude === 'number' && typeof bar?.longitude === 'number' && (
+                <TouchableOpacity
+                  style={[styles.copyButton, styles.actionButtonSpacing]}
+                  onPress={handleOpenInMaps}
+                  accessibilityRole="button"
+                  accessibilityLabel="Abrir en Mapas"
+                >
+                  <Ionicons name="navigate-outline" size={18} color={colors.brand.link} />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={styles.copyButton} onPress={copyAddress}>
                 <Ionicons name="copy-outline" size={18} color={colors.brand.link} />
               </TouchableOpacity>
@@ -505,6 +536,14 @@ export default function BarProfileScreen() {
                   <AppText variant="label" color={colors.text.secondary}>Teléfono</AppText>
                   <AppText variant="body" color={colors.text.primary}>{bar.phone}</AppText>
                 </View>
+                <TouchableOpacity
+                  style={[styles.copyButton, styles.actionButtonSpacing]}
+                  onPress={handleCallPhone}
+                  accessibilityRole="button"
+                  accessibilityLabel="Llamar"
+                >
+                  <Ionicons name="call" size={18} color={colors.brand.link} />
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.copyButton} onPress={copyPhone}>
                   <Ionicons name="copy-outline" size={18} color={colors.brand.link} />
                 </TouchableOpacity>
@@ -826,13 +865,7 @@ export default function BarProfileScreen() {
 
 
                     <AppText variant="body" color={colors.brand.accent} align="center" style={styles.upcomingMatchTimeSpacing}>
-                      {new Date(`${match.date} ${match.time}`).toLocaleString('es-ES', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatMatchDateTime(match.date, match.time)}
                     </AppText>
 
                     <AppText variant="caption" color={colors.text.secondary} align="center">
@@ -1019,11 +1052,14 @@ export default function BarProfileScreen() {
 
       if (barError) {
         console.error('Error fetching bar:', barError);
-        Alert.alert('Error', 'No se pudo cargar la información del bar');
+        // PGRST116 = el bar no existe o no es visible: se muestra "no encontrado".
+        // Cualquier otro error (red, Supabase caído) permite reintentar.
+        if ((barError as any).code !== 'PGRST116') setLoadError(true);
         return;
       }
 
       if (barData) {
+        setLoadError(false);
         setVerificationStatus((barData as any).verification_status || null);
         setVerificationNotes((barData as any).verification_notes || null);
         setCanShowMenuButton(true);
@@ -1082,7 +1118,7 @@ export default function BarProfileScreen() {
 
     } catch (error) {
       console.error('Error in fetchBarProfile:', error);
-      Alert.alert('Error', 'Ocurrió un error al cargar el perfil del bar');
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -1430,9 +1466,32 @@ export default function BarProfileScreen() {
   if (!bar) {
     return (
       <SafeAreaView style={styles.container} edges={['top','bottom']}>
-        <View style={styles.loadingContainer}>
-          <AppText variant="body">Bar no encontrado</AppText>
-        </View>
+        <Stack.Screen options={{ headerShown: false }} />
+        <TouchableOpacity
+          style={styles.errorBackButton}
+          onPress={handleBack}
+          accessibilityRole="button"
+          accessibilityLabel="Volver"
+        >
+          <Ionicons name="chevron-back" size={28} color={colors.text.primary} />
+        </TouchableOpacity>
+        {loadError ? (
+          <ErrorState
+            title="No se pudo cargar el bar"
+            subtitle="Comprueba tu conexión e inténtalo de nuevo."
+            onRetry={() => {
+              setLoading(true);
+              fetchBarProfile();
+            }}
+          />
+        ) : (
+          <ErrorState
+            title="Bar no encontrado"
+            subtitle="Puede que el bar ya no esté disponible en MatchMap."
+            retryLabel="Volver"
+            onRetry={handleBack}
+          />
+        )}
       </SafeAreaView>
     );
   }
@@ -2151,6 +2210,14 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  actionButtonSpacing: {
+    marginRight: spacing.sm,
+  },
+  errorBackButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    alignSelf: 'flex-start',
   },
   buttonRow: {
     flexDirection: 'row',

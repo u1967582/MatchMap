@@ -13,6 +13,7 @@ import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import HorizontalDateScroller from './HorizontalDateScroller';
+import { formatMatchTime } from '~/utils/dateFormat';
 
 interface Team {
   id: string;
@@ -248,10 +249,7 @@ export default function MatchPickerModal({
 
         <View style={styles.matchDetails}>
           <AppText style={styles.matchTime}>
-            {new Date(`${item.date} ${item.time}`).toLocaleTimeString('es-ES', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+            {formatMatchTime(item.date, item.time)}
           </AppText>
           <AppText style={styles.competitionName}>
             {item.competition?.name || 'Competición'}

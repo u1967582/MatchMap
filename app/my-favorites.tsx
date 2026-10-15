@@ -23,6 +23,7 @@ import {
   AppText,
   AppCard,
   EmptyState,
+  ErrorState,
   SkeletonCard,
   toast,
   colors,
@@ -147,6 +148,7 @@ export default function MyFavoritesScreen() {
   const [favoriteBars, setFavoriteBars] = useState<FavoriteBar[]>([]);
   const [filteredBars, setFilteredBars] = useState<FavoriteBar[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
@@ -184,8 +186,12 @@ export default function MyFavoritesScreen() {
       const bars = await getFavoriteBars();
       setFavoriteBars(bars as unknown as FavoriteBar[]);
       setFilteredBars(bars as unknown as FavoriteBar[]);
-    } catch {}
-    finally { setLoading(false); }
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [getFavoriteBars]);
 
   const applyFilters = useCallback(() => {
@@ -334,7 +340,13 @@ export default function MyFavoritesScreen() {
       </View>
 
       <View style={styles.content}>
-        {filteredBars.length > 0 ? (
+        {loadError ? (
+          <ErrorState
+            title="No se pudieron cargar tus favoritos"
+            subtitle="Comprueba tu conexión e inténtalo de nuevo."
+            onRetry={loadFavoriteBars}
+          />
+        ) : filteredBars.length > 0 ? (
           <FlatList
             data={listRows}
             renderItem={renderRow}

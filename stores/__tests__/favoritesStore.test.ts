@@ -234,15 +234,17 @@ describe('getFavoriteBars', () => {
     expect(bars[0].image_url).toBeNull();
   });
 
-  it('devuelve [] si Supabase falla', async () => {
+  it('lanza el error si Supabase falla (para mostrar "Reintentar" y no el estado vacío)', async () => {
     useFavoritesStore.setState({ userId: 'user-1' });
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     mockedFrom.mockReturnValueOnce(
       createQueryBuilderMock({ data: null, error: { message: 'boom' } })
     );
 
-    const bars = await useFavoritesStore.getState().getFavoriteBars();
-
-    expect(bars).toEqual([]);
+    await expect(useFavoritesStore.getState().getFavoriteBars()).rejects.toEqual({
+      message: 'boom',
+    });
+    (console.error as jest.Mock).mockRestore();
   });
 });
 
