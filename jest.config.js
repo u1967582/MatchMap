@@ -2,6 +2,10 @@
 module.exports = {
   preset: 'jest-expo',
   setupFiles: ['<rootDir>/jest.setup.ts'],
+  // Con la caché de transformación vacía (CI, sesiones en la nube, worktree
+  // nuevo) la primera prueba de algunas suites tarda más de los 5 s por defecto
+  // en transformar sus imports y falla por timeout aunque el código esté bien.
+  testTimeout: 30000,
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/.expo/',
