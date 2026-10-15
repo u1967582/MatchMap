@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Keyboard } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Keyboard, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -83,7 +83,7 @@ export default function WriteReviewScreen() {
   
   const router = useRouter();
   const { barId } = useLocalSearchParams<{ barId: string }>();
-  const { createReview, updateReview, getUserReview } = useReviews();
+  const { createReview, updateReview, getUserReview, deleteReview } = useReviews();
 
   // Get current user
   useEffect(() => {
@@ -184,6 +184,29 @@ export default function WriteReviewScreen() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!existingReview) return;
+    setLoading(true);
+    try {
+      const success = await deleteReview(existingReview.id);
+      if (success) {
+        toast.success('Reseña eliminada');
+        router.back();
+      } else {
+        toast.error('No se pudo eliminar la reseña', 'Inténtalo de nuevo');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    Alert.alert('Eliminar reseña', '¿Seguro que quieres eliminar tu reseña? No se puede deshacer.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: handleDelete },
+    ]);
+  };
+
   const handleBack = () => {
     router.back();
   };
@@ -193,7 +216,7 @@ export default function WriteReviewScreen() {
       <Stack.Screen
         options={{
           headerShown: false,
-          title: 'Write a Review'
+          title: 'Escribir reseña'
         }}
       />
 
@@ -210,7 +233,7 @@ export default function WriteReviewScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={existingReview ? styles.scrollContentWithDelete : styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -325,6 +348,16 @@ export default function WriteReviewScreen() {
           loading={loading}
           disabled={!rating || !comment.trim() || loading}
         />
+        {existingReview && (
+          <View style={styles.deleteButtonSpacing}>
+            <AppButton
+              text="Eliminar reseña"
+              onPress={confirmDelete}
+              variant="ghost"
+              disabled={loading}
+            />
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -350,6 +383,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100, // Space for fixed button
+  },
+  scrollContentWithDelete: {
+    paddingBottom: 160, // Botón fijo + "Eliminar reseña"
+  },
+  deleteButtonSpacing: {
+    marginTop: spacing.sm,
   },
 
   // Bar Info - Minimal Design

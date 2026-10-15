@@ -1089,15 +1089,15 @@ export default function BarProfileScreen() {
           category,
           bar_food_types: ((barData as any).bar_food_types || []).map((item: any) => ({
             food_type_id: item.food_type_id,
-            food_type: { name: item.food_types?.name || 'Unknown' },
+            food_type: { name: item.food_types?.name || 'Otro' },
           })),
           bar_selected_tv_features: ((barData as any).bar_selected_tv_features || []).map((item: any) => ({
             tv_feature_id: item.tv_feature_id,
-            tv_feature: { name: item.bar_tv_features?.name || 'Unknown' },
+            tv_feature: { name: item.bar_tv_features?.name || 'Otro' },
           })),
           bar_selected_features: ((barData as any).bar_selected_features || []).map((item: any) => ({
             feature_id: item.feature_id,
-            feature: { name: item.bar_features?.name || 'Unknown' },
+            feature: { name: item.bar_features?.name || 'Otro' },
           })),
           is_betting_venue: (barData as any).is_betting_venue ?? false,
         });
