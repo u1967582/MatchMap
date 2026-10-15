@@ -54,6 +54,12 @@ Estado inicial verificado el 2026-10-10 contra prod: los bloqueantes 1–4 de `H
 ### Reglas
 - Nunca aplicar migraciones, tocar datos de prod ni cambiar paneles desde la nube.
 - No ejecutar `supabase db push` en bloque: la migración `20260518000000_drop_scarves_collectibles` es destructiva y está pendiente de decisión (D3).
+- **Recursos del Mac (16 GB)** — el 2026-10-15 se agotó la RAM con 7 agentes locales en paralelo:
+  - Máximo **2 sesiones locales** trabajando a la vez y solo **una** ejecutando jest/tsc en cada momento. El resto de áreas, en la nube.
+  - jest va limitado a 3 workers (`maxWorkers`) y recicla los que pasan de 512 MB.
+  - El hook de pre-commit ejecuta `typecheck` + **toda** la suite: para commits WIP usar `--no-verify` y verificar una sola vez al final.
+  - Commit WIP (y push) frecuente: si el Mac se cuelga, no se pierde nada.
+  - Antes de lanzar trabajo, comprobar con `ListAgents` qué hacen las otras sesiones (Claude Desktop, Cursor, CLI).
 - Una PR por área, pequeña y revisable. Si un área crece, partirla (`01a`, `01b`).
 - Las áreas que tocan los mismos ficheros no se lanzan a la vez (ver dependencias del calendario).
 - Nada de datos personales (emails, tokens) en logs, PRs ni en estos documentos.
@@ -81,17 +87,17 @@ Leyenda de ejecución: ☁️ nube · 💻 local · 👤 tú. Estado: ⬜ pendie
 
 | Área | Prioridad | Ejecución | Estado | PR | Notas |
 |---|---|---|---|---|---|
-| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | ⬜ | | Hallazgos 1–4, 11, 13 |
-| [02 Autenticación y cuenta](areas/02-auth-cuenta.md) | 🔴 | ☁️ + 💻 + 👤 | ⬜ | | Hallazgos 8, 9 |
-| [03 Flujos de usuario](areas/03-flujos-usuario.md) | 🟠 | ☁️ | ⬜ | | Hallazgo 16 |
+| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | | WIP sin verificar: migración `20261015120000_audit01_security_rls_storage.sql` + tests RLS. Hallazgos 1–4, 11, 13 |
+| [02 Autenticación y cuenta](areas/02-auth-cuenta.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | WIP sin verificar (auth, reset, perfil). Hallazgos 8, 9 |
+| [03 Flujos de usuario](areas/03-flujos-usuario.md) | 🟠 | ☁️ | 🔄 | | WIP sin verificar; migración renombrada a `20261015130000_…` (chocaba con la de 01). Hallazgo 16 |
 | [04 Flujos de propietario y admin](areas/04-flujos-propietario-admin.md) | 🟠 | ☁️ | ⬜ | | Depende de 01 (subidas) |
 | [05 Pagos Boost](areas/05-pagos-boost.md) | 🔴 | 💻 + 👤 | ⬜ | | Hallazgo 7 |
 | [06 Notificaciones push](areas/06-push.md) | 🔴 | 👤 + 💻 | ⬜ | | Hallazgo 6, depende de D1 |
-| [07 Backend: edge functions, crons y migraciones](areas/07-backend.md) | 🟠 | ☁️ + 💻 | ⬜ | | Hallazgos 10, 12, 21 |
-| [08 Estabilidad, calidad y monitorización](areas/08-estabilidad-calidad.md) | 🟠 | ☁️ | ⬜ | | Hallazgos 15, 17, 18 |
+| [07 Backend: edge functions, crons y migraciones](areas/07-backend.md) | 🟠 | ☁️ + 💻 | 🔄 | | WIP sin verificar; migración `20261020000000_perf_rls_initplan_and_fk_indexes.sql`. Hallazgos 10, 12, 21 |
+| [08 Estabilidad, calidad y monitorización](areas/08-estabilidad-calidad.md) | 🟠 | ☁️ | 🔄 | | 2 commits + límites de jest. Hallazgos 15, 17, 18 |
 | [09 Rendimiento](areas/09-rendimiento.md) | 🟡 | ☁️ + 💻 | ⬜ | | Solo regresiones graves antes del lanzamiento |
-| [10 Builds y configuración de tiendas](areas/10-builds-config.md) | 🔴 | ☁️ + 💻 + 👤 | ⬜ | | Hallazgos 5, 19, 20 |
-| [11 Cumplimiento de tiendas y legal](areas/11-cumplimiento-legal.md) | 🔴 | ☁️ + 👤 | ⬜ | | Hallazgo 22 |
+| [10 Builds y configuración de tiendas](areas/10-builds-config.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | 2 commits. Hallazgos 5, 19, 20 |
+| [11 Cumplimiento de tiendas y legal](areas/11-cumplimiento-legal.md) | 🔴 | ☁️ + 👤 | 🔄 | | 1 commit + WIP de ficha de tienda. Hallazgo 22 |
 | [12 QA manual en dispositivos](areas/12-qa-manual.md) | 🔴 | 👤 + 💻 | ⬜ | | Última puerta antes de enviar |
 | [13 Contenido y datos](areas/13-contenido-datos.md) | 🟠 | 👤 + 💻 | ⬜ | | Hallazgo 14 |
 
