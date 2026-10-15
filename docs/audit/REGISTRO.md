@@ -25,3 +25,12 @@ Una entrada por cada cambio: PR mergeada, migración aplicada en prod, ajuste en
 - **Verificación:** estado inicial comprobado en prod con `pg_policies`: los bloqueantes 1–4 siguen abiertos.
 - **Rollback:** n/a.
 - **Quién:** 💻 local.
+
+### 2026-10-15 · Área 10 · Reparto con la sesión local de release
+- **Tipo:** decisión
+- **Qué:** la sesión local se queda variables de EAS, credenciales, builds, submit y el runbook; los cambios en `eas.json`/`app.json` se encolan en `areas/10-builds-config.md` (R1–R9).
+- **Por qué:** evitar conflictos con la rama `audit/10-builds-config`.
+- **Dónde:** rama `docs/audit-plan`, rama `docs/release-runbook`.
+- **Verificación:** n/a.
+- **Rollback:** n/a.
+- **Quién:** 💻 local.

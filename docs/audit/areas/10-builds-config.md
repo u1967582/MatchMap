@@ -22,6 +22,22 @@ Generar builds de producción firmados, reproducibles y con la configuración co
 - [ ] **Iconos y splash:** iOS sin transparencia; icono adaptativo de Android; splash en modo claro y oscuro.
 - [ ] 💻 **Builds:** `eas build --profile production --platform all` sin warnings bloqueantes; subir a TestFlight y a la pista de prueba interna/cerrada de Play.
 
+## Cola desde la sesión local de release (2026-10-15)
+La sesión local 💻 `eas-build-submit-pipeline` se encarga de variables de EAS, credenciales, builds reales y submit, y del runbook `docs/deployment/RELEASE_RUNBOOK.md` (rama `docs/release-runbook`). Lo que sigue son cambios de **ficheros** que pertenecen a esta área:
+
+| ID | Sev. | Cambio pedido | Motivo |
+|---|---|---|---|
+| R2 | 🔴 | En el perfil `production` poner `"autoIncrement": true` a nivel de perfil (iOS y Android), no solo en `android`. Unificar `production-ios` en `production`. | Con `appVersionSource: remote` (iOS 11 · Android 31 a 2026-10-15), un build iOS con `production` repite el número de build y App Store Connect lo rechaza. |
+| R3 | 🟡 | Quitar `ios.buildNumber` y `android.versionCode` de `app.json`. | Se ignoran con versión remota (EAS lo avisa) y confunden. |
+| R1 | 🟠 | Quitar todos los bloques `env` de `eas.json` y añadir `"environment": "production"/"preview"/"development"` a cada perfil. | Las 6 variables `EXPO_PUBLIC_*` ya están creadas en EAS Environment Variables (production, preview y development) por la sesión local. |
+| R4 | 🟠 | Bloque `submit.production`: `ios.ascAppId` 6758625895 + `ios.appleTeamId` K2C9W5KCNL (sin `appleId` si hay API key) y `android.track: "internal"`, `android.releaseStatus: "draft"`. Sin rutas a ficheros de claves: las credenciales viven en EAS. | Submit sin 2FA y Android sin configurar. |
+| R5 | 🟡 | Eliminar `MAPBOX_DOWNLOADS_TOKEN` (es un `pk.`). | Los builds de Android compilan sin necesitar un token de descarga secreto. |
+| R7 | 🟡 | `cli.version` a `">= 16.0.0"`. | La CLI local ya se actualiza a la última. |
+| R8 | 🟠 | **Decisión del usuario:** añadir `expo-updates` (`runtimeVersion: { policy: "appVersion" }`, `channel` por perfil) antes del primer build de lanzamiento. | Sin OTA no hay hotfix rápido tras el lanzamiento; añadirlo después exige otra versión en tienda. |
+| R9 | 🟡 | `android.adaptiveIcon.foregroundImage` → `./assets/adaptive-icon.png` (comprobar la zona segura de 66 %). | Ahora usa `icon.png` y el logo puede recortarse en lanzadores con máscara circular. |
+
+Perfiles mínimos esperados: `development` (developmentClient, internal, + `ios.simulator` en una variante si se necesita), `preview` (internal, apk), `production` (store, app-bundle, autoIncrement). Avisar a la sesión local cuando la PR esté mergeada: los builds de producción se lanzan después.
+
 ## Criterios de aceptación
 - Build de producción de ambas plataformas instalada desde TestFlight y Play (prueba interna) y abre sin errores.
 
