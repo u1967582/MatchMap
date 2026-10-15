@@ -1,9 +1,9 @@
-jest.mock('~/utils/supabase');
-
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { supabase } from '~/utils/supabase';
 import { createQueryBuilderMock } from '~/test-utils/mockSupabase';
 import { useFilterData } from '~/hooks/useFilterData';
+
+jest.mock('~/utils/supabase');
 
 const mockedFrom = supabase.from as jest.Mock;
 

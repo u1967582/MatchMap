@@ -1,3 +1,10 @@
+import React from 'react';
+import { Text } from 'react-native';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react-native';
+import { supabase } from '~/utils/supabase';
+import * as RC from '~/utils/revenuecat';
+import { RevenueCatProvider, useRevenueCat } from '~/contexts/RevenueCatContext';
+
 jest.mock('~/utils/supabase');
 jest.mock('~/utils/revenuecat', () => ({
   initializeRevenueCat: jest.fn(async () => {}),
@@ -7,13 +14,6 @@ jest.mock('~/utils/revenuecat', () => ({
   restorePurchases: jest.fn(),
   syncRevenueCatUser: jest.fn(async () => {}),
 }));
-
-import React from 'react';
-import { Text } from 'react-native';
-import { act, render, renderHook, screen, waitFor } from '@testing-library/react-native';
-import { supabase } from '~/utils/supabase';
-import * as RC from '~/utils/revenuecat';
-import { RevenueCatProvider, useRevenueCat } from '~/contexts/RevenueCatContext';
 
 const mockedSupabase = supabase as any;
 const rc = RC as jest.Mocked<typeof RC>;

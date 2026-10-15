@@ -1,10 +1,10 @@
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
 
-jest.mock('~/utils/supabase');
-
 import { supabase } from '~/utils/supabase';
 import { getBarPlanInfo, getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
 import { CAP_BY_TIER } from '~/lib/planCapabilities';
+
+jest.mock('~/utils/supabase');
 
 const mockedFrom = supabase.from as jest.Mock;
 

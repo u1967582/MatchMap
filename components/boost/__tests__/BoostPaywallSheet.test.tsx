@@ -1,6 +1,9 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 
+import { useBoostOfferings, type BoostPackageInfo } from '~/hooks/useBoostOfferings';
+import BoostPaywallSheet from '~/components/boost/BoostPaywallSheet';
+
 const mockPresent = jest.fn();
 const mockDismiss = jest.fn();
 
@@ -34,9 +37,6 @@ jest.mock('@gorhom/bottom-sheet', () => {
 });
 
 jest.mock('~/hooks/useBoostOfferings');
-
-import { useBoostOfferings, type BoostPackageInfo } from '~/hooks/useBoostOfferings';
-import BoostPaywallSheet from '~/components/boost/BoostPaywallSheet';
 
 const { __getLastBottomSheetModalProps } = jest.requireMock('@gorhom/bottom-sheet');
 const mockedUseBoostOfferings = useBoostOfferings as jest.Mock;
