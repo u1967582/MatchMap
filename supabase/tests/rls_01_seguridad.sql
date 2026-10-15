@@ -68,10 +68,19 @@ UPDATE public.bars SET verification_status = 'approved'
 WHERE id IN ('0b0b0b0b-0000-4000-8000-0000000b0002', '0b0b0b0b-0000-4000-8000-0000000b0003');
 UPDATE public.bars SET owner_id = NULL WHERE id = '0b0b0b0b-0000-4000-8000-0000000b0003';
 
+-- Reseña de B en el bar aprobado (para comprobar que A no puede tocarla).
+INSERT INTO public.reviews (user_id, bar_id, rating, comment)
+VALUES ('0a0a0a0a-0000-4000-8000-0000000a0002', '0b0b0b0b-0000-4000-8000-0000000b0002', 5, 'AUDIT01 B');
+
 -- Documento de reclamación de A (insertado como postgres, sin pasar por RLS).
 INSERT INTO storage.objects (bucket_id, name, owner)
 VALUES ('bar-claim-documents', '0a0a0a0a-0000-4000-8000-0000000a0001/0b0b0b0b-0000-4000-8000-0000000b0003-1.jpg',
         '0a0a0a0a-0000-4000-8000-0000000a0001');
+
+-- Foto ya existente del bar aprobado de OWN (para probar UPDATE/DELETE ajenos).
+INSERT INTO storage.objects (bucket_id, name, owner)
+VALUES ('bar-images', '0b0b0b0b-0000-4000-8000-0000000b0002/bar/bar_0_seed.jpg',
+        '0a0a0a0a-0000-4000-8000-0000000a0003');
 
 -- ------------------------------------------------------------- invitado --
 SET LOCAL ROLE authenticated;
@@ -114,6 +123,21 @@ BEGIN
     RAISE EXCEPTION 'AUDIT01 FAIL: invitado creó bar_request';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  -- Reseñas: tampoco (y menos aún vía la legacy "Reviews: Insert by authenticated users")
+  BEGIN
+    INSERT INTO public.reviews (user_id, bar_id, rating, comment)
+    VALUES ('0a0a0a0a-0000-4000-8000-0000000a0005', '0b0b0b0b-0000-4000-8000-0000000b0002', 5, 'AUDIT01');
+    RAISE EXCEPTION 'AUDIT01 FAIL: invitado creó una reseña';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  -- Storage: no puede sobrescribir ni borrar imágenes de bares
+  -- (antes "Users can update/delete bar images" lo permitía)
+  UPDATE storage.objects SET name = name WHERE bucket_id = 'bar-images';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'AUDIT01 FAIL: invitado modificó % ficheros', n; END IF;
+  DELETE FROM storage.objects WHERE bucket_id = 'bar-images';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'AUDIT01 FAIL: invitado borró % ficheros', n; END IF;
   -- Favoritos (ya existía "No anonymous", se comprueba que sigue)
   BEGIN
     INSERT INTO public.favorites (user_id, bar_id)
@@ -231,6 +255,39 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
 
+  -- Reseña en bar aprobado: sí. El recálculo de rating (trigger SECURITY
+  -- DEFINER) no debe chocar con trg_bars_protect_privileged_columns.
+  INSERT INTO public.reviews (user_id, bar_id, rating, comment)
+  VALUES ('0a0a0a0a-0000-4000-8000-0000000a0001', '0b0b0b0b-0000-4000-8000-0000000b0002', 4, 'AUDIT01');
+
+  -- No puede editar ni borrar la reseña de otro (legacy "Reviews: Update own" fuera)
+  UPDATE public.reviews SET rating = 1 WHERE user_id = '0a0a0a0a-0000-4000-8000-0000000a0002';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'AUDIT01 FAIL: usuario editó una reseña ajena'; END IF;
+  DELETE FROM public.reviews WHERE user_id = '0a0a0a0a-0000-4000-8000-0000000a0002';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'AUDIT01 FAIL: usuario borró una reseña ajena'; END IF;
+
+  -- No puede borrar un bar ajeno ni escribir en sus tablas hijas
+  DELETE FROM public.bars WHERE id = '0b0b0b0b-0000-4000-8000-0000000b0002';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'AUDIT01 FAIL: usuario borró un bar ajeno'; END IF;
+  BEGIN
+    INSERT INTO public.bar_images (bar_id) VALUES ('0b0b0b0b-0000-4000-8000-0000000b0002');
+    RAISE EXCEPTION 'AUDIT01 FAIL: usuario añadió una foto a un bar ajeno';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO public.bar_menus (bar_id) VALUES ('0b0b0b0b-0000-4000-8000-0000000b0002');
+    RAISE EXCEPTION 'AUDIT01 FAIL: usuario añadió un menú a un bar ajeno';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
+  -- No puede borrar ficheros de bar-images de otro bar
+  DELETE FROM storage.objects WHERE bucket_id = 'bar-images';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'AUDIT01 FAIL: usuario borró % ficheros de bar-images', n; END IF;
+
   -- Storage bar-images: no es dueño de ningún bar
   BEGIN
     INSERT INTO storage.objects (bucket_id, name) VALUES ('bar-images', '0b0b0b0b-0000-4000-8000-0000000b0002/bar/bar_9.jpg');
@@ -277,6 +334,63 @@ BEGIN
 END $$;
 
 RESET ROLE;
+
+-- ------------------------------------------- comprobaciones estructurales --
+DO $$
+DECLARE
+  n int;
+  v text;
+BEGIN
+  -- El recálculo de rating de la reseña de A llegó a bars (2 reseñas).
+  SELECT review_count INTO n FROM public.bars WHERE id = '0b0b0b0b-0000-4000-8000-0000000b0002';
+  IF n IS DISTINCT FROM 2 THEN
+    RAISE EXCEPTION 'AUDIT01 FAIL: review_count = % tras la reseña de A (se esperaba 2)', n;
+  END IF;
+
+  -- Ninguna política genérica de prod sigue viva en storage.objects.
+  SELECT string_agg(policyname, ', ') INTO v FROM pg_policies
+  WHERE schemaname = 'storage' AND tablename = 'objects'
+    AND policyname IN ('Allow read', 'Allow read access to objects', 'Allow insert for authenticated users',
+                       'Allow upload', 'Users can update bar images', 'Users can delete bar images');
+  IF v IS NOT NULL THEN RAISE EXCEPTION 'AUDIT01 FAIL: siguen las políticas de Storage %', v; END IF;
+
+  -- Ni rastro de las legacy de bars, reviews y favorites.
+  SELECT string_agg(tablename || '.' || policyname, ', ') INTO v FROM pg_policies
+  WHERE schemaname = 'public'
+    AND policyname IN ('Bar owner: update own bar', 'Bar owner: delete own bar', 'Bar owner: insert own bar',
+                       'Reviews: Insert by authenticated users', 'Reviews: Update own', 'Reviews: Delete own',
+                       'Favorites: Self insert', 'Favorites: Self read', 'Favorites: Self delete');
+  IF v IS NOT NULL THEN RAISE EXCEPTION 'AUDIT01 FAIL: siguen las políticas legacy %', v; END IF;
+
+  -- Tablas hijas de bars: solo las canónicas pueden escribir.
+  SELECT string_agg(tablename || '.' || policyname, ', ') INTO v FROM pg_policies
+  WHERE schemaname = 'public'
+    AND tablename IN ('bar_images', 'bar_menus', 'bar_food_types', 'bar_languages',
+                      'bar_selected_features', 'bar_selected_tv_features')
+    AND permissive = 'PERMISSIVE' AND cmd IN ('INSERT', 'UPDATE', 'DELETE', 'ALL')
+    AND policyname NOT IN (tablename || '_insert_owner', tablename || '_update_owner', tablename || '_delete_owner');
+  IF v IS NOT NULL THEN RAISE EXCEPTION 'AUDIT01 FAIL: políticas de escritura no canónicas en %', v; END IF;
+
+  -- Límites de buckets (HALLAZGOS #13).
+  SELECT count(*) INTO n FROM storage.buckets
+  WHERE id IN ('avatars', 'bar-images')
+    AND file_size_limit = 5242880
+    AND allowed_mime_types @> ARRAY['image/jpeg', 'image/png', 'image/webp'];
+  IF n <> 2 THEN RAISE EXCEPTION 'AUDIT01 FAIL: avatars/bar-images sin límites de tamaño o MIME'; END IF;
+  IF EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'bar-claim-documents' AND public) THEN
+    RAISE EXCEPTION 'AUDIT01 FAIL: bar-claim-documents es público';
+  END IF;
+
+  -- SECURITY DEFINER (HALLAZGOS #11): fn_claim_scarf cerrada y ningún trigger ejecutable.
+  SELECT string_agg(p.oid::regprocedure::text, ', ') INTO v
+  FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+  WHERE ns.nspname = 'public' AND p.prosecdef
+    AND (p.proname = 'fn_claim_scarf' OR p.prorettype = 'trigger'::regtype)
+    AND (has_function_privilege('anon', p.oid, 'EXECUTE')
+         OR has_function_privilege('authenticated', p.oid, 'EXECUTE'));
+  IF v IS NOT NULL THEN RAISE EXCEPTION 'AUDIT01 FAIL: ejecutables por anon/authenticated: %', v; END IF;
+END $$;
+
 SELECT 'AUDIT01 RLS OK' AS resultado;
 
 -- ------------------------------------------------- diagnóstico (lectura) --

@@ -33,7 +33,18 @@
 --   5. SECURITY DEFINER: REVOKE EXECUTE FROM anon en las funciones que no se
 --      usan dentro de políticas, y de authenticated en las funciones trigger.
 --
--- Rollback: ver docs/audit/areas/01-seguridad-supabase.md (sección Rollback).
+-- Pruebas: supabase/tests/rls_01_seguridad.sql (BEGIN … ROLLBACK, no deja datos).
+--
+-- Rollback (si algo falla en prod tras aplicarla):
+--   - Subidas rotas: el bloqueo está en las políticas de storage.objects;
+--     se pueden recrear temporalmente las genéricas, p. ej.
+--       CREATE POLICY "Allow upload" ON storage.objects FOR INSERT TO public WITH CHECK (true);
+--     (vuelve a abrir el hallazgo #1, solo como medida de emergencia).
+--   - Edición de bar rota: DROP TRIGGER trg_bars_protect_privileged_columns ON public.bars;
+--   - Una RPC deja de funcionar para invitados/usuarios:
+--       GRANT EXECUTE ON FUNCTION public.<funcion>(<args>) TO authenticated;
+--   - Límites de buckets: UPDATE storage.buckets SET file_size_limit = NULL,
+--       allowed_mime_types = NULL WHERE id IN ('avatars', 'bar-images');
 -- ============================================================================
 
 
@@ -122,6 +133,10 @@ USING (
 --       <barId>/posts/…                 crear/editar post
 --       <autoPreBarId>/bar|menu/…       registro en frío (solo super admin)
 --     El SELECT (no público) es necesario para upsert: true.
+--     OJO: dentro del EXISTS hay que escribir objects.name. public.bars también
+--     tiene una columna "name" y, sin calificar, la subconsulta compararía el
+--     id del bar con su propio nombre (nunca coincide → ningún dueño podría
+--     subir fotos).
 DROP POLICY IF EXISTS "bar_images_storage_select_owner_admin" ON storage.objects;
 CREATE POLICY "bar_images_storage_select_owner_admin"
 ON storage.objects FOR SELECT TO authenticated
@@ -131,7 +146,7 @@ USING (
     public.is_super_admin()
     OR EXISTS (
       SELECT 1 FROM public.bars b
-      WHERE b.id::text = (storage.foldername(name))[1]
+      WHERE b.id::text = (storage.foldername(objects.name))[1]
         AND b.owner_id = (SELECT auth.uid())
     )
   )
@@ -146,7 +161,7 @@ WITH CHECK (
     public.is_super_admin()
     OR EXISTS (
       SELECT 1 FROM public.bars b
-      WHERE b.id::text = (storage.foldername(name))[1]
+      WHERE b.id::text = (storage.foldername(objects.name))[1]
         AND b.owner_id = (SELECT auth.uid())
     )
   )
@@ -161,7 +176,7 @@ USING (
     public.is_super_admin()
     OR EXISTS (
       SELECT 1 FROM public.bars b
-      WHERE b.id::text = (storage.foldername(name))[1]
+      WHERE b.id::text = (storage.foldername(objects.name))[1]
         AND b.owner_id = (SELECT auth.uid())
     )
   )
@@ -172,7 +187,7 @@ WITH CHECK (
     public.is_super_admin()
     OR EXISTS (
       SELECT 1 FROM public.bars b
-      WHERE b.id::text = (storage.foldername(name))[1]
+      WHERE b.id::text = (storage.foldername(objects.name))[1]
         AND b.owner_id = (SELECT auth.uid())
     )
   )
@@ -187,7 +202,7 @@ USING (
     public.is_super_admin()
     OR EXISTS (
       SELECT 1 FROM public.bars b
-      WHERE b.id::text = (storage.foldername(name))[1]
+      WHERE b.id::text = (storage.foldername(objects.name))[1]
         AND b.owner_id = (SELECT auth.uid())
     )
   )
@@ -471,11 +486,16 @@ BEGIN
     EXECUTE format('CREATE POLICY %I ON public.%I FOR DELETE TO authenticated USING (' || owner_expr || ')',
       t || '_delete_owner', t, t);
 
+    -- Cualquier otra política PERMISSIVE de escritura (legacy "Bar owner: …",
+    -- "Enable insert for authenticated users", FOR ALL…) se suma por OR a las
+    -- canónicas y las anula, así que se borra. Las de lectura (SELECT) no se
+    -- tocan. Las RESTRICTIVE tampoco (solo pueden restringir más).
     FOR pol IN
       SELECT policyname FROM pg_policies
       WHERE schemaname = 'public' AND tablename = t
-        AND policyname ILIKE 'Bar owner:%'
+        AND permissive = 'PERMISSIVE'
         AND cmd IN ('INSERT', 'UPDATE', 'DELETE', 'ALL')
+        AND policyname NOT IN (t || '_insert_owner', t || '_update_owner', t || '_delete_owner')
     LOOP
       RAISE NOTICE 'audit01: drop policy "%" on public.%', pol.policyname, t;
       EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', pol.policyname, t);
@@ -493,7 +513,10 @@ DECLARE
   t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
-    'bar_reports', 'bar_claims', 'bar_requests', 'support_tickets', 'review_likes'
+    'bar_reports', 'bar_claims', 'bar_requests', 'support_tickets', 'review_likes',
+    -- reviews y favorites ya tienen su "No anonymous …" en prod; se añade la
+    -- nuestra también para no depender de una política no versionada.
+    'reviews', 'favorites'
   ] LOOP
     IF to_regclass('public.' || t) IS NULL THEN
       RAISE NOTICE 'audit01: tabla public.% no existe, se omite', t;
