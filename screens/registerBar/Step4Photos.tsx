@@ -15,6 +15,7 @@ import { DraggableImageGrid } from '~/components/images';
 import type { DraggableImage } from '~/components/images';
 import { useFocusEffect } from '@react-navigation/native';
 import { createAutoPreRegisterBar } from '~/services/bars';
+import { barImagePath, STORAGE_BUCKETS } from '~/utils/storagePaths';
 
 interface ImageItem {
   id: string;
@@ -65,7 +66,7 @@ const Step4Photos: React.FC = () => {
 
       // Crear path del archivo
       const timestamp = Date.now();
-      const fileName = `${barId}/${type}/${type}_${order}_${timestamp}.jpg`;
+      const fileName = barImagePath(barId, type, `${order}_${timestamp}`);
 
       // Método 1: Usando base64 (más confiable en simuladores iOS)
       let uploadData, uploadError;
@@ -94,7 +95,7 @@ const Step4Photos: React.FC = () => {
         console.log('📦 ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
 
         const result = await supabase.storage
-          .from('bar-images')
+          .from(STORAGE_BUCKETS.barImages)
           .upload(fileName, arrayBuffer, {
             contentType: 'image/jpeg',
             upsert: true,
@@ -126,7 +127,7 @@ const Step4Photos: React.FC = () => {
         }
 
         const result = await supabase.storage
-          .from('bar-images')
+          .from(STORAGE_BUCKETS.barImages)
           .upload(fileName, blob, {
             contentType: blob.type || 'image/jpeg',
             upsert: true,
@@ -147,7 +148,7 @@ const Step4Photos: React.FC = () => {
 
       // Obtener URL pública
       const { data: urlData } = supabase.storage
-        .from('bar-images')
+        .from(STORAGE_BUCKETS.barImages)
         .getPublicUrl(fileName);
 
       const publicUrl = urlData?.publicUrl;
@@ -213,7 +214,7 @@ const Step4Photos: React.FC = () => {
 
       // Upload to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('bar-images')
+        .from(STORAGE_BUCKETS.barImages)
         .upload(filePath, arrayBuffer.buffer, {
           contentType: 'image/jpeg',
           upsert: false,
@@ -225,7 +226,7 @@ const Step4Photos: React.FC = () => {
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('bar-images')
+        .from(STORAGE_BUCKETS.barImages)
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl;

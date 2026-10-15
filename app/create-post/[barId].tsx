@@ -18,6 +18,7 @@ import { supabase } from '~/utils/supabase';
 import { toast, AppText } from '~/components/ds';
 import CustomButton from '~/components/ui/CustomButton';
 import ScreenTitle from '~/components/ui/ScreenTitle';
+import { barPostImagePath, STORAGE_BUCKETS } from '~/utils/storagePaths';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
 import { CAP_BY_TIER, type Capabilities, type Tier } from '~/lib/planCapabilities';
 
@@ -160,7 +161,7 @@ export default function CreatePostScreen() {
       }
 
       const timestamp = Date.now();
-      const fileName = `${barId}/posts/post_${postId}_${timestamp}.jpg`;
+      const fileName = barPostImagePath(barId as string, postId, timestamp);
 
       // Use the same robust upload method as profile images
       try {
@@ -177,7 +178,7 @@ export default function CreatePostScreen() {
         }
 
         const { data, error } = await supabase.storage
-          .from('bar-images')
+          .from(STORAGE_BUCKETS.barImages)
           .upload(fileName, arrayBuffer, {
             contentType: 'image/jpeg',
             upsert: true,
@@ -186,7 +187,7 @@ export default function CreatePostScreen() {
         if (error) throw error;
 
         const { data: urlData } = supabase.storage
-          .from('bar-images')
+          .from(STORAGE_BUCKETS.barImages)
           .getPublicUrl(fileName);
 
         return urlData?.publicUrl || null;
@@ -199,7 +200,7 @@ export default function CreatePostScreen() {
         if (blob.size === 0) throw new Error('Empty blob');
 
         const { data, error } = await supabase.storage
-          .from('bar-images')
+          .from(STORAGE_BUCKETS.barImages)
           .upload(fileName, blob, {
             contentType: blob.type || 'image/jpeg',
             upsert: true,
@@ -208,7 +209,7 @@ export default function CreatePostScreen() {
         if (error) throw error;
 
         const { data: urlData } = supabase.storage
-          .from('bar-images')
+          .from(STORAGE_BUCKETS.barImages)
           .getPublicUrl(fileName);
 
         return urlData?.publicUrl || null;

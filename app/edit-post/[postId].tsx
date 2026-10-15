@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { resizeForUpload } from '~/utils/imageResize';
 import { supabase } from '~/utils/supabase';
 import { toast, AppText } from '~/components/ds';
+import { barPostImagePath, STORAGE_BUCKETS } from '~/utils/storagePaths';
 import { getBarTierAndCapabilities } from '~/lib/getBarPlanInfo';
 import { CAP_BY_TIER, type Capabilities, type Tier } from '~/lib/planCapabilities';
 
@@ -214,14 +215,16 @@ export default function EditPostScreen() {
       // Upload new image if changed
       if (imageUrl && imageUrl !== post.image_url && !imageUrl.startsWith('http')) {
         try {
-          const fileName = `post-${post.id}-${Date.now()}.jpg`;
+          // Mismo bucket y ruta que create-post: la primera carpeta es el bar
+          // (el bucket post-images no existe y la política exige <barId>/…).
+          const fileName = barPostImagePath(post.bar_id, post.id);
           
           // Convert URI to Blob
           const response = await fetch(imageUrl);
           const blob = await response.blob();
           
           const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('post-images')
+            .from(STORAGE_BUCKETS.barImages)
             .upload(fileName, blob, {
               contentType: 'image/jpeg',
             });
@@ -233,7 +236,7 @@ export default function EditPostScreen() {
           }
 
           const { data: { publicUrl } } = supabase.storage
-            .from('post-images')
+            .from(STORAGE_BUCKETS.barImages)
             .getPublicUrl(fileName);
 
           finalImageUrl = publicUrl;
