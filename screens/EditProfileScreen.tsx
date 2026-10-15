@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { resizeForUpload } from '~/utils/imageResize';
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '~/utils/supabase';
+import { avatarPath, STORAGE_BUCKETS } from '~/utils/storagePaths';
 import { deleteAccount } from '~/utils/auth';
 import {
   AppText,
@@ -350,7 +351,7 @@ export default function EditProfileScreen() {
         throw new Error('El archivo está vacío');
       }
 
-      const filePath = `${user.id}/avatar_${Date.now()}.jpg`;
+      const filePath = avatarPath(user.id);
       
       // Método 1: Usando base64 (más confiable en simuladores iOS)
       try {
@@ -378,7 +379,7 @@ export default function EditProfileScreen() {
         console.log('📦 ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
 
         const { data, error } = await supabase.storage
-          .from('avatars')
+          .from(STORAGE_BUCKETS.avatars)
           .upload(filePath, arrayBuffer, {
             contentType: 'image/jpeg',
             upsert: true,
@@ -412,7 +413,7 @@ export default function EditProfileScreen() {
         }
 
         const { data, error } = await supabase.storage
-          .from('avatars')
+          .from(STORAGE_BUCKETS.avatars)
           .upload(filePath, blob, {
             contentType: blob.type || 'image/jpeg',
             upsert: true,
@@ -428,7 +429,7 @@ export default function EditProfileScreen() {
 
       // Obtener URL pública
       const { data: urlData } = supabase.storage
-        .from('avatars')
+        .from(STORAGE_BUCKETS.avatars)
         .getPublicUrl(filePath);
 
       const avatarUrl = urlData?.publicUrl;
