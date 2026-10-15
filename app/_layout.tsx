@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar, Platform, Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -17,6 +17,18 @@ import { useLikesStore } from '~/stores/likesStore';
 import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
 import { configureNotificationHandler, unregisterCurrentPushToken } from '~/services/notifications';
 import { parseAuthDeepLink } from '~/utils/authDeepLink';
+import { installGlobalErrorHandlers, reportError } from '~/utils/errorReporting';
+import AppErrorFallback from '~/components/AppErrorFallback';
+
+// Registra errores JS no capturados y promesas rechazadas sin catch (área 08).
+installGlobalErrorHandlers();
+
+// Error boundary global de Expo Router: cualquier error de render en la app
+// (incluidos los providers de este layout) muestra una pantalla de reintento.
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <AppErrorFallback error={error} retry={retry} />;
+}
+
 export default function Layout() {
   const router = useRouter();
   const setFavoritesUserId = useFavoritesStore((state) => state.setUserId);
@@ -40,9 +52,11 @@ export default function Layout() {
     );
 
     // Cubre el caso de la app abierta en frío tocando la notificación
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      handleNotificationTap(response?.notification.request.content.data as NotificationData);
-    });
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        handleNotificationTap(response?.notification.request.content.data as NotificationData);
+      })
+      .catch((error) => reportError(error, { extra: { step: 'lastNotificationResponse' } }));
 
     return () => {
       notificationSubscription.remove();
@@ -78,7 +92,7 @@ export default function Layout() {
         // Inicializar stores con el userId
         setFavoritesUserId(session.user.id);
         setLikesUserId(session.user.id);
-        console.log('🔄 Stores inicializados con userId:', session.user.id);
+        console.log('🔄 Stores inicializados');
 
         // No redirigir al mapa si es sesión anónima (guest en WelcomeScreen)
         if (session.user.is_anonymous) {
@@ -142,6 +156,7 @@ export default function Layout() {
         }
       } catch (err) {
         console.error('❌ Error procesando deep link:', err);
+        reportError(err, { extra: { step: 'authDeepLink' } });
       }
     };
 
@@ -149,12 +164,14 @@ export default function Layout() {
     const subscription = Linking.addEventListener('url', handleDeepLink);
 
     // Verificar si la app se abrió con un deep link
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        console.log('🚀 App abierta con URL inicial');
-        handleDeepLink({ url });
-      }
-    });
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url) {
+          console.log('🚀 App abierta con URL inicial');
+          handleDeepLink({ url });
+        }
+      })
+      .catch((error) => reportError(error, { extra: { step: 'initialURL' } }));
 
     return () => {
       subscription.remove();
@@ -177,16 +194,16 @@ export default function Layout() {
 
       if (session) {
         console.log('✅ Sesión restaurada automáticamente al iniciar la app');
-        console.log('   Usuario:', session.user.email);
         // Inicializar stores con el userId
         setFavoritesUserId(session.user.id);
         setLikesUserId(session.user.id);
-        console.log('🔄 Stores inicializados en session restore con userId:', session.user.id);
+        console.log('🔄 Stores inicializados en session restore');
       } else {
         console.log('ℹ️ No hay sesión guardada');
       }
     } catch (error) {
       console.error('❌ Error inesperado al verificar la sesión:', error);
+      reportError(error, { extra: { step: 'initializeSession' } });
     }
   };
 

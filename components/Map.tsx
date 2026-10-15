@@ -189,6 +189,7 @@ const Map: React.FC<MapProps> = ({
 
   // Ref to hold location subscription during active navigation
   const locationSubscriptionRef = React.useRef<Location.LocationSubscription | null>(null);
+  const isMountedRef = React.useRef(true);
   
   // Load filter data
   const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
@@ -466,9 +467,19 @@ const Map: React.FC<MapProps> = ({
           }
         }
       }
-    ).then((subscription) => {
-      locationSubscriptionRef.current = subscription;
-    });
+    )
+      .then((subscription) => {
+        // Evita dejar un seguimiento GPS huérfano si se pulsa «empezar» dos veces
+        // o si el mapa se desmonta antes de que resuelva la promesa.
+        locationSubscriptionRef.current?.remove();
+        if (!isMountedRef.current) {
+          subscription.remove();
+          locationSubscriptionRef.current = null;
+          return;
+        }
+        locationSubscriptionRef.current = subscription;
+      })
+      .catch((error) => console.error('Error iniciando seguimiento de ubicación:', error));
   }, [userLocation]);
 
   // Handle change travel mode
@@ -558,7 +569,9 @@ const Map: React.FC<MapProps> = ({
 
   // Cleanup location subscription on unmount
   React.useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (locationSubscriptionRef.current) {
         locationSubscriptionRef.current.remove();
         locationSubscriptionRef.current = null;
