@@ -27,6 +27,7 @@ interface FavoritesState {
   addFavorite: (barId: string) => Promise<boolean>;
   removeFavorite: (barId: string) => Promise<boolean>;
   toggleFavorite: (barId: string) => Promise<boolean>;
+  /** Lanza si Supabase falla (red, servidor caído) */
   getFavoriteBars: () => Promise<FavoriteBar[]>;
 }
 
@@ -198,7 +199,9 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
       if (error) {
         console.error('❌ Error fetching favorite bars:', error);
-        return [];
+        // Se propaga para que la pantalla muestre un error con "Reintentar"
+        // en lugar del estado vacío "No tienes favoritos".
+        throw error;
       }
 
       // Si un bar favorito deja de ser visible (RLS), el join devuelve bars: null
@@ -210,7 +213,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
       })) || [];
     } catch (error) {
       console.error('❌ Error in getFavoriteBars:', error);
-      return [];
+      throw error;
     }
   },
 }));

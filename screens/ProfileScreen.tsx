@@ -112,6 +112,7 @@ export default function ProfileScreen() {
   const [isGuestUser, setIsGuestUser] = useState(false);
   const [planName, setPlanName] = useState<string>('Cargando...');
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [pendingReviewReportsCount, setPendingReviewReportsCount] = useState(0);
   const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
   const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
   const [pendingTicketsCount, setPendingTicketsCount] = useState(0);
@@ -135,13 +136,16 @@ export default function ProfileScreen() {
       { count: scrapedPendingCount },
       { count: barsPendingCount },
       { count: ticketsCount },
+      { count: reviewReportsCount },
     ] = await Promise.all([
       supabase.from('bar_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('bar_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('bars_scraped').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('bars').select('id', { count: 'exact', head: true }).eq('verification_status', 'pending'),
       supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+      supabase.from('review_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     ]);
+    setPendingReviewReportsCount(reviewReportsCount || 0);
     setPendingReportsCount(reportsCount || 0);
     setPendingClaimsCount(claimsCount || 0);
     setPendingVerificationCount((scrapedPendingCount || 0) + (barsPendingCount || 0));
@@ -684,6 +688,32 @@ export default function ProfileScreen() {
                   <View style={styles.adminBadge}>
                     <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
                       {pendingReportsCount}
+                    </AppText>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/review-reports-admin' as any)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.adminButtonIcon, styles.adminButtonIconRed]}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={24} color={colors.status.error} />
+                </View>
+                <View style={styles.adminButtonContent}>
+                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                    Reseñas reportadas
+                  </AppText>
+                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                    Reseñas ofensivas reportadas por usuarios (revisar en 24 h)
+                  </AppText>
+                </View>
+                {pendingReviewReportsCount > 0 && (
+                  <View style={styles.adminBadge}>
+                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                      {pendingReviewReportsCount}
                     </AppText>
                   </View>
                 )}
