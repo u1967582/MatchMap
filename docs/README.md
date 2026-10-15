@@ -24,10 +24,9 @@ Guías y checklists para despliegue en tiendas de aplicaciones.
 - Checklists de release
 - Preparación para producción
 
-**Archivos principales:**
-- `TESTFLIGHT_SETUP.md` - Configuración inicial de TestFlight
-- `RELEASE_IOS_TESTFLIGHT_CHECKLIST.md` - Checklist para releases
-- `APP_STORE_CONNECT_SETUP.md` - Configuración de App Store Connect
+**Archivo principal:**
+- `RELEASE_RUNBOOK.md` - **Runbook único de build, envío y publicación (EAS, App Store, Google Play)**
+- `archive/` - checklists antiguos de TestFlight (solo histórico)
 
 ### ✨ [features/](./features/)
 Implementación de funcionalidades específicas del producto.
