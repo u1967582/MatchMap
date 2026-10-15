@@ -5,8 +5,8 @@
 // jugando dentro de las próximas ~2 horas y les envía un push
 // personalizado invitándoles a buscar un bar donde verlo.
 //
-// Pensada para dispararse cada 15 minutos vía GitHub Actions
-// (.github/workflows/notify-favorite-team-matches.yml), igual que
+// Se dispara cada 15 minutos con pg_cron + pg_net (job
+// 'send-match-notifications', migración cron_jobs_pg_cron), igual que
 // sync-football. El dedupe real de envíos vive en la tabla
 // match_notifications_sent (unique user_id+match_id), así que es seguro
 // que el cron corra más de una vez dentro de la ventana de la RPC.
@@ -14,6 +14,7 @@
 
 // Lógica separada de index.ts para poder testearla (deno test).
 // deno-lint-ignore-file no-explicit-any
+import { createCronAuth } from '../_shared/secrets.ts'
 
 export interface Deps {
   supabase: any
@@ -104,23 +105,7 @@ export function createHandler(deps: Deps) {
   // pg_cron envía el secreto guardado en Vault en la cabecera x-cron-secret
   // (migración cron_jobs_pg_cron). Es la única autorización: la función se
   // despliega con verify_jwt = false.
-  let cronSecret: string | null = null
-
-  async function isAuthorizedCron(req: Request): Promise<boolean> {
-    const provided = req.headers.get('x-cron-secret')
-    if (!provided) return false
-
-    if (!cronSecret) {
-      const { data, error } = await supabase.rpc('get_cron_secret')
-      if (error || typeof data !== 'string' || !data) {
-        console.error('No se pudo leer cron_secret:', error?.message)
-        return false
-      }
-      cronSecret = data
-    }
-
-    return provided === cronSecret
-  }
+  const isAuthorizedCron = createCronAuth(supabase)
 
   async function sendExpoPushChunk(messages: ExpoMessage[]): Promise<ExpoTicket[]> {
     const res = await deps.fetch(EXPO_PUSH_API_URL, {
@@ -234,7 +219,8 @@ export function createHandler(deps: Deps) {
             notifiedPairs.add(`${row.user_id}::${row.match_id}`)
           } else {
             console.error(
-              `Ticket error para token ${row.expo_push_token}: ${ticket.message ?? 'unknown'}`
+              // Se registra el id de la fila, no el token push (dato del dispositivo)
+              `Ticket error para push_token_id=${row.push_token_id}: ${ticket.details?.error ?? 'unknown'}`
             )
             if (ticket.details?.error === 'DeviceNotRegistered') {
               const { error: delError } = await supabase

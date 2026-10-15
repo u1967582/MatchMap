@@ -63,6 +63,39 @@ Deno.test('400 si faltan parámetros', async () => {
   assertEquals((await quiet(() => handler(req({ preBarId: 'x' })))).status, 400);
 });
 
+Deno.test('400 (no 500) con body malformado o parámetros que no son string', async () => {
+  const { handler, rpcCalls } = setup();
+  const bad = new Request('http://localhost', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer tok' },
+    body: '{no-json',
+  });
+  const res = await quiet(() => handler(bad));
+  assertEquals(res.status, 400);
+  assertEquals(res.headers.get('Content-Type'), 'application/json');
+  assertEquals((await quiet(() => handler(req({ preBarId: 1, ownerId: {} })))).status, 400);
+  assertEquals(rpcCalls.length, 0);
+});
+
+Deno.test('no filtra mensajes internos de la BD ni del RPC al cliente', async () => {
+  const notFound = setup({
+    tables: { auto_pre_register_bars: () => ({ data: null, error: { message: 'JSON object requested, multiple (or no) rows returned' } }) },
+  });
+  const r1 = await quiet(() => notFound.handler(req(BODY)));
+  assertEquals(r1.status, 400);
+  assertEquals(JSON.stringify(await r1.json()).includes('rows returned'), false);
+
+  const rpcFail = setup({ rpc: () => ({ data: null, error: { message: 'violates foreign key constraint "bars_owner_id_fkey"' } }) });
+  const r2 = await quiet(() => rpcFail.handler(req(BODY)));
+  assertEquals(r2.status, 400);
+  assertEquals(JSON.stringify(await r2.json()).includes('constraint'), false);
+
+  const crash = setup({ tables: { auto_pre_register_bars: () => { throw new Error('stack interno'); } } });
+  const r3 = await quiet(() => crash.handler(req(BODY)));
+  assertEquals(r3.status, 500);
+  assertEquals(await r3.json(), { error: 'Unexpected error' });
+});
+
 Deno.test('401 sin token, con usuario anónimo o con email sin confirmar', async () => {
   assertEquals((await quiet(() => setup().handler(req(BODY, null)))).status, 401);
   assertEquals((await quiet(() => setup({ user: { ...OWNER, is_anonymous: true } }).handler(req(BODY)))).status, 401);

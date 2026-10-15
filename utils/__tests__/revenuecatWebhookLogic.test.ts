@@ -1,6 +1,7 @@
 import {
   computeBoostWindow,
   computeEndAt,
+  getAmount,
   getActionForEvent,
   getBoostBarIdAttribute,
   getPlanFromProductId,
@@ -111,5 +112,24 @@ describe('revenuecat-webhook logic - ventana del boost', () => {
   it('ignora un end_at ya pasado', () => {
     const { startAt } = computeBoostWindow('1m', now, '2026-10-01T00:00:00.000Z');
     expect(startAt.toISOString()).toBe(now.toISOString());
+  });
+});
+
+describe('revenuecat-webhook logic - getAmount', () => {
+  it('usa el importe en la moneda de compra (price viene en USD)', () => {
+    expect(
+      getAmount({ type: 'X', price: 5.49, price_in_purchased_currency: 4.99, currency: 'EUR' })
+    ).toEqual({ amountCents: 499, currency: 'eur' });
+  });
+
+  it('si falta el importe local, guarda price como USD', () => {
+    expect(getAmount({ type: 'X', price: 5.49, currency: 'EUR' })).toEqual({
+      amountCents: 549,
+      currency: 'usd',
+    });
+  });
+
+  it('sin precios devuelve 0 USD', () => {
+    expect(getAmount({ type: 'X' })).toEqual({ amountCents: 0, currency: 'usd' });
   });
 });
