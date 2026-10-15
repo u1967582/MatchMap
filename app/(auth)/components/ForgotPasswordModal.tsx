@@ -4,13 +4,12 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ToastRoot from 'react-native-toast-message';
-import { sendPasswordResetEmail } from '~/utils/auth';
+import { getAuthErrorMessage, sendPasswordResetEmail } from '~/utils/auth';
 import {
   AppText,
   AppInput,
@@ -45,10 +44,18 @@ export default function ForgotPasswordModal({
     setLoading(true);
 
     try {
-      await sendPasswordResetEmail(email.trim());
+      const result = await sendPasswordResetEmail(email.trim());
 
-      // Siempre mostrar mensaje de éxito por seguridad
-      // (no revelar si el email existe o no)
+      // Límite de envíos o sin conexión: el email NO se ha enviado, avisar.
+      // Cualquier otro caso muestra éxito para no revelar si el email existe.
+      if (!result.success) {
+        const message = getAuthErrorMessage(result.rawError ?? result.error, '');
+        if (message.kind === 'rate_limit' || message.kind === 'network') {
+          toast.error(message.title, message.subtitle);
+          return;
+        }
+      }
+
       setEmail('');
       // Mostrar toast antes de cerrar para que se vea en la capa del modal
       toast.success('Email enviado', 'Revisa tu correo · mira también en SPAM');

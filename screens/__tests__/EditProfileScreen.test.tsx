@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 
 jest.mock('~/utils/supabase');
 jest.mock('~/utils/auth', () => ({
-  deleteAccount: jest.fn(),
+  promptDeleteAccount: jest.fn(),
 }));
 
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
@@ -165,54 +165,19 @@ describe('EditProfileScreen - guardado exitoso', () => {
 });
 
 describe('EditProfileScreen - eliminar cuenta', () => {
-  const { Alert } = require('react-native');
-  const { deleteAccount } = require('~/utils/auth');
+  // El flujo de doble confirmación y borrado se testea en utils/__tests__/auth.test.ts
+  const { promptDeleteAccount } = require('~/utils/auth');
 
-  /** Pulsa "Eliminar Cuenta" y acepta las dos confirmaciones. */
-  const confirmDeletion = async (getByText: any, alertSpy: jest.SpyInstance) => {
-    fireEvent.press(getByText('Eliminar Cuenta'));
-    const first = alertSpy.mock.calls[0][2].find((b: any) => b.text === 'Eliminar');
-    first.onPress();
-    const second = alertSpy.mock.calls[1][2].find((b: any) => b.text === 'Sí, eliminar');
-    await second.onPress();
-  };
-
-  it('pide doble confirmación y no borra si se cancela', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  it('abre el flujo compartido de borrado y al terminar vuelve al inicio', async () => {
     mockInitialLoad();
     const { getByText } = await renderScreen();
 
     fireEvent.press(getByText('Eliminar Cuenta'));
-    expect(alertSpy).toHaveBeenCalledTimes(1);
-    const buttons = alertSpy.mock.calls[0][2] as any[];
-    expect(buttons.find((b) => b.style === 'cancel')).toBeTruthy();
-    expect(deleteAccount).not.toHaveBeenCalled();
-    alertSpy.mockRestore();
-  });
 
-  it('borra la cuenta y vuelve al inicio', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    (deleteAccount as jest.Mock).mockResolvedValueOnce({ success: true });
-    mockInitialLoad();
-    const { getByText } = await renderScreen();
-
-    await confirmDeletion(getByText, alertSpy);
-
-    expect(deleteAccount).toHaveBeenCalledTimes(1);
-    expect(mockedRouter.replace).toHaveBeenCalledWith('/');
-    alertSpy.mockRestore();
-  });
-
-  it('muestra el error si el borrado falla y no navega', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    (deleteAccount as jest.Mock).mockResolvedValueOnce({ success: false, error: 'Fallo servidor' });
-    mockInitialLoad();
-    const { getByText } = await renderScreen();
-
-    await confirmDeletion(getByText, alertSpy);
-
-    expect(alertSpy).toHaveBeenLastCalledWith('Error', 'Fallo servidor');
+    expect(promptDeleteAccount).toHaveBeenCalledTimes(1);
+    const options = (promptDeleteAccount as jest.Mock).mock.calls[0][0];
     expect(mockedRouter.replace).not.toHaveBeenCalledWith('/');
-    alertSpy.mockRestore();
+    options.onDeleted();
+    expect(mockedRouter.replace).toHaveBeenCalledWith('/');
   });
 });

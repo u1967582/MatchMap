@@ -4,7 +4,6 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import ToastRoot from 'react-native-toast-message';
 import { supabase } from '~/utils/supabase';
-import { checkAndPromotePreRegisteredBar } from '~/utils/auth';
+import { checkAndPromotePreRegisteredBar, getAuthErrorMessage } from '~/utils/auth';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import {
   AppText,
@@ -21,7 +20,6 @@ import {
   toast,
   colors,
   spacing,
-  radius,
 } from '~/components/ds';
 import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 
@@ -37,7 +35,8 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
   const [loading, setLoading] = useState(false);
   const [forgotPasswordModalVisible, setForgotPasswordModalVisible] = useState(false);
 
-  const isFormValid = email.trim().length > 0 && password.trim().length > 0;
+  // La contraseña no se recorta: el registro la guarda tal cual
+  const isFormValid = email.trim().length > 0 && password.length > 0;
 
   const handleLogin = async () => {
     if (!isFormValid) {
@@ -50,26 +49,19 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
-        password: password.trim(),
+        password,
       });
 
       if (error) {
-        toast.supabaseError(error, 'No se pudo iniciar sesión');
+        const { title, subtitle } = getAuthErrorMessage(error, 'No se pudo iniciar sesión');
+        toast.error(title, subtitle);
         return;
       }
 
-      console.log('✅ Login exitoso:', data.user?.email);
-
-      // ✅ IMPORTANTE: Verificar si hay un bar pre-registrado
-      // Esto se ejecuta DESPUÉS de que el usuario tiene sesión activa
+      // Verificar si hay un bar pre-registrado (con la sesión ya activa).
+      // checkAndPromotePreRegisteredBar nunca lanza.
       if (data.user) {
-        try {
-          console.log('🔍 Verificando bar pre-registrado después del login...');
-          await checkAndPromotePreRegisteredBar(data.user.id, data.user.email || '');
-        } catch (preRegError) {
-          console.error('❌ Error verificando bar pre-registrado:', preRegError);
-          // No bloquear el login si falla
-        }
+        await checkAndPromotePreRegisteredBar(data.user.id, data.user.email || '');
       }
 
       // Limpiar formulario
@@ -81,8 +73,9 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
       onClose();
       onLoginSuccess();
     } catch (error: any) {
-      console.error('Login error:', error);
-      toast.error('Error inesperado', 'No se pudo iniciar sesión');
+      console.error('❌ Error inesperado en login:', error?.message);
+      const { title, subtitle } = getAuthErrorMessage(error, 'No se pudo iniciar sesión');
+      toast.error(title, subtitle);
     } finally {
       setLoading(false);
     }

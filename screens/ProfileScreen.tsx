@@ -18,7 +18,7 @@ import * as WebBrowser from 'expo-web-browser';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
 import { AppText, colors, spacing, radius, ProfileSkeleton, toast } from '~/components/ds';
-import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
+import { getIsGuest, promptDeleteAccount, showGuestLoginAlert } from '~/utils/auth';
 import AdBanner from '~/components/ads/AdBanner';
 import FavoriteTeamPopup from '~/components/FavoriteTeamPopup';
 import BettingBarsAgeGatePopup from '~/components/BettingBarsAgeGatePopup';
@@ -110,6 +110,7 @@ export default function ProfileScreen() {
   const [userBars, setUserBars] = useState<UserBar[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGuestUser, setIsGuestUser] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [planName, setPlanName] = useState<string>('Cargando...');
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [pendingClaimsCount, setPendingClaimsCount] = useState(0);
@@ -305,6 +306,16 @@ export default function ProfileScreen() {
       ]
     );
   }, [router]);
+
+  // Borrado de cuenta accesible directamente desde Perfil (Apple 5.1.1(v) / Google Play)
+  const handleDeleteAccount = useCallback(() => {
+    if (deletingAccount) return;
+    promptDeleteAccount({
+      onStart: () => setDeletingAccount(true),
+      onFinish: () => setDeletingAccount(false),
+      onDeleted: () => router.replace('/'),
+    });
+  }, [router, deletingAccount]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -849,7 +860,13 @@ export default function ProfileScreen() {
                 onPress={() => setShowBettingBarsAgeGate(true)}
               />
             )}
-            <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast color={colors.status.error} />
+            <SettingsRow title="Cerrar Sesión" onPress={handleLogout} color={colors.status.error} />
+            <SettingsRow
+              title={deletingAccount ? 'Eliminando cuenta…' : 'Eliminar cuenta'}
+              onPress={handleDeleteAccount}
+              isLast
+              color={colors.status.error}
+            />
           </View>
         </View>
       </ScrollView>

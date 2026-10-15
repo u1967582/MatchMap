@@ -3,6 +3,13 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import ToastMessage from 'react-native-toast-message';
 
 jest.mock('~/utils/supabase');
+jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
+  openAuthSessionAsync: jest.fn(),
+}));
+jest.mock('expo-auth-session', () => ({
+  makeRedirectUri: jest.fn(() => 'exp://127.0.0.1:8081/--/auth/callback'),
+}));
 
 import { supabase } from '~/utils/supabase';
 import RegisterModal from '~/app/(auth)/components/RegisterModal';
@@ -14,8 +21,8 @@ const VALID_FIELDS = {
   email: 'user@test.com',
   username: 'usuario123',
   fullName: 'Juan Pérez',
-  password: 'secret6',
-  confirmPassword: 'secret6',
+  password: 'secret88',
+  confirmPassword: 'secret88',
 };
 
 const setup = async (props?: Partial<React.ComponentProps<typeof RegisterModal>>) => {
@@ -65,8 +72,8 @@ describe('RegisterModal - formulario incompleto/inválido no permite registrar',
     ['username con menos de 3 caracteres', { ...VALID_FIELDS, username: 'ab' }],
     ['fullName vacío', { ...VALID_FIELDS, fullName: '' }],
     [
-      'password con menos de 6 caracteres',
-      { ...VALID_FIELDS, password: '123', confirmPassword: '123' },
+      'password con menos de 8 caracteres',
+      { ...VALID_FIELDS, password: '1234567', confirmPassword: '1234567' },
     ],
     ['passwords que no coinciden', { ...VALID_FIELDS, confirmPassword: 'otra-cosa' }],
   ];
@@ -83,7 +90,7 @@ describe('RegisterModal - formulario incompleto/inválido no permite registrar',
 describe('RegisterModal - feedback visual', () => {
   it('muestra el error inline "Las contraseñas no coinciden" mientras se escriben, sin esperar al submit', async () => {
     const utils = await setup();
-    await fillFields(utils, { password: 'secret6', confirmPassword: 'diferente' });
+    await fillFields(utils, { password: 'secret88', confirmPassword: 'diferente' });
 
     expect(utils.getByText('Las contraseñas no coinciden')).toBeTruthy();
   });
@@ -92,7 +99,7 @@ describe('RegisterModal - feedback visual', () => {
 describe('RegisterModal - registro exitoso', () => {
   it('llama a signUp con el payload correcto, limpia el formulario y cierra el modal', async () => {
     mockedSignUp.mockResolvedValueOnce({
-      data: { user: { id: 'user-1', email: 'user@test.com' } },
+      data: { user: { id: 'user-1', identities: [{}] }, session: { access_token: 't' } },
       error: null,
     });
 
@@ -102,8 +109,9 @@ describe('RegisterModal - registro exitoso', () => {
 
     expect(mockedSignUp).toHaveBeenCalledWith({
       email: 'user@test.com',
-      password: 'secret6',
+      password: 'secret88',
       options: {
+        emailRedirectTo: 'exp://127.0.0.1:8081/--/auth/callback',
         data: {
           username: 'usuario123',
           full_name: 'Juan Pérez',
@@ -128,7 +136,9 @@ describe('RegisterModal - registro exitoso', () => {
 
     expect(mockedSignUp).toHaveBeenCalledWith(
       expect.objectContaining({
-        options: { data: expect.objectContaining({ username: 'usuario123' }) },
+        options: expect.objectContaining({
+          data: expect.objectContaining({ username: 'usuario123' }),
+        }),
       })
     );
   });
@@ -153,5 +163,60 @@ describe('RegisterModal - error del servidor', () => {
 
     expect(utils.onClose).not.toHaveBeenCalled();
     expect(utils.onRegisterSuccess).not.toHaveBeenCalled();
+  });
+});
+
+describe('RegisterModal - confirmación de email', () => {
+  it('sin sesión (confirmación de email activa) cierra el modal pero no navega al mapa', async () => {
+    mockedSignUp.mockResolvedValueOnce({
+      data: { user: { id: 'user-1', identities: [{}] }, session: null },
+      error: null,
+    });
+
+    const utils = await setup();
+    await fillFields(utils, VALID_FIELDS);
+    await pressRegisterButton(utils.getAllByText);
+
+    await waitFor(() => expect(utils.onClose).toHaveBeenCalled());
+    expect(utils.onRegisterSuccess).not.toHaveBeenCalled();
+    expect(mockedToastShow).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'success', text2: expect.stringContaining('correo') })
+    );
+  });
+
+  it('detecta el email ya registrado aunque Supabase no devuelva error (identities vacío)', async () => {
+    mockedSignUp.mockResolvedValueOnce({
+      data: { user: { id: 'fake', identities: [] }, session: null },
+      error: null,
+    });
+
+    const utils = await setup();
+    await fillFields(utils, VALID_FIELDS);
+    await pressRegisterButton(utils.getAllByText);
+
+    await waitFor(() => {
+      expect(mockedToastShow).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'error', text1: 'Este email ya está registrado' })
+      );
+    });
+    expect(utils.onClose).not.toHaveBeenCalled();
+    expect(utils.onRegisterSuccess).not.toHaveBeenCalled();
+  });
+
+  it('traduce la contraseña filtrada/débil a un mensaje en español', async () => {
+    mockedSignUp.mockResolvedValueOnce({
+      data: { user: null, session: null },
+      error: { code: 'weak_password', message: 'Password is known to be weak and easy to guess' },
+    });
+
+    const utils = await setup();
+    await fillFields(utils, VALID_FIELDS);
+    await pressRegisterButton(utils.getAllByText);
+
+    await waitFor(() => {
+      expect(mockedToastShow).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'error', text1: 'Contraseña poco segura' })
+      );
+    });
   });
 });

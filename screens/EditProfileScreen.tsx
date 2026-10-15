@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { resizeForUpload } from '~/utils/imageResize';
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '~/utils/supabase';
-import { deleteAccount } from '~/utils/auth';
+import { promptDeleteAccount } from '~/utils/auth';
 import {
   AppText,
   AppInput,
@@ -59,6 +59,7 @@ export default function EditProfileScreen() {
   });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showPasswordFields, setShowPasswordFields] = useState(false);
@@ -780,45 +781,24 @@ export default function EditProfileScreen() {
             {/* Delete Account */}
             <TouchableOpacity
               style={styles.deleteAccountButton}
-              onPress={() => {
-                Alert.alert(
-                  'Eliminar Cuenta',
-                  '¿Estás seguro? Esta acción es irreversible. Se eliminarán todos tus datos, bares y contenido asociado.',
-                  [
-                    { text: 'Cancelar', style: 'cancel' },
-                    {
-                      text: 'Eliminar',
-                      style: 'destructive',
-                      onPress: () => {
-                        Alert.alert(
-                          'Confirmación Final',
-                          'Esta es tu última oportunidad. ¿Realmente quieres eliminar tu cuenta permanentemente?',
-                          [
-                            { text: 'No, conservar', style: 'cancel' },
-                            {
-                              text: 'Sí, eliminar',
-                              style: 'destructive',
-                              onPress: async () => {
-                                const result = await deleteAccount();
-                                if (result.success) {
-                                  router.replace('/');
-                                } else {
-                                  Alert.alert('Error', result.error || 'No se pudo eliminar la cuenta.');
-                                }
-                              },
-                            },
-                          ]
-                        );
-                      },
-                    },
-                  ]
-                );
-              }}
+              onPress={() =>
+                promptDeleteAccount({
+                  onStart: () => setDeletingAccount(true),
+                  onFinish: () => setDeletingAccount(false),
+                  onDeleted: () => router.replace('/'),
+                })
+              }
+              disabled={deletingAccount}
               activeOpacity={0.7}
+              accessibilityRole="button"
             >
-              <AppText variant="caption" color={colors.status.error}>
-                Eliminar Cuenta
-              </AppText>
+              {deletingAccount ? (
+                <ActivityIndicator size="small" color={colors.status.error} />
+              ) : (
+                <AppText variant="caption" color={colors.status.error}>
+                  Eliminar Cuenta
+                </AppText>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>

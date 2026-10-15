@@ -4,7 +4,6 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import ToastRoot from 'react-native-toast-message';
 import { supabase } from '~/utils/supabase';
+import { getAuthErrorMessage, getOAuthRedirectUrl, MIN_PASSWORD_LENGTH } from '~/utils/auth';
 import {
   AppText,
   AppInput,
@@ -47,7 +47,7 @@ export default function RegisterModal({
     formData.email.includes('@') &&
     formData.username.trim().length >= 3 &&
     formData.fullName.trim().length > 0 &&
-    formData.password.length >= 6 &&
+    formData.password.length >= MIN_PASSWORD_LENGTH &&
     formData.password === formData.confirmPassword;
 
   // ⚠️ La función checkAndPromotePreRegisteredBar ahora está en utils/auth.ts
@@ -75,8 +75,8 @@ export default function RegisterModal({
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.warning('La contraseña debe tener al menos 6 caracteres');
+    if (formData.password.length < MIN_PASSWORD_LENGTH) {
+      toast.warning(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`);
       return;
     }
 
@@ -93,6 +93,8 @@ export default function RegisterModal({
         email: formData.email.trim(),
         password: formData.password,
         options: {
+          // El enlace de confirmación abre la app (auth/callback) en vez de la Site URL
+          emailRedirectTo: getOAuthRedirectUrl(),
           data: {
             username: formData.username.trim().toLowerCase(),
             full_name: formData.fullName.trim(),
@@ -101,19 +103,20 @@ export default function RegisterModal({
       });
 
       if (error) {
-        toast.supabaseError(error, 'No se pudo crear la cuenta');
+        const { title, subtitle } = getAuthErrorMessage(error, 'No se pudo crear la cuenta');
+        toast.error(title, subtitle);
         return;
       }
 
-      // El trigger de Supabase creará automáticamente el usuario en public.users
-      console.log('✅ Usuario registrado:', data.user?.email);
-      console.log('ℹ️ El usuario debe confirmar su email antes de iniciar sesión');
-      console.log('ℹ️ La verificación de bar pre-registrado se ejecutará al hacer login');
+      // Con la confirmación de email activa, Supabase no devuelve error si el
+      // email ya existe: devuelve un usuario sin identidades y sin sesión.
+      if (data.user && !data.session && data.user.identities?.length === 0) {
+        toast.error('Este email ya está registrado', 'Inicia sesión o recupera tu contraseña');
+        return;
+      }
 
-      // ⚠️ NO verificar el bar pre-registrado aquí
-      // Se verifica cuando el usuario inicia sesión (evento SIGNED_IN)
-      // Razón: En este momento el usuario NO tiene sesión activa (necesita confirmar email)
-      // y las policies requieren un usuario autenticado
+      // El trigger de Supabase crea el usuario en public.users. El bar
+      // pre-registrado se comprueba al iniciar sesión (aquí puede no haber sesión).
 
       // Limpiar formulario
       setFormData({
@@ -125,12 +128,20 @@ export default function RegisterModal({
       });
 
       // Mostrar toast antes de cerrar para que se vea en la capa del modal
-      toast.success('¡Cuenta creada!', 'Revisa tu correo para verificar · mira también en SPAM');
       onClose();
-      onRegisterSuccess();
+      if (data.session) {
+        // Sin confirmación de email: ya hay sesión
+        toast.success('¡Cuenta creada!');
+        onRegisterSuccess();
+      } else {
+        // Con confirmación de email: no hay sesión hasta que pulse el enlace.
+        // No navegar al mapa (lo devolvería a la bienvenida sin sesión).
+        toast.success('¡Cuenta creada!', 'Revisa tu correo para verificar · mira también en SPAM');
+      }
     } catch (error: any) {
-      console.error('Register error:', error);
-      toast.error('Error inesperado', 'No se pudo crear la cuenta');
+      console.error('❌ Error inesperado en registro:', error?.message);
+      const { title, subtitle } = getAuthErrorMessage(error, 'No se pudo crear la cuenta');
+      toast.error(title, subtitle);
     } finally {
       setLoading(false);
     }
@@ -217,7 +228,7 @@ export default function RegisterModal({
               secureTextEntry
               autoCapitalize="none"
               editable={!loading}
-              helperText="Mínimo 6 caracteres"
+              helperText={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
             />
 
             <AppInput
