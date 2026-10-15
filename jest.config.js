@@ -6,6 +6,11 @@ module.exports = {
   // nuevo) la primera prueba de algunas suites tarda más de los 5 s por defecto
   // en transformar sus imports y falla por timeout aunque el código esté bien.
   testTimeout: 30000,
+  // Limita la RAM: por defecto jest lanza un worker por núcleo (9 en este Mac)
+  // y varias sesiones en paralelo agotaron los 16 GB. Los workers que superan
+  // 512 MB se reciclan entre suites.
+  maxWorkers: 3,
+  workerIdleMemoryLimit: '512MB',
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/.expo/',
