@@ -38,12 +38,14 @@ VALUES
   ('0c0c0c0c-0000-4000-8000-000000030003', 'authenticated', 'authenticated', 'audit03-adm@example.invalid', false, '{}', '{}', now(), now()),
   ('0c0c0c0c-0000-4000-8000-000000030004', 'authenticated', 'authenticated', NULL,                          true,  '{}', '{}', now(), now());
 
-INSERT INTO public.users (id, email)
+-- handle_new_user ya crea estas filas al insertar en auth.users; esto es por si
+-- el trigger no existe. El invitado anónimo no tiene fila en public.users (en prod
+-- email y username son NOT NULL y el trigger la omite), igual que en la app.
+INSERT INTO public.users (id, email, username)
 VALUES
-  ('0c0c0c0c-0000-4000-8000-000000030001', 'audit03-a@example.invalid'),
-  ('0c0c0c0c-0000-4000-8000-000000030002', 'audit03-b@example.invalid'),
-  ('0c0c0c0c-0000-4000-8000-000000030003', 'audit03-adm@example.invalid'),
-  ('0c0c0c0c-0000-4000-8000-000000030004', NULL)
+  ('0c0c0c0c-0000-4000-8000-000000030001', 'audit03-a@example.invalid', 'audit03_a'),
+  ('0c0c0c0c-0000-4000-8000-000000030002', 'audit03-b@example.invalid', 'audit03_b'),
+  ('0c0c0c0c-0000-4000-8000-000000030003', 'audit03-adm@example.invalid', 'audit03_adm')
 ON CONFLICT (id) DO NOTHING;
 
 UPDATE public.users SET is_super_user = true WHERE id = '0c0c0c0c-0000-4000-8000-000000030003';
