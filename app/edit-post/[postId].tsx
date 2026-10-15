@@ -216,7 +216,7 @@ export default function EditPostScreen() {
       if (imageUrl && imageUrl !== post.image_url && !imageUrl.startsWith('http')) {
         try {
           // Mismo bucket y ruta que create-post: la primera carpeta es el bar
-          // (el bucket 'post-images' no existe y la política exige <barId>/…).
+          // (el bucket post-images no existe y la política exige <barId>/…).
           const fileName = barPostImagePath(post.bar_id, post.id);
           
           // Convert URI to Blob
