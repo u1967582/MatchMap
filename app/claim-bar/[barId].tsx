@@ -5,6 +5,7 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
+import { claimDocumentPath, STORAGE_BUCKETS } from '~/utils/storagePaths';
 import {
   AppText,
   AppButton,
@@ -86,7 +87,7 @@ export default function ClaimBarScreen() {
         return;
       }
 
-      const fileName = `${user.id}/${barId}-${Date.now()}.jpg`;
+      const fileName = claimDocumentPath(user.id, barId as string);
       const fileUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
 
       const formData = new FormData();
@@ -97,7 +98,7 @@ export default function ClaimBarScreen() {
       } as any);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('bar-claim-documents')
+        .from(STORAGE_BUCKETS.claimDocuments)
         .upload(fileName, formData as any, {
           contentType: 'image/jpeg',
         });

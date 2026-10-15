@@ -1,15 +1,17 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { AppText } from '~/components/ds';
-import { useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { AppText, AppButton, colors, toast } from '~/components/ds';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { toast } from '~/components/ds';
 import { useLikesStore } from '~/stores/likesStore';
 import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
+import { formatRelativeDate } from '~/utils/dateFormat';
+import { blockUser, fetchHiddenReviewFilters, filterHiddenReviews } from '~/services/moderation';
 
 interface Review {
   id: string;
+  user_id: string | null;
   rating: number;
   comment: string;
   created_at: string;
@@ -34,6 +36,8 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   const [average, setAverage] = useState(0);
   const [totalReviews, setTotalReviews] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const [busyById, setBusyById] = useState<Record<string, boolean>>({});
   const [visibleCount, setVisibleCount] = useState(5);
@@ -45,6 +49,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   useEffect(() => {
     const fetchReviewsAndBarData = async () => {
       setLoading(true);
+      setLoadError(false);
       try {
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth?.user?.id || null;
@@ -53,12 +58,13 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         // Fetch reviews
         const { data: reviewsData, error: reviewsError } = await supabase
           .from('reviews')
-          .select(`id, rating, comment, created_at, likes, is_google_review, google_author_name, user:users(username, profile_image_url)`)
+          .select(`id, user_id, rating, comment, created_at, likes, is_google_review, google_author_name, user:users(username, profile_image_url)`)
           .eq('bar_id', barId)
           .order('created_at', { ascending: false });
 
         if (reviewsError) {
           console.error('❌ Error loading reviews:', reviewsError);
+          setLoadError(true);
           return;
         }
 
@@ -71,13 +77,23 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
 
         if (barError) {
           console.error('❌ Error loading bar data:', barError);
+          setLoadError(true);
           return;
         }
 
+        // Se ocultan las reseñas de usuarios bloqueados y las que el usuario
+        // ya ha reportado (Apple 1.2)
+        const { blockedUserIds, reportedReviewIds } = await fetchHiddenReviewFilters(uid);
+
         if (reviewsData) {
           // Transform the data to match our interface
-          const transformedData: Review[] = reviewsData.map((item: any) => ({
+          const transformedData: Review[] = filterHiddenReviews(
+            reviewsData as any[],
+            blockedUserIds,
+            reportedReviewIds
+          ).map((item: any) => ({
             id: item.id,
+            user_id: item.user_id ?? null,
             rating: item.rating,
             comment: item.comment,
             created_at: item.created_at,
@@ -86,7 +102,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
             user: {
               username: item.is_google_review
                 ? (item.google_author_name || 'Google')
-                : (item.user?.username || 'Anonymous'),
+                : (item.user?.username || 'Usuario'),
               profile_image_url: item.user?.profile_image_url || '',
             },
           }));
@@ -121,25 +137,72 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         }
       } catch (error) {
         console.error('❌ Error fetching data:', error);
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
     };
 
     fetchReviewsAndBarData();
-  }, [barId]);
+  }, [barId, reloadKey]);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays === 1) return '1 day ago';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-    return `${Math.floor(diffDays / 365)} years ago`;
-  };
+  // Al volver de escribir/editar una reseña, recargar la lista (el primer
+  // foco coincide con el montaje y ya lo cubre el efecto anterior)
+  const hasFocusedOnce = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedOnce.current) {
+        hasFocusedOnce.current = true;
+        return;
+      }
+      setReloadKey((key) => key + 1);
+    }, [])
+  );
+
+  // Opciones de moderación de una reseña (App Store 1.2): reportar y bloquear
+  const handleBlockUser = useCallback(async (review: Review) => {
+    if (!userId || !review.user_id) return;
+    const result = await blockUser(userId, review.user_id);
+    if (!result.ok && !result.duplicate) {
+      toast.error('No se pudo bloquear al usuario', 'Inténtalo de nuevo');
+      return;
+    }
+    const blockedUserId = review.user_id;
+    setReviews(prev => prev.filter(r => r.user_id !== blockedUserId));
+    toast.success('Usuario bloqueado', 'Ya no verás sus reseñas');
+  }, [userId]);
+
+  const openReviewOptions = useCallback(async (review: Review) => {
+    if (await getIsGuest()) {
+      showGuestLoginAlert(router);
+      return;
+    }
+
+    const canBlock = !!review.user_id && !!userId && review.user_id !== userId;
+    Alert.alert('Opciones de la reseña', undefined, [
+      {
+        text: 'Reportar reseña',
+        onPress: () => router.push(`/report-review/${review.id}` as any),
+      },
+      ...(canBlock
+        ? [{
+            text: 'Bloquear a este usuario',
+            style: 'destructive' as const,
+            onPress: () => {
+              Alert.alert(
+                'Bloquear usuario',
+                `No volverás a ver las reseñas de ${review.user.username}.`,
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Bloquear', style: 'destructive', onPress: () => handleBlockUser(review) },
+                ]
+              );
+            },
+          }]
+        : []),
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  }, [router, userId, handleBlockUser]);
 
   const renderStars = (value: number, size = 14) => {
     const full = Math.floor(value);
@@ -249,7 +312,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
 
         <View style={styles.reviewContent}>
           <Text maxFontSizeMultiplier={1.5} style={styles.commentLine}>
-            <Text style={styles.username}>{item.user.username || 'Anonymous'}</Text>
+            <Text style={styles.username}>{item.user.username || 'Usuario'}</Text>
             {item.is_google_review && (
               <>{' '}<Ionicons name="logo-google" size={11} color="#4285F4" /></>
             )}
@@ -258,7 +321,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           </Text>
 
           <View style={styles.metaRow}>
-            <AppText maxScale={1.0} style={styles.metaText}>{formatDate(item.created_at)}</AppText>
+            <AppText maxScale={1.0} style={styles.metaText}>{formatRelativeDate(item.created_at)}</AppText>
             <View style={styles.metaDot} />
             {renderStars(item.rating, 11)}
           </View>
@@ -273,6 +336,18 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           <Ionicons name={liked ? 'heart' : 'heart-outline'} size={16} color={liked ? '#EF4444' : '#94A3B8'} />
           <AppText maxScale={1.0} style={[styles.likeCount, liked && styles.likeCountActive]}>{item.likes ?? 0}</AppText>
         </TouchableOpacity>
+
+        {item.user_id !== userId || !userId ? (
+          <TouchableOpacity
+            style={styles.moreButton}
+            onPress={() => openReviewOptions(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Opciones de la reseña"
+          >
+            <Ionicons name="ellipsis-vertical" size={16} color="#94A3B8" />
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   };
@@ -282,6 +357,24 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <AppText style={styles.loadingText}>Cargando reseñas...</AppText>
+        </View>
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.status.error} />
+          <AppText style={styles.emptyTitle}>No se pudieron cargar las reseñas</AppText>
+          <AppText style={styles.emptySubtitle}>Comprueba tu conexión e inténtalo de nuevo.</AppText>
+          <AppButton
+            text="Reintentar"
+            variant="dark"
+            fullWidth={false}
+            onPress={() => setReloadKey((key) => key + 1)}
+          />
         </View>
       </View>
     );
@@ -468,6 +561,10 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
     backgroundColor: '#6B7A8F',
+  },
+  moreButton: {
+    paddingLeft: 8,
+    paddingTop: 2,
   },
   likeButton: {
     alignItems: 'center',

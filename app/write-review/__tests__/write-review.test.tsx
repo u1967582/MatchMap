@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -14,11 +15,13 @@ jest.mock('@expo/vector-icons', () => {
 const mockCreateReview = jest.fn();
 const mockUpdateReview = jest.fn();
 const mockGetUserReview = jest.fn();
+const mockDeleteReview = jest.fn();
 jest.mock('~/hooks/useReviews', () => ({
   useReviews: () => ({
     createReview: mockCreateReview,
     updateReview: mockUpdateReview,
     getUserReview: mockGetUserReview,
+    deleteReview: mockDeleteReview,
   }),
 }));
 jest.mock('~/components/ds', () => {
@@ -108,5 +111,50 @@ describe('WriteReviewScreen', () => {
     await fireEvent.press(screen.getByText('Publicar'));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(mockedRouter.back).not.toHaveBeenCalled();
+  });
+
+  it('una reseña nueva no muestra "Eliminar reseña"', async () => {
+    await renderScreen();
+    expect(screen.queryByText('Eliminar reseña')).toBeNull();
+  });
+
+  it('se puede eliminar la propia reseña tras confirmar', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockGetUserReview.mockResolvedValueOnce({ id: 'rev-1', rating: 2, comment: 'Regular' });
+    mockDeleteReview.mockResolvedValueOnce(true);
+    await renderScreen();
+
+    await waitFor(() => expect(screen.getByText('Eliminar reseña')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Eliminar reseña'));
+
+    // No borra sin confirmar
+    expect(mockDeleteReview).not.toHaveBeenCalled();
+    const confirm = (alertSpy.mock.calls[0][2] as any[]).find((b) => b.text === 'Eliminar');
+    await confirm.onPress();
+
+    await waitFor(() => expect(mockDeleteReview).toHaveBeenCalledWith('rev-1'));
+    expect(toast.success).toHaveBeenCalledWith('Reseña eliminada');
+    expect(mockedRouter.back).toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it('si no se puede eliminar, muestra error y se queda en la pantalla', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockGetUserReview.mockResolvedValueOnce({ id: 'rev-1', rating: 2, comment: 'Regular' });
+    mockDeleteReview.mockResolvedValueOnce(false);
+    await renderScreen();
+
+    await waitFor(() => expect(screen.getByText('Eliminar reseña')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Eliminar reseña'));
+    await (alertSpy.mock.calls[0][2] as any[]).find((b) => b.text === 'Eliminar').onPress();
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'No se pudo eliminar la reseña',
+        'Inténtalo de nuevo'
+      )
+    );
+    expect(mockedRouter.back).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 });

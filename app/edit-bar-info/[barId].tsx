@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { resizeForUpload } from '~/utils/imageResize';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '~/utils/supabase';
+import { barImagePath, STORAGE_BUCKETS } from '~/utils/storagePaths';
 import { toast, EditBarSkeleton, AppText, colors } from '~/components/ds';
 import { DraggableImageGrid } from '~/components/images';
 // Subscriptions removed; use fixed limits
@@ -78,6 +79,9 @@ export default function EditBarInfoScreen() {
   const [website, setWebsite] = React.useState('');
   const [selectedCategoryId, setSelectedCategoryId] = React.useState<number | null>(null);
   const [isBettingVenue, setIsBettingVenue] = React.useState(false);
+  // Si el bar ya está marcado como local de apuestas, el propietario no puede
+  // desmarcarlo: lo bloquea el trigger trg_bars_protect_privileged_columns.
+  const [bettingVenueLocked, setBettingVenueLocked] = React.useState(false);
   
   // Images state
   const [barImages, setBarImages] = React.useState<BarImage[]>([]);
@@ -147,6 +151,7 @@ export default function EditBarInfoScreen() {
         setWebsite(barData.website || '');
         setSelectedCategoryId(barData.category_id || null);
         setIsBettingVenue(barData.is_betting_venue || false);
+        setBettingVenueLocked(barData.is_betting_venue === true);
 
         // Load bar images
         const { data: barImagesData, error: barImagesError } = await supabase
@@ -393,7 +398,8 @@ export default function EditBarInfoScreen() {
 
   const uploadBarImage = async (imageUri: string, imageType: 'bar' | 'menu') => {
     try {
-      const fileName = `bar-${barId}-${imageType}-${Date.now()}.jpg`;
+      // La primera carpeta tiene que ser el id del bar (política de Storage).
+      const fileName = barImagePath(barId as string, imageType, Date.now());
       
       // 🔥 FIX: Usar FormData en lugar de Blob (funciona mejor en React Native)
       const fileUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
@@ -407,7 +413,7 @@ export default function EditBarInfoScreen() {
       } as any);
       
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('bar-images')
+        .from(STORAGE_BUCKETS.barImages)
         .upload(fileName, formData as any, {
           contentType: 'image/jpeg',
         });
@@ -421,7 +427,7 @@ export default function EditBarInfoScreen() {
       console.log('✅ Upload successful:', uploadData);
 
       const { data: { publicUrl } } = supabase.storage
-        .from('bar-images')
+        .from(STORAGE_BUCKETS.barImages)
         .getPublicUrl(fileName);
 
       // Get max order for this type
@@ -941,10 +947,17 @@ export default function EditBarInfoScreen() {
                 Se ocultará por defecto en el mapa y la búsqueda; solo lo verán los usuarios que
                 hayan optado por ver este tipo de locales.
               </AppText>
+              {bettingVenueLocked && (
+                <AppText style={styles.helperText}>
+                  Para desmarcarlo, escríbenos desde Perfil › Soporte y Tickets.
+                </AppText>
+              )}
             </View>
             <Switch
               value={isBettingVenue}
               onValueChange={setIsBettingVenue}
+              disabled={bettingVenueLocked}
+              testID="betting-venue-switch"
               trackColor={{ true: colors.brand.primary }}
             />
           </View>

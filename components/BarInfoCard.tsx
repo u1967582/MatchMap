@@ -2,11 +2,13 @@ import * as React from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, Alert, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppText } from '~/components/ds';
+import { AppText, toast } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
+import { useFavoritesStore } from '~/stores/favoritesStore';
+import { formatMatchDateTime } from '~/utils/dateFormat';
 
 interface Bar {
   id: string;
@@ -35,7 +37,8 @@ interface BarInfoCardProps {
   bar: Bar | null;
   visible: boolean;
   onClose: () => void;
-  onNavigate?: (barId: string) => void;
+  /** Abre la app de mapas nativa (Apple Maps / Google Maps) con el bar como destino */
+  onNavigate?: (destination: { latitude: number; longitude: number; name: string }) => void;
   onStartNavigation?: (destination: { latitude: number; longitude: number; name: string }) => void;
   isBoosted?: boolean;
 }
@@ -49,56 +52,41 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
   isBoosted = false,
 }) => {
   const router = useRouter();
-  const [isFavorite, setIsFavorite] = React.useState(false);
-  const [nextMatch, setNextMatch] = React.useState<{ date: string; time: string } | null>(null);
-  
-  console.log('📍 BarInfoCard render - visible:', visible, 'bar name:', bar?.name || 'undefined');
-  
-  // Check if bar is favorite
+  const [nextMatch, setNextMatch] = React.useState<{ date: string; time: string | null } | null>(null);
+
+  // Favoritos desde el store compartido (actualización optimista con rollback),
+  // así el corazón coincide con búsqueda, ficha del bar y "Mis favoritos".
+  const favorites = useFavoritesStore((state) => state.favorites);
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
+  const isFavorite = !!bar && favorites.has(bar.id);
+
+  // Próximo partido que emite el bar (tabla events → matches)
   React.useEffect(() => {
+    setNextMatch(null);
     if (!bar) return;
-    
-    const checkFavorite = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+    let cancelled = false;
 
-        const { data } = await supabase
-          .from('favorites')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('bar_id', bar.id)
-          .single();
-
-        setIsFavorite(!!data);
-      } catch (error) {
-        console.error('Error checking favorite status:', error);
-      }
-    };
-
-    checkFavorite();
-  }, [bar?.id]);
-
-  // Fetch next match
-  React.useEffect(() => {
-    if (!bar) return;
-    
     const fetchNextMatch = async () => {
       try {
-        const { data } = await supabase
-          .from('posts')
-          .select('start_date, start_time')
+        const { data, error } = await supabase
+          .from('events')
+          .select('start_time, matches!inner(date, time)')
           .eq('bar_id', bar.id)
-          .gte('start_date', new Date().toISOString().split('T')[0])
-          .order('start_date', { ascending: true })
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        if (data) {
-          setNextMatch({
-            date: data.start_date,
-            time: data.start_time || '18:00'
-          });
+        if (error) {
+          console.error('Error fetching next match:', error);
+          return;
+        }
+
+        const match = Array.isArray((data as any)?.matches)
+          ? (data as any).matches[0]
+          : (data as any)?.matches;
+        if (!cancelled && match?.date) {
+          setNextMatch({ date: match.date, time: match.time ?? null });
         }
       } catch (error) {
         console.error('Error fetching next match:', error);
@@ -106,15 +94,16 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
     };
 
     fetchNextMatch();
+    return () => {
+      cancelled = true;
+    };
   }, [bar?.id]);
-  
+
   if (!visible || !bar) {
-    console.log('📍 BarInfoCard returning null - visible:', visible, 'bar exists:', !!bar);
     return null;
   }
 
   const handleCardPress = () => {
-    console.log('📍 Opening bar profile for:', bar.name);
     onClose(); // Close the card first
     router.push(`/bar-profile/${bar.id}` as any);
   };
@@ -126,35 +115,18 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
       return;
     }
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        Alert.alert('Error', 'Debes iniciar sesión para agregar favoritos');
-        return;
-      }
-
-      if (isFavorite) {
-        // Remove from favorites
-        await supabase
-          .from('favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('bar_id', bar.id);
-        setIsFavorite(false);
-      } else {
-        // Add to favorites
-        await supabase
-          .from('favorites')
-          .insert({
-            user_id: user.id,
-            bar_id: bar.id
-          });
-        setIsFavorite(true);
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      Alert.alert('Error', 'No se pudo actualizar favoritos');
+    const ok = await toggleFavorite(bar.id);
+    if (!ok) {
+      toast.error('No se pudo actualizar favoritos', 'Inténtalo de nuevo');
     }
+  };
+
+  const handleOpenInMaps = () => {
+    if (!bar.latitude || !bar.longitude) {
+      Alert.alert('Error', 'No hay coordenadas disponibles para este bar');
+      return;
+    }
+    onNavigate?.({ latitude: bar.latitude, longitude: bar.longitude, name: bar.name });
   };
 
   const handleStartNavigation = () => {
@@ -240,7 +212,6 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
           <TouchableOpacity
             onPress={(e) => {
               e.stopPropagation();
-              console.log('📍 Closing bar card for:', bar.name);
               onClose();
             }}
             style={styles.closeButton}
@@ -274,7 +245,7 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
             <View style={styles.nextMatchContainer}>
               <Ionicons name="calendar" size={14} color="#10B981" />
               <AppText numberOfLines={1} style={styles.nextMatchText}>
-                Próximo partido: {new Date(nextMatch.date).toLocaleDateString('es-ES')} {nextMatch.time}
+                Próximo partido: {formatMatchDateTime(nextMatch.date, nextMatch.time)}
               </AppText>
             </View>
           )}
@@ -287,18 +258,36 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
                 <AppText numberOfLines={1} ellipsizeMode="tail" style={styles.barAddress}>{bar.address}, {bar.city}</AppText>
               </View>
 
-              {/* Navigate Button */}
-              {onStartNavigation && (
-                <TouchableOpacity
-                  style={styles.navigateButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleStartNavigation();
-                  }}
-                >
-                  <Ionicons name="navigate" size={18} color="#FFFFFF" />
-                  <AppText maxScale={1.0} style={styles.navigateButtonText}>Cómo llegar</AppText>
-                </TouchableOpacity>
+              {/* Botones de navegación: ruta dentro de la app y app de mapas nativa */}
+              {(onStartNavigation || onNavigate) && (
+                <View style={styles.navigateRow}>
+                  {onStartNavigation && (
+                    <TouchableOpacity
+                      style={[styles.navigateButton, styles.navigateButtonFlex]}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleStartNavigation();
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="navigate" size={18} color="#FFFFFF" />
+                      <AppText maxScale={1.0} style={styles.navigateButtonText}>Cómo llegar</AppText>
+                    </TouchableOpacity>
+                  )}
+                  {onNavigate && (
+                    <TouchableOpacity
+                      style={[styles.navigateButton, styles.navigateButtonFlex, styles.openMapsButton]}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleOpenInMaps();
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="map-outline" size={18} color="#FFFFFF" />
+                      <AppText maxScale={1.0} style={styles.navigateButtonText}>Abrir en Mapas</AppText>
+                    </TouchableOpacity>
+                  )}
+                </View>
               )}
             </View>
           )}
@@ -483,6 +472,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 8,
     marginBottom: 4,
+  },
+  navigateRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  navigateButtonFlex: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+  openMapsButton: {
+    backgroundColor: 'rgba(0, 122, 255, 0.25)',
+    borderWidth: 1,
+    borderColor: '#007AFF',
   },
   navigateButtonText: {
     color: '#FFFFFF',
