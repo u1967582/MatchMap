@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { AppText, AppButton, colors } from '~/components/ds';
+import { AppText, AppButton, colors, toast } from '~/components/ds';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '~/utils/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { toast } from '~/components/ds';
 import { useLikesStore } from '~/stores/likesStore';
 import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 import { formatRelativeDate } from '~/utils/dateFormat';
-import { blockUser, fetchBlockedUserIds } from '~/services/moderation';
+import { blockUser, fetchHiddenReviewFilters, filterHiddenReviews } from '~/services/moderation';
 
 interface Review {
   id: string;
@@ -82,14 +81,17 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           return;
         }
 
-        // Reseñas de usuarios bloqueados: se ocultan (Apple 1.2)
-        const blockedIds = new Set(await fetchBlockedUserIds(uid));
+        // Se ocultan las reseñas de usuarios bloqueados y las que el usuario
+        // ya ha reportado (Apple 1.2)
+        const { blockedUserIds, reportedReviewIds } = await fetchHiddenReviewFilters(uid);
 
         if (reviewsData) {
           // Transform the data to match our interface
-          const transformedData: Review[] = reviewsData
-            .filter((item: any) => !item.user_id || !blockedIds.has(item.user_id))
-            .map((item: any) => ({
+          const transformedData: Review[] = filterHiddenReviews(
+            reviewsData as any[],
+            blockedUserIds,
+            reportedReviewIds
+          ).map((item: any) => ({
             id: item.id,
             user_id: item.user_id ?? null,
             rating: item.rating,

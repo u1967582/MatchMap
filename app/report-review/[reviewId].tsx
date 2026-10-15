@@ -101,8 +101,7 @@ export default function ReportReviewScreen() {
           onPress={() => router.back()}
           activeOpacity={0.6}
           accessibilityRole="button"
-          accessibilityLabel="Volver"
-        >
+          accessibilityLabel="Volver">
           <Ionicons name="chevron-back" size={28} color={colors.text.primary} />
         </TouchableOpacity>
         <AppText variant="h2">Reportar reseña</AppText>
@@ -113,8 +112,7 @@ export default function ReportReviewScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         {review?.comment ? (
           <View style={styles.reviewQuote}>
             <AppText variant="caption" color={colors.text.secondary} numberOfLines={4}>
@@ -140,12 +138,10 @@ export default function ReportReviewScreen() {
                   }}
                   activeOpacity={0.75}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: isActive }}
-                >
+                  accessibilityState={{ selected: isActive }}>
                   <AppText
                     variant="label"
-                    color={isActive ? colors.text.primary : colors.brand.link}
-                  >
+                    color={isActive ? colors.text.primary : colors.brand.link}>
                     {option.label}
                   </AppText>
                 </TouchableOpacity>

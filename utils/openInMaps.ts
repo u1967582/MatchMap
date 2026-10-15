@@ -20,10 +20,7 @@ function hasValidCoords(dest: MapsDestination): boolean {
  * el destino. La primera es la preferida para la plataforma y la última es
  * siempre la web de Google Maps, que funciona en cualquier dispositivo.
  */
-export function buildMapsUrls(
-  dest: MapsDestination,
-  platform: string = Platform.OS
-): string[] {
+export function buildMapsUrls(dest: MapsDestination, platform: string = Platform.OS): string[] {
   const coords = `${dest.latitude},${dest.longitude}`;
   const label = encodeURIComponent(dest.name?.trim() || 'Destino');
   const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${coords}`;

@@ -44,15 +44,24 @@ export function madridWallTimeToDate(date: string, time?: string | null): Date |
   return new Date(utcMs);
 }
 
+/** `timeZone` solo se pasa en tests; en la app se usa la zona del dispositivo. */
+function zoneOption(timeZone?: string): { timeZone?: string } {
+  return timeZone ? { timeZone } : {};
+}
+
 /** Hora del partido en la zona del dispositivo, p. ej. "21:00". */
-export function formatMatchTime(date: string, time?: string | null): string {
+export function formatMatchTime(date: string, time?: string | null, timeZone?: string): string {
   const kickoff = madridWallTimeToDate(date, time);
   if (!kickoff) return time ? time.slice(0, 5) : '';
-  return kickoff.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  return kickoff.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...zoneOption(timeZone),
+  });
 }
 
 /** Fecha y hora del partido en la zona del dispositivo, p. ej. "jue, 15 oct, 21:00". */
-export function formatMatchDateTime(date: string, time?: string | null): string {
+export function formatMatchDateTime(date: string, time?: string | null, timeZone?: string): string {
   const kickoff = madridWallTimeToDate(date, time);
   if (!kickoff) return `${date ?? ''} ${time ?? ''}`.trim();
   return kickoff.toLocaleString('es-ES', {
@@ -61,6 +70,7 @@ export function formatMatchDateTime(date: string, time?: string | null): string 
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    ...zoneOption(timeZone),
   });
 }
 
