@@ -20,6 +20,7 @@ import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
 import { AppText, colors, spacing, radius, ProfileSkeleton, toast } from '~/components/ds';
 import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 import AdBanner from '~/components/ads/AdBanner';
+import { useAds } from '~/contexts/AdsContext';
 import FavoriteTeamPopup from '~/components/FavoriteTeamPopup';
 import BettingBarsAgeGatePopup from '~/components/BettingBarsAgeGatePopup';
 import { setMatchNotificationsEnabled } from '~/services/notifications';
@@ -118,6 +119,7 @@ export default function ProfileScreen() {
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   const [showBettingBarsAgeGate, setShowBettingBarsAgeGate] = useState(false);
   const router = useRouter();
+  const { privacyOptionsRequired, openAdsPrivacyOptions } = useAds();
 
   // Toggle de admin: mostrar/ocultar bares de test en mapa y search
   const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
@@ -828,6 +830,9 @@ export default function ProfileScreen() {
             )}
             <SettingsRow title="Política de Privacidad" onPress={handlePrivacyPolicy} />
             <SettingsRow title="Términos de Servicio" onPress={handleTermsOfService} />
+            {privacyOptionsRequired && (
+              <SettingsRow title="Privacidad de anuncios" onPress={openAdsPrivacyOptions} />
+            )}
             {user?.favorite_team_id && (
               <SettingsToggleRow
                 title="Avisos de mi equipo"
