@@ -17,6 +17,15 @@ Una entrada por cada cambio: PR mergeada, migración aplicada en prod, ajuste en
 
 ---
 
+### 2026-11-04 · Áreas 06 y 12 · Revisión de código de push y flujos de usuario
+- **Tipo:** código
+- **Qué:** el push token se desregistra antes de cerrar sesión (06-H2); errores de push a `reportError`; canal Android «Avisos de partidos»; errores de red con reintento en el filtro por partido y en el selector de partidos; corazón de Buscar con aviso a invitado y toast de error; errores de login en español (`formatAuthErrorAlert`).
+- **Por qué:** 06-H2, 06-H3, 06-H7, 12-H2…12-H5. Causa probable de 0 tokens en prod: build en tienda anterior al código de push (06-H1).
+- **Dónde:** rama `audit/06-12-flujos` (desde `release/qa-final`).
+- **Verificación:** `npm run typecheck` ✅, `npx jest` 60 suites / 679 tests ✅, eslint de los ficheros tocados 0 errores.
+- **Rollback:** revertir los commits de la rama.
+- **Quién:** ☁️ nube.
+
 ### 2026-10-10 · General · Plan de auditoría creado
 - **Tipo:** decisión
 - **Qué:** plan maestro en `docs/audit/` con 13 áreas, criterios Go/No-Go y calendario de 2 semanas. Se copia la auditoría del 2026-10-10 como `HALLAZGOS_2026-10-10.md`.
