@@ -15,6 +15,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import ImageViewing from 'react-native-image-viewing';
+import { userFacingErrorMessage } from '~/utils/userFacingError';
 
 type ClaimDetail = {
   id: string;
@@ -66,7 +67,7 @@ export default function BarClaimDetailScreen() {
       }
     } catch (e: any) {
       console.error('❌ Error loading claim:', e);
-      Alert.alert('Error', e?.message || 'No se pudo cargar la solicitud.');
+      Alert.alert('Error', userFacingErrorMessage(e, 'No se pudo cargar la solicitud.'));
     } finally {
       setLoading(false);
     }
@@ -97,7 +98,7 @@ export default function BarClaimDetailScreen() {
             Alert.alert('Aprobado', 'El bar ha quedado vinculado a este propietario.', [{ text: 'OK', onPress: () => router.back() }]);
           } catch (e: any) {
             console.error('❌ approve claim error:', e);
-            Alert.alert('Error', e?.message || 'No se pudo aprobar el reclamo.');
+            Alert.alert('Error', userFacingErrorMessage(e, 'No se pudo aprobar el reclamo.'));
           } finally {
             setActionLoading(null);
           }
@@ -138,7 +139,7 @@ export default function BarClaimDetailScreen() {
             Alert.alert('Rechazado', 'La solicitud ha sido rechazada.', [{ text: 'OK', onPress: () => router.back() }]);
           } catch (e: any) {
             console.error('❌ reject claim error:', e);
-            Alert.alert('Error', e?.message || 'No se pudo rechazar el reclamo.');
+            Alert.alert('Error', userFacingErrorMessage(e, 'No se pudo rechazar el reclamo.'));
           } finally {
             setActionLoading(null);
           }

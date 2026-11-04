@@ -1,4 +1,5 @@
 import ToastLib from 'react-native-toast-message';
+import { userFacingErrorMessage } from '~/utils/userFacingError';
 
 /**
  * Helper para mostrar toasts sin haptic feedback.
@@ -60,9 +61,10 @@ export const toast = {
           message = 'La operación tardó demasiado';
           subtitle = 'Inténtalo de nuevo';
         } else {
-          // Usar mensaje original del error
+          // Nunca el texto técnico/en inglés de Supabase (auditoría 12-H6)
+          const friendly = userFacingErrorMessage(error, '');
           message = fallbackMsg;
-          subtitle = error.message;
+          subtitle = friendly || 'Inténtalo de nuevo';
         }
       }
     }
