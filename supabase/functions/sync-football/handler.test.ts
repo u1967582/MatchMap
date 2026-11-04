@@ -123,9 +123,43 @@ Deno.test('omite partidos con equipos desconocidos', async () => {
 Deno.test('un error de la API (p.ej. temporada no permitida en el plan free) se reporta por competición', async () => {
   const { handler } = setup({ apiErrors: { plan: 'Free plans do not have access to this season' } });
   const res = await quiet(() => handler(req()));
-  assertEquals(res.status, 200);
-  const { results } = await res.json();
+  // Única competición y falla: el sync entero ha fallado → 502 visible en net._http_response
+  assertEquals(res.status, 502);
+  const { results, success, failed } = await res.json();
+  assertEquals(success, false);
+  assertEquals(failed, 1);
   assertEquals(results[0].error.includes('Free plans'), true);
+});
+
+Deno.test('si solo falla alguna competición, 200 con el detalle del fallo', async () => {
+  const fake = createFakeSupabase({
+    rpc: () => ({ data: 'cron-secret' }),
+    respond: (c) => {
+      if (c.table === 'competitions') return { data: [COMP, { ...COMP, id: 'c2', name: 'Rota', api_football_id: 999 }] };
+      if (c.table === 'teams') {
+        const rows = op(c, 'upsert')!.args[0];
+        return { data: rows.map((r: any) => ({ id: `uuid-${r.api_football_id}`, api_football_id: r.api_football_id })) };
+      }
+      return { data: null };
+    },
+  });
+  const fetchMock = (async (url: string) => {
+    if (url.includes('league=999')) return new Response('down', { status: 503 });
+    return new Response(JSON.stringify({ errors: [], response: url.includes('/teams') ? TEAMS : [fixture()] }));
+  }) as any;
+  const handler = createHandler({ supabase: fake.client, fetch: fetchMock, apiKey: 'api-key', sleep: async () => {} });
+  const res = await quiet(() => handler(req()));
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body.failed, 1);
+  assertEquals(body.results[1].error, 'HTTP 503 for /teams?league=999&season=2025');
+});
+
+Deno.test('400 si leagueId no es un entero positivo (sin consultar la BD)', async () => {
+  const { handler, calls } = setup();
+  assertEquals((await quiet(() => handler(req('cron-secret', '?leagueId=abc')))).status, 400);
+  assertEquals((await quiet(() => handler(req('cron-secret', '?leagueId=-3')))).status, 400);
+  assertEquals(calls.length, 0);
 });
 
 Deno.test('?leagueId filtra la competición', async () => {

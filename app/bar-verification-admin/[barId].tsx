@@ -24,6 +24,7 @@ import { DraggableImageGrid, type DraggableImage } from '~/components/images';
 import { useAutoBroadcastPreferences } from '~/hooks/useAutoBroadcastPreferences';
 import { CompetitionsTeamsSelector } from '~/components/admin/CompetitionsTeamsSelector';
 import { buildBroadcastPreferencesPayload } from '~/lib/broadcastPreferences';
+import { userFacingErrorMessage } from '~/utils/userFacingError';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -315,7 +316,7 @@ export default function BarVerificationDetailScreen() {
       }
       return;
     } catch (e: any) {
-      toast.error('Error al cargar el bar', e?.message);
+      toast.error('Error al cargar el bar', userFacingErrorMessage(e, 'Inténtalo de nuevo'));
     } finally {
       setLoading(false);
       setLoadingExtras(false);

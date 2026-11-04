@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
 
-jest.mock('~/utils/supabase');
-
 import { supabase } from '~/utils/supabase';
 import { useIsAdmin } from '~/hooks/useIsAdmin';
+
+jest.mock('~/utils/supabase');
 
 const mockedFrom = supabase.from as jest.Mock;
 const mockedGetUser = supabase.auth.getUser as jest.Mock;

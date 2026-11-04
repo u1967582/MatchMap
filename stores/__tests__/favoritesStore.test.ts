@@ -1,9 +1,9 @@
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
 
-jest.mock('~/utils/supabase');
-
 import { supabase } from '~/utils/supabase';
 import { useFavoritesStore } from '~/stores/favoritesStore';
+
+jest.mock('~/utils/supabase');
 
 const mockedFrom = supabase.from as jest.Mock;
 

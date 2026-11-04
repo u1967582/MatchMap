@@ -12,7 +12,9 @@ export interface RevenueCatEvent {
   original_transaction_id?: string | null;
   product_id?: string | null;
   price?: number | null;
+  price_in_purchased_currency?: number | null;
   currency?: string | null;
+  environment?: string | null;
   subscriber_attributes?: Record<string, { value?: string | null } | undefined> | null;
 }
 
@@ -81,9 +83,21 @@ export function computeEndAt(plan: BoostPlan, from: Date): Date {
 export function computeBoostWindow(
   plan: BoostPlan,
   now: Date,
-  currentActiveEndAt: string | null | undefined,
+  currentActiveEndAt: string | null | undefined
 ): { startAt: Date; endAt: Date } {
   const currentEnd = currentActiveEndAt ? new Date(currentActiveEndAt) : null;
   const startAt = currentEnd && currentEnd.getTime() > now.getTime() ? currentEnd : now;
   return { startAt, endAt: computeEndAt(plan, startAt) };
+}
+
+// RevenueCat envía `price` en USD y `price_in_purchased_currency` en la moneda
+// de `currency`. Para que amount_cents y currency sean coherentes se usa el
+// importe en la moneda de compra; si falta, se guarda `price` en USD.
+export function getAmount(event: RevenueCatEvent): { amountCents: number; currency: string } {
+  const local = event.price_in_purchased_currency;
+  if (typeof local === 'number' && Number.isFinite(local) && event.currency) {
+    return { amountCents: Math.round(local * 100), currency: event.currency.toLowerCase() };
+  }
+  const usd = typeof event.price === 'number' && Number.isFinite(event.price) ? event.price : 0;
+  return { amountCents: Math.round(usd * 100), currency: 'usd' };
 }

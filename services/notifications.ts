@@ -1,9 +1,10 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '~/utils/supabase';
+import { reportError } from '~/utils/errorReporting';
 
 const CACHED_TOKEN_KEY = 'matchmap_expo_push_token';
 
@@ -23,7 +24,7 @@ export function configureNotificationHandler(): void {
 
   if (Platform.OS === 'android') {
     Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
+      name: 'Avisos de partidos',
       importance: Notifications.AndroidImportance.HIGH,
     }).catch((error) => console.error('Error creando canal de notificaciones:', error));
   }
@@ -48,7 +49,8 @@ export async function getExpoPushToken(): Promise<string | null> {
     const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
     return data;
   } catch (error) {
-    console.error('Error obteniendo Expo Push Token:', error);
+    // Sin FCM (Android) o sin aps-environment (iOS) falla aquí: que se vea.
+    reportError(error, { extra: { step: 'getExpoPushToken', platform: Platform.OS } });
     return null;
   }
 }
@@ -116,7 +118,7 @@ export async function requestMatchNotificationsPermission(
     await registerPushToken(token);
     return 'granted';
   } catch (error) {
-    console.error('Error solicitando permiso de notificaciones:', error);
+    reportError(error, { extra: { step: 'requestMatchNotificationsPermission' } });
     return 'skipped';
   }
 }
@@ -144,4 +146,51 @@ export async function setMatchNotificationsEnabled(
     .eq('id', userId);
 
   if (error) throw error;
+}
+
+/**
+ * Interruptor «Avisos de mi equipo» de Perfil (auditoría 06-H6). Guarda la
+ * preferencia y, al activarlo, se asegura de que los avisos puedan llegar:
+ * pide permiso si el sistema aún deja preguntar, registra el token y, si el
+ * permiso está denegado, ofrece abrir los ajustes del móvil. Sin esto el
+ * interruptor salía activado y no llegaba nada.
+ */
+export async function syncMatchNotificationsToggle(
+  userId: string,
+  enabled: boolean
+): Promise<'granted' | 'denied' | 'skipped' | 'disabled'> {
+  await setMatchNotificationsEnabled(userId, enabled);
+  if (!enabled) return 'disabled';
+  if (!Device.isDevice) return 'skipped';
+
+  let status: 'granted' | 'denied' | 'skipped' = 'skipped';
+  try {
+    const current = await Notifications.getPermissionsAsync();
+    if (current.status !== 'granted' && current.canAskAgain !== false) {
+      const requested = await Notifications.requestPermissionsAsync();
+      status = requested.status === 'granted' ? 'granted' : 'denied';
+    } else {
+      status = current.status === 'granted' ? 'granted' : 'denied';
+    }
+
+    if (status === 'granted') {
+      const token = await getExpoPushToken();
+      if (token) await registerPushToken(token);
+    }
+  } catch (error) {
+    reportError(error, { extra: { step: 'syncMatchNotificationsToggle' } });
+    return 'skipped';
+  }
+
+  if (status === 'denied') {
+    Alert.alert(
+      'Notificaciones desactivadas',
+      'Para recibir los avisos de tu equipo, activa las notificaciones de MatchMap en los ajustes del móvil.',
+      [
+        { text: 'Ahora no', style: 'cancel' },
+        { text: 'Abrir ajustes', onPress: () => Linking.openSettings() },
+      ]
+    );
+  }
+  return status;
 }

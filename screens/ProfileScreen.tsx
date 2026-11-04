@@ -18,11 +18,12 @@ import * as WebBrowser from 'expo-web-browser';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
 import { AppText, colors, spacing, radius, ProfileSkeleton, toast } from '~/components/ds';
-import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
+import { getIsGuest, promptDeleteAccount, showGuestLoginAlert, signOut } from '~/utils/auth';
 import AdBanner from '~/components/ads/AdBanner';
+import { useAds } from '~/contexts/AdsContext';
 import FavoriteTeamPopup from '~/components/FavoriteTeamPopup';
 import BettingBarsAgeGatePopup from '~/components/BettingBarsAgeGatePopup';
-import { setMatchNotificationsEnabled } from '~/services/notifications';
+import { syncMatchNotificationsToggle } from '~/services/notifications';
 import { updateShowBettingBars } from '~/services/users';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
@@ -110,6 +111,7 @@ export default function ProfileScreen() {
   const [userBars, setUserBars] = useState<UserBar[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGuestUser, setIsGuestUser] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [planName, setPlanName] = useState<string>('Cargando...');
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
   const [pendingReviewReportsCount, setPendingReviewReportsCount] = useState(0);
@@ -119,6 +121,7 @@ export default function ProfileScreen() {
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   const [showBettingBarsAgeGate, setShowBettingBarsAgeGate] = useState(false);
   const router = useRouter();
+  const { privacyOptionsRequired, openAdsPrivacyOptions } = useAds();
 
   // Toggle de admin: mostrar/ocultar bares de test en mapa y search
   const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
@@ -298,7 +301,8 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await supabase.auth.signOut();
+              const { error } = await signOut();
+              if (error) throw error;
               router.replace('/');
             } catch (error) {
               console.error('Error signing out:', error);
@@ -310,6 +314,16 @@ export default function ProfileScreen() {
     );
   }, [router]);
 
+  // Borrado de cuenta accesible directamente desde Perfil (Apple 5.1.1(v) / Google Play)
+  const handleDeleteAccount = useCallback(() => {
+    if (deletingAccount) return;
+    promptDeleteAccount({
+      onStart: () => setDeletingAccount(true),
+      onFinish: () => setDeletingAccount(false),
+      onDeleted: () => router.replace('/'),
+    });
+  }, [router, deletingAccount]);
+
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
@@ -320,7 +334,7 @@ export default function ProfileScreen() {
       const previousValue = user.match_notifications_enabled ?? true;
       setUser((prev) => (prev ? { ...prev, match_notifications_enabled: value } : prev));
       try {
-        await setMatchNotificationsEnabled(user.id, value);
+        await syncMatchNotificationsToggle(user.id, value);
       } catch (error) {
         setUser((prev) =>
           prev ? { ...prev, match_notifications_enabled: previousValue } : prev
@@ -858,6 +872,9 @@ export default function ProfileScreen() {
             )}
             <SettingsRow title="Política de Privacidad" onPress={handlePrivacyPolicy} />
             <SettingsRow title="Términos de Servicio" onPress={handleTermsOfService} />
+            {privacyOptionsRequired && (
+              <SettingsRow title="Privacidad de anuncios" onPress={openAdsPrivacyOptions} />
+            )}
             {user?.favorite_team_id && (
               <SettingsToggleRow
                 title="Avisos de mi equipo"
@@ -879,7 +896,13 @@ export default function ProfileScreen() {
                 onPress={() => setShowBettingBarsAgeGate(true)}
               />
             )}
-            <SettingsRow title="Cerrar Sesión" onPress={handleLogout} isLast color={colors.status.error} />
+            <SettingsRow title="Cerrar Sesión" onPress={handleLogout} color={colors.status.error} />
+            <SettingsRow
+              title={deletingAccount ? 'Eliminando cuenta…' : 'Eliminar cuenta'}
+              onPress={handleDeleteAccount}
+              isLast
+              color={colors.status.error}
+            />
           </View>
         </View>
       </ScrollView>

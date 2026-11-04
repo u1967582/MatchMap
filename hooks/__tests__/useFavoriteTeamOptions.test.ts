@@ -1,9 +1,9 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 
-jest.mock('~/utils/supabase');
-
 import { supabase } from '~/utils/supabase';
 import { useFavoriteTeamOptions } from '~/hooks/useFavoriteTeamOptions';
+
+jest.mock('~/utils/supabase');
 
 const mockedRpc = supabase.rpc as jest.Mock;
 

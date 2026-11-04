@@ -3,7 +3,13 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import ToastMessage from 'react-native-toast-message';
 
 jest.mock('~/utils/supabase');
+jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
+  openAuthSessionAsync: jest.fn(),
+}));
+jest.mock('expo-auth-session', () => ({ makeRedirectUri: jest.fn(() => 'exp://test') }));
 jest.mock('~/utils/auth', () => ({
+  ...jest.requireActual('~/utils/auth'),
   checkAndPromotePreRegisteredBar: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -96,5 +102,55 @@ describe('LoginModal', () => {
     expect(onClose).not.toHaveBeenCalled();
     expect(onLoginSuccess).not.toHaveBeenCalled();
     expect(mockedCheckAndPromote).not.toHaveBeenCalled();
+  });
+});
+
+describe('LoginModal - casos de error y contraseña', () => {
+  it('no recorta la contraseña (el registro la guarda tal cual)', async () => {
+    mockedSignIn.mockResolvedValueOnce({
+      data: { user: { id: 'user-1', email: 'user@test.com' }, session: {} },
+      error: null,
+    });
+    const { getAllByText, getByPlaceholderText } = await setup();
+
+    await fireEvent.changeText(getByPlaceholderText('tu@email.com'), '  user@test.com ');
+    await fireEvent.changeText(getByPlaceholderText('••••••••'), ' clave con espacio ');
+    await pressLoginButton(getAllByText);
+
+    expect(mockedSignIn).toHaveBeenCalledWith({
+      email: 'user@test.com',
+      password: ' clave con espacio ',
+    });
+  });
+
+  it('email sin confirmar → mensaje en español', async () => {
+    mockedSignIn.mockResolvedValueOnce({
+      data: { user: null, session: null },
+      error: { code: 'email_not_confirmed', message: 'Email not confirmed' },
+    });
+    const { getAllByText, getByPlaceholderText } = await setup();
+    await fireEvent.changeText(getByPlaceholderText('tu@email.com'), 'user@test.com');
+    await fireEvent.changeText(getByPlaceholderText('••••••••'), 'password123');
+    await pressLoginButton(getAllByText);
+
+    await waitFor(() => {
+      expect(mockedToastShow).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'error', text1: 'Email no verificado' })
+      );
+    });
+  });
+
+  it('sin conexión (excepción de red) → mensaje de conexión, no el texto en inglés', async () => {
+    mockedSignIn.mockRejectedValueOnce(new TypeError('Network request failed'));
+    const { getAllByText, getByPlaceholderText } = await setup();
+    await fireEvent.changeText(getByPlaceholderText('tu@email.com'), 'user@test.com');
+    await fireEvent.changeText(getByPlaceholderText('••••••••'), 'password123');
+    await pressLoginButton(getAllByText);
+
+    await waitFor(() => {
+      expect(mockedToastShow).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'error', text1: 'Error de conexión' })
+      );
+    });
   });
 });

@@ -3,7 +3,7 @@ import { Stack, useRouter } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import WelcomeScreen from '~/screens/WelcomeScreen';
 import { supabase } from '~/utils/supabase';
-import { signInWithGoogle, signInWithApple } from '~/utils/auth';
+import { signInWithGoogle, signInWithApple, formatAuthErrorAlert } from '~/utils/auth';
 import LoginModal from './(auth)/components/LoginModal';
 import RegisterModal from './(auth)/components/RegisterModal';
 
@@ -71,13 +71,13 @@ export default function Home() {
         if (result.error && !result.error.includes('cancel') && !result.error.includes('dismiss')) {
           Alert.alert(
             'Error de Google',
-            result.error || 'No se pudo completar el inicio de sesión con Google'
+            formatAuthErrorAlert(result.error, 'No se pudo completar el inicio de sesión con Google')
           );
         }
       }
     } catch (error: any) {
       console.error('❌ Exception in handleGoogleLogin:', error);
-      Alert.alert('Error', error.message || 'Error inesperado con Google');
+      Alert.alert('Error', formatAuthErrorAlert(error, 'No se pudo completar el inicio de sesión con Google'));
     } finally {
       setLoadingGoogle(false);
     }
@@ -88,13 +88,14 @@ export default function Home() {
     try {
       const { error } = await supabase.auth.signInAnonymously();
       if (error) {
-        Alert.alert('Error', error.message || 'No se pudo continuar como invitado');
+        // Nunca el texto en inglés de Supabase (p. ej. «Anonymous sign-ins are disabled»)
+        Alert.alert('Error', formatAuthErrorAlert(error, 'No se pudo continuar como invitado'));
         return;
       }
       // Navegar explícitamente (el listener de _layout ignora sesiones anónimas)
       router.replace('/(protected)/map');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error inesperado');
+      Alert.alert('Error', formatAuthErrorAlert(error, 'No se pudo continuar como invitado'));
     } finally {
       setLoadingGuest(false);
     }
@@ -108,7 +109,7 @@ export default function Home() {
     } catch (error: any) {
       // Don't show error if user cancelled
       if (error?.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Error', error.message || 'No se pudo iniciar sesión con Apple');
+        Alert.alert('Error', formatAuthErrorAlert(error, 'No se pudo iniciar sesión con Apple'));
       }
     } finally {
       setLoadingApple(false);

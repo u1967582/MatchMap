@@ -8,6 +8,7 @@
 
 // Lógica separada de index.ts para poder testearla (deno test).
 // deno-lint-ignore-file no-explicit-any
+import { createCronAuth } from '../_shared/secrets.ts'
 
 export const SEASON = '2026'  // ← año de inicio de la temporada actual
 
@@ -55,23 +56,7 @@ export function createHandler(deps: Deps) {
   // pg_cron envía el secreto guardado en Vault en la cabecera x-cron-secret
   // (migración cron_jobs_pg_cron). Es la única autorización: la función se
   // despliega con verify_jwt = false.
-  let cronSecret: string | null = null
-
-  async function isAuthorizedCron(req: Request): Promise<boolean> {
-    const provided = req.headers.get('x-cron-secret')
-    if (!provided) return false
-
-    if (!cronSecret) {
-      const { data, error } = await supabase.rpc('get_cron_secret')
-      if (error || typeof data !== 'string' || !data) {
-        console.error('No se pudo leer cron_secret:', error?.message)
-        return false
-      }
-      cronSecret = data
-    }
-
-    return provided === cronSecret
-  }
+  const isAuthorizedCron = createCronAuth(supabase)
 
   // ── Helper: llamada a la API-Football ───────────────────────
   async function apiFetch(path: string) {
@@ -272,6 +257,13 @@ export function createHandler(deps: Deps) {
         } catch { /* body vacío o no-JSON */ }
       }
 
+      if (leagueIdFilter !== null && (!Number.isInteger(leagueIdFilter) || leagueIdFilter <= 0)) {
+        return new Response(JSON.stringify({ error: 'leagueId must be a positive integer' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
       // Obtener solo las competiciones que tienen api_football_id asignado
       // (las que configuraste en el PASO 2)
       let query = supabase
@@ -350,9 +342,16 @@ export function createHandler(deps: Deps) {
       console.log('=== sync-football END ===')
       console.log(JSON.stringify(results, null, 2))
 
+      // Si fallan TODAS las competiciones (clave de API caducada, plan sin
+      // acceso a la temporada…) el sync no ha hecho nada: devolver 502 para
+      // que el fallo se vea en net._http_response y en los logs de la función
+      // en vez de quedar oculto tras un 200.
+      const failed = results.filter((r: any) => r.error).length
+      const allFailed = failed === results.length
+
       return new Response(
-        JSON.stringify({ success: true, season: SEASON, results }),
-        { headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: !allFailed, season: SEASON, failed, results }),
+        { status: allFailed ? 502 : 200, headers: { 'Content-Type': 'application/json' } }
       )
 
     } catch (err: any) {

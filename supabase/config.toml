@@ -26,3 +26,16 @@ enabled = true
 # esa cabecera es su autorización, no un JWT.
 verify_jwt = false
 entrypoint = "./functions/send-match-notifications/index.ts"
+
+[functions.delete-user-account]
+enabled = true
+# La llama la app con el JWT del usuario: la plataforma lo valida antes de
+# ejecutar y la función deriva el usuario a borrar del propio JWT.
+verify_jwt = true
+entrypoint = "./functions/delete-user-account/index.ts"
+
+[functions.promote_pre_registered_bar_with_images]
+enabled = true
+# La llama la app con el JWT del usuario (utils/auth.ts).
+verify_jwt = true
+entrypoint = "./functions/promote_pre_registered_bar_with_images/index.ts"

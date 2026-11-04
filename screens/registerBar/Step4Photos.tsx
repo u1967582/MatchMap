@@ -16,6 +16,7 @@ import type { DraggableImage } from '~/components/images';
 import { useFocusEffect } from '@react-navigation/native';
 import { createAutoPreRegisterBar } from '~/services/bars';
 import { barImagePath, STORAGE_BUCKETS } from '~/utils/storagePaths';
+import { UserFacingError, userFacingErrorMessage } from '~/utils/userFacingError';
 
 interface ImageItem {
   id: string;
@@ -449,7 +450,7 @@ const Step4Photos: React.FC = () => {
       console.log(`📊 ${type} upload results: ${successful} exitosas, ${failed} fallidas`);
 
       if (failed > 0) {
-        throw new Error(`${failed} de ${images.length} imágenes de ${type} no se pudieron subir`);
+        throw new UserFacingError(`${failed} de ${images.length} imágenes de ${type} no se pudieron subir`);
       }
 
     } catch (error) {
@@ -679,7 +680,7 @@ const Step4Photos: React.FC = () => {
         .single();
 
       if (barError) {
-        throw new Error(barError.message);
+        throw barError;
       }
 
         barData = insertedBarData;
@@ -723,7 +724,7 @@ const Step4Photos: React.FC = () => {
 
     } catch (error: any) {
       console.error('Error submitting form:', error);
-      Alert.alert('Error', error.message || 'No se pudo completar el registro. Inténtalo de nuevo.');
+      Alert.alert('Error', userFacingErrorMessage(error, 'No se pudo completar el registro. Inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }

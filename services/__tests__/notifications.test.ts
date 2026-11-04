@@ -1,5 +1,21 @@
-import { Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
+
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '~/utils/supabase';
+import {
+  configureNotificationHandler,
+  getExpoPushToken,
+  registerPushToken,
+  unregisterCurrentPushToken,
+  requestMatchNotificationsPermission,
+  fetchMatchNotificationsEnabled,
+  setMatchNotificationsEnabled,
+  syncMatchNotificationsToggle,
+} from '~/services/notifications';
 
 jest.mock('~/utils/supabase');
 
@@ -25,21 +41,6 @@ jest.mock('expo-constants', () => ({
     easConfig: { projectId: 'test-project-id' },
   },
 }));
-
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '~/utils/supabase';
-import {
-  configureNotificationHandler,
-  getExpoPushToken,
-  registerPushToken,
-  unregisterCurrentPushToken,
-  requestMatchNotificationsPermission,
-  fetchMatchNotificationsEnabled,
-  setMatchNotificationsEnabled,
-} from '~/services/notifications';
 
 const mockedFrom = supabase.from as jest.Mock;
 const mockedRpc = supabase.rpc as jest.Mock;
@@ -72,7 +73,7 @@ describe('configureNotificationHandler', () => {
 
     expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
       'default',
-      expect.objectContaining({ name: 'default' })
+      expect.objectContaining({ name: 'Avisos de partidos' })
     );
   });
 
@@ -290,5 +291,67 @@ describe('setMatchNotificationsEnabled', () => {
     await expect(setMatchNotificationsEnabled('user-1', true)).rejects.toEqual({
       message: 'boom',
     });
+  });
+});
+
+describe('syncMatchNotificationsToggle (auditoría 06-H6)', () => {
+  const mockedGetPerms = Notifications.getPermissionsAsync as jest.Mock;
+  const mockedReqPerms = Notifications.requestPermissionsAsync as jest.Mock;
+  const mockedToken = Notifications.getExpoPushTokenAsync as jest.Mock;
+  let alertSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    mockedFrom.mockReturnValue(createQueryBuilderMock({ data: null, error: null }));
+    mockedRpc.mockResolvedValue({ error: null });
+    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+
+  afterEach(() => alertSpy.mockRestore());
+
+  it('al desactivar solo guarda la preferencia', async () => {
+    await expect(syncMatchNotificationsToggle('user-1', false)).resolves.toBe('disabled');
+    expect(mockedGetPerms).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it('con permiso concedido registra el token', async () => {
+    mockedGetPerms.mockResolvedValueOnce({ status: 'granted', canAskAgain: true });
+    mockedToken.mockResolvedValueOnce({ data: 'ExponentPushToken[t]' });
+
+    await expect(syncMatchNotificationsToggle('user-1', true)).resolves.toBe('granted');
+    expect(mockedRpc).toHaveBeenCalledWith(
+      'fn_register_push_token',
+      expect.objectContaining({ p_token: 'ExponentPushToken[t]' })
+    );
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it('vuelve a pedir permiso si el sistema aún deja preguntar (Android 13+)', async () => {
+    mockedGetPerms.mockResolvedValueOnce({ status: 'denied', canAskAgain: true });
+    mockedReqPerms.mockResolvedValueOnce({ status: 'granted' });
+    mockedToken.mockResolvedValueOnce({ data: 'ExponentPushToken[t]' });
+
+    await expect(syncMatchNotificationsToggle('user-1', true)).resolves.toBe('granted');
+    expect(mockedReqPerms).toHaveBeenCalled();
+  });
+
+  it('con permiso denegado avisa y ofrece abrir los ajustes', async () => {
+    mockedGetPerms.mockResolvedValueOnce({ status: 'denied', canAskAgain: false });
+    const openSettings = jest.spyOn(Linking, 'openSettings').mockResolvedValue(undefined as any);
+
+    await expect(syncMatchNotificationsToggle('user-1', true)).resolves.toBe('denied');
+
+    expect(mockedReqPerms).not.toHaveBeenCalled();
+    expect(mockedRpc).not.toHaveBeenCalledWith('fn_register_push_token', expect.anything());
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    const buttons = alertSpy.mock.calls[0][2] as { text: string; onPress?: () => void }[];
+    buttons.find((b) => b.text === 'Abrir ajustes')!.onPress!();
+    expect(openSettings).toHaveBeenCalled();
+    openSettings.mockRestore();
+  });
+
+  it('propaga el error si no se puede guardar la preferencia (Perfil revierte el interruptor)', async () => {
+    mockedFrom.mockReturnValueOnce(createQueryBuilderMock({ data: null, error: { message: 'boom' } }));
+    await expect(syncMatchNotificationsToggle('user-1', true)).rejects.toEqual({ message: 'boom' });
   });
 });

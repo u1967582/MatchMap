@@ -1,9 +1,9 @@
-jest.mock('~/utils/supabase');
-
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { supabase } from '~/utils/supabase';
 import { createQueryBuilderMock } from '~/test-utils/mockSupabase';
 import { useFavorites } from '~/hooks/useFavorites';
+
+jest.mock('~/utils/supabase');
 
 const mockedSupabase = supabase as any;
 const user = { id: 'user-1' };

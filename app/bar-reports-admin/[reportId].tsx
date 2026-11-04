@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
+import { userFacingErrorMessage } from '~/utils/userFacingError';
 
 const REASON_LABELS: Record<string, string> = {
   info_incorrecta: 'Información incorrecta',
@@ -56,7 +57,7 @@ export default function BarReportDetailScreen() {
       setReport(data as any);
     } catch (e: any) {
       console.error('❌ Error loading report:', e);
-      Alert.alert('Error', e?.message || 'No se pudo cargar el reporte.');
+      Alert.alert('Error', userFacingErrorMessage(e, 'No se pudo cargar el reporte.'));
     } finally {
       setLoading(false);
     }
@@ -89,7 +90,7 @@ export default function BarReportDetailScreen() {
         router.back();
       } catch (e: any) {
         console.error('❌ Error resolving report:', e);
-        Alert.alert('Error', e?.message || 'No se pudo actualizar el reporte.');
+        Alert.alert('Error', userFacingErrorMessage(e, 'No se pudo actualizar el reporte.'));
       } finally {
         setActionLoading(null);
       }

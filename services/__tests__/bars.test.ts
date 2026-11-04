@@ -1,7 +1,5 @@
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
 
-jest.mock('~/utils/supabase');
-
 import { supabase } from '~/utils/supabase';
 import {
   approveBars,
@@ -9,6 +7,8 @@ import {
   fetchBarIdsByMatch,
   fetchBarIdsByTeam,
 } from '~/services/bars';
+
+jest.mock('~/utils/supabase');
 
 const mockedFrom = supabase.from as jest.Mock;
 const mockedRpc = supabase.rpc as jest.Mock;

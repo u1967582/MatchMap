@@ -1,8 +1,9 @@
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import mobileAds, {
   AppOpenAd,
   AdEventType,
   AdsConsent,
+  AdsConsentPrivacyOptionsRequirementStatus,
   type PaidEvent,
 } from 'react-native-google-mobile-ads';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
@@ -49,6 +50,10 @@ export async function initializeAdsSDK(): Promise<boolean> {
 
   if (Platform.OS === 'ios') {
     try {
+      // iOS ignora la petición de ATT (no muestra el diálogo) si la app aún
+      // no está en estado `active`; Apple rechaza builds en los que el
+      // revisor no ve el diálogo (guideline 5.1.2).
+      await waitForAppActive();
       await requestTrackingPermissionsAsync();
     } catch (error) {
       if (__DEV__) console.log('[ads] ATT request failed', error);
@@ -57,6 +62,48 @@ export async function initializeAdsSDK(): Promise<boolean> {
 
   await mobileAds().initialize();
   return true;
+}
+
+/**
+ * Resuelve cuando la app está en primer plano (`active`). Si ya lo está,
+ * resuelve inmediatamente.
+ */
+export function waitForAppActive(): Promise<void> {
+  if (AppState.currentState === 'active') return Promise.resolve();
+  return new Promise((resolve) => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        subscription.remove();
+        resolve();
+      }
+    });
+  });
+}
+
+/**
+ * `true` si el usuario está en una región donde UMP exige ofrecer un punto
+ * de acceso permanente para revisar o retirar el consentimiento de anuncios
+ * (EEE/Reino Unido). En ese caso la app debe mostrar el botón
+ * "Privacidad de anuncios" en el perfil.
+ */
+export async function isAdsPrivacyOptionsRequired(): Promise<boolean> {
+  try {
+    const { privacyOptionsRequirementStatus } = await AdsConsent.getConsentInfo();
+    return privacyOptionsRequirementStatus === AdsConsentPrivacyOptionsRequirementStatus.REQUIRED;
+  } catch (error) {
+    if (__DEV__) console.log('[ads] getConsentInfo failed', error);
+    return false;
+  }
+}
+
+/**
+ * Muestra el formulario de opciones de privacidad de UMP para que el usuario
+ * cambie o retire su consentimiento (RGPD art. 7.3). Devuelve si, tras el
+ * cambio, se pueden pedir anuncios.
+ */
+export async function showAdsPrivacyOptions(): Promise<boolean> {
+  const { canRequestAds } = await AdsConsent.showPrivacyOptionsForm();
+  return canRequestAds;
 }
 
 export async function loadAndShowAppOpenAdOnce({
