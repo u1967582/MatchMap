@@ -1,399 +1,252 @@
-import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
-import { Platform, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
 import { makeRedirectUri } from 'expo-auth-session';
 import Constants from 'expo-constants';
-import { supabase, supabaseUrl } from './supabase';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import { supabase, supabaseUrl } from './supabase';
 
-// ============================================
-// CONFIGURACIÓN DE DEEP LINKING
-// ============================================
+// ⚠️ Logs: nunca imprimir emails, tokens ni ids de usuario. En producción los
+// console.log se eliminan (babel), pero console.error/warn se mantienen.
 
-// ⚠️ IMPORTANTE: Esto debe estar al inicio, antes de cualquier función
-// Completa la sesión de OAuth cuando se reciba el callback
+// Completa la sesión de OAuth cuando se recibe el callback (debe ir al inicio)
 WebBrowser.maybeCompleteAuthSession();
 
+// ============================================
+// CONFIGURACIÓN
+// ============================================
+
+/** Deep link de producción al que vuelven OAuth y la confirmación de email. */
+export const AUTH_CALLBACK_URL = 'matchmap://auth/callback';
+/** Deep link de producción del email de recuperación de contraseña. */
+export const PASSWORD_RESET_URL = 'matchmap://auth/reset-password';
+
 /**
- * Obtiene la URL de redirección OAuth correcta según el entorno
- * @returns URL de redirección para OAuth callbacks
+ * Longitud mínima de contraseña en registro y cambio de contraseña.
+ * Debe coincidir (o ser mayor) con Auth › Providers › Email › Minimum password length.
+ */
+export const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * URL de redirección para OAuth y para el enlace de confirmación de email.
+ * Debe estar en Auth › URL Configuration › Redirect URLs de Supabase.
  */
 export const getOAuthRedirectUrl = (): string => {
   if (__DEV__) {
-    // Development: Usar URL de Expo dev client
-    const redirectUrl = makeRedirectUri({ 
-      scheme: 'matchmap',
-      path: 'auth/callback' // ⚠️ AÑADIDO: Esto faltaba
-    });
-    console.log('🔗 OAuth Redirect URL (DEV):', redirectUrl);
-    return redirectUrl;
-  } else {
-    // Production: Usar scheme de la app
-    const redirectUrl = 'matchmap://auth/callback'; // ⚠️ CAMBIADO: Añadido /auth/callback
-    console.log('🔗 OAuth Redirect URL (PROD):', redirectUrl);
-    return redirectUrl;
+    return makeRedirectUri({ scheme: 'matchmap', path: 'auth/callback' });
   }
+  return AUTH_CALLBACK_URL;
+};
+
+/** URL de redirección del email de recuperación de contraseña. */
+export const getPasswordResetRedirectUrl = (): string => {
+  if (!__DEV__) return PASSWORD_RESET_URL;
+  const hostUri = Constants.expoConfig?.hostUri;
+  return hostUri
+    ? `exp://${hostUri}/--/auth/reset-password`
+    : 'exp://localhost:8081/--/auth/reset-password';
 };
 
 // ============================================
-// HOOK: Manejo de Estado de Autenticación
+// MENSAJES DE ERROR EN ESPAÑOL
 // ============================================
+
+export type AuthErrorKind =
+  | 'invalid_credentials'
+  | 'email_not_confirmed'
+  | 'user_exists'
+  | 'weak_password'
+  | 'same_password'
+  | 'rate_limit'
+  | 'invalid_email'
+  | 'signup_disabled'
+  | 'session_expired'
+  | 'network'
+  | 'unknown';
+
+export interface AuthErrorMessage {
+  kind: AuthErrorKind;
+  title: string;
+  subtitle?: string;
+}
 
 /**
- * Hook que escucha cambios en el estado de autenticación
- * y maneja la navegación automática
- * 
- * @param onUserSignedIn Callback opcional cuando usuario inicia sesión
+ * Traduce un error de Supabase Auth (o de red) a un mensaje comprensible.
+ * Usa `error.code` cuando existe (supabase-js ≥ 2.4x) y cae al texto del mensaje.
+ * Nunca devuelve el mensaje original en inglés.
  */
-export const useAuthStateChange = (onUserSignedIn?: (user: any) => Promise<void>) => {
-  const router = useRouter();
+export function getAuthErrorMessage(error: any, fallback: string): AuthErrorMessage {
+  const code: string = (error?.code ?? '').toString().toLowerCase();
+  const msg: string = (typeof error === 'string' ? error : error?.message ?? '').toLowerCase();
+  const has = (...needles: string[]) => needles.some((n) => code === n || msg.includes(n));
 
-  useEffect(() => {
-    console.log('🔐 Iniciando listener de auth state changes...');
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('📡 Auth event:', event);
-
-        if (event === 'SIGNED_IN' && session) {
-          console.log('✅ Usuario autenticado:', session.user.email);
-          console.log('   Provider:', session.user.app_metadata.provider);
-          console.log('   User ID:', session.user.id);
-
-          // ✅ IMPORTANTE: Verificar si hay un bar pre-registrado CUANDO TIENE SESIÓN
-          try {
-            await checkAndPromotePreRegisteredBar(session.user.id, session.user.email || '');
-          } catch (error) {
-            console.error('❌ Error verificando bar pre-registrado:', error);
-            // No bloquear el login si falla
-          }
-
-          // Callback personalizado si se proporciona
-          if (onUserSignedIn && session.user) {
-            try {
-              await onUserSignedIn(session.user);
-            } catch (error) {
-              console.error('❌ Error en callback onUserSignedIn:', error);
-            }
-          }
-
-          // ✅ NO navegar aquí - la navegación se maneja en _layout.tsx
-          console.log('ℹ️  Navegación manejada por _layout.tsx');
-        }
-        else if (event === 'SIGNED_OUT') {
-          console.log('👋 Usuario cerró sesión');
-          // ✅ NO navegar aquí - la navegación se maneja en _layout.tsx
-          console.log('ℹ️  Navegación manejada por _layout.tsx');
-        }
-        else if (event === 'TOKEN_REFRESHED') {
-          console.log('🔄 Token de sesión renovado');
-        }
-        else if (event === 'USER_UPDATED') {
-          console.log('👤 Datos de usuario actualizados');
-        }
-      }
-    );
-
-    return () => {
-      console.log('🔐 Desconectando listener de auth...');
-      subscription.unsubscribe();
+  if (has('invalid_credentials', 'invalid login credentials')) {
+    return { kind: 'invalid_credentials', title: 'Email o contraseña incorrectos' };
+  }
+  if (has('email_not_confirmed', 'email not confirmed')) {
+    return { kind: 'email_not_confirmed', title: 'Email no verificado', subtitle: 'Revisa tu correo para confirmar tu cuenta' };
+  }
+  if (has('user_already_exists', 'email_exists', 'user already registered', 'already been registered')) {
+    return { kind: 'user_exists', title: 'Este email ya está registrado', subtitle: 'Inicia sesión o recupera tu contraseña' };
+  }
+  if (has('weak_password', 'pwned', 'weak and easy to guess', 'password should')) {
+    return {
+      kind: 'weak_password',
+      title: 'Contraseña poco segura',
+      subtitle: `Usa al menos ${MIN_PASSWORD_LENGTH} caracteres y evita contraseñas conocidas`,
     };
-  }, [router, onUserSignedIn]);
-};
+  }
+  if (has('same_password', 'should be different from the old')) {
+    return { kind: 'same_password', title: 'La nueva contraseña debe ser distinta de la anterior' };
+  }
+  if (
+    has(
+      'over_email_send_rate_limit',
+      'over_request_rate_limit',
+      'over_sms_send_rate_limit',
+      'rate limit',
+      'for security purposes',
+      'too many requests'
+    ) ||
+    error?.status === 429
+  ) {
+    return { kind: 'rate_limit', title: 'Demasiados intentos', subtitle: 'Espera unos minutos y vuelve a intentarlo' };
+  }
+  if (
+    has('email_address_invalid', 'invalid format', 'unable to validate email') ||
+    (code === 'validation_failed' && msg.includes('email'))
+  ) {
+    return { kind: 'invalid_email', title: 'El email no es válido' };
+  }
+  if (has('signup_disabled', 'signups not allowed', 'email_provider_disabled')) {
+    return { kind: 'signup_disabled', title: 'El registro no está disponible ahora mismo', subtitle: 'Inténtalo más tarde' };
+  }
+  if (has('session_not_found', 'session_expired', 'refresh_token_not_found', 'auth session missing')) {
+    return { kind: 'session_expired', title: 'Tu sesión ha caducado', subtitle: 'Vuelve a iniciar sesión' };
+  }
+  if (has('network', 'fetch failed', 'failed to fetch', 'timeout', 'timed out')) {
+    return { kind: 'network', title: 'Error de conexión', subtitle: 'Revisa tu conexión a internet' };
+  }
+  return { kind: 'unknown', title: fallback, subtitle: 'Inténtalo de nuevo' };
+}
 
 // ============================================
 // FUNCIONES DE AUTENTICACIÓN
 // ============================================
 
-/**
- * Obtiene el usuario actualmente autenticado
- * @returns Usuario actual o null
- */
+/** Usuario autenticado actual o null. */
 export const getCurrentUser = async () => {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
     if (error) {
       console.error('❌ Error al obtener usuario:', error.message);
       return null;
     }
-
-    if (user) {
-      console.log('✅ Usuario actual:', user.email);
-    }
-
     return user;
-  } catch (error) {
-    console.error('❌ Error inesperado al obtener usuario:', error);
+  } catch (error: any) {
+    console.error('❌ Error inesperado al obtener usuario:', error?.message);
     return null;
   }
 };
 
+type PreRegisteredBarRow = {
+  id: string;
+  name: string | null;
+  status: string | null;
+  converted_bar_id: string | null;
+};
+
 /**
- * Verifica si existe un bar pre-registrado para el usuario y lo promote
- * Esta función se debe llamar DESPUÉS de que el usuario ha iniciado sesión
- * @param userId ID del usuario autenticado
- * @param userEmail Email del usuario autenticado
+ * Elige el pre-registro a procesar entre las filas con el email del usuario:
+ * primero uno pendiente sin convertir, luego cualquiera sin convertir y por
+ * último cualquiera (para completar una conversión a medias).
+ */
+function pickPreRegisteredBar(rows: PreRegisteredBarRow[]): PreRegisteredBarRow | null {
+  return (
+    rows.find((r) => r.status === 'pre_registered' && !r.converted_bar_id) ??
+    rows.find((r) => !r.converted_bar_id) ??
+    rows[0] ??
+    null
+  );
+}
+
+/**
+ * Si existe un bar pre-registrado con el email del usuario, lo promueve
+ * (edge function `promote_pre_registered_bar_with_images`, que valida en
+ * servidor que el email coincide y está confirmado). Nunca lanza: no debe
+ * bloquear el login.
  */
 export const checkAndPromotePreRegisteredBar = async (userId: string, userEmail: string) => {
   try {
-    // Normalize email to lowercase for consistent matching
-    const normalizedEmail = userEmail.toLowerCase().trim();
-    
-    console.log(`\n========================================`);
-    console.log(`🔍 BUSCANDO BAR PRE-REGISTRADO`);
-    console.log(`========================================`);
-    console.log(`📧 Email original: ${userEmail}`);
-    console.log(`📧 Email normalizado: ${normalizedEmail}`);
-    console.log(`👤 User ID: ${userId}`);
+    const normalizedEmail = (userEmail ?? '').toLowerCase().trim();
+    if (!userId || !normalizedEmail) return;
 
-    // STEP 1: Debug - Show the last 5 rows in the table to compare
-    console.log(`\n🔍 DEBUG: Últimas 5 filas en auto_pre_register_bars:`);
-    const { data: debugRows, error: debugError } = await supabase
+    const { data: rows, error: queryError } = await supabase
       .from('auto_pre_register_bars')
-      .select('id, email, status, converted_bar_id, created_at')
-      .order('created_at', { ascending: false })
-      .limit(5);
-    
-    if (debugError) {
-      console.error('❌ Error fetching debug rows:', debugError);
-    } else {
-      console.table(debugRows);
-      debugRows?.forEach((row, index) => {
-        console.log(`\n   Row ${index + 1}:`);
-        console.log(`   - Email: "${row.email}" (length: ${row.email?.length})`);
-        console.log(`   - Email matches: ${row.email === normalizedEmail}`);
-        console.log(`   - Status: "${row.status}"`);
-        console.log(`   - Converted: ${row.converted_bar_id}`);
-        console.log(`   - Created: ${row.created_at}`);
-      });
-    }
-
-    // STEP 2: Try simple query first (only email filter)
-    console.log(`\n🔎 QUERY 1: Búsqueda simple (solo email):`);
-    const { data: simpleQuery, error: simpleError } = await supabase
-      .from('auto_pre_register_bars')
-      .select('id, email, name, status, converted_bar_id, created_at')
-      .eq('email', normalizedEmail);
-
-    console.log(`   Resultados:`, {
-      found: simpleQuery?.length || 0,
-      data: simpleQuery,
-      error: simpleError,
-    });
-
-    // STEP 3: Try with converted_bar_id filter
-    console.log(`\n🔎 QUERY 2: Búsqueda con email + converted_bar_id IS NULL:`);
-    const { data: withConvertedFilter, error: convertedError } = await supabase
-      .from('auto_pre_register_bars')
-      .select('id, email, name, status, converted_bar_id, created_at')
+      .select('id, name, status, converted_bar_id')
       .eq('email', normalizedEmail)
-      .is('converted_bar_id', null);
-
-    console.log(`   Resultados:`, {
-      found: withConvertedFilter?.length || 0,
-      data: withConvertedFilter,
-      error: convertedError,
-    });
-
-    // STEP 4: Full query with all filters
-    console.log(`\n🔎 QUERY 3: Búsqueda completa (email + status + converted_bar_id):`);
-    const { data: preRegBars, error: queryError } = await supabase
-      .from('auto_pre_register_bars')
-      .select('id, email, name, status, converted_bar_id, created_at')
-      .eq('email', normalizedEmail)
-      .eq('status', 'pre_registered')
-      .is('converted_bar_id', null)
-      .limit(1);
-
-    console.log(`   Resultados:`, {
-      found: preRegBars?.length || 0,
-      data: preRegBars,
-      error: queryError,
-    });
+      .order('created_at', { ascending: false });
 
     if (queryError) {
-      console.error('❌ Error querying pre-registered bars:', queryError);
-      console.log(`========================================\n`);
+      console.error('❌ Error buscando bar pre-registrado:', queryError.message);
       return;
     }
 
-    // Use the simplest query that found results
-    let foundBar = null;
-    if (preRegBars && preRegBars.length > 0) {
-      foundBar = preRegBars[0];
-      console.log(`✅ Encontrado con query completa`);
-    } else if (withConvertedFilter && withConvertedFilter.length > 0) {
-      foundBar = withConvertedFilter[0];
-      console.log(`✅ Encontrado sin filtro de status`);
-    } else if (simpleQuery && simpleQuery.length > 0) {
-      foundBar = simpleQuery[0];
-      console.log(`✅ Encontrado solo con email`);
-    }
+    const foundBar = pickPreRegisteredBar((rows as PreRegisteredBarRow[] | null) ?? []);
+    if (!foundBar) return;
 
-    if (!foundBar) {
-      console.log('\n❌ NO SE ENCONTRÓ BAR PRE-REGISTRADO CON NINGUNA QUERY');
-      console.log(`   Posibles razones:`);
-      console.log(`   - Email "${normalizedEmail}" no existe en la tabla`);
-      console.log(`   - Revisa los emails en el DEBUG arriba`);
-      console.log(`========================================\n`);
-      return;
-    }
-
-    const preBarId = foundBar.id;
-    console.log(`\n✅ BAR PRE-REGISTRADO ENCONTRADO!`);
-    console.log(`   ID: ${preBarId}`);
-    console.log(`   Nombre: ${foundBar.name}`);
-    console.log(`   Email: ${foundBar.email}`);
-    console.log(`   Status: ${foundBar.status}`);
-    console.log(`   Converted Bar ID: ${foundBar.converted_bar_id}`);
-    console.log(`   Creado: ${foundBar.created_at}`);
-
-    // ========================================
-    // VERIFICACIÓN: ¿Ya fue convertido?
-    // ========================================
     if (foundBar.converted_bar_id) {
-      console.log(`\n🔍 BAR TIENE converted_bar_id: ${foundBar.converted_bar_id}`);
-      console.log(`   Verificando si las imágenes ya fueron migradas...`);
-
-      // Verificar si las imágenes ya están en bar_images/bar_menus
-      const { data: existingImages, error: imagesError } = await supabase
+      // Ya convertido: solo hay que actuar si faltan las imágenes por migrar
+      const { data: existingImages } = await supabase
         .from('bar_images')
         .select('id')
         .eq('bar_id', foundBar.converted_bar_id)
         .limit(1);
-
-      const { data: existingMenus, error: menusError } = await supabase
+      const { data: existingMenus } = await supabase
         .from('bar_menus')
         .select('id')
         .eq('bar_id', foundBar.converted_bar_id)
         .limit(1);
 
-      const hasImages = (existingImages && existingImages.length > 0) || 
-                       (existingMenus && existingMenus.length > 0);
-
-      console.log(`   - Imágenes en bar_images: ${existingImages?.length || 0}`);
-      console.log(`   - Imágenes en bar_menus: ${existingMenus?.length || 0}`);
-
-      if (hasImages) {
-        // Todo está completo: bar creado e imágenes migradas
-        console.log(`\n✅ BAR COMPLETAMENTE CONVERTIDO`);
-        console.log(`   - Bar creado: ${foundBar.converted_bar_id}`);
-        console.log(`   - Imágenes migradas: Sí`);
-        console.log(`   Acción: Solo enlazar usuario...`);
-
-        // Solo actualizar users.bar_id si aún no lo tiene
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ bar_id: foundBar.converted_bar_id })
-          .eq('id', userId);
-
-        if (updateError) {
-          console.error(`❌ Error actualizando user bar_id:`, updateError);
-        } else {
-          console.log(`✅ Usuario enlazado al bar ${foundBar.converted_bar_id}`);
-        }
-
-        console.log(`========================================\n`);
-        
-        Alert.alert(
-          'Bar Vinculado',
-          `Tu bar "${foundBar.name}" ya está activo. Has sido vinculado correctamente.`,
-          [{ text: 'OK' }]
-        );
-        return;
-      } else {
-        // Bar creado pero imágenes NO migradas → llamar Edge para completar
-        console.log(`\n⚠️ BAR PARCIALMENTE CONVERTIDO`);
-        console.log(`   - Bar creado: ${foundBar.converted_bar_id}`);
-        console.log(`   - Imágenes migradas: NO`);
-        console.log(`   Acción: Llamar Edge Function para completar migración de imágenes...`);
-        // Continuar con el flujo normal de Edge Function
-      }
-    }
-
-    // ========================================
-    // VERIFICACIÓN: ¿Estado válido para promoción completa?
-    // ========================================
-    // Solo verificar status si NO tiene converted_bar_id
-    // Si tiene converted_bar_id pero sin imágenes, permitir continuar
-    if (!foundBar.converted_bar_id && foundBar.status !== 'pre_registered') {
-      console.log(`\n⚠️ BAR NO ESTÁ EN ESTADO PRE_REGISTERED`);
-      console.log(`   Status actual: ${foundBar.status}`);
-      console.log(`   NO se llamará a la Edge Function`);
-      console.log(`========================================\n`);
+      const hasImages = !!existingImages?.length || !!existingMenus?.length;
+      // Conversión completa: el bar ya quedó enlazado al convertirse. No
+      // repetir el aviso en cada login.
+      if (hasImages) return;
+    } else if (foundBar.status !== 'pre_registered') {
       return;
     }
 
-    if (foundBar.converted_bar_id) {
-      console.log(`\n✅ COMPLETANDO MIGRACIÓN DE IMÁGENES`);
-      console.log(`   - Bar ID existente: ${foundBar.converted_bar_id}`);
-      console.log(`   - Imágenes pendientes: Sí`);
-      console.log(`   Procediendo a llamar Edge Function para migrar imágenes...`);
-    } else {
-      console.log(`\n✅ CONDICIONES VÁLIDAS PARA PROMOCIÓN COMPLETA`);
-      console.log(`   - converted_bar_id es NULL`);
-      console.log(`   - status es "pre_registered"`);
-      console.log(`   Procediendo a llamar Edge Function...`);
-    }
-
-    // Get current session for auth token
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
-      console.error('❌ No session available for Edge Function call');
-      console.log(`========================================\n`);
+      console.error('❌ Sin sesión para promover el bar pre-registrado');
       return;
     }
 
-    // Call Edge Function to promote the bar
-    const functionUrl = `${supabaseUrl}/functions/v1/promote_pre_registered_bar_with_images`;
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/promote_pre_registered_bar_with_images`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ preBarId: foundBar.id, ownerId: userId }),
+      }
+    );
 
-    console.log(`\n🚀 LLAMANDO A EDGE FUNCTION`);
-    console.log(`   URL: ${functionUrl}`);
-    console.log(`   Payload:`, {
-      preBarId: preBarId,
-      ownerId: userId,
-    });
-
-    const requestBody = {
-      preBarId: preBarId,
-      ownerId: userId,
-    };
-
-    console.log(`📤 Enviando petición...`);
-
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${sessionData.session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    console.log(`📥 Respuesta recibida - Status: ${response.status} ${response.statusText}`);
-
-    let result;
+    let result: any = null;
     try {
       result = await response.json();
-      console.log(`📦 Response body:`, result);
-    } catch (parseError) {
-      console.error('❌ Error parsing response JSON:', parseError);
-      const text = await response.text();
-      console.log('📄 Raw response:', text);
-      console.log(`========================================\n`);
+    } catch {
+      console.error('❌ Respuesta no válida al promover el bar. Status:', response.status);
       return;
     }
 
-    if (!response.ok || !result.success) {
-      console.error('❌ ERROR EN EDGE FUNCTION');
-      console.error('   Status:', response.status);
-      console.error('   Error:', result.error);
-      console.error('   Details:', result.details || result);
-      console.log(`========================================\n`);
-      
+    if (!response.ok || !result?.success) {
+      console.error('❌ Error al promover el bar pre-registrado. Status:', response.status);
       Alert.alert(
         'Aviso',
         'Se encontró un bar pre-registrado para tu email, pero hubo un error al reclamarlo. Contacta con soporte.'
@@ -401,92 +254,42 @@ export const checkAndPromotePreRegisteredBar = async (userId: string, userEmail:
       return;
     }
 
-    console.log(`✅ BAR PROMOVIDO EXITOSAMENTE!`);
-    console.log(`   Bar ID: ${result.barId}`);
-    console.log(`   Imágenes del bar: ${result.barImagesCount || 0}`);
-    console.log(`   Imágenes del menú: ${result.menuImagesCount || 0}`);
-
     const totalImages = (result.barImagesCount || 0) + (result.menuImagesCount || 0);
-
-    console.log(`\n🎉 PROCESO COMPLETADO`);
-    console.log(`   Total imágenes migradas: ${totalImages}`);
-    console.log(`========================================\n`);
-
-    // Show success message
     Alert.alert(
       '¡Bar Reclamado!',
       `Tu bar ha sido activado exitosamente${totalImages > 0 ? ` con ${totalImages} imágenes` : ''}. Ya puedes gestionar tu establecimiento.`,
       [{ text: 'OK' }]
     );
-
   } catch (error: any) {
-    console.error('\n❌ EXCEPCIÓN EN checkAndPromotePreRegisteredBar');
-    console.error('   Error:', error);
-    console.error('   Stack:', error.stack);
-    console.log(`========================================\n`);
-    // Don't block login if promotion fails
+    console.error('❌ Excepción en checkAndPromotePreRegisteredBar:', error?.message);
   }
 };
 
-/**
- * Cierra la sesión del usuario actual
- * @returns Error si ocurre, o null si es exitoso
- */
+/** Cierra la sesión del usuario actual. */
 export const signOut = async () => {
   try {
-    console.log('👋 Cerrando sesión...');
     const { error } = await supabase.auth.signOut();
-    
     if (error) {
       console.error('❌ Error al cerrar sesión:', error.message);
       return { error };
     }
-
-    console.log('✅ Sesión cerrada exitosamente');
     return { error: null };
   } catch (error: any) {
-    console.error('❌ Error inesperado al cerrar sesión:', error);
+    console.error('❌ Error inesperado al cerrar sesión:', error?.message);
     return { error };
   }
-}; 
+};
 
 // ============================================
 // GOOGLE OAUTH
 // ============================================
 
 /**
- * Genera la URL de redirección correcta para el entorno actual
- * @returns URL de redirección para OAuth callbacks
- */
-function getRedirectUrl(): string {
-  if (__DEV__) {
-    // En desarrollo, usar el redirect URL generado por Expo
-    const redirectUrl = makeRedirectUri({
-      scheme: 'matchmap',
-      path: 'auth/callback',
-    });
-    console.log('🔗 Dev Redirect URL:', redirectUrl);
-    return redirectUrl;
-  } else {
-    // En producción, usar scheme personalizado
-    const redirectUrl = 'matchmap://auth/callback';
-    console.log('🔗 Prod Redirect URL:', redirectUrl);
-    return redirectUrl;
-  }
-}
-
-/**
- * Inicia el flujo de autenticación con Google OAuth usando método robusto
- * 
- * Proceso mejorado:
- * 1. Genera URL de OAuth de Supabase con skipBrowserRedirect: true
- * 2. Abre navegador EMBEBIDO de Expo (no Safari nativo)
- * 3. Usuario selecciona cuenta y autoriza en el navegador embebido
- * 4. Captura los tokens de la URL de callback manualmente
- * 5. Establece la sesión en Supabase con setSession()
- * 6. El trigger de Supabase crea el usuario en public.users
- * 
- * @returns Objeto con success, error y session
+ * Login con Google vía OAuth de Supabase en el navegador embebido:
+ * 1. Supabase devuelve la URL de autorización (skipBrowserRedirect).
+ * 2. Se abre con WebBrowser.openAuthSessionAsync.
+ * 3. Se extraen los tokens del callback y se fija la sesión con setSession().
+ * 4. Se comprueba si el usuario tiene un bar pre-registrado.
  */
 export async function signInWithGoogle(): Promise<{
   success: boolean;
@@ -495,160 +298,91 @@ export async function signInWithGoogle(): Promise<{
   url?: string;
 }> {
   try {
-    console.log('🔐 Iniciando Google OAuth (método robusto)...');
-    console.log('   Platform:', Platform.OS);
-    console.log('   Environment:', __DEV__ ? 'Development' : 'Production');
+    const redirectUrl = getOAuthRedirectUrl();
 
-    // Paso 1: Generar URL de redirección
-    const redirectUrl = getRedirectUrl();
-    console.log('✅ Redirect URL configurada');
-
-    // Paso 2: Obtener URL de autorización de Supabase
     const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: redirectUrl,
         skipBrowserRedirect: true, // ⚠️ CRÍTICO: true para mobile
-        queryParams: { 
+        queryParams: {
           access_type: 'offline',
-          prompt: 'consent'
+          prompt: 'consent',
         },
-        scopes: 'email profile'
+        scopes: 'email profile',
       },
     });
 
     if (oauthError) {
       console.error('❌ OAuth Error:', oauthError.message);
-      return { 
-        success: false, 
-        error: oauthError.message 
-      };
+      return { success: false, error: oauthError.message };
     }
 
     if (!data?.url) {
       console.error('❌ No authorization URL received');
-      return { 
-        success: false, 
-        error: 'No authorization URL received from Supabase' 
-      };
+      return { success: false, error: 'No authorization URL received from Supabase' };
     }
 
-    console.log('✅ Authorization URL received');
-    console.log('   URL preview:', data.url.substring(0, 80) + '...');
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl, {
+      showInRecents: true,
+    });
 
-    // Paso 3: Abrir navegador EMBEBIDO de Expo (NO Safari nativo)
-    console.log('🌐 Opening embedded browser...');
-    
-    const result = await WebBrowser.openAuthSessionAsync(
-      data.url,
-      redirectUrl,
-      {
-        showInRecents: true, // Para iOS
-      }
-    );
-
-    console.log('📱 Browser result type:', result.type);
-
-    // Paso 4: Manejar respuesta del navegador
     if (result.type === 'success' && result.url) {
-      console.log('✅ Success! Received callback URL');
-      
-      // Parsear la URL de callback - los tokens están en el hash (#) o en query params (?)
+      // Los tokens pueden venir en el hash (#) o en query params (?)
       let accessToken: string | null = null;
       let refreshToken: string | null = null;
-      
-      // Intentar extraer de hash fragment primero (formato: #access_token=...&refresh_token=...)
+
       if (result.url.includes('#')) {
-        const hashFragment = result.url.split('#')[1];
-        const params = new URLSearchParams(hashFragment);
+        const params = new URLSearchParams(result.url.split('#')[1]);
         accessToken = params.get('access_token');
         refreshToken = params.get('refresh_token');
       }
-      
-      // Si no están en el hash, intentar en query params (formato: ?access_token=...&refresh_token=...)
+
       if (!accessToken || !refreshToken) {
-      const url = new URL(result.url);
+        const url = new URL(result.url);
         accessToken = url.searchParams.get('access_token');
         refreshToken = url.searchParams.get('refresh_token');
       }
 
       if (!accessToken || !refreshToken) {
+        // No imprimir la URL: puede contener códigos o tokens
         console.error('❌ No tokens in callback URL');
-        console.log('   URL:', result.url);
-        return { 
-          success: false, 
-          error: 'No tokens received in callback URL' 
-        };
+        return { success: false, error: 'No tokens received in callback URL' };
       }
 
-      console.log('✅ Tokens extracted from URL');
-      console.log('   Access Token:', accessToken.substring(0, 20) + '...');
-      console.log('   Refresh Token:', refreshToken.substring(0, 20) + '...');
-
-      // Paso 5: Establecer sesión manualmente en Supabase
-      console.log('🔄 Setting session in Supabase...');
-      
-      const { data: sessionData, error: sessionError } = 
-        await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
 
       if (sessionError) {
         console.error('❌ Session Error:', sessionError.message);
-        return { 
-          success: false, 
-          error: sessionError.message 
-        };
+        return { success: false, error: sessionError.message };
       }
 
       if (!sessionData.session) {
         console.error('❌ No session data received');
-        return { 
-          success: false, 
-          error: 'Failed to establish session' 
-        };
+        return { success: false, error: 'Failed to establish session' };
       }
 
-      console.log('✅ Session established successfully!');
-      console.log('   User:', sessionData.session.user.email);
-      console.log('   User ID:', sessionData.session.user.id);
-      console.log('   Provider:', sessionData.session.user.app_metadata.provider);
+      const user = sessionData.session.user;
+      if (user?.email) {
+        await checkAndPromotePreRegisteredBar(user.id, user.email);
+      }
 
-      // Retornar éxito con la sesión
-      return { 
-        success: true, 
-        session: sessionData.session,
-        url: data.url
-      };
-
+      return { success: true, session: sessionData.session, url: data.url };
     } else if (result.type === 'cancel') {
-      console.log('ℹ️  User cancelled login');
-      return { 
-        success: false, 
-        error: 'Login cancelled by user' 
-      };
+      return { success: false, error: 'Login cancelled by user' };
     } else if (result.type === 'dismiss') {
-      console.log('ℹ️  Browser dismissed');
-      return { 
-        success: false, 
-        error: 'Login dismissed' 
-      };
+      return { success: false, error: 'Login dismissed' };
     } else {
       console.error('❌ Unexpected result type:', result.type);
-      return { 
-        success: false, 
-        error: `Unexpected result: ${result.type}` 
-      };
+      return { success: false, error: `Unexpected result: ${result.type}` };
     }
-
   } catch (error: any) {
-    console.error('❌ Exception in signInWithGoogle:', error);
-    console.error('   Stack:', error.stack);
-    
-    // Mensajes de error más amigables
-    let errorMessage = error.message || 'Unknown error';
-    
+    console.error('❌ Exception in signInWithGoogle:', error?.message);
+
+    let errorMessage = error?.message || 'Unknown error';
     if (error?.message?.includes('provider')) {
       errorMessage = 'Google OAuth no está configurado en Supabase. Verifica la configuración.';
     } else if (error?.message?.includes('redirect')) {
@@ -656,67 +390,75 @@ export async function signInWithGoogle(): Promise<{
     } else if (error?.message?.includes('network')) {
       errorMessage = 'Error de conexión. Verifica tu internet.';
     }
-    
-    return { 
-      success: false, 
-      error: errorMessage 
-    };
+
+    return { success: false, error: errorMessage };
   }
 }
 
-/**
- * Verifica el estado de la sesión de OAuth
- * Útil para debugging
- */
+/** Sesión actual (útil para depurar) o null. */
 export async function checkOAuthSession() {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
     if (error) {
       console.error('❌ Error al verificar sesión:', error.message);
       return null;
     }
-
-    if (session) {
-      console.log('✅ Sesión OAuth activa');
-      console.log('   User:', session.user.email);
-      console.log('   Provider:', session.user.app_metadata.provider);
-      console.log('   Expires:', new Date(session.expires_at! * 1000).toLocaleString());
-    } else {
-      console.log('ℹ️  No hay sesión activa');
-    }
-
     return session;
-  } catch (error) {
-    console.error('❌ Error inesperado al verificar sesión:', error);
+  } catch (error: any) {
+    console.error('❌ Error inesperado al verificar sesión:', error?.message);
     return null;
   }
 }
 
 // ============================================
-// APPLE OAUTH
+// APPLE SIGN-IN
 // ============================================
 
-import * as AppleAuthentication from 'expo-apple-authentication';
+/** Nombre completo a partir de la credencial de Apple (solo llega en el primer login). */
+export function formatAppleFullName(
+  fullName: AppleAuthentication.AppleAuthenticationFullName | null | undefined
+): string | null {
+  if (!fullName) return null;
+  const name = [fullName.givenName, fullName.middleName, fullName.familyName]
+    .filter((part) => !!part && part.trim().length > 0)
+    .map((part) => (part as string).trim())
+    .join(' ');
+  return name.length > 0 ? name : null;
+}
 
 /**
- * Inicia el flujo de autenticación con Apple Sign-In
- * Solo disponible en iOS
- *
- * @returns Datos de autenticación o lanza error
- * @throws Error si no está disponible o falla
+ * Apple solo envía el nombre en el primer login y Supabase no lo guarda con
+ * signInWithIdToken: se guarda aquí para no tener que pedirlo de nuevo
+ * (App Review rechaza apps que piden nombre/email tras Sign in with Apple).
+ */
+async function persistAppleFullName(userId: string, fullName: string) {
+  try {
+    await supabase.auth.updateUser({ data: { full_name: fullName } });
+    await supabase
+      .from('users')
+      .update({ full_name: fullName })
+      .eq('id', userId)
+      .or('full_name.is.null,full_name.eq.');
+  } catch (error: any) {
+    console.error('❌ No se pudo guardar el nombre de Apple:', error?.message);
+  }
+}
+
+/**
+ * Login con Apple (solo iOS).
+ * @throws Error si no está disponible, si el usuario cancela o si falla Supabase
  */
 export async function signInWithApple() {
   try {
     const isAvailable = await AppleAuthentication.isAvailableAsync();
-
     if (!isAvailable) {
       throw new Error('Apple Sign-In no está disponible en este dispositivo.');
     }
 
-    console.log('🍎 Iniciando Apple Sign-In...');
-
-    // Generar nonce para seguridad
+    // Nonce: a Apple se le envía el hash y a Supabase el original
     const rawNonceBytes = await Crypto.getRandomBytesAsync(16);
     const rawNonce = Array.from(rawNonceBytes)
       .map((b) => b.toString(16).padStart(2, '0'))
@@ -726,7 +468,6 @@ export async function signInWithApple() {
       rawNonce
     );
 
-    // Solicitar credenciales de Apple
     const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [
         AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -739,9 +480,6 @@ export async function signInWithApple() {
       throw new Error('No se recibió identityToken de Apple.');
     }
 
-    console.log('✅ Credenciales de Apple recibidas');
-
-    // Autenticar con Supabase
     const { data, error } = await supabase.auth.signInWithIdToken({
       provider: 'apple',
       token: credential.identityToken,
@@ -749,45 +487,28 @@ export async function signInWithApple() {
     });
 
     if (error) {
-      console.error('❌ Error en Apple Sign-In:', error.message);
       throw error;
     }
 
-    console.log('✅ Apple Sign-In exitoso');
-    return data;
-  } catch (error: any) {
-    console.error('❌ Error en Apple Sign-In:', error);
-    throw error;
-  }
-}
-
-// ============================================
-// UTILIDADES DE DEBUG
-// ============================================
-
-/**
- * Imprime información detallada del usuario actual
- * Útil para debugging de OAuth
- */
-export async function debugUserInfo() {
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error || !user) {
-      console.log('❌ No hay usuario autenticado');
-      return;
+    const user = data?.user;
+    if (user) {
+      const fullName = formatAppleFullName(credential.fullName);
+      if (fullName) {
+        await persistAppleFullName(user.id, fullName);
+      }
+      // Con «Ocultar mi email» el email es un relay de Apple y no coincidirá
+      // con ningún pre-registro, lo cual es correcto.
+      if (user.email) {
+        await checkAndPromotePreRegisteredBar(user.id, user.email);
+      }
     }
 
-    console.log('👤 ==== USER DEBUG INFO ====');
-    console.log('ID:', user.id);
-    console.log('Email:', user.email);
-    console.log('Provider:', user.app_metadata.provider);
-    console.log('Created:', new Date(user.created_at).toLocaleString());
-    console.log('Last Sign In:', new Date(user.last_sign_in_at!).toLocaleString());
-    console.log('Metadata:', JSON.stringify(user.user_metadata, null, 2));
-    console.log('========================');
-  } catch (error) {
-    console.error('❌ Error en debugUserInfo:', error);
+    return data;
+  } catch (error: any) {
+    if (error?.code !== 'ERR_REQUEST_CANCELED') {
+      console.error('❌ Error en Apple Sign-In:', error?.message);
+    }
+    throw error;
   }
 }
 
@@ -795,97 +516,45 @@ export async function debugUserInfo() {
 // PASSWORD RECOVERY
 // ============================================
 
-/**
- * Envía email de recuperación de contraseña
- */
-export async function sendPasswordResetEmail(
-  email: string
-): Promise<{
+/** Envía el email de recuperación de contraseña. */
+export async function sendPasswordResetEmail(email: string): Promise<{
   success: boolean;
   error?: string;
+  rawError?: any;
 }> {
   try {
-    console.log('📧 Enviando email de recuperación a:', email);
-
-    // Generar URL de redirect correcta según el entorno
-    let redirectUrl: string;
-    
-    if (__DEV__) {
-      // En desarrollo, intentar obtener la IP/host del servidor de Expo
-      try {
-        const hostUri = Constants.expoConfig?.hostUri;
-        console.log('🔍 Constants.expoConfig?.hostUri:', hostUri);
-        
-        if (hostUri) {
-          redirectUrl = `exp://${hostUri}/--/auth/reset-password`;
-          console.log('✅ URL construida desde hostUri');
-        } else {
-          // Fallback: usar localhost (funcionará en simulador)
-          redirectUrl = 'exp://localhost:8081/--/auth/reset-password';
-          console.log('⚠️ Usando localhost como fallback');
-        }
-      } catch (err) {
-        console.error('❌ Error obteniendo hostUri:', err);
-        redirectUrl = 'exp://localhost:8081/--/auth/reset-password';
-      }
-      
-      console.log('🔧 URL de desarrollo generada');
-    } else {
-      // En producción, usar scheme personalizado
-      redirectUrl = 'matchmap://auth/reset-password';
-      console.log('🔧 URL de producción generada');
-    }
-
-    console.log('🔗 Password Reset Redirect URL:', redirectUrl);
-    console.log('🌍 Environment:', __DEV__ ? 'Development' : 'Production');
-
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
+      redirectTo: getPasswordResetRedirectUrl(),
     });
 
     if (error) {
-      console.error('❌ Error enviando email:', error);
-      console.error('   Error code:', error.status);
-      console.error('   Error details:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Error enviando email de recuperación. Status:', error.status);
+      return { success: false, error: error.message, rawError: error };
     }
 
-    console.log('✅ Email de recuperación enviado exitosamente');
-    console.log('📬 Revisa tu inbox (y spam) en:', email);
     return { success: true };
   } catch (error: any) {
-    console.error('❌ Exception al enviar email:', error);
-    console.error('   Stack:', error.stack);
-    return { success: false, error: error.message };
+    console.error('❌ Excepción al enviar email de recuperación:', error?.message);
+    return { success: false, error: error?.message, rawError: error };
   }
 }
 
-/**
- * Actualiza la contraseña del usuario
- */
-export async function updatePassword(
-  newPassword: string
-): Promise<{
+/** Actualiza la contraseña del usuario con sesión (p. ej. la del enlace de recuperación). */
+export async function updatePassword(newPassword: string): Promise<{
   success: boolean;
   error?: string;
+  rawError?: any;
 }> {
   try {
-    console.log('🔐 Actualizando contraseña...');
-
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
-      console.error('❌ Error actualizando contraseña:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Error actualizando contraseña:', error.message);
+      return { success: false, error: error.message, rawError: error };
     }
-
-    console.log('✅ Contraseña actualizada exitosamente');
     return { success: true };
   } catch (error: any) {
-    console.error('❌ Exception:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Excepción actualizando contraseña:', error?.message);
+    return { success: false, error: error?.message, rawError: error };
   }
 }
 
@@ -893,82 +562,143 @@ export async function updatePassword(
 // ACCOUNT DELETION
 // ============================================
 
+const DELETE_ACCOUNT_GENERIC_ERROR =
+  'No se pudo eliminar la cuenta. Inténtalo de nuevo o contacta con soporte.';
+
 /**
- * Elimina la cuenta del usuario actual.
- * Borra datos en public.users y luego elimina el auth user via Edge Function.
- *
- * @returns Objeto con success y error opcional
+ * Elimina la cuenta del usuario actual vía la edge function
+ * `delete-user-account` (borra datos, ficheros y el usuario de auth con
+ * service_role) y cierra la sesión local.
  */
 export async function deleteAccount(): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
       return { success: false, error: 'No se pudo obtener el usuario actual.' };
     }
 
-    // Llamar a Edge Function que maneja la eliminación completa
-    // (borrar datos relacionados + auth user con service_role)
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
       return { success: false, error: 'No hay sesión activa.' };
     }
 
-    const functionUrl = `${supabaseUrl}/functions/v1/delete-user-account`;
-
-    const response = await fetch(functionUrl, {
+    const response = await fetch(`${supabaseUrl}/functions/v1/delete-user-account`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${sessionData.session.access_token}`,
+        Authorization: `Bearer ${sessionData.session.access_token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ userId: user.id }),
     });
 
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      return { success: false, error: result.error || 'Error al eliminar la cuenta.' };
+    let result: any = null;
+    try {
+      result = await response.json();
+    } catch {
+      result = null;
     }
 
-    // Sign out locally after deletion
-    await supabase.auth.signOut();
+    if (!response.ok || !result?.success) {
+      console.error('❌ Error eliminando la cuenta. Status:', response.status);
+      return { success: false, error: DELETE_ACCOUNT_GENERIC_ERROR };
+    }
+
+    // El usuario ya no existe en el servidor: cerrar solo la sesión local
+    // (scope global haría una llamada que fallaría con 404/403).
+    await supabase.auth.signOut({ scope: 'local' });
 
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Error inesperado al eliminar la cuenta.' };
+    console.error('❌ Excepción eliminando la cuenta:', error?.message);
+    const isNetwork = getAuthErrorMessage(error, '').kind === 'network';
+    return {
+      success: false,
+      error: isNetwork
+        ? 'Error de conexión. Revisa tu internet e inténtalo de nuevo.'
+        : DELETE_ACCOUNT_GENERIC_ERROR,
+    };
   }
 }
 
-// ============================================
-// TIPOS Y EXPORTS
-// ============================================
+export interface PromptDeleteAccountOptions {
+  /** Se llama justo antes de empezar el borrado (para mostrar un loader). */
+  onStart?: () => void;
+  /** Se llama al terminar, con éxito o error (para ocultar el loader). */
+  onFinish?: () => void;
+  /** Se llama si la cuenta se eliminó (p. ej. navegar al inicio). */
+  onDeleted: () => void;
+}
 
 /**
- * Verifica si el usuario actual es un invitado (sesión anónima).
- * Para uso en Phase 2 — restricción de funciones para invitados.
+ * Flujo de borrado de cuenta con doble confirmación (Apple 5.1.1(v) y Google
+ * Play). Compartido por Perfil y Editar perfil.
  */
+export function promptDeleteAccount({ onStart, onFinish, onDeleted }: PromptDeleteAccountOptions) {
+  const runDeletion = async () => {
+    onStart?.();
+    try {
+      const result = await deleteAccount();
+      if (result.success) {
+        onDeleted();
+      } else {
+        Alert.alert('Error', result.error || DELETE_ACCOUNT_GENERIC_ERROR);
+      }
+    } finally {
+      onFinish?.();
+    }
+  };
+
+  Alert.alert(
+    'Eliminar cuenta',
+    'Esta acción es irreversible. Se eliminarán tu perfil, tus reseñas, favoritos y fotos, y los bares que gestiones dejarán de aparecer en MatchMap. Los Boost ya comprados no se reembolsan.',
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Continuar',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(
+            'Confirmación final',
+            '¿Seguro que quieres eliminar tu cuenta de forma permanente?',
+            [
+              { text: 'No, conservar', style: 'cancel' },
+              { text: 'Sí, eliminar', style: 'destructive', onPress: runDeletion },
+            ]
+          );
+        },
+      },
+    ]
+  );
+}
+
+// ============================================
+// INVITADOS
+// ============================================
+
+/** True si el usuario actual es un invitado (sesión anónima). */
 export const getIsGuest = async (): Promise<boolean> => {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user?.is_anonymous === true;
 };
 
 /**
- * Muestra alerta para invitados que intentan usar funciones restringidas.
- * Ofrece navegar al WelcomeScreen para iniciar sesión.
+ * Alerta para invitados que intentan usar funciones restringidas.
+ * Ofrece volver a la pantalla de bienvenida para iniciar sesión.
  */
 export const showGuestLoginAlert = (router: any) => {
-  Alert.alert(
-    'Inicia sesión',
-    'Necesitas una cuenta para usar esta función.',
-    [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Iniciar sesión', onPress: () => router.replace('/') },
-    ]
-  );
+  Alert.alert('Inicia sesión', 'Necesitas una cuenta para usar esta función.', [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: 'Iniciar sesión', onPress: () => router.replace('/') },
+  ]);
 };
 
 export type AuthProvider = 'google' | 'apple' | 'facebook';

@@ -10,7 +10,7 @@ import {
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { updatePassword } from '~/utils/auth';
+import { getAuthErrorMessage, MIN_PASSWORD_LENGTH, updatePassword } from '~/utils/auth';
 import { supabase } from '~/utils/supabase';
 import InputField from '~/components/ui/InputField';
 import CustomButton from '~/components/ui/CustomButton';
@@ -30,26 +30,14 @@ export default function ResetPasswordScreen() {
 
   const checkSession = async () => {
     try {
-      console.log('🔍 Verificando sesión para reset password...');
-      
       const { data: { session } } = await supabase.auth.getSession();
-      
-      console.log('📋 Session data:', {
-        hasSession: !!session,
-        userId: session?.user?.id,
-        email: session?.user?.email,
-      });
-      
-      if (session) {
-        console.log('✅ Sesión válida para reset password');
-        console.log('   User ID:', session.user.id);
-        console.log('   Email:', session.user.email);
+
+      // Una sesión de invitado (anónima) no puede tener contraseña: el enlace no
+      // llegó a establecer la sesión de recuperación.
+      if (session && !session.user?.is_anonymous) {
         setIsValidToken(true);
       } else {
-        console.log('❌ No hay sesión válida');
-        console.log('⚠️ Esto significa que el deep link no funcionó correctamente');
-        
-        // Dar más información al usuario
+        console.log('❌ No hay sesión de recuperación válida');
         Alert.alert(
           'Link Inválido',
           'El link de recuperación ha expirado o es inválido.\n\nPosibles causas:\n• El link ya fue usado\n• Han pasado más de 1 hora\n• El link no abrió la app correctamente\n\nPor favor solicita uno nuevo.',
@@ -57,19 +45,19 @@ export default function ResetPasswordScreen() {
         );
       }
     } catch (error) {
-      console.error('❌ Error checking session:', error);
+      console.error('❌ Error verificando la sesión de recuperación');
       Alert.alert('Error', 'Error verificando el link de recuperación');
     }
   };
 
   const isFormValid =
-    password.length >= 6 &&
+    password.length >= MIN_PASSWORD_LENGTH &&
     password === confirmPassword;
 
   const handleResetPassword = async () => {
     if (!isFormValid) {
-      if (password.length < 6) {
-        Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        Alert.alert('Error', `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`);
       } else if (password !== confirmPassword) {
         Alert.alert('Error', 'Las contraseñas no coinciden');
       }
@@ -82,31 +70,29 @@ export default function ResetPasswordScreen() {
       const result = await updatePassword(password);
 
       if (result.success) {
-        console.log('✅ Contraseña actualizada exitosamente');
-        
         // Cerrar sesión después de actualizar la contraseña
-        console.log('🚪 Cerrando sesión...');
         await supabase.auth.signOut();
-        console.log('✅ Sesión cerrada');
-        
+
         Alert.alert(
           'Contraseña Actualizada',
           'Tu contraseña ha sido actualizada exitosamente. Por favor inicia sesión con tu nueva contraseña.',
           [
             {
               text: 'OK',
-              onPress: () => {
-                console.log('🧭 Navegando al home...');
-                router.replace('/');
-              },
+              onPress: () => router.replace('/'),
             },
           ]
         );
       } else {
-        Alert.alert('Error', result.error || 'Error actualizando la contraseña');
+        const { title, subtitle } = getAuthErrorMessage(
+          result.rawError ?? result.error,
+          'No se pudo actualizar la contraseña'
+        );
+        Alert.alert(title, subtitle);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error inesperado');
+      const { title, subtitle } = getAuthErrorMessage(error, 'Error inesperado');
+      Alert.alert(title, subtitle);
     } finally {
       setLoading(false);
     }
@@ -164,7 +150,8 @@ export default function ResetPasswordScreen() {
                 <View style={styles.requirements}>
                   <AppText style={styles.requirementsTitle}>Requisitos:</AppText>
                   <AppText style={styles.requirementItem}>
-                    {password.length >= 6 ? '✅' : '⭕'} Mínimo 6 caracteres
+                    {password.length >= MIN_PASSWORD_LENGTH ? '✅' : '⭕'}{' '}
+                    {`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
                   </AppText>
                   <AppText style={styles.requirementItem}>
                     {password === confirmPassword && password.length > 0

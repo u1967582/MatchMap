@@ -4,7 +4,15 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 
 jest.mock('~/utils/supabase');
-jest.mock('~/utils/auth', () => ({ updatePassword: jest.fn() }));
+jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
+  openAuthSessionAsync: jest.fn(),
+}));
+jest.mock('expo-auth-session', () => ({ makeRedirectUri: jest.fn(() => 'exp://test') }));
+jest.mock('~/utils/auth', () => ({
+  ...jest.requireActual('~/utils/auth'),
+  updatePassword: jest.fn(),
+}));
 
 import { supabase } from '~/utils/supabase';
 import { updatePassword } from '~/utils/auth';
@@ -75,13 +83,36 @@ describe('ResetPasswordScreen', () => {
     expect(mockedRouter.replace).toHaveBeenCalledWith('/');
   });
 
-  it('muestra el error del servidor', async () => {
-    mockedUpdatePassword.mockResolvedValueOnce({ success: false, error: 'Password too weak' });
+  it('una sesión de invitado (anónima) no sirve para cambiar la contraseña', async () => {
+    mockedSupabase.auth.getSession.mockResolvedValueOnce({
+      data: { session: { user: { id: 'g1', is_anonymous: true } } },
+    });
+    await render(<ResetPasswordScreen />);
+    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    expect(alertSpy.mock.calls[0][0]).toBe('Link Inválido');
+  });
+
+  it('exige el mínimo de 8 caracteres', async () => {
+    const { getByPlaceholderText, getByText } = await renderWithSession();
+    await fireEvent.changeText(getByPlaceholderText('Nueva contraseña'), '1234567');
+    await fireEvent.changeText(getByPlaceholderText('Confirmar contraseña'), '1234567');
+    await fireEvent.press(getByText('Actualizar Contraseña'));
+    expect(mockedUpdatePassword).not.toHaveBeenCalled();
+  });
+
+  it('muestra el error del servidor en español', async () => {
+    mockedUpdatePassword.mockResolvedValueOnce({
+      success: false,
+      error: 'Password is known to be weak and easy to guess',
+      rawError: { code: 'weak_password', message: 'Password is known to be weak and easy to guess' },
+    });
     const { getByPlaceholderText, getByText } = await renderWithSession();
     await fireEvent.changeText(getByPlaceholderText('Nueva contraseña'), 'nueva123');
     await fireEvent.changeText(getByPlaceholderText('Confirmar contraseña'), 'nueva123');
     await fireEvent.press(getByText('Actualizar Contraseña'));
-    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Error', 'Password too weak'));
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith('Contraseña poco segura', expect.any(String))
+    );
     expect(mockedSupabase.auth.signOut).not.toHaveBeenCalled();
   });
 });
