@@ -22,7 +22,8 @@ Una entrada por cada cambio: PR mergeada, migración aplicada en prod, ajuste en
 - **Qué:** el push token se desregistra antes de cerrar sesión (06-H2); errores de push a `reportError`; canal Android «Avisos de partidos»; errores de red con reintento en el filtro por partido y en el selector de partidos; corazón de Buscar con aviso a invitado y toast de error; errores de login en español (`formatAuthErrorAlert`).
 - **Por qué:** 06-H2, 06-H3, 06-H7, 12-H2…12-H5. Causa probable de 0 tokens en prod: build en tienda anterior al código de push (06-H1).
 - **Dónde:** rama `audit/06-12-flujos` (desde `release/qa-final`).
-- **Verificación:** `npm run typecheck` ✅, `npx jest` 60 suites / 679 tests ✅, eslint de los ficheros tocados 0 errores.
+- **Ampliación:** 06-H6 (interruptor de avisos pide permiso / abre Ajustes) y 12-H6 (`utils/userFacingError.ts`, también en `toast.supabaseError`).
+- **Verificación:** `npm run typecheck` ✅, `npx jest` 62 suites / 697 tests ✅, eslint de los ficheros tocados 0 errores.
 - **Rollback:** revertir los commits de la rama.
 - **Quién:** ☁️ nube.
 
