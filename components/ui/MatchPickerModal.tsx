@@ -9,7 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText } from '~/components/ds';
+import { AppText, ErrorState } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import HorizontalDateScroller from './HorizontalDateScroller';
@@ -76,10 +76,12 @@ export default function MatchPickerModal({
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<number | null>(null);
   const [tempSelectedMatchId, setTempSelectedMatchId] = useState<string | null>(selectedMatchId || null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Fetch matches for selected date
   const fetchMatchesForDate = async (date: Date) => {
     setLoading(true);
+    setLoadError(false);
     try {
       // Format date as YYYY-MM-DD
       const dateString = date.getFullYear() + '-' + 
@@ -110,7 +112,12 @@ export default function MatchPickerModal({
         .order('time');
 
       if (matchesError) {
+        // No dejar los partidos del día anterior bajo la fecha nueva ni
+        // decir «no hay partidos» cuando lo que falla es la red.
         console.error('Error fetching matches:', matchesError);
+        setMatches([]);
+        setCompetitions([]);
+        setLoadError(true);
         return;
       }
 
@@ -165,6 +172,9 @@ export default function MatchPickerModal({
       }
     } catch (error) {
       console.error('Error in fetchMatchesForDate:', error);
+      setMatches([]);
+      setCompetitions([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -345,6 +355,12 @@ export default function MatchPickerModal({
                 <ActivityIndicator color="#FFFFFF" size="large" />
                 <AppText style={styles.loadingText}>Cargando partidos...</AppText>
               </View>
+            ) : loadError ? (
+              <ErrorState
+                title="No se pudieron cargar los partidos"
+                subtitle="Comprueba tu conexión e inténtalo de nuevo."
+                onRetry={() => fetchMatchesForDate(selectedDate)}
+              />
             ) : filteredMatches.length > 0 ? (
               <FlatList
                 data={filteredMatches}
