@@ -131,6 +131,15 @@ export function getAuthErrorMessage(error: any, fallback: string): AuthErrorMess
   return { kind: 'unknown', title: fallback, subtitle: 'Inténtalo de nuevo' };
 }
 
+/**
+ * Texto de un Alert de error de login en español: nunca el mensaje en inglés
+ * de Supabase, Google o Apple (auditoría 12).
+ */
+export function formatAuthErrorAlert(error: any, fallback: string): string {
+  const msg = getAuthErrorMessage(error, fallback);
+  return msg.subtitle ? `${msg.title}. ${msg.subtitle}` : msg.title;
+}
+
 // ============================================
 // FUNCIONES DE AUTENTICACIÓN
 // ============================================

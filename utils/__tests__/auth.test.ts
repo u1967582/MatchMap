@@ -37,6 +37,7 @@ import {
   deleteAccount,
   formatAppleFullName,
   getAuthErrorMessage,
+  formatAuthErrorAlert,
   getCurrentUser,
   getIsGuest,
   getOAuthRedirectUrl,
@@ -638,6 +639,24 @@ describe('checkAndPromotePreRegisteredBar - selección del pre-registro', () => 
   it('no consulta nada si no hay email (p. ej. invitado)', async () => {
     await checkAndPromotePreRegisteredBar('user-1', '');
     expect(mockedSupabase.from).not.toHaveBeenCalled();
+  });
+});
+
+describe('formatAuthErrorAlert', () => {
+  it.each([
+    'Failed to establish session',
+    'No tokens received in callback URL',
+    'Unexpected result: locked',
+    'The authorization attempt failed for an unknown reason',
+  ])('no muestra el texto en inglés «%s»', (raw) => {
+    const text = formatAuthErrorAlert(raw, 'No se pudo completar el inicio de sesión con Google');
+    expect(text).toBe('No se pudo completar el inicio de sesión con Google. Inténtalo de nuevo');
+  });
+
+  it('traduce un error de red', () => {
+    expect(formatAuthErrorAlert(new Error('Network request failed'), 'x')).toBe(
+      'Error de conexión. Revisa tu conexión a internet'
+    );
   });
 });
 
