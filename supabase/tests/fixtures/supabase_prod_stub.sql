@@ -71,7 +71,7 @@ CREATE POLICY "Users can delete bar images" ON storage.objects FOR DELETE TO pub
 
 -- public
 CREATE TABLE public.users (
-  id uuid PRIMARY KEY, email text, is_super_user boolean DEFAULT false, bar_id uuid, is_bar_owner boolean
+  id uuid PRIMARY KEY, email text, username text, is_super_user boolean DEFAULT false, bar_id uuid, is_bar_owner boolean
 );
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY users_self ON public.users FOR SELECT TO authenticated USING (id = auth.uid());
