@@ -6,7 +6,15 @@ jest.mock('react-native-google-mobile-ads', () => {
   const mobileAds = jest.fn(() => ({ initialize: mockInitialize }));
   const createForAdRequest = jest.fn();
   const gatherConsent = jest.fn(() => Promise.resolve());
-  const getConsentInfo = jest.fn(() => Promise.resolve({ canRequestAds: true }));
+  const getConsentInfo = jest.fn(() =>
+    Promise.resolve({ canRequestAds: true, privacyOptionsRequirementStatus: 'NOT_REQUIRED' })
+  );
+  const showPrivacyOptionsForm = jest.fn(() => Promise.resolve({ canRequestAds: true }));
+  const AdsConsentPrivacyOptionsRequirementStatus = {
+    UNKNOWN: 'UNKNOWN',
+    REQUIRED: 'REQUIRED',
+    NOT_REQUIRED: 'NOT_REQUIRED',
+  };
 
   return {
     __esModule: true,
@@ -15,7 +23,8 @@ jest.mock('react-native-google-mobile-ads', () => {
     AdEventType,
     RevenuePrecisions,
     TestIds,
-    AdsConsent: { gatherConsent, getConsentInfo },
+    AdsConsent: { gatherConsent, getConsentInfo, showPrivacyOptionsForm },
+    AdsConsentPrivacyOptionsRequirementStatus,
   };
 });
 
@@ -28,15 +37,41 @@ jest.mock('expo-tracking-transparency', () => ({
   requestTrackingPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
 }));
 
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import mobileAds, { AppOpenAd, AdsConsent } from 'react-native-google-mobile-ads';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import {
   hasShownAppOpenAdThisSession,
   markAppOpenAdShown,
   initializeAdsSDK,
+  isAdsPrivacyOptionsRequired,
   loadAndShowAppOpenAdOnce,
+  showAdsPrivacyOptions,
+  waitForAppActive,
 } from '~/utils/ads';
+
+type AppStateListener = (state: string) => void;
+
+/** Simula AppState: estado actual configurable y emisión manual de eventos. */
+function mockAppState(initial: string) {
+  const listeners: AppStateListener[] = [];
+  const remove = jest.fn();
+  Object.defineProperty(AppState, 'currentState', { value: initial, configurable: true });
+  jest.spyOn(AppState, 'addEventListener').mockImplementation(((
+    _: string,
+    cb: AppStateListener
+  ) => {
+    listeners.push(cb);
+    return { remove };
+  }) as any);
+  return {
+    remove,
+    emit(state: string) {
+      Object.defineProperty(AppState, 'currentState', { value: state, configurable: true });
+      listeners.forEach((cb) => cb(state));
+    },
+  };
+}
 
 function createMockAd() {
   const listeners: Record<string, Array<(payload?: any) => void>> = {};
@@ -55,6 +90,11 @@ function createMockAd() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockAppState('active');
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 // Se ejecuta primero a propósito: appOpenAdShownThisSession es un flag de
@@ -121,6 +161,95 @@ describe('initializeAdsSDK', () => {
     (requestTrackingPermissionsAsync as jest.Mock).mockRejectedValueOnce(new Error('denied'));
 
     await expect(initializeAdsSDK()).resolves.toBe(true);
+  });
+});
+
+describe('waitForAppActive', () => {
+  it('resuelve inmediatamente si la app ya está activa', async () => {
+    mockAppState('active');
+    await expect(waitForAppActive()).resolves.toBeUndefined();
+    expect(AppState.addEventListener).not.toHaveBeenCalled();
+  });
+
+  it('espera al evento active si la app está inactiva', async () => {
+    const appState = mockAppState('inactive');
+    let resolved = false;
+    const promise = waitForAppActive().then(() => {
+      resolved = true;
+    });
+
+    appState.emit('background');
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    appState.emit('active');
+    await promise;
+    expect(resolved).toBe(true);
+    expect(appState.remove).toHaveBeenCalled();
+  });
+});
+
+describe('ATT en iOS', () => {
+  it('no pide ATT hasta que la app está activa (si no, iOS no muestra el diálogo)', async () => {
+    Platform.OS = 'ios';
+    const appState = mockAppState('inactive');
+
+    const promise = initializeAdsSDK();
+    await new Promise((r) => setImmediate(r));
+    expect(requestTrackingPermissionsAsync).not.toHaveBeenCalled();
+    expect(mobileAds().initialize).not.toHaveBeenCalled();
+
+    appState.emit('active');
+    await expect(promise).resolves.toBe(true);
+    expect(requestTrackingPermissionsAsync).toHaveBeenCalled();
+  });
+
+  it('pide ATT después del consentimiento UMP y antes de inicializar el SDK', async () => {
+    Platform.OS = 'ios';
+    const order: string[] = [];
+    (AdsConsent.gatherConsent as jest.Mock).mockImplementationOnce(async () => {
+      order.push('ump');
+    });
+    (requestTrackingPermissionsAsync as jest.Mock).mockImplementationOnce(async () => {
+      order.push('att');
+      return { status: 'denied' };
+    });
+    (mobileAds().initialize as jest.Mock).mockImplementationOnce(async () => {
+      order.push('init');
+    });
+
+    await initializeAdsSDK();
+
+    expect(order).toEqual(['ump', 'att', 'init']);
+  });
+});
+
+describe('isAdsPrivacyOptionsRequired', () => {
+  it('true si UMP marca las opciones de privacidad como obligatorias (EEE/UK)', async () => {
+    (AdsConsent.getConsentInfo as jest.Mock).mockResolvedValueOnce({
+      canRequestAds: true,
+      privacyOptionsRequirementStatus: 'REQUIRED',
+    });
+    await expect(isAdsPrivacyOptionsRequired()).resolves.toBe(true);
+  });
+
+  it('false fuera del EEE', async () => {
+    await expect(isAdsPrivacyOptionsRequired()).resolves.toBe(false);
+  });
+
+  it('false si la consulta falla', async () => {
+    (AdsConsent.getConsentInfo as jest.Mock).mockRejectedValueOnce(new Error('native'));
+    await expect(isAdsPrivacyOptionsRequired()).resolves.toBe(false);
+  });
+});
+
+describe('showAdsPrivacyOptions', () => {
+  it('abre el formulario de UMP y devuelve canRequestAds', async () => {
+    (AdsConsent.showPrivacyOptionsForm as jest.Mock).mockResolvedValueOnce({
+      canRequestAds: false,
+    });
+    await expect(showAdsPrivacyOptions()).resolves.toBe(false);
+    expect(AdsConsent.showPrivacyOptionsForm).toHaveBeenCalled();
   });
 });
 
