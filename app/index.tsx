@@ -3,7 +3,7 @@ import { Stack, useRouter } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import WelcomeScreen from '~/screens/WelcomeScreen';
 import { supabase } from '~/utils/supabase';
-import { signInWithGoogle, signInWithApple } from '~/utils/auth';
+import { signInWithGoogle, signInWithApple, getAuthErrorMessage } from '~/utils/auth';
 import LoginModal from './(auth)/components/LoginModal';
 import RegisterModal from './(auth)/components/RegisterModal';
 
@@ -88,13 +88,16 @@ export default function Home() {
     try {
       const { error } = await supabase.auth.signInAnonymously();
       if (error) {
-        Alert.alert('Error', error.message || 'No se pudo continuar como invitado');
+        // Nunca el texto en inglés de Supabase (p. ej. «Anonymous sign-ins are disabled»)
+        const msg = getAuthErrorMessage(error, 'No se pudo continuar como invitado');
+        Alert.alert('Error', msg.subtitle ? `${msg.title}. ${msg.subtitle}` : msg.title);
         return;
       }
       // Navegar explícitamente (el listener de _layout ignora sesiones anónimas)
       router.replace('/(protected)/map');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error inesperado');
+      const msg = getAuthErrorMessage(error, 'No se pudo continuar como invitado');
+      Alert.alert('Error', msg.subtitle ? `${msg.title}. ${msg.subtitle}` : msg.title);
     } finally {
       setLoadingGuest(false);
     }

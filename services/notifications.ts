@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '~/utils/supabase';
+import { reportError } from '~/utils/errorReporting';
 
 const CACHED_TOKEN_KEY = 'matchmap_expo_push_token';
 
@@ -48,7 +49,8 @@ export async function getExpoPushToken(): Promise<string | null> {
     const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
     return data;
   } catch (error) {
-    console.error('Error obteniendo Expo Push Token:', error);
+    // Sin FCM (Android) o sin aps-environment (iOS) falla aquí: que se vea.
+    reportError(error, { extra: { step: 'getExpoPushToken', platform: Platform.OS } });
     return null;
   }
 }
@@ -116,7 +118,7 @@ export async function requestMatchNotificationsPermission(
     await registerPushToken(token);
     return 'granted';
   } catch (error) {
-    console.error('Error solicitando permiso de notificaciones:', error);
+    reportError(error, { extra: { step: 'requestMatchNotificationsPermission' } });
     return 'skipped';
   }
 }

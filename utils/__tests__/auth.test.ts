@@ -642,6 +642,15 @@ describe('checkAndPromotePreRegisteredBar - selección del pre-registro', () => 
 });
 
 describe('getAuthErrorMessage', () => {
+  it('traduce el error de invitado desactivado (auditoría 12)', () => {
+    const r = getAuthErrorMessage(
+      { code: 'anonymous_provider_disabled', message: 'Anonymous sign-ins are disabled' },
+      'No se pudo continuar como invitado'
+    );
+    expect(r.kind).toBe('signup_disabled');
+    expect(r.title).not.toMatch(/anonymous/i);
+  });
+
   it.each([
     [{ code: 'invalid_credentials', message: 'Invalid login credentials' }, 'invalid_credentials', 'Email o contraseña incorrectos'],
     [{ message: 'Invalid login credentials' }, 'invalid_credentials', 'Email o contraseña incorrectos'],
