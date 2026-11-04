@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { supabase, supabaseUrl } from './supabase';
+import { unregisterCurrentPushToken } from '~/services/notifications';
 
 // ⚠️ Logs: nunca imprimir emails, tokens ni ids de usuario. En producción los
 // console.log se eliminan (babel), pero console.error/warn se mantienen.
@@ -265,9 +266,15 @@ export const checkAndPromotePreRegisteredBar = async (userId: string, userEmail:
   }
 };
 
-/** Cierra la sesión del usuario actual. */
+/**
+ * Cierra la sesión del usuario actual. Antes desregistra el push token del
+ * dispositivo: fn_unregister_push_token filtra por auth.uid(), así que si se
+ * hace después del signOut (p. ej. en el evento SIGNED_OUT) no borra nada y
+ * el dispositivo sigue recibiendo los avisos de la cuenta anterior.
+ */
 export const signOut = async () => {
   try {
+    await unregisterCurrentPushToken();
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('❌ Error al cerrar sesión:', error.message);

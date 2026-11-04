@@ -132,6 +132,29 @@ describe('signOut', () => {
     mockedSupabase.auth.signOut.mockRejectedValueOnce(error);
     await expect(signOut()).resolves.toEqual({ error });
   });
+
+  it('desregistra el push token ANTES de cerrar la sesión (auditoría 06)', async () => {
+    const AsyncStorage = jest.requireMock('@react-native-async-storage/async-storage');
+    const store = AsyncStorage.default ?? AsyncStorage;
+    await store.setItem('matchmap_expo_push_token', 'ExponentPushToken[abc]');
+    const order: string[] = [];
+    mockedSupabase.rpc.mockImplementationOnce((fn: string) => {
+      order.push(fn);
+      return Promise.resolve({ data: null, error: null });
+    });
+    mockedSupabase.auth.signOut.mockImplementationOnce(() => {
+      order.push('signOut');
+      return Promise.resolve({ error: null });
+    });
+
+    await expect(signOut()).resolves.toEqual({ error: null });
+
+    expect(mockedSupabase.rpc).toHaveBeenCalledWith('fn_unregister_push_token', {
+      p_token: 'ExponentPushToken[abc]',
+    });
+    expect(order).toEqual(['fn_unregister_push_token', 'signOut']);
+    await expect(store.getItem('matchmap_expo_push_token')).resolves.toBeNull();
+  });
 });
 
 describe('deleteAccount', () => {

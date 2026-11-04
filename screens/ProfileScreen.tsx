@@ -18,7 +18,7 @@ import * as WebBrowser from 'expo-web-browser';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
 import { AppText, colors, spacing, radius, ProfileSkeleton, toast } from '~/components/ds';
-import { getIsGuest, promptDeleteAccount, showGuestLoginAlert } from '~/utils/auth';
+import { getIsGuest, promptDeleteAccount, showGuestLoginAlert, signOut } from '~/utils/auth';
 import AdBanner from '~/components/ads/AdBanner';
 import { useAds } from '~/contexts/AdsContext';
 import FavoriteTeamPopup from '~/components/FavoriteTeamPopup';
@@ -301,7 +301,8 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await supabase.auth.signOut();
+              const { error } = await signOut();
+              if (error) throw error;
               router.replace('/');
             } catch (error) {
               console.error('Error signing out:', error);

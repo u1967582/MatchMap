@@ -23,7 +23,7 @@ export function configureNotificationHandler(): void {
 
   if (Platform.OS === 'android') {
     Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
+      name: 'Avisos de partidos',
       importance: Notifications.AndroidImportance.HIGH,
     }).catch((error) => console.error('Error creando canal de notificaciones:', error));
   }

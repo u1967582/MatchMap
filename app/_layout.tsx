@@ -15,7 +15,7 @@ import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import { useLikesStore } from '~/stores/likesStore';
 import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
-import { configureNotificationHandler, unregisterCurrentPushToken } from '~/services/notifications';
+import { configureNotificationHandler } from '~/services/notifications';
 import { parseAuthDeepLink } from '~/utils/authDeepLink';
 import { installGlobalErrorHandlers, reportError } from '~/utils/errorReporting';
 import AppErrorFallback from '~/components/AppErrorFallback';
@@ -107,8 +107,8 @@ export default function Layout() {
         }, 300);
       } else if (event === 'SIGNED_OUT') {
         console.log('👋 Usuario cerró sesión en _layout, navegando a inicio...');
-        // Desregistrar el push token del dispositivo antes de perder la sesión
-        unregisterCurrentPushToken();
+        // El push token se desregistra en utils/auth.signOut, ANTES de cerrar
+        // la sesión: aquí ya no hay auth.uid() y la RPC no borraría nada.
         // Limpiar stores
         setFavoritesUserId(null);
         setLikesUserId(null);
