@@ -1,6 +1,15 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
 
+import Purchases from 'react-native-purchases';
+import { supabase } from '~/utils/supabase';
+import { toast } from '~/components/ds';
+import {
+  useBoostOfferings,
+  getCustomersToBreakEven,
+  getYearlySavingsPercent,
+} from '~/hooks/useBoostOfferings';
+
 jest.mock('~/utils/supabase');
 jest.mock('react-native-purchases', () => ({
   __esModule: true,
@@ -17,15 +26,6 @@ jest.mock('~/components/ds', () => ({
     error: jest.fn(),
   },
 }));
-
-import Purchases from 'react-native-purchases';
-import { supabase } from '~/utils/supabase';
-import { toast } from '~/components/ds';
-import {
-  useBoostOfferings,
-  getCustomersToBreakEven,
-  getYearlySavingsPercent,
-} from '~/hooks/useBoostOfferings';
 
 const mockedGetOfferings = Purchases.getOfferings as jest.Mock;
 const mockedPurchasePackage = Purchases.purchasePackage as jest.Mock;

@@ -1,6 +1,21 @@
 import { Platform } from 'react-native';
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
 
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '~/utils/supabase';
+import {
+  configureNotificationHandler,
+  getExpoPushToken,
+  registerPushToken,
+  unregisterCurrentPushToken,
+  requestMatchNotificationsPermission,
+  fetchMatchNotificationsEnabled,
+  setMatchNotificationsEnabled,
+} from '~/services/notifications';
+
 jest.mock('~/utils/supabase');
 
 jest.mock('expo-notifications', () => ({
@@ -25,21 +40,6 @@ jest.mock('expo-constants', () => ({
     easConfig: { projectId: 'test-project-id' },
   },
 }));
-
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '~/utils/supabase';
-import {
-  configureNotificationHandler,
-  getExpoPushToken,
-  registerPushToken,
-  unregisterCurrentPushToken,
-  requestMatchNotificationsPermission,
-  fetchMatchNotificationsEnabled,
-  setMatchNotificationsEnabled,
-} from '~/services/notifications';
 
 const mockedFrom = supabase.from as jest.Mock;
 const mockedRpc = supabase.rpc as jest.Mock;

@@ -1,10 +1,10 @@
 import { renderHook, waitFor, act } from '@testing-library/react-native';
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
 
-jest.mock('~/utils/supabase');
-
 import { supabase } from '~/utils/supabase';
 import { useAutoBroadcastPreferences } from '~/hooks/useAutoBroadcastPreferences';
+
+jest.mock('~/utils/supabase');
 
 const mockedFrom = supabase.from as jest.Mock;
 const mockedRpc = supabase.rpc as jest.Mock;

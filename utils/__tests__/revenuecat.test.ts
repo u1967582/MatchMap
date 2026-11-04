@@ -1,3 +1,22 @@
+import Purchases from 'react-native-purchases';
+import {
+  initializeRevenueCat,
+  hasActiveBoost,
+  getOfferings,
+  purchasePackage,
+  restorePurchases,
+  syncRevenueCatUser,
+  ENTITLEMENTS,
+  getCustomerInfo,
+  identifyUser,
+  logoutUser,
+  getActiveSubscriptionInfo,
+  hasAnyActiveEntitlement,
+  getAllEntitlements,
+  generateAdImpressionId,
+  trackAdRevenue,
+} from '~/utils/revenuecat';
+
 jest.mock('react-native-purchases', () => ({
   __esModule: true,
   default: {
@@ -28,25 +47,6 @@ jest.mock('react-native-google-mobile-ads', () => ({
   __esModule: true,
   RevenuePrecisions: { UNKNOWN: 0, ESTIMATED: 1, PUBLISHER_PROVIDED: 2, PRECISE: 3 },
 }));
-
-import Purchases from 'react-native-purchases';
-import {
-  initializeRevenueCat,
-  hasActiveBoost,
-  getOfferings,
-  purchasePackage,
-  restorePurchases,
-  syncRevenueCatUser,
-  ENTITLEMENTS,
-  getCustomerInfo,
-  identifyUser,
-  logoutUser,
-  getActiveSubscriptionInfo,
-  hasAnyActiveEntitlement,
-  getAllEntitlements,
-  generateAdImpressionId,
-  trackAdRevenue,
-} from '~/utils/revenuecat';
 
 const mockedIsConfigured = Purchases.isConfigured as jest.Mock;
 const mockedConfigure = Purchases.configure as jest.Mock;

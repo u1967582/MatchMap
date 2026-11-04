@@ -1,5 +1,3 @@
-jest.mock('~/utils/supabase');
-
 import { supabase } from '~/utils/supabase';
 import {
   trackBarEvent,
@@ -8,6 +6,8 @@ import {
   fetchBarStatsDaily,
   fetchBarStatsRangeStart,
 } from '~/services/barAnalytics';
+
+jest.mock('~/utils/supabase');
 
 const mockedRpc = supabase.rpc as jest.Mock;
 
