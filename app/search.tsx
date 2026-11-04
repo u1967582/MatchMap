@@ -36,6 +36,8 @@ import { useBoostSelection } from '~/context/BoostSelectionContext';
 import AdBanner from '~/components/ads/AdBanner';
 import { interleaveWithAds } from '~/utils/adListInterleave';
 import { useFavoritesStore } from '~/stores/favoritesStore';
+import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
+import { toast } from '~/components/ds';
 import { madridWallTimeToDate } from '~/utils/dateFormat';
 import {
   AppText,
@@ -586,10 +588,17 @@ export default function SearchScreen() {
   const renderBarCard = useCallback(({ item }: { item: Bar }) => {
     const handleFavoriteToggle = async (e: any) => {
       e.stopPropagation(); // Prevent triggering the card press
-      const wasFavorite = isFavorite(item.id);
+      // Igual que en la ficha y en BarInfoCard: el invitado ve el aviso de
+      // registro y un fallo de red se notifica (antes se revertía en silencio).
+      if (await getIsGuest()) {
+        showGuestLoginAlert(router);
+        return;
+      }
       const success = await toggleFavorite(item.id);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        toast.error('No se pudo actualizar favoritos', 'Inténtalo de nuevo');
       }
     };
 
@@ -732,7 +741,7 @@ export default function SearchScreen() {
       </AppCard>
     );
 
-  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable, favorites]);
+  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable, favorites, router]);
 
   const renderRow = useCallback(({ item }: { item: (typeof listRows)[number] }) => {
     if (item.kind === 'ad') {
