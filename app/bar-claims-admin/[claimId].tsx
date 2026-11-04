@@ -15,6 +15,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import ImageViewing from 'react-native-image-viewing';
+import { withAdminOnly } from '~/components/AdminOnly';
 
 type ClaimDetail = {
   id: string;
@@ -28,7 +29,7 @@ type ClaimDetail = {
   bars: { name: string; address?: string | null; city?: string | null; phone?: string | null; owner_id: string | null } | null;
 };
 
-export default function BarClaimDetailScreen() {
+function BarClaimDetailScreen() {
   const router = useRouter();
   const { claimId } = useLocalSearchParams<{ claimId: string }>();
 
@@ -420,3 +421,5 @@ const styles = StyleSheet.create({
   },
   rejectConfirmText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
 });
+
+export default withAdminOnly(BarClaimDetailScreen);

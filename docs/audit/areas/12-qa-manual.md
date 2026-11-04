@@ -49,3 +49,11 @@ Probar la app como lo hará un usuario real, con el build de producción, antes 
 | ID | Severidad | Dispositivo | Pasos para reproducir | Área | Estado |
 |---|---|---|---|---|---|
 | | | | | | |
+
+## Revisión de código (2026-11-04)
+| ID | Severidad | Descripción | Estado |
+|---|---|---|---|
+| 12-H2 | 🟠 | Mapa con filtro de partido sin red: decía «Ningún bar emite este partido». | ✅ error con reintento |
+| 12-H3 | 🟠 | Selector de partidos: al fallar la carga seguían los partidos del día anterior. | ✅ error con reintento (test) |
+| 12-H4 | 🟠 | Buscar: el corazón fallaba en silencio para invitados y con error de red. | ✅ pide registro y avisa |
+| 12-H5 | 🟡 | Errores de Google, Apple e invitado en inglés en la bienvenida. | ✅ `getLoginAlertMessage` (test) |

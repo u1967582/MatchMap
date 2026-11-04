@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '~/utils/supabase';
+import { reportError } from '~/utils/errorReporting';
 
 const CACHED_TOKEN_KEY = 'matchmap_expo_push_token';
 
@@ -23,7 +24,7 @@ export function configureNotificationHandler(): void {
 
   if (Platform.OS === 'android') {
     Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
+      name: 'Avisos de partidos',
       importance: Notifications.AndroidImportance.HIGH,
     }).catch((error) => console.error('Error creando canal de notificaciones:', error));
   }
@@ -49,6 +50,7 @@ export async function getExpoPushToken(): Promise<string | null> {
     return data;
   } catch (error) {
     console.error('Error obteniendo Expo Push Token:', error);
+    reportError(error, { source: 'manual', extra: { step: 'push_token' } });
     return null;
   }
 }

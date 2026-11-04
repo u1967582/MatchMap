@@ -659,8 +659,11 @@ const Map: React.FC<MapProps> = ({
           try {
             barIdsFilter = await fetchBarIdsByMatch(selectedMatch.id);
           } catch (e) {
+            // Sin red no es «ningún bar emite este partido»: mostrar el error con reintento
             console.error('❌ Error fetching barIds by match:', e);
-            barIdsFilter = [];
+            setBars([]);
+            setBarsError(true);
+            return;
           }
           if (!barIdsFilter || barIdsFilter.length === 0) {
             setBars([]);

@@ -24,4 +24,10 @@ Que los avisos de partidos lleguen en iOS y Android, con el permiso pedido en el
 ## Hallazgos
 | ID | Severidad | Descripción | Estado |
 |---|---|---|---|
-| | | | |
+| 06-H1 | 🔴 | 0 filas en `push_tokens` en prod (2026-11-04). Causa probable: el binario publicado es anterior al código de push (2026-08-06) y no hay OTA. | ⏳ confirmar con un build nuevo |
+| 06-H2 | 🔴 | El token se desregistraba tras perder la sesión: la RPC no borraba la fila y el móvil seguía recibiendo avisos de la cuenta anterior. | ✅ se borra antes de `signOut` (test) |
+| 06-H3 | 🟠 | Los fallos al obtener el token solo salían por consola. | ✅ `reportError` |
+| 06-H4 | 🟠 | Android sin FCM: token `null` en silencio. | ⏳ 👤 Firebase + EAS |
+| 06-H5 | 🟠 | Al tocar la notificación con la app cerrada, la redirección de `app/index.tsx` puede pisar el `matchId`. | ⏳ probar en dispositivo |
+| 06-H6 | 🟡 | Con el permiso denegado, el interruptor de Perfil sale activado. | Anotado |
+| 06-H7 | 🟡 | Canal de Android llamado `default`. | ✅ «Avisos de partidos» |

@@ -21,6 +21,7 @@ import * as Haptics from 'expo-haptics';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
 import { supabase } from '~/utils/supabase';
+import { toast } from '~/components/ds';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import Dropdown from '~/components/ui/Dropdown';
 import FilterModal from '~/components/ui/FilterModal';
@@ -30,6 +31,7 @@ import { useIsAdmin } from '~/hooks/useIsAdmin';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
 import { useFavorites } from '~/hooks/useFavorites';
+import { getIsGuest, showGuestLoginAlert } from '~/utils/auth';
 import { fetchBarIdsByMatch } from '~/services/bars';
 import { useBoostBars } from '~/hooks/useBoostBars';
 import { useBoostSelection } from '~/context/BoostSelectionContext';
@@ -586,10 +588,15 @@ export default function SearchScreen() {
   const renderBarCard = useCallback(({ item }: { item: Bar }) => {
     const handleFavoriteToggle = async (e: any) => {
       e.stopPropagation(); // Prevent triggering the card press
-      const wasFavorite = isFavorite(item.id);
+      if (await getIsGuest()) {
+        showGuestLoginAlert(router);
+        return;
+      }
       const success = await toggleFavorite(item.id);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        toast.error('No se pudo actualizar favoritos', 'Inténtalo de nuevo');
       }
     };
 
@@ -732,7 +739,7 @@ export default function SearchScreen() {
       </AppCard>
     );
 
-  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable, favorites]);
+  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable, favorites, router]);
 
   const renderRow = useCallback(({ item }: { item: (typeof listRows)[number] }) => {
     if (item.kind === 'ad') {

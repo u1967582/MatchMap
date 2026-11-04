@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { supabase, supabaseUrl } from './supabase';
+import { unregisterCurrentPushToken } from '~/services/notifications';
 
 // ⚠️ Logs: nunca imprimir emails, tokens ni ids de usuario. En producción los
 // console.log se eliminan (babel), pero console.error/warn se mantienen.
@@ -118,7 +119,7 @@ export function getAuthErrorMessage(error: any, fallback: string): AuthErrorMess
   ) {
     return { kind: 'invalid_email', title: 'El email no es válido' };
   }
-  if (has('signup_disabled', 'signups not allowed', 'email_provider_disabled')) {
+  if (has('signup_disabled', 'signups not allowed', 'email_provider_disabled', 'anonymous_provider_disabled', 'anonymous sign-ins are disabled')) {
     return { kind: 'signup_disabled', title: 'El registro no está disponible ahora mismo', subtitle: 'Inténtalo más tarde' };
   }
   if (has('session_not_found', 'session_expired', 'refresh_token_not_found', 'auth session missing')) {
@@ -128,6 +129,12 @@ export function getAuthErrorMessage(error: any, fallback: string): AuthErrorMess
     return { kind: 'network', title: 'Error de conexión', subtitle: 'Revisa tu conexión a internet' };
   }
   return { kind: 'unknown', title: fallback, subtitle: 'Inténtalo de nuevo' };
+}
+
+/** Texto de un Alert de error de login en español, nunca el mensaje en inglés del proveedor. */
+export function getLoginAlertMessage(error: any, fallback: string): string {
+  const { title, subtitle } = getAuthErrorMessage(error, fallback);
+  return subtitle ? `${title}. ${subtitle}` : title;
 }
 
 // ============================================
@@ -268,6 +275,8 @@ export const checkAndPromotePreRegisteredBar = async (userId: string, userEmail:
 /** Cierra la sesión del usuario actual. */
 export const signOut = async () => {
   try {
+    // Con la sesión aún activa: después la RPC ya no puede borrar el token
+    await unregisterCurrentPushToken();
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('❌ Error al cerrar sesión:', error.message);

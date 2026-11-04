@@ -72,7 +72,7 @@ describe('configureNotificationHandler', () => {
 
     expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
       'default',
-      expect.objectContaining({ name: 'default' })
+      expect.objectContaining({ name: 'Avisos de partidos' })
     );
   });
 

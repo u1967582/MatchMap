@@ -26,7 +26,9 @@ Registro de bar (`app/register-bar`, `screens/registerBar/*`, `stores/barRegiste
 ## Hallazgos
 | ID | Severidad | Descripción | Estado |
 |---|---|---|---|
-| | | | |
+| 04-H1 | 🟠 | 8 pantallas de admin se abrían por deep link sin comprobar el rol (las acciones ya fallaban en servidor). | ✅ `components/AdminOnly.tsx` con test |
+| 04-H2 | 🟠 | Las políticas de `support_tickets`, `bar_posts`, `auto_pre_register_bars`, `bar_selected_*` y `events` no están en las migraciones del repo. | Revisar con `pg_policies` en prod |
+| 04-H3 | 🟡 | `create-post`, `auto-broadcasts`, `manual-match-selection` y `bar-menu` no comprueban el dueño en la app; el servidor lo impide. | Anotado |
 
 ## Prompt para la sesión en la nube
 ```text

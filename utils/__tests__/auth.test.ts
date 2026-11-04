@@ -1,3 +1,5 @@
+import { unregisterCurrentPushToken } from '~/services/notifications';
+jest.mock('~/services/notifications', () => ({ unregisterCurrentPushToken: jest.fn() }));
 jest.mock('~/utils/supabase');
 
 jest.mock('expo-web-browser', () => ({
@@ -47,6 +49,7 @@ import {
   signInWithApple,
   signInWithGoogle,
   signOut,
+  getLoginAlertMessage,
   updatePassword,
 } from '~/utils/auth';
 
@@ -116,6 +119,19 @@ describe('getCurrentUser', () => {
 });
 
 describe('signOut', () => {
+  it('borra el token push antes de perder la sesión', async () => {
+    const order: string[] = [];
+    (unregisterCurrentPushToken as jest.Mock).mockImplementationOnce(async () => {
+      order.push('token');
+    });
+    mockedSupabase.auth.signOut.mockImplementationOnce(async () => {
+      order.push('signOut');
+      return { error: null };
+    });
+    await signOut();
+    expect(order).toEqual(['token', 'signOut']);
+  });
+
   it('devuelve error null si todo va bien', async () => {
     await expect(signOut()).resolves.toEqual({ error: null });
     expect(mockedSupabase.auth.signOut).toHaveBeenCalled();
@@ -851,5 +867,14 @@ describe('logs sin datos personales (HALLAZGOS #17)', () => {
     for (const secret of SECRETS) {
       expect(output).not.toContain(secret);
     }
+  });
+});
+
+describe('getLoginAlertMessage', () => {
+  it('traduce el invitado desactivado y no enseña inglés del proveedor', () => {
+    expect(getLoginAlertMessage({ code: 'anonymous_provider_disabled', message: 'Anonymous sign-ins are disabled' }, 'x')).toBe(
+      'El registro no está disponible ahora mismo. Inténtalo más tarde'
+    );
+    expect(getLoginAlertMessage('Failed to establish session', 'No se pudo entrar')).toBe('No se pudo entrar. Inténtalo de nuevo');
   });
 });

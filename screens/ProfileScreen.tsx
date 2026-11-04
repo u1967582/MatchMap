@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '~/utils/supabase';
+import { unregisterCurrentPushToken } from '~/services/notifications';
 import * as WebBrowser from 'expo-web-browser';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import { getBarPlanInfo } from '~/lib/getBarPlanInfo';
@@ -301,6 +302,8 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Con la sesión aún activa: después la RPC ya no puede borrar el token
+              await unregisterCurrentPushToken();
               await supabase.auth.signOut();
               router.replace('/');
             } catch (error) {
