@@ -35,18 +35,32 @@ export function toBucketPath(pathOrUrl: string, bucket: string): string {
   return pathOrUrl.includes(marker) ? pathOrUrl.split(marker)[1] : pathOrUrl;
 }
 
+const json = (body: Record<string, unknown>, status: number) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+
 export function createHandler(deps: Deps) {
   return async (req: Request): Promise<Response> => {
     try {
-      const { preBarId, ownerId } = await req.json();
+      // Body malformado → 400 (antes lanzaba y acababa en 500)
+      let body: any;
+      try {
+        body = await req.json();
+      } catch {
+        return json({ error: "Invalid JSON body" }, 400);
+      }
+      const preBarId = body?.preBarId;
+      const ownerId = body?.ownerId;
 
       // Validación de parámetros
-      if (!preBarId || !ownerId) {
+      if (
+        typeof preBarId !== "string" || !preBarId ||
+        typeof ownerId !== "string" || !ownerId
+      ) {
         console.error("[ERROR] Missing required parameters");
-        return new Response(
-          JSON.stringify({ error: "preBarId and ownerId required" }),
-          { status: 400 }
-        );
+        return json({ error: "preBarId and ownerId required" }, 400);
       }
 
       console.log(`[START] Promoting pre-bar ${preBarId} for owner ${ownerId}`);
@@ -58,14 +72,11 @@ export function createHandler(deps: Deps) {
       const { data: { user: caller }, error: authError } = await supabase.auth.getUser(token);
 
       if (authError || !caller || caller.is_anonymous || !caller.email || !caller.email_confirmed_at) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+        return json({ error: "Unauthorized" }, 401);
       }
 
       if (caller.id !== ownerId) {
-        return new Response(
-          JSON.stringify({ error: "ownerId must match the authenticated user" }),
-          { status: 403 }
-        );
+        return json({ error: "ownerId must match the authenticated user" }, 403);
       }
 
       const bucket = "bar-images";
@@ -81,11 +92,9 @@ export function createHandler(deps: Deps) {
         .single();
 
       if (preBarErr) {
+        // No se devuelve el mensaje de Postgres/PostgREST al cliente
         console.error("[CHECK ERROR]", preBarErr);
-        return new Response(
-          JSON.stringify({ error: preBarErr.message }),
-          { status: 400 }
-        );
+        return json({ error: "Pre-registered bar not found" }, 400);
       }
 
       // Solo quien usa el email con el que se pre-registró el bar puede reclamarlo
@@ -93,10 +102,7 @@ export function createHandler(deps: Deps) {
         !preBarRow?.email ||
         preBarRow.email.trim().toLowerCase() !== caller.email.trim().toLowerCase()
       ) {
-        return new Response(
-          JSON.stringify({ error: "This pre-registered bar does not belong to the authenticated user" }),
-          { status: 403 }
-        );
+        return json({ error: "This pre-registered bar does not belong to the authenticated user" }, 403);
       }
 
       let barId: string | null = null;
@@ -154,12 +160,7 @@ export function createHandler(deps: Deps) {
         // Verificar status (solo permitir pre_registered para creación nueva)
         if (preBarRow?.status !== "pre_registered") {
           console.error("[INVALID STATUS]", preBarRow?.status);
-          return new Response(
-            JSON.stringify({
-              error: `Invalid status: ${preBarRow?.status}. Expected "pre_registered"`
-            }),
-            { status: 400 }
-          );
+          return json({ error: `Invalid status: ${preBarRow?.status}. Expected "pre_registered"` }, 400);
         }
 
         console.log("[NEW CONVERSION] Creating new bar with RPC...");
@@ -178,11 +179,8 @@ export function createHandler(deps: Deps) {
 
         if (rpcErr) {
           console.error("[RPC ERROR]", rpcErr);
-          return new Response(
-            JSON.stringify({ error: rpcErr.message }),
-            { status: 400 }
-          );
-      }
+          return json({ error: "Could not promote the pre-registered bar" }, 400);
+        }
 
         console.log("[RPC] Response data:", rpcData);
 
@@ -192,13 +190,7 @@ export function createHandler(deps: Deps) {
         // FAIL FAST: Si no se obtiene un UUID válido, detener
         if (!barId) {
           console.error("[CRITICAL] RPC did not return a valid barId", { rpcData });
-          return new Response(
-            JSON.stringify({
-              error: "RPC did not return a valid barId",
-              rpcData
-            }),
-            { status: 500 }
-          );
+          return json({ error: "RPC did not return a valid barId" }, 500);
         }
 
         console.log(`[SUCCESS] Bar created with ID: ${barId}`);
@@ -367,13 +359,8 @@ export function createHandler(deps: Deps) {
 
     } catch (err) {
       console.error("[CRITICAL ERROR]", err);
-      return new Response(
-        JSON.stringify({
-          error: "Unexpected error",
-          details: String(err)
-        }),
-        { status: 500 }
-      );
+      // El detalle se queda en los logs de la función, no en la respuesta
+      return json({ error: "Unexpected error" }, 500);
     }
   };
 }

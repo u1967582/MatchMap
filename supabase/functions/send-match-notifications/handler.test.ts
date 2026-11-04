@@ -113,6 +113,31 @@ Deno.test('borra tokens DeviceNotRegistered y no marca al usuario si todos sus e
   assertEquals(calls.some((c) => c.table === 'match_notifications_sent'), false);
 });
 
+Deno.test('los logs de error no incluyen el token push del dispositivo', async () => {
+  const { handler } = setup({
+    pending: [row({ push_token_id: 'dead', expo_push_token: 'ExponentPushToken[secreto]' })],
+    tickets: () => [
+      {
+        status: 'error',
+        message: '"ExponentPushToken[secreto]" is not a registered push notification recipient',
+        details: { error: 'DeviceNotRegistered' },
+      },
+    ],
+  });
+  const logged: string[] = [];
+  const { log, warn, error } = console;
+  console.log = console.warn = console.error = (...args: unknown[]) => {
+    logged.push(args.map(String).join(' '));
+  };
+  try {
+    await handler(req());
+  } finally {
+    Object.assign(console, { log, warn, error });
+  }
+  assertEquals(logged.some((l) => l.includes('ExponentPushToken[secreto]')), false);
+  assertEquals(logged.some((l) => l.includes('push_token_id=dead')), true);
+});
+
 Deno.test('envía en lotes de 100 y si Expo falla no marca ese lote (reintento en el siguiente cron)', async () => {
   const pending = Array.from({ length: 150 }, (_, i) =>
     row({ user_id: `u${i}`, push_token_id: `t${i}`, expo_push_token: `T${i}` })
