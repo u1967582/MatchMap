@@ -23,7 +23,7 @@ import AdBanner from '~/components/ads/AdBanner';
 import { useAds } from '~/contexts/AdsContext';
 import FavoriteTeamPopup from '~/components/FavoriteTeamPopup';
 import BettingBarsAgeGatePopup from '~/components/BettingBarsAgeGatePopup';
-import { setMatchNotificationsEnabled } from '~/services/notifications';
+import { syncMatchNotificationsToggle } from '~/services/notifications';
 import { updateShowBettingBars } from '~/services/users';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
@@ -334,7 +334,7 @@ export default function ProfileScreen() {
       const previousValue = user.match_notifications_enabled ?? true;
       setUser((prev) => (prev ? { ...prev, match_notifications_enabled: value } : prev));
       try {
-        await setMatchNotificationsEnabled(user.id, value);
+        await syncMatchNotificationsToggle(user.id, value);
       } catch (error) {
         setUser((prev) =>
           prev ? { ...prev, match_notifications_enabled: previousValue } : prev
