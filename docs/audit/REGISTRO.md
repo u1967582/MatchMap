@@ -19,10 +19,10 @@ Una entrada por cada cambio: PR mergeada, migración aplicada en prod, ajuste en
 
 ### 2026-11-05 · Áreas 01 y 04 · Fuga de `public.users`, escalado a super admin y guardia de admin
 - **Tipo:** código
-- **Qué:** migración `20261105120000_audit01b_users_privacy.sql` (cada usuario lee solo su fila, sin INSERT/DELETE desde cliente, vista `public_profiles` para el autor de las reseñas). Se recupera `AdminOnly` (04-H1), que estaba en `release/qa-final` pero no llegó a `main` con la PR #38.
+- **Qué:** migración `20261105212402_audit01b_users_privacy.sql` (cada usuario lee solo su fila, sin INSERT/DELETE desde cliente, vista `public_profiles` para el autor de las reseñas). Se recupera `AdminOnly` (04-H1), que estaba en `release/qa-final` pero no llegó a `main` con la PR #38.
 - **Por qué:** 01-H1, 01-H2, 01-H3, 04-H1.
-- **Dónde:** rama `audit/04-admin-guard`. **Repo público: no subir antes de aplicar la migración en prod.**
-- **Verificación:** `tsc` ✅, jest 63 suites / 700 tests ✅, `test:functions` 72 tests ✅ (5 nuevos en `rls_01b_usuarios.test.ts`, que reproducen el escalado en PGlite). Falta el embed `user:public_profiles` contra PostgREST real, posible solo tras aplicar.
+- **Dónde:** rama `audit/04-admin-guard`. Migración aplicada en prod el 2026-11-05 con aprobación de Roger, antes de publicar la rama porque el repo es público.
+- **Verificación:** `tsc` ✅, jest 63 suites / 700 tests ✅, `test:functions` 72 tests ✅ (5 nuevos en `rls_01b_usuarios.test.ts`, que reproducen el escalado en PGlite). En prod: invitado ve 0 filas de `users`, `rls_01b_usuarios.sql` con ROLLBACK OK y sin restos. **Sin verificar:** el embed `user:public_profiles` y la API externa, porque prod responde 402 (01-H7).
 - **Rollback:** recrear las 3 políticas y los grants retirados. Reabre los agujeros.
 - **Quién:** 💻 local.
 

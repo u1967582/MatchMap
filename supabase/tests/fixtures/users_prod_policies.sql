@@ -1,5 +1,5 @@
 -- Réplica de public.users en prod a 2026-11-05 (políticas y grants), para
--- reproducir los agujeros que cierra 20261105120000_audit01b_users_privacy.sql.
+-- reproducir los agujeros que cierra 20261105212402_audit01b_users_privacy.sql.
 ALTER TABLE public.users ADD COLUMN full_name text, ADD COLUMN profile_image_url text;
 
 DROP POLICY users_self ON public.users;

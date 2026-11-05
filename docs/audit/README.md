@@ -20,8 +20,8 @@ La app sale a mercado cuando **todos** estos puntos están en ✅. Cualquier ❌
 
 | # | Criterio | Cómo se comprueba | Estado |
 |---|---|---|---|
-| G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ (01-H1…H3, 06-H1, 06-H4) |
-| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ❌ (01-H1…H3 abiertos en prod) |
+| G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ (01-H7, 06-H1, 06-H4) |
+| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ⏳ (01-H1…H3 arreglados; falta repasar el resto de tablas y confirmar con la API real, caída por 01-H7) |
 | G3 | `npm run typecheck`, `npm run lint` (0 errores) y `npm run test:all` en verde sobre `main` | CI local / sesión en la nube | ⏳ |
 | G4 | Smoke test manual completo en iPhone y Android físicos con el build de producción | Matriz del área 12 | ⏳ |
 | G5 | Compra de Boost real (sandbox) activa el boost en iOS y Android | Área 05 | ❌ |
@@ -31,7 +31,7 @@ La app sale a mercado cuando **todos** estos puntos están en ✅. Cualquier ❌
 | G9 | Hay monitorización de crashes en producción | Área 08 | ❌ (sin SDK instalado, pendiente de D4) |
 | G10 | Contenido mínimo: bares aprobados suficientes en las zonas de lanzamiento | Área 13 | ❌ (47 aprobados, de ellos 31 de test: 16 reales; 135 pendientes) |
 
-**Estado verificado el 2026-11-05 contra prod:** aplicada `audit01_security_rls_storage` (ya no quedan las políticas antiguas). Sin aplicar: `20261015130000_review_reports_and_user_blocks`, `20261020000000_perf_rls_initplan_and_fk_indexes` y `20261105120000_audit01b_users_privacy`. Crons `sync-football-daily` y `send-match-notifications` en verde.
+**Estado verificado el 2026-11-05 contra prod:** aplicada `audit01_security_rls_storage` (ya no quedan las políticas antiguas). Aplicada `20261105212402_audit01b_users_privacy`. Sin aplicar: `20261015130000_review_reports_and_user_blocks` y `20261020000000_perf_rls_initplan_and_fk_indexes`. **Toda la API responde 402 por cuota de almacenamiento (01-H7).** Los crons figuran en verde, pero sus llamadas HTTP devuelven 402.
 
 Estado inicial verificado el 2026-10-10 contra prod: los bloqueantes 1–4 de `HALLAZGOS` **siguen abiertos** (políticas `Allow read`, `Allow upload`, `Bar owner: update own bar`, `Reviews: Insert by authenticated users`, `Favorites: Self insert`… presentes en `pg_policies`).
 
@@ -89,7 +89,7 @@ Leyenda de ejecución: ☁️ nube · 💻 local · 👤 tú. Estado: ⬜ pendie
 
 | Área | Prioridad | Ejecución | Estado | PR | Notas |
 |---|---|---|---|---|---|
-| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | | Migración 01 aplicada en prod. Abiertos 01-H1…H3 (🔴): `20261105120000_audit01b_users_privacy.sql` sin aplicar |
+| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | | Migraciones 01 y 01b aplicadas en prod. Abierto 01-H7 (🔴): API caída por cuota de almacenamiento |
 | [02 Autenticación y cuenta](areas/02-auth-cuenta.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | WIP sin verificar (auth, reset, perfil). Hallazgos 8, 9 |
 | [03 Flujos de usuario](areas/03-flujos-usuario.md) | 🟠 | ☁️ | 🔄 | | Mergeada, **sin aplicar en prod**: `review_reports` y `user_blocks` no existen, reportar y bloquear reseñas falla |
 | [04 Flujos de propietario y admin](areas/04-flujos-propietario-admin.md) | 🟠 | ☁️ | 🔄 | | 04-H1 (`AdminOnly`) se quedó fuera de la PR #38; recuperado en `audit/04-admin-guard` |

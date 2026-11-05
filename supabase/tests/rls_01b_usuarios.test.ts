@@ -1,4 +1,4 @@
-// Tests de 20261105120000_audit01b_users_privacy.sql sobre PGlite. Mismo patrón
+// Tests de 20261105212402_audit01b_users_privacy.sql sobre PGlite. Mismo patrón
 // que rls_01_seguridad.test.ts. Se ejecuta con `npm run test:functions`.
 import { assert, assertEquals, assertRejects } from 'jsr:@std/assert@1';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2.17';
@@ -8,7 +8,7 @@ const read = (path: string) => Deno.readTextFileSync(new URL(path, root));
 
 const STUB = read('tests/fixtures/supabase_prod_stub.sql');
 const USERS_PROD = read('tests/fixtures/users_prod_policies.sql');
-const MIGRATION = read('migrations/20261105120000_audit01b_users_privacy.sql');
+const MIGRATION = read('migrations/20261105212402_audit01b_users_privacy.sql');
 const RLS_SCRIPT = read('tests/rls_01b_usuarios.sql');
 
 async function freshDb(): Promise<PGlite> {
