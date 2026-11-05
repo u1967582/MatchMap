@@ -20,16 +20,18 @@ La app sale a mercado cuando **todos** estos puntos están en ✅. Cualquier ❌
 
 | # | Criterio | Cómo se comprueba | Estado |
 |---|---|---|---|
-| G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ |
-| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ❌ |
+| G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ (01-H7, 06-H1, 06-H4) |
+| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ⏳ (01-H1…H3 arreglados; falta repasar el resto de tablas y confirmar con la API real, caída por 01-H7) |
 | G3 | `npm run typecheck`, `npm run lint` (0 errores) y `npm run test:all` en verde sobre `main` | CI local / sesión en la nube | ⏳ |
 | G4 | Smoke test manual completo en iPhone y Android físicos con el build de producción | Matriz del área 12 | ⏳ |
 | G5 | Compra de Boost real (sandbox) activa el boost en iOS y Android | Área 05 | ❌ |
-| G6 | Push de partidos recibidas en iOS y Android | Área 06 | ❌ (falta FCM) |
+| G6 | Push de partidos recibidas en iOS y Android | Área 06 | ❌ (falta FCM; 0 tokens en prod) |
 | G7 | Borrado de cuenta funciona desde la app (Apple 5.1.1(v), Google Play) | Área 02 | ⏳ |
 | G8 | Política de privacidad, etiqueta de App Store y *Data safety* de Play coinciden con lo que hace la app | Área 11 | ⏳ |
-| G9 | Hay monitorización de crashes en producción | Área 08 | ❌ |
-| G10 | Contenido mínimo: bares aprobados suficientes en las zonas de lanzamiento | Área 13 | ❌ (47 aprobados / 135 pendientes) |
+| G9 | Hay monitorización de crashes en producción | Área 08 | ❌ (sin SDK instalado, pendiente de D4) |
+| G10 | Contenido mínimo: bares aprobados suficientes en las zonas de lanzamiento | Área 13 | ❌ (47 aprobados, de ellos 31 de test: 16 reales; 135 pendientes) |
+
+**Estado verificado el 2026-11-05 contra prod:** aplicada `audit01_security_rls_storage` (ya no quedan las políticas antiguas). Aplicada `20261105212402_audit01b_users_privacy`. Sin aplicar: `20261015130000_review_reports_and_user_blocks` y `20261020000000_perf_rls_initplan_and_fk_indexes`. **Toda la API responde 402 por cuota de almacenamiento (01-H7).** Los crons figuran en verde, pero sus llamadas HTTP devuelven 402.
 
 Estado inicial verificado el 2026-10-10 contra prod: los bloqueantes 1–4 de `HALLAZGOS` **siguen abiertos** (políticas `Allow read`, `Allow upload`, `Bar owner: update own bar`, `Reviews: Insert by authenticated users`, `Favorites: Self insert`… presentes en `pg_policies`).
 
@@ -87,13 +89,13 @@ Leyenda de ejecución: ☁️ nube · 💻 local · 👤 tú. Estado: ⬜ pendie
 
 | Área | Prioridad | Ejecución | Estado | PR | Notas |
 |---|---|---|---|---|---|
-| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | | WIP sin verificar: migración `20261015120000_audit01_security_rls_storage.sql` + tests RLS. Hallazgos 1–4, 11, 13 |
+| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | | Migraciones 01 y 01b aplicadas en prod. Abierto 01-H7 (🔴): API caída por cuota de almacenamiento |
 | [02 Autenticación y cuenta](areas/02-auth-cuenta.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | WIP sin verificar (auth, reset, perfil). Hallazgos 8, 9 |
-| [03 Flujos de usuario](areas/03-flujos-usuario.md) | 🟠 | ☁️ | 🔄 | | WIP sin verificar; migración renombrada a `20261015130000_…` (chocaba con la de 01). Hallazgo 16 |
-| [04 Flujos de propietario y admin](areas/04-flujos-propietario-admin.md) | 🟠 | ☁️ | ⬜ | | Depende de 01 (subidas) |
+| [03 Flujos de usuario](areas/03-flujos-usuario.md) | 🟠 | ☁️ | 🔄 | | Mergeada, **sin aplicar en prod**: `review_reports` y `user_blocks` no existen, reportar y bloquear reseñas falla |
+| [04 Flujos de propietario y admin](areas/04-flujos-propietario-admin.md) | 🟠 | ☁️ | 🔄 | | 04-H1 (`AdminOnly`) se quedó fuera de la PR #38; recuperado en `audit/04-admin-guard` |
 | [05 Pagos Boost](areas/05-pagos-boost.md) | 🔴 | 💻 + 👤 | ⬜ | | Hallazgo 7 |
-| [06 Notificaciones push](areas/06-push.md) | 🔴 | 👤 + 💻 | ⬜ | | Hallazgo 6, depende de D1 |
-| [07 Backend: edge functions, crons y migraciones](areas/07-backend.md) | 🟠 | ☁️ + 💻 | 🔄 | | WIP sin verificar; migración `20261020000000_perf_rls_initplan_and_fk_indexes.sql`. Hallazgos 10, 12, 21 |
+| [06 Notificaciones push](areas/06-push.md) | 🔴 | 👤 + 💻 | 🔄 | | Código revisado (PR #38). Abiertos 06-H1 y 06-H4: build nuevo y FCM |
+| [07 Backend: edge functions, crons y migraciones](areas/07-backend.md) | 🟠 | ☁️ + 💻 | 🔄 | | `20261020000000_perf_rls_initplan_and_fk_indexes.sql` mergeada, **sin aplicar en prod** |
 | [08 Estabilidad, calidad y monitorización](areas/08-estabilidad-calidad.md) | 🟠 | ☁️ | 🔄 | | 2 commits + límites de jest. Hallazgos 15, 17, 18 |
 | [09 Rendimiento](areas/09-rendimiento.md) | 🟡 | ☁️ + 💻 | ⬜ | | Solo regresiones graves antes del lanzamiento |
 | [10 Builds y configuración de tiendas](areas/10-builds-config.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | 2 commits. Hallazgos 5, 19, 20 |

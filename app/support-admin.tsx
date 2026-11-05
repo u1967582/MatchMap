@@ -12,6 +12,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import { AppText } from '~/components/ds';
+import { withAdminOnly } from '~/components/AdminOnly';
 
 interface SupportTicket {
   id: string;
@@ -55,7 +56,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   other: 'chatbubbles-outline',
 };
 
-export default function SupportAdminScreen() {
+function SupportAdminScreen() {
   const router = useRouter();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -462,3 +463,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
+
+export default withAdminOnly(SupportAdminScreen);

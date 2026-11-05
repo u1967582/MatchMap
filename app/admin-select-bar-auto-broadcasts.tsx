@@ -24,6 +24,7 @@ import {
 import { useIsAdmin } from '~/hooks/useIsAdmin';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { TestBarsFlagButton } from '~/components/admin/TestBarsFlagButton';
+import { withAdminOnly } from '~/components/AdminOnly';
 
 interface Bar {
   id: string;
@@ -38,7 +39,7 @@ interface Bar {
   is_test?: boolean;
 }
 
-export default function AdminSelectBarAutoBroadcastsScreen() {
+function AdminSelectBarAutoBroadcastsScreen() {
   const router = useRouter();
   const { isAdmin } = useIsAdmin();
   const showTestBars = useTestBarsVisibilityStore((state) => state.showTestBars);
@@ -439,3 +440,5 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
 });
+
+export default withAdminOnly(AdminSelectBarAutoBroadcastsScreen);
