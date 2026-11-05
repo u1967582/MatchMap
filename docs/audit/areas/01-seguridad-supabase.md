@@ -33,7 +33,12 @@ Que ningún usuario (invitado anónimo, usuario normal o propietario) pueda leer
 ## Hallazgos
 | ID | Severidad | Descripción | Estado |
 |---|---|---|---|
-| | | | |
+| 01-H1 | 🔴 | **Fuga de datos personales.** `Users can view profiles` era `SELECT USING (true)` para `authenticated`, rol que también tienen los invitados. Comprobado en prod en transacción de solo lectura como invitado: 122 filas y 122 emails visibles. | ⏳ `20261105120000_audit01b_users_privacy.sql`, **sin aplicar en prod** |
+| 01-H2 | 🔴 | **Escalado a super admin.** `Allow insert during registration` era `INSERT WITH CHECK (true)` para `public`, y `trg_users_protect_privileged_columns` solo cubre UPDATE. Un invitado obtiene `is_super_user` creando su fila con el rol `anon`; un usuario normal, borrando y recreando la suya. Reproducido en PGlite, no en prod. | ⏳ misma migración, **sin aplicar en prod** |
+| 01-H3 | 🔴 | **Robo de bares pre-registrados.** El mismo INSERT con un email falso dispara `match_pre_registered_bar`. Deducido de las definiciones, no reproducido. | ⏳ misma migración, **sin aplicar en prod** |
+| 01-H4 | 🟠 | Protección de contraseñas filtradas desactivada en Supabase Auth. | ⏳ 👤 panel |
+| 01-H5 | 🟠 | Postgres `17.4.1.048` con parches de seguridad pendientes. | ⏳ 👤 panel, con reinicio |
+| 01-H6 | 🟡 | `is_super_admin()` e `is_support_admin()` ejecutables por `anon`. Solo devuelven `false` sin sesión. | Anotado |
 
 ## Prompt para la sesión en la nube
 ```text

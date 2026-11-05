@@ -58,7 +58,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         // Fetch reviews
         const { data: reviewsData, error: reviewsError } = await supabase
           .from('reviews')
-          .select(`id, user_id, rating, comment, created_at, likes, is_google_review, google_author_name, user:users(username, profile_image_url)`)
+          .select(`id, user_id, rating, comment, created_at, likes, is_google_review, google_author_name, user:public_profiles(username, profile_image_url)`)
           .eq('bar_id', barId)
           .order('created_at', { ascending: false });
 
