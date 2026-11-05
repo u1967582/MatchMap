@@ -25,6 +25,7 @@ import { useAutoBroadcastPreferences } from '~/hooks/useAutoBroadcastPreferences
 import { CompetitionsTeamsSelector } from '~/components/admin/CompetitionsTeamsSelector';
 import { buildBroadcastPreferencesPayload } from '~/lib/broadcastPreferences';
 import { userFacingErrorMessage } from '~/utils/userFacingError';
+import { withAdminOnly } from '~/components/AdminOnly';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -91,7 +92,7 @@ const STATUS_LABEL: Record<VerificationStatus, string> = {
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
-export default function BarVerificationDetailScreen() {
+function BarVerificationDetailScreen() {
   const router = useRouter();
   const { barId, source: sourceParam } = useLocalSearchParams<{ barId: string; source?: string }>();
   const source: Source = sourceParam === 'scraped' ? 'scraped' : 'owner';
@@ -2027,3 +2028,5 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
 });
+
+export default withAdminOnly(BarVerificationDetailScreen);
