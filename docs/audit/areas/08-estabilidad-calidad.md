@@ -21,7 +21,7 @@ Que la app no se cierre sola, que cuando algo falle lo sepamos, y que el código
 ## Hallazgos
 | ID | Severidad | Descripción | Estado |
 |---|---|---|---|
-| | | | |
+| 08-H1 | 🔴 | Sin monitorización de errores en producción (G9). | 🛠 EAS Observe (D4): `utils/observe.ts` configura Observe al arrancar, filtra parámetros de auth en la integración de Expo Router y envía los errores de `reportError` ya limpios de datos personales (se desactiva el handler global propio de Observe para no mandarlos dos veces sin limpiar). TTR con `ObserveRoot.wrap` y TTI en el mapa y en la bienvenida. Falta una build y comprobar el panel. |
 
 ## Prompt para la sesión en la nube
 ```text

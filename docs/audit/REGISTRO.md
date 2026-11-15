@@ -17,6 +17,26 @@ Una entrada por cada cambio: PR mergeada, migración aplicada en prod, ajuste en
 
 ---
 
+### 2026-11-15 · Área 01 · Repaso de RLS contra prod y fuga de pagos de Boost
+- **Tipo:** código (migración sin aplicar)
+- **Qué:** repaso de solo lectura de las 47 tablas, sus políticas, permisos, funciones `SECURITY DEFINER` y buckets. Un hallazgo grave (01-H8: `bar_boosts` dejaba leer quién ha pagado y cuánto) y dos menores (01-H9, 01-H10). Migración `20261115120000_audit01c_bar_boosts_privacy.sql`.
+- **Por qué:** G2, 01-H8.
+- **Dónde:** rama `audit/08-observe-rls`.
+- **Verificación:** `supabase/tests/rls_01c_bar_boosts.test.ts` (5 tests en PGlite con la tabla y las políticas de prod: reproduce la fuga sin la migración y comprueba mapa, dueño y upsert de compra con ella).
+- **Pendiente:** aplicarla en prod con aprobación de Roger.
+- **Rollback:** recrear la política `USING (true)` y `GRANT ALL ON public.bar_boosts TO anon, authenticated` (reabre la fuga).
+- **Quién:** 💻 local.
+
+### 2026-11-15 · Área 08 · EAS Observe (D4)
+- **Tipo:** decisión · código
+- **Qué:** D1 = mantener `com.tuorg.matchmap` (la app ya está publicada en las dos tiendas); D2 resuelta (ya está publicada en Google Play); D4 = EAS Observe. Se instala `expo-observe` 58 y `utils/observe.ts` lo conecta a `reportError`.
+- **Por qué:** G9, 08-H1.
+- **Dónde:** rama `audit/08-observe-rls`.
+- **Verificación:** jest (tests nuevos en `utils/__tests__/observe.test.ts` y `map.test.tsx`), `tsc`. **Sin verificar:** datos en el panel de Observe, porque hace falta una build (en debug no se envía nada).
+- **Pendiente:** añadir a Expo (EAS Observe) como encargado del tratamiento en la política de privacidad de la web.
+- **Rollback:** quitar `setupObserve()` y `ObserveRoot.wrap` de `app/_layout.tsx`; los errores vuelven a ir solo a consola.
+- **Quién:** 💻 local.
+
 ### 2026-11-15 · Áreas 06 y 11 · Política de privacidad, contacto, Mapbox y push en frío
 - **Tipo:** código
 - **Qué:** política de privacidad y página para eliminar la cuenta en la web (`matchmap-landing`, `/privacidad` y `/eliminar-cuenta`), redactadas desde el código y prod; se retiran los HTML antiguos de `privacy/`. Buzón único `support@matchmapapp.com` (`constants/legal.ts`). Telemetría de Mapbox desactivada. «Soporte y Tickets» visible para todos. FAQ corregida. El `matchId` de una notificación se guarda en un store para que no se pierda en el arranque en frío.

@@ -21,14 +21,14 @@ La app sale a mercado cuando **todos** estos puntos están en ✅. Cualquier ❌
 | # | Criterio | Cómo se comprueba | Estado |
 |---|---|---|---|
 | G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ (06-H1 build nuevo con push, 10-H1 rotar token de Mapbox, 11-H4 publicar la política con los datos del responsable) |
-| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ⏳ (01-H1…H3 arreglados; falta repasar el resto de tablas contra la API real, que ya responde) |
+| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ⏳ Repaso completo de las 47 tablas, funciones y Storage hecho en prod el 2026-11-15: solo queda 01-H8 (`bar_boosts`), con la migración `20261115120000_audit01c_bar_boosts_privacy.sql` pendiente de aplicar |
 | G3 | `npm run typecheck`, `npm run lint` (0 errores) y `npm run test:all` en verde sobre `main` | CI local / sesión en la nube | ⏳ (verde con la PR #42 de Prettier; falta fusionarla) |
 | G4 | Smoke test manual completo en iPhone y Android físicos con el build de producción | Matriz del área 12 | ⏳ |
 | G5 | Compra de Boost real (sandbox) activa el boost en iOS y Android | Área 05 | ❌ |
 | G6 | Push de partidos recibidas en iOS y Android | Área 06 | ❌ (falta FCM; 0 tokens en prod) |
 | G7 | Borrado de cuenta funciona desde la app (Apple 5.1.1(v), Google Play) | Área 02 | ⏳ (falta probarlo en dispositivo; página web de borrado en la PR #8 de `matchmap-landing`) |
 | G8 | Política de privacidad, etiqueta de App Store y *Data safety* de Play coinciden con lo que hace la app | Área 11 | ⏳ (política nueva en `matchmap-landing` PR #8; faltan datos del responsable y rellenar los cuestionarios de las tiendas) |
-| G9 | Hay monitorización de crashes en producción | Área 08 | ❌ (sin SDK instalado, pendiente de D4) |
+| G9 | Hay monitorización de crashes en producción | Área 08 | 🛠 EAS Observe integrado (D4). Falta una build con el SDK y ver datos en el panel de Observe |
 | G10 | Contenido mínimo: bares aprobados suficientes en las zonas de lanzamiento | Área 13 | ❌ (47 aprobados, de ellos 31 de test: 16 reales; 135 pendientes) |
 
 **Estado verificado el 2026-11-15 contra prod:** Supabase en plan Pro (01-H7 resuelto, la API responde). Aplicadas `20261015130000_review_reports_and_user_blocks` y `20261020000000_perf_rls_initplan_and_fk_indexes`; redesplegadas las 5 edge functions. `main` en Expo SDK 58 (PR #41) y con la PR #39 fusionada. 0 push tokens, 16 bares reales aprobados y 135 pendientes. API-Football en plan Free (sync 502, se paga antes de publicar).
@@ -76,10 +76,10 @@ Bloquean partes del plan. Anota la respuesta aquí y en `REGISTRO.md`.
 
 | # | Decisión | Opciones | Bloquea | Respuesta |
 |---|---|---|---|---|
-| D1 | Package de Android `com.tuorg.matchmap` es un placeholder. Si la app **no** está publicada aún en Play, es el último momento para cambiarlo (luego es imposible). En iOS ya existe en App Store Connect con ese ID. | Mantener / cambiar Android (p. ej. `com.matchmap.app`) | Área 10, 06 (FCM se registra con el package) | |
-| D2 | ¿La cuenta de Google Play Console es **personal y creada después de nov-2023**? Si es así, Google exige una prueba cerrada con **12 testers durante 14 días** antes de poder publicar en producción. | Personal nueva / personal antigua / organización | Fecha de Android | |
+| D1 | Package de Android `com.tuorg.matchmap` es un placeholder. Si la app **no** está publicada aún en Play, es el último momento para cambiarlo (luego es imposible). En iOS ya existe en App Store Connect con ese ID. | Mantener / cambiar Android (p. ej. `com.matchmap.app`) | Área 10, 06 (FCM se registra con el package) | **Mantener** (2026-11-15): la app ya está publicada en App Store y Google Play con ese package. |
+| D2 | ¿La cuenta de Google Play Console es **personal y creada después de nov-2023**? Si es así, Google exige una prueba cerrada con **12 testers durante 14 días** antes de poder publicar en producción. | Personal nueva / personal antigua / organización | Fecha de Android | **Resuelta** (2026-11-15): la app ya está publicada en Google Play. |
 | D3 | Bufandas coleccionables: ¿se abandona la función? | Aplicar `drop_scarves_collectibles` + borrar `fn_claim_scarf`, `ticket_claims`, bucket `ticket-claims` / borrar la migración y mantenerla | Área 01, 07 | |
-| D4 | Monitorización de crashes | Sentry (cuenta gratuita) / EAS Observe / Crashlytics | Área 08 | |
+| D4 | Monitorización de crashes | Sentry (cuenta gratuita) / EAS Observe / Crashlytics | Área 08 | **EAS Observe** (2026-11-15). Integrado en `utils/observe.ts` (rama `audit/08-observe-rls`). |
 | D5 | Zonas/ciudades de lanzamiento y nº mínimo de bares aprobados | — | Área 13 | |
 | D6 | Cuenta demo para los revisores de Apple y Google (con bar de propietario para enseñar Boost) | Crear `review@…` / otra | Área 11 | |
 
@@ -91,14 +91,14 @@ Leyenda de ejecución: ☁️ nube · 💻 local · 👤 tú. Estado: ⬜ pendie
 
 | Área | Prioridad | Ejecución | Estado | PR | Notas |
 |---|---|---|---|---|---|
-| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | #39 | Migraciones 01 y 01b aplicadas y PR #39 fusionada. 01-H7 resuelto (Pro). Quedan 01-H4/H5 (paneles) y el repaso de RLS |
+| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | #39 | Migraciones 01 y 01b aplicadas y PR #39 fusionada. 01-H7 resuelto (Pro). Repaso de RLS hecho (2026-11-15): 01-H8 con migración pendiente de aplicar; quedan 01-H4/H5 (paneles) |
 | [02 Autenticación y cuenta](areas/02-auth-cuenta.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | WIP sin verificar (auth, reset, perfil). Hallazgos 8, 9 |
 | [03 Flujos de usuario](areas/03-flujos-usuario.md) | 🟠 | ☁️ | ✅ | | Migración de reportes y bloqueos aplicada en prod el 2026-11-15 |
 | [04 Flujos de propietario y admin](areas/04-flujos-propietario-admin.md) | 🟠 | ☁️ | ✅ | #39 | 04-H1 (`AdminOnly`) fusionado con la PR #39 |
 | [05 Pagos Boost](areas/05-pagos-boost.md) | 🔴 | 💻 + 👤 | ⬜ | | Hallazgo 7 |
 | [06 Notificaciones push](areas/06-push.md) | 🔴 | 👤 + 💻 | 🔄 | | Código revisado (PR #38) y 06-H5 arreglado. Abiertos 06-H1 y 06-H4: build nuevo y FCM (depende de D1) |
 | [07 Backend: edge functions, crons y migraciones](areas/07-backend.md) | 🟠 | ☁️ + 💻 | ✅ | | Migración de rendimiento aplicada y funciones redesplegadas el 2026-11-15. Solo quedan 🟡 |
-| [08 Estabilidad, calidad y monitorización](areas/08-estabilidad-calidad.md) | 🟠 | ☁️ | 🔄 | | 2 commits + límites de jest. Hallazgos 15, 17, 18 |
+| [08 Estabilidad, calidad y monitorización](areas/08-estabilidad-calidad.md) | 🟠 | ☁️ | 🔄 | | 2 commits + límites de jest. Hallazgos 15, 17, 18. EAS Observe integrado (08-H1) |
 | [09 Rendimiento](areas/09-rendimiento.md) | 🟡 | ☁️ + 💻 | ⬜ | | Solo regresiones graves antes del lanzamiento |
 | [10 Builds y configuración de tiendas](areas/10-builds-config.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | 2 commits. Hallazgos 5, 19, 20 |
 | [11 Cumplimiento de tiendas y legal](areas/11-cumplimiento-legal.md) | 🔴 | ☁️ + 👤 | 🔄 | landing #8 | 11-H5/H7/H9/H11 resueltos. Política y página de borrado en `matchmap-landing` (falta el responsable). Quedan 11-H8 y los cuestionarios de las tiendas |
