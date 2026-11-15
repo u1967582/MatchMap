@@ -20,7 +20,7 @@ La app sale a mercado cuando **todos** estos puntos están en ✅. Cualquier ❌
 
 | # | Criterio | Cómo se comprueba | Estado |
 |---|---|---|---|
-| G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ (06-H1 build nuevo con push, 10-H1 rotar token de Mapbox, 11-H4 publicar la política con los datos del responsable) |
+| G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ (06-H1 build nuevo con push, 11-H4 publicar la política con los datos del responsable). 10-H1 resuelto el 2026-11-15 |
 | G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ⏳ Repaso completo de las 47 tablas, funciones y Storage hecho en prod el 2026-11-15: 01-H8 (`bar_boosts`) arreglado y aplicado. Quedan menores: 01-H9 (depende de D3) y 01-H10 |
 | G3 | `npm run typecheck`, `npm run lint` (0 errores) y `npm run test:all` en verde sobre `main` | CI local / sesión en la nube | ⏳ (verde con la PR #42 de Prettier; falta fusionarla) |
 | G4 | Smoke test manual completo en iPhone y Android físicos con el build de producción | Matriz del área 12 | ⏳ |
