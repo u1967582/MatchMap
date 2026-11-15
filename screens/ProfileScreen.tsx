@@ -26,6 +26,7 @@ import { syncMatchNotificationsToggle } from '~/services/notifications';
 import { updateShowBettingBars } from '~/services/users';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
+import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '~/constants/legal';
 
 interface FavoriteTeam {
   id: string;
@@ -411,15 +412,11 @@ export default function ProfileScreen() {
   }, [router]);
 
   const handlePrivacyPolicy = useCallback(() => {
-    WebBrowser.openBrowserAsync(
-      'https://shared-orange-c4f.notion.site/MatchMap-Privacy-Policy-2fdfe32774b580e4b19ae0b7898c1ce8'
-    );
+    WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL);
   }, []);
 
   const handleTermsOfService = useCallback(() => {
-    WebBrowser.openBrowserAsync(
-      'https://shared-orange-c4f.notion.site/MatchMap-Terms-of-Service-32cfe32774b580fe8ad4d06d0ec552ae'
-    );
+    WebBrowser.openBrowserAsync(TERMS_OF_SERVICE_URL);
   }, []);
 
   const handleAddBar = useCallback(async () => {
@@ -1021,9 +1018,8 @@ export default function ProfileScreen() {
           <View style={styles.settingsContainer}>
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
             <SettingsRow title="Preguntas Frecuentes" onPress={handlePrivacy} />
-            {userBars.length > 0 && (
-              <SettingsRow title="Soporte y Tickets" onPress={handleContactSupport} />
-            )}
+            {/* Visible para todos los registrados: Apple 1.2 pide un contacto publicado (11-H11). */}
+            <SettingsRow title="Soporte y Tickets" onPress={handleContactSupport} />
             <SettingsRow title="Política de Privacidad" onPress={handlePrivacyPolicy} />
             <SettingsRow title="Términos de Servicio" onPress={handleTermsOfService} />
             {privacyOptionsRequired && (

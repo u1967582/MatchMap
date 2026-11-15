@@ -65,6 +65,10 @@ const PROXIMITY_RADIUS_METERS = 150;
 const PROXIMITY_CHECK_COOLDOWN_MS = 5 * 60 * 1000;
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
+// La telemetría de Mapbox está activa por defecto y envía datos de uso y de
+// ubicación a Mapbox. No la necesitamos y obligaría a declararla en la política
+// y en las etiquetas de privacidad de las tiendas (auditoría 11-H9).
+MapboxGL.setTelemetryEnabled(false);
 
 // Centro por defecto cuando no hay permiso de ubicación (o falla el GPS):
 // Madrid, con zoom de ciudad para que se vean bares al abrir la app.

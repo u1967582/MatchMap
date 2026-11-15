@@ -38,7 +38,7 @@ Que ningún usuario (invitado anónimo, usuario normal o propietario) pueda leer
 | 01-H3 | 🔴 | **Robo de bares pre-registrados.** El mismo INSERT con un email falso dispara `match_pre_registered_bar`. Deducido de las definiciones, no reproducido. | ✅ misma migración; `rls_01b_usuarios.sql` en prod con ROLLBACK: OK |
 | 01-H4 | 🟠 | Protección de contraseñas filtradas desactivada en Supabase Auth. | ⏳ 👤 panel |
 | 01-H5 | 🟠 | Postgres `17.4.1.048` con parches de seguridad pendientes. | ⏳ 👤 panel, con reinicio |
-| 01-H7 | 🔴 | **Prod caído: toda la API responde 402** (`exceed_storage_size_quota`): REST, Auth, Storage y Functions. Plan free (1 GB) con 6,2 GB en `bar-images`, de ellos 4,1 GB en `scraped/`. Los crons figuran `succeeded` en `cron.job_run_details`, pero sus llamadas HTTP devuelven 402: no sincronizan partidos ni envían avisos. | ⏳ 👤 subir de plan o reducir almacenamiento |
+| 01-H7 | 🔴 | **Prod caído: toda la API responde 402** (`exceed_storage_size_quota`): REST, Auth, Storage y Functions. Plan free (1 GB) con 6,2 GB en `bar-images`, de ellos 4,1 GB en `scraped/`. Los crons figuran `succeeded` en `cron.job_run_details`, pero sus llamadas HTTP devuelven 402: no sincronizan partidos ni envían avisos. | ✅ Resuelto el 2026-11-15: proyecto pasado a Supabase Pro; la API vuelve a responder (HTTP 200). |
 | 01-H6 | 🟡 | `is_super_admin()` e `is_support_admin()` ejecutables por `anon`. Solo devuelven `false` sin sesión. | Anotado |
 
 ## Prompt para la sesión en la nube

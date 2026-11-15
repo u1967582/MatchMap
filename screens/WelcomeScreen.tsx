@@ -15,6 +15,7 @@ import * as WebBrowser from 'expo-web-browser';
 import BackgroundImage from '~/components/ui/BackgroundImage';
 import CustomButton from '~/components/ui/CustomButton';
 import { useState } from 'react';
+import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '~/constants/legal';
 
 interface WelcomeScreenProps {
   onLoginPress: () => void;
@@ -155,22 +156,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               <AppText
                 maxScale={1.0}
                 style={styles.legalLink}
-                onPress={() =>
-                  WebBrowser.openBrowserAsync(
-                    'https://shared-orange-c4f.notion.site/MatchMap-Terms-of-Service-32cfe32774b580fe8ad4d06d0ec552ae'
-                  )
-                }>
+                onPress={() => WebBrowser.openBrowserAsync(TERMS_OF_SERVICE_URL)}>
                 Términos de Servicio
               </AppText>{' '}
               y{' '}
               <AppText
                 maxScale={1.0}
                 style={styles.legalLink}
-                onPress={() =>
-                  WebBrowser.openBrowserAsync(
-                    'https://shared-orange-c4f.notion.site/MatchMap-Privacy-Policy-2fdfe32774b580e4b19ae0b7898c1ce8'
-                  )
-                }>
+                onPress={() => WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL)}>
                 Política de Privacidad
               </AppText>
             </AppText>

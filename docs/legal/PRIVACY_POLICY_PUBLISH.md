@@ -1,3 +1,5 @@
+> **Obsoleto (2026-11-15).** La política ya no vive en `privacy/`: se publica en https://matchmapapp.com/privacidad desde el repo `matchmap-landing`. Ver `privacy/README.md`.
+
 # 📜 PUBLICAR POLÍTICA DE PRIVACIDAD - GUÍA COMPLETA
 
 **Fecha**: 4 de Febrero de 2026  

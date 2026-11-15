@@ -20,16 +20,18 @@ La app sale a mercado cuando **todos** estos puntos están en ✅. Cualquier ❌
 
 | # | Criterio | Cómo se comprueba | Estado |
 |---|---|---|---|
-| G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ (01-H7, 06-H1, 06-H4) |
-| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ⏳ (01-H1…H3 arreglados; falta repasar el resto de tablas y confirmar con la API real, caída por 01-H7) |
-| G3 | `npm run typecheck`, `npm run lint` (0 errores) y `npm run test:all` en verde sobre `main` | CI local / sesión en la nube | ⏳ |
+| G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ (06-H1 build nuevo con push, 10-H1 rotar token de Mapbox, 11-H4 publicar la política con los datos del responsable) |
+| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ⏳ (01-H1…H3 arreglados; falta repasar el resto de tablas contra la API real, que ya responde) |
+| G3 | `npm run typecheck`, `npm run lint` (0 errores) y `npm run test:all` en verde sobre `main` | CI local / sesión en la nube | ⏳ (verde con la PR #42 de Prettier; falta fusionarla) |
 | G4 | Smoke test manual completo en iPhone y Android físicos con el build de producción | Matriz del área 12 | ⏳ |
 | G5 | Compra de Boost real (sandbox) activa el boost en iOS y Android | Área 05 | ❌ |
 | G6 | Push de partidos recibidas en iOS y Android | Área 06 | ❌ (falta FCM; 0 tokens en prod) |
-| G7 | Borrado de cuenta funciona desde la app (Apple 5.1.1(v), Google Play) | Área 02 | ⏳ |
-| G8 | Política de privacidad, etiqueta de App Store y *Data safety* de Play coinciden con lo que hace la app | Área 11 | ⏳ |
+| G7 | Borrado de cuenta funciona desde la app (Apple 5.1.1(v), Google Play) | Área 02 | ⏳ (falta probarlo en dispositivo; página web de borrado en la PR #8 de `matchmap-landing`) |
+| G8 | Política de privacidad, etiqueta de App Store y *Data safety* de Play coinciden con lo que hace la app | Área 11 | ⏳ (política nueva en `matchmap-landing` PR #8; faltan datos del responsable y rellenar los cuestionarios de las tiendas) |
 | G9 | Hay monitorización de crashes en producción | Área 08 | ❌ (sin SDK instalado, pendiente de D4) |
 | G10 | Contenido mínimo: bares aprobados suficientes en las zonas de lanzamiento | Área 13 | ❌ (47 aprobados, de ellos 31 de test: 16 reales; 135 pendientes) |
+
+**Estado verificado el 2026-11-15 contra prod:** Supabase en plan Pro (01-H7 resuelto, la API responde). Aplicadas `20261015130000_review_reports_and_user_blocks` y `20261020000000_perf_rls_initplan_and_fk_indexes`; redesplegadas las 5 edge functions. `main` en Expo SDK 58 (PR #41) y con la PR #39 fusionada. 0 push tokens, 16 bares reales aprobados y 135 pendientes. API-Football en plan Free (sync 502, se paga antes de publicar).
 
 **Estado verificado el 2026-11-05 contra prod:** aplicada `audit01_security_rls_storage` (ya no quedan las políticas antiguas). Aplicada `20261105212402_audit01b_users_privacy`. Sin aplicar: `20261015130000_review_reports_and_user_blocks` y `20261020000000_perf_rls_initplan_and_fk_indexes`. **Toda la API responde 402 por cuota de almacenamiento (01-H7).** Los crons figuran en verde, pero sus llamadas HTTP devuelven 402.
 
@@ -89,17 +91,17 @@ Leyenda de ejecución: ☁️ nube · 💻 local · 👤 tú. Estado: ⬜ pendie
 
 | Área | Prioridad | Ejecución | Estado | PR | Notas |
 |---|---|---|---|---|---|
-| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | | Migraciones 01 y 01b aplicadas en prod. Abierto 01-H7 (🔴): API caída por cuota de almacenamiento |
+| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | #39 | Migraciones 01 y 01b aplicadas y PR #39 fusionada. 01-H7 resuelto (Pro). Quedan 01-H4/H5 (paneles) y el repaso de RLS |
 | [02 Autenticación y cuenta](areas/02-auth-cuenta.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | WIP sin verificar (auth, reset, perfil). Hallazgos 8, 9 |
-| [03 Flujos de usuario](areas/03-flujos-usuario.md) | 🟠 | ☁️ | 🔄 | | Mergeada, **sin aplicar en prod**: `review_reports` y `user_blocks` no existen, reportar y bloquear reseñas falla |
-| [04 Flujos de propietario y admin](areas/04-flujos-propietario-admin.md) | 🟠 | ☁️ | 🔄 | | 04-H1 (`AdminOnly`) se quedó fuera de la PR #38; recuperado en `audit/04-admin-guard` |
+| [03 Flujos de usuario](areas/03-flujos-usuario.md) | 🟠 | ☁️ | ✅ | | Migración de reportes y bloqueos aplicada en prod el 2026-11-15 |
+| [04 Flujos de propietario y admin](areas/04-flujos-propietario-admin.md) | 🟠 | ☁️ | ✅ | #39 | 04-H1 (`AdminOnly`) fusionado con la PR #39 |
 | [05 Pagos Boost](areas/05-pagos-boost.md) | 🔴 | 💻 + 👤 | ⬜ | | Hallazgo 7 |
-| [06 Notificaciones push](areas/06-push.md) | 🔴 | 👤 + 💻 | 🔄 | | Código revisado (PR #38). Abiertos 06-H1 y 06-H4: build nuevo y FCM |
-| [07 Backend: edge functions, crons y migraciones](areas/07-backend.md) | 🟠 | ☁️ + 💻 | 🔄 | | `20261020000000_perf_rls_initplan_and_fk_indexes.sql` mergeada, **sin aplicar en prod** |
+| [06 Notificaciones push](areas/06-push.md) | 🔴 | 👤 + 💻 | 🔄 | | Código revisado (PR #38) y 06-H5 arreglado. Abiertos 06-H1 y 06-H4: build nuevo y FCM (depende de D1) |
+| [07 Backend: edge functions, crons y migraciones](areas/07-backend.md) | 🟠 | ☁️ + 💻 | ✅ | | Migración de rendimiento aplicada y funciones redesplegadas el 2026-11-15. Solo quedan 🟡 |
 | [08 Estabilidad, calidad y monitorización](areas/08-estabilidad-calidad.md) | 🟠 | ☁️ | 🔄 | | 2 commits + límites de jest. Hallazgos 15, 17, 18 |
 | [09 Rendimiento](areas/09-rendimiento.md) | 🟡 | ☁️ + 💻 | ⬜ | | Solo regresiones graves antes del lanzamiento |
 | [10 Builds y configuración de tiendas](areas/10-builds-config.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | 2 commits. Hallazgos 5, 19, 20 |
-| [11 Cumplimiento de tiendas y legal](areas/11-cumplimiento-legal.md) | 🔴 | ☁️ + 👤 | 🔄 | | 1 commit + WIP de ficha de tienda. Hallazgo 22 |
+| [11 Cumplimiento de tiendas y legal](areas/11-cumplimiento-legal.md) | 🔴 | ☁️ + 👤 | 🔄 | landing #8 | 11-H5/H7/H9/H11 resueltos. Política y página de borrado en `matchmap-landing` (falta el responsable). Quedan 11-H8 y los cuestionarios de las tiendas |
 | [12 QA manual en dispositivos](areas/12-qa-manual.md) | 🔴 | 👤 + 💻 | ⬜ | | Última puerta antes de enviar |
 | [13 Contenido y datos](areas/13-contenido-datos.md) | 🟠 | 👤 + 💻 | ⬜ | | Hallazgo 14 |
 

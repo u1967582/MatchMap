@@ -15,6 +15,7 @@ import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 import { useFavoritesStore } from '~/stores/favoritesStore';
 import { useLikesStore } from '~/stores/likesStore';
 import { useBettingBarsVisibilityStore } from '~/stores/bettingBarsVisibilityStore';
+import { usePendingNotificationStore } from '~/stores/pendingNotificationStore';
 import { configureNotificationHandler } from '~/services/notifications';
 import { parseAuthDeepLink } from '~/utils/authDeepLink';
 import { installGlobalErrorHandlers, reportError } from '~/utils/errorReporting';
@@ -39,23 +40,23 @@ export default function Layout() {
 
     type NotificationData = { matchId?: string; type?: string };
 
-    const handleNotificationTap = (data: NotificationData | undefined) => {
-      if (data?.type === 'favorite_team_match' && data.matchId) {
-        router.push({ pathname: '/(protected)/map', params: { matchId: data.matchId } });
-      }
+    const handleNotificationTap = (response: Notifications.NotificationResponse | null) => {
+      if (!response) return;
+      const { identifier, content } = response.notification.request;
+      const data = content.data as NotificationData | undefined;
+      if (data?.type !== 'favorite_team_match' || !data.matchId) return;
+      // En frío pueden llegar el listener y getLastNotificationResponseAsync con
+      // la misma respuesta: solo se trata una vez (06-H5).
+      if (!usePendingNotificationStore.getState().registerTap(identifier, data.matchId)) return;
+      router.push({ pathname: '/(protected)/map', params: { matchId: data.matchId } });
     };
 
-    const notificationSubscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        handleNotificationTap(response.notification.request.content.data as NotificationData);
-      }
-    );
+    const notificationSubscription =
+      Notifications.addNotificationResponseReceivedListener(handleNotificationTap);
 
     // Cubre el caso de la app abierta en frío tocando la notificación
     Notifications.getLastNotificationResponseAsync()
-      .then((response) => {
-        handleNotificationTap(response?.notification.request.content.data as NotificationData);
-      })
+      .then(handleNotificationTap)
       .catch((error) => reportError(error, { extra: { step: 'lastNotificationResponse' } }));
 
     return () => {

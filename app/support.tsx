@@ -37,7 +37,7 @@ const FAQS: Faq[] = [
   },
   {
     q: '¿Qué pasa con mi privacidad y la ubicación?',
-    a: 'Solo usamos tu ubicación para mostrarte bares cercanos. Puedes desactivarla cuando quieras; la app sigue funcionando con búsqueda manual. No compartimos tus datos personales con terceros sin tu consentimiento.',
+    a: 'Solo usamos tu ubicación para mostrarte bares cercanos. Puedes desactivarla cuando quieras; la app sigue funcionando con búsqueda manual. No vendemos tus datos. Los proveedores que hacen funcionar la app (alojamiento, pagos, mapas y anuncios) solo reciben lo necesario; los anuncios personalizados dependen de tu consentimiento. Tienes todos los detalles en la Política de Privacidad.',
   },
 ];
 
