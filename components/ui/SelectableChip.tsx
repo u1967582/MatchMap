@@ -1,8 +1,5 @@
 import { useState, useRef } from 'react';
-import {
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import { AppText } from '~/components/ds';
 
 interface SelectableChipProps {
@@ -12,30 +9,16 @@ interface SelectableChipProps {
   onPress: () => void;
 }
 
-export default function SelectableChip({
-  icon,
-  label,
-  selected,
-  onPress,
-}: SelectableChipProps) {
+export default function SelectableChip({ icon, label, selected, onPress }: SelectableChipProps) {
   console.log('🎨 SelectableChip render:', { icon, label, selected });
-  
+
   return (
     <TouchableOpacity
-      style={[
-        styles.chip,
-        selected && styles.chipSelected
-      ]}
+      style={[styles.chip, selected && styles.chipSelected]}
       onPress={onPress}
-      activeOpacity={0.7}
-    >
+      activeOpacity={0.7}>
       <AppText style={styles.icon}>{icon}</AppText>
-      <AppText style={[
-        styles.label,
-        selected && styles.labelSelected
-      ]}>
-        {label}
-      </AppText>
+      <AppText style={[styles.label, selected && styles.labelSelected]}>{label}</AppText>
     </TouchableOpacity>
   );
 }
@@ -82,4 +65,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
-}); 
+});

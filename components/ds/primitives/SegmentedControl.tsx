@@ -31,9 +31,11 @@ export default function SegmentedControl<T extends string>({
             key={option.value}
             style={[styles.option, active && { backgroundColor: `${accentColor}1f` }]}
             onPress={() => onChange(option.value)}
-            activeOpacity={0.8}
-          >
-            <AppText variant="label" color={active ? accentColor : colors.text.secondary} maxScale={1.0}>
+            activeOpacity={0.8}>
+            <AppText
+              variant="label"
+              color={active ? accentColor : colors.text.secondary}
+              maxScale={1.0}>
               {option.label}
             </AppText>
           </TouchableOpacity>

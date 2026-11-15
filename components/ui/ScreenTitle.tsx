@@ -29,7 +29,11 @@ const ScreenTitle: React.FC<ScreenTitleProps> = ({
     },
   ];
 
-  return <AppText maxScale={1.2} style={titleStyle}>{title}</AppText>;
+  return (
+    <AppText maxScale={1.2} style={titleStyle}>
+      {title}
+    </AppText>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -44,4 +48,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ScreenTitle; 
+export default ScreenTitle;

@@ -74,11 +74,14 @@ export function getYearlySavingsPercent(yearlyPrice: number, monthlyPrice: numbe
   return pct > 0 ? pct : null;
 }
 
-const PLAN_META: Record<'7d' | '1m' | '1y', {
-  title: string;
-  duration: string;
-  icon: 'flash' | 'trending-up' | 'sparkles';
-}> = {
+const PLAN_META: Record<
+  '7d' | '1m' | '1y',
+  {
+    title: string;
+    duration: string;
+    icon: 'flash' | 'trending-up' | 'sparkles';
+  }
+> = {
   '7d': { title: 'Boost Semanal', duration: '7 días', icon: 'flash' },
   '1m': { title: 'Boost Mensual', duration: '1 mes', icon: 'trending-up' },
   '1y': { title: 'Boost de Temporada', duration: '1 año', icon: 'sparkles' },
@@ -123,9 +126,10 @@ export function useBoostOfferings(): UseBoostOfferingsResult {
               isPopular: plan === '1m',
               duration: meta.duration,
               amortization: `Se amortiza con ${customers} ${customers === 1 ? 'cliente nuevo' : 'clientes nuevos'}`,
-              pricePerMonth: plan === '1y'
-                ? `${formatPrice(pkg.product.price / 12, pkg.product.currencyCode)}/mes`
-                : undefined,
+              pricePerMonth:
+                plan === '1y'
+                  ? `${formatPrice(pkg.product.price / 12, pkg.product.currencyCode)}/mes`
+                  : undefined,
               icon: meta.icon,
             });
             return acc;
@@ -150,77 +154,79 @@ export function useBoostOfferings(): UseBoostOfferingsResult {
     }
 
     fetchOfferings();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const purchaseBoost = useCallback(async (
-    pkg: PurchasesPackage,
-    barId: string,
-    userId: string,
-  ): Promise<boolean> => {
-    const plan = getPlanFromProductId(pkg.product.identifier);
-    if (!plan) return false;
+  const purchaseBoost = useCallback(
+    async (pkg: PurchasesPackage, barId: string, userId: string): Promise<boolean> => {
+      const plan = getPlanFromProductId(pkg.product.identifier);
+      if (!plan) return false;
 
-    try {
-      setIsPurchasing(true);
-      setPurchasingId(pkg.identifier);
-
-      // Para que el webhook sepa a qué bar va el boost aunque el insert del
-      // cliente falle o llegue tarde. No bloquea la compra si falla.
       try {
-        await Purchases.setAttributes({ [BOOST_BAR_ATTRIBUTE]: barId });
-      } catch (attrErr) {
-        console.warn('[useBoostOfferings] No se pudo fijar boost_bar_id:', attrErr);
-      }
+        setIsPurchasing(true);
+        setPurchasingId(pkg.identifier);
 
-      const { transaction } = await Purchases.purchasePackage(pkg);
+        // Para que el webhook sepa a qué bar va el boost aunque el insert del
+        // cliente falle o llegue tarde. No bloquea la compra si falla.
+        try {
+          await Purchases.setAttributes({ [BOOST_BAR_ATTRIBUTE]: barId });
+        } catch (attrErr) {
+          console.warn('[useBoostOfferings] No se pudo fijar boost_bar_id:', attrErr);
+        }
 
-      const startAt = new Date();
-      const endAt = getEndAt(plan);
-      const amountCents = Math.round(pkg.product.price * 100);
-      const currency = (pkg.product.currencyCode ?? 'eur').toLowerCase();
+        const { transaction } = await Purchases.purchasePackage(pkg);
 
-      // status='pending': la activación real (status='active') la hace
-      // el webhook de RevenueCat (service_role) tras confirmar el pago,
-      // no el cliente. Ver supabase/functions/revenuecat-webhook y la
-      // migración 20260806161426_fix_bar_boosts_payment_integrity.
-      // ignoreDuplicates: si el webhook llegó antes y ya activó la fila,
-      // no la pisamos (ON CONFLICT DO NOTHING).
-      const { error: insertError } = await supabase
-        .from('bar_boosts')
-        .upsert({
-          bar_id: barId,
-          user_id: userId,
-          plan,
-          start_at: startAt.toISOString(),
-          end_at: endAt.toISOString(),
-          status: 'pending',
-          amount_cents: amountCents,
-          currency,
-          revenuecat_transaction_id: transaction?.transactionIdentifier ?? null,
-        }, { onConflict: 'revenuecat_transaction_id', ignoreDuplicates: true });
+        const startAt = new Date();
+        const endAt = getEndAt(plan);
+        const amountCents = Math.round(pkg.product.price * 100);
+        const currency = (pkg.product.currencyCode ?? 'eur').toLowerCase();
 
-      if (insertError) {
-        console.error('[useBoostOfferings] Error inserting boost:', insertError);
-        // El webhook activa el boost igualmente con el atributo boost_bar_id.
+        // status='pending': la activación real (status='active') la hace
+        // el webhook de RevenueCat (service_role) tras confirmar el pago,
+        // no el cliente. Ver supabase/functions/revenuecat-webhook y la
+        // migración 20260806161426_fix_bar_boosts_payment_integrity.
+        // ignoreDuplicates: si el webhook llegó antes y ya activó la fila,
+        // no la pisamos (ON CONFLICT DO NOTHING).
+        const { error: insertError } = await supabase.from('bar_boosts').upsert(
+          {
+            bar_id: barId,
+            user_id: userId,
+            plan,
+            start_at: startAt.toISOString(),
+            end_at: endAt.toISOString(),
+            status: 'pending',
+            amount_cents: amountCents,
+            currency,
+            revenuecat_transaction_id: transaction?.transactionIdentifier ?? null,
+          },
+          { onConflict: 'revenuecat_transaction_id', ignoreDuplicates: true }
+        );
+
+        if (insertError) {
+          console.error('[useBoostOfferings] Error inserting boost:', insertError);
+          // El webhook activa el boost igualmente con el atributo boost_bar_id.
+          toast.success('¡Compra exitosa!', 'Tu boost se activará en unos segundos');
+          return true;
+        }
+
         toast.success('¡Compra exitosa!', 'Tu boost se activará en unos segundos');
         return true;
-      }
-
-      toast.success('¡Compra exitosa!', 'Tu boost se activará en unos segundos');
-      return true;
-    } catch (err: any) {
-      if (err.userCancelled) {
+      } catch (err: any) {
+        if (err.userCancelled) {
+          return false;
+        }
+        console.error('[useBoostOfferings] Purchase failed:', err);
+        toast.error('Error en la compra', 'Vuelve a intentarlo');
         return false;
+      } finally {
+        setIsPurchasing(false);
+        setPurchasingId(null);
       }
-      console.error('[useBoostOfferings] Purchase failed:', err);
-      toast.error('Error en la compra', 'Vuelve a intentarlo');
-      return false;
-    } finally {
-      setIsPurchasing(false);
-      setPurchasingId(null);
-    }
-  }, []);
+    },
+    []
+  );
 
   return { packages, isLoading, error, purchaseBoost, isPurchasing, purchasingId };
 }

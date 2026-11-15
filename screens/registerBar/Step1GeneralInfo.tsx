@@ -16,9 +16,10 @@ interface Step1GeneralInfoProps {
 
 const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister = false }) => {
   const router = useRouter();
-  const { name, description, phone, website, categoryId, email, notes, setField } = useBarRegisterStore();
+  const { name, description, phone, website, categoryId, email, notes, setField } =
+    useBarRegisterStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   // Use custom hook for categories
   const { categories, loading, error, usingFallback, refetch } = useCategories();
 
@@ -30,7 +31,10 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
   // Show alert only if using fallback categories due to error
   useEffect(() => {
     if (usingFallback && error) {
-      Alert.alert('Aviso', 'No se pudieron cargar las categorías de la base de datos. Se muestran categorías por defecto.');
+      Alert.alert(
+        'Aviso',
+        'No se pudieron cargar las categorías de la base de datos. Se muestran categorías por defecto.'
+      );
     }
   }, [usingFallback, error]);
 
@@ -78,7 +82,7 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
   };
 
   // Convert categories to RadioGroup options format
-  const categoryOptions = categories.map(category => ({
+  const categoryOptions = categories.map((category) => ({
     id: category.id,
     label: category.name,
   }));
@@ -86,7 +90,7 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -109,7 +113,8 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
           <View style={styles.content}>
             <AppText style={styles.title}>Cuéntanos sobre tu bar</AppText>
             <AppText style={styles.subtitle}>
-              Información básica que ayudará a los usuarios a encontrar y conocer tu establecimiento.
+              Información básica que ayudará a los usuarios a encontrar y conocer tu
+              establecimiento.
             </AppText>
 
             <TextInputField
@@ -153,7 +158,7 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
                   required
                   error={errors.email}
                 />
-                
+
                 <TextInputField
                   label="Notas (opcional)"
                   value={notes}
@@ -189,9 +194,7 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
                 />
                 {usingFallback ? (
                   <View style={styles.fallbackContainer}>
-                    <AppText style={styles.fallbackText}>
-                      ⚠️ Usando categorías por defecto
-                    </AppText>
+                    <AppText style={styles.fallbackText}>⚠️ Usando categorías por defecto</AppText>
                     <TouchableOpacity onPress={refetch} style={styles.retryButton}>
                       <AppText style={styles.retryButtonText}>Reintentar</AppText>
                     </TouchableOpacity>
@@ -203,11 +206,7 @@ const Step1GeneralInfo: React.FC<Step1GeneralInfoProps> = ({ isAutoPreRegister =
         </ScrollView>
 
         <View style={styles.buttonContainer}>
-          <PrimaryButton
-            title="Siguiente"
-            onPress={handleNext}
-            loading={loading}
-          />
+          <PrimaryButton title="Siguiente" onPress={handleNext} loading={loading} />
         </View>
       </SafeAreaView>
     </>
@@ -330,4 +329,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Step1GeneralInfo; 
+export default Step1GeneralInfo;

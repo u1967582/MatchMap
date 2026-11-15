@@ -31,44 +31,50 @@ const BottomTabBar = () => {
     '/profile': new Animated.Value(1),
   }).current;
 
-  const isActiveTab = useCallback((route: string) => {
-    // Special handling for map route
-    if (route === '/(protected)/map') {
-      return pathname === '/(protected)/map' || pathname === '/map';
-    }
-    // Check if current pathname matches the tab route
-    return pathname === route || pathname.includes(route.replace('/', ''));
-  }, [pathname]);
+  const isActiveTab = useCallback(
+    (route: string) => {
+      // Special handling for map route
+      if (route === '/(protected)/map') {
+        return pathname === '/(protected)/map' || pathname === '/map';
+      }
+      // Check if current pathname matches the tab route
+      return pathname === route || pathname.includes(route.replace('/', ''));
+    },
+    [pathname]
+  );
 
-  const handleTabPress = useCallback((route: string) => {
-    // Don't navigate if already on the same tab
-    if (isActiveTab(route)) {
-      return;
-    }
+  const handleTabPress = useCallback(
+    (route: string) => {
+      // Don't navigate if already on the same tab
+      if (isActiveTab(route)) {
+        return;
+      }
 
-    // Animate the pressed tab
-    Animated.sequence([
-      Animated.timing(tabAnimations[route], {
-        toValue: 0.8,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(tabAnimations[route], {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
+      // Animate the pressed tab
+      Animated.sequence([
+        Animated.timing(tabAnimations[route], {
+          toValue: 0.8,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(tabAnimations[route], {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
 
-    router.push(route as any);
-  }, [router, tabAnimations, isActiveTab]);
+      router.push(route as any);
+    },
+    [router, tabAnimations, isActiveTab]
+  );
 
   // Animate active indicator when tab changes
   useEffect(() => {
     tabs.forEach(({ route }) => {
       const isActive = isActiveTab(route);
       const animation = tabAnimations[route];
-      
+
       if (isActive) {
         Animated.spring(animation, {
           toValue: 1,
@@ -80,41 +86,45 @@ const BottomTabBar = () => {
     });
   }, [pathname, isActiveTab, tabAnimations]);
 
-  const renderTab = useCallback(({ icon, label, route }: TabItem) => {
-    const isActive = isActiveTab(route);
-    const iconColor = isActive ? '#1976D2' : 'rgba(163,179,204,0.85)';
-    const textColor = isActive ? '#1976D2' : 'rgba(163,179,204,0.85)';
-    const animation = tabAnimations[route];
+  const renderTab = useCallback(
+    ({ icon, label, route }: TabItem) => {
+      const isActive = isActiveTab(route);
+      const iconColor = isActive ? '#1976D2' : 'rgba(163,179,204,0.85)';
+      const textColor = isActive ? '#1976D2' : 'rgba(163,179,204,0.85)';
+      const animation = tabAnimations[route];
 
-    return (
-      <Animated.View
-        key={route}
-        style={[
-          styles.tab,
-          {
-            transform: [{ scale: animation }],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => handleTabPress(route)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.iconContainer}>
-            <Ionicons name={icon} size={18} color={iconColor} />
-          </View>
-          <AppText maxScale={1.0} style={[styles.tabLabel, { color: textColor }]}>{label}</AppText>
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  }, [handleTabPress, isActiveTab, tabAnimations]);
+      return (
+        <Animated.View
+          key={route}
+          style={[
+            styles.tab,
+            {
+              transform: [{ scale: animation }],
+            },
+          ]}>
+          <TouchableOpacity
+            style={styles.tabButton}
+            onPress={() => handleTabPress(route)}
+            activeOpacity={0.7}>
+            <View style={styles.iconContainer}>
+              <Ionicons name={icon} size={18} color={iconColor} />
+            </View>
+            <AppText maxScale={1.0} style={[styles.tabLabel, { color: textColor }]}>
+              {label}
+            </AppText>
+          </TouchableOpacity>
+        </Animated.View>
+      );
+    },
+    [handleTabPress, isActiveTab, tabAnimations]
+  );
 
   return (
-    <View style={[
-      styles.container,
-      { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 8) }
-    ]}>
+    <View
+      style={[
+        styles.container,
+        { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 8) },
+      ]}>
       {tabs.map(renderTab)}
     </View>
   );
@@ -169,7 +179,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
   },
-
 });
 
-export default BottomTabBar; 
+export default BottomTabBar;

@@ -351,7 +351,9 @@ describe('syncMatchNotificationsToggle (auditoría 06-H6)', () => {
   });
 
   it('propaga el error si no se puede guardar la preferencia (Perfil revierte el interruptor)', async () => {
-    mockedFrom.mockReturnValueOnce(createQueryBuilderMock({ data: null, error: { message: 'boom' } }));
+    mockedFrom.mockReturnValueOnce(
+      createQueryBuilderMock({ data: null, error: { message: 'boom' } })
+    );
     await expect(syncMatchNotificationsToggle('user-1', true)).rejects.toEqual({ message: 'boom' });
   });
 });

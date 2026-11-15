@@ -33,12 +33,13 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       style={buttonStyle}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
-    >
+      activeOpacity={0.8}>
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? '#FFFFFF' : '#007AFF'} />
       ) : (
-        <AppText maxScale={1.0} style={textStyle}>{title}</AppText>
+        <AppText maxScale={1.0} style={textStyle}>
+          {title}
+        </AppText>
       )}
     </TouchableOpacity>
   );
@@ -80,4 +81,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PrimaryButton; 
+export default PrimaryButton;

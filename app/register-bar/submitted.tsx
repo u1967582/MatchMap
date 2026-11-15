@@ -19,7 +19,9 @@ export default function RegisterBarSubmittedScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <AppText maxScale={1.0} style={styles.headerTitle}>Verificación</AppText>
+        <AppText maxScale={1.0} style={styles.headerTitle}>
+          Verificación
+        </AppText>
         <View style={{ width: 28 }} />
       </View>
 
@@ -29,31 +31,37 @@ export default function RegisterBarSubmittedScreen() {
             <Ionicons name="time-outline" size={28} color="#FFD700" />
           </View>
 
-          <AppText maxScale={1.2} style={styles.title}>Bar enviado para verificación</AppText>
+          <AppText maxScale={1.2} style={styles.title}>
+            Bar enviado para verificación
+          </AppText>
           <AppText maxScale={1.3} style={styles.subtitle}>
             En cuanto lo aprobemos, aparecerá en el mapa y en la búsqueda.
           </AppText>
 
           <View style={styles.badge}>
             <Ionicons name="alert-circle-outline" size={16} color="#FFD700" />
-            <AppText maxScale={1.0} style={styles.badgeText}>Pendiente de verificación</AppText>
+            <AppText maxScale={1.0} style={styles.badgeText}>
+              Pendiente de verificación
+            </AppText>
           </View>
 
           <TouchableOpacity
             activeOpacity={0.9}
             style={styles.primaryButton}
-            onPress={() => router.replace('/(protected)/profile' as any)}
-          >
-            <AppText maxScale={1.0} style={styles.primaryButtonText}>Volver al perfil</AppText>
+            onPress={() => router.replace('/(protected)/profile' as any)}>
+            <AppText maxScale={1.0} style={styles.primaryButtonText}>
+              Volver al perfil
+            </AppText>
           </TouchableOpacity>
 
           {canViewBar ? (
             <TouchableOpacity
               activeOpacity={0.85}
               style={styles.secondaryButton}
-              onPress={() => router.replace(`/bar-profile/${barId}` as any)}
-            >
-              <AppText maxScale={1.0} style={styles.secondaryButtonText}>Ver mi bar</AppText>
+              onPress={() => router.replace(`/bar-profile/${barId}` as any)}>
+              <AppText maxScale={1.0} style={styles.secondaryButtonText}>
+                Ver mi bar
+              </AppText>
               <Ionicons name="chevron-forward" size={16} color="#A3B3CC" />
             </TouchableOpacity>
           ) : null}
@@ -172,5 +180,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
-

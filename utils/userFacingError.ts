@@ -28,12 +28,28 @@ export function userFacingErrorMessage(error: unknown, fallback: string): string
   const msg = raw.toLowerCase();
   const has = (...needles: string[]) => needles.some((n) => msg.includes(n));
 
-  if (has('network request failed', 'failed to fetch', 'fetch failed', 'network', 'timeout', 'timed out')) {
+  if (
+    has(
+      'network request failed',
+      'failed to fetch',
+      'fetch failed',
+      'network',
+      'timeout',
+      'timed out'
+    )
+  ) {
     return NETWORK_ERROR_MESSAGE;
   }
   if (
     code === '42501' ||
-    has('row-level security', 'permission denied', 'not authorized', 'no autorizado', 'only super admins', 'unauthorized')
+    has(
+      'row-level security',
+      'permission denied',
+      'not authorized',
+      'no autorizado',
+      'only super admins',
+      'unauthorized'
+    )
   ) {
     return PERMISSION_ERROR_MESSAGE;
   }

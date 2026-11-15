@@ -52,13 +52,30 @@ const { width } = Dimensions.get('window');
 function getCompetitionLogoFilename(compName: string): string | null {
   const nameLower = compName.toLowerCase();
 
-  if (nameLower.includes('champions') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer'))) return 'champions_femen.png';
+  if (
+    nameLower.includes('champions') &&
+    (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer'))
+  )
+    return 'champions_femen.png';
   if (nameLower.includes('champions')) return 'champions.png';
   if (nameLower.includes('copa del rey')) return 'copa-del-rey.png';
   if (nameLower.includes('europa league')) return 'europa-league.png';
-  if (nameLower.includes('liga f') || (nameLower.includes('primera') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))) return 'ligaf.png';
-  if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) return 'primera-division-ea.png';
-  if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) return 'segunda-division-hypermotion.png';
+  if (
+    nameLower.includes('liga f') ||
+    (nameLower.includes('primera') &&
+      (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))
+  )
+    return 'ligaf.png';
+  if (
+    nameLower.includes('primera') &&
+    (nameLower.includes('división') || nameLower.includes('division'))
+  )
+    return 'primera-division-ea.png';
+  if (
+    nameLower.includes('segunda') &&
+    (nameLower.includes('división') || nameLower.includes('division'))
+  )
+    return 'segunda-division-hypermotion.png';
 
   return null;
 }
@@ -66,7 +83,7 @@ function getCompetitionLogoFilename(compName: string): string | null {
 export default function ManualMatchSelectionScreen() {
   const router = useRouter();
   const { barId } = useLocalSearchParams<{ barId: string }>();
-  
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [matches, setMatches] = useState<Match[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -83,24 +100,31 @@ export default function ManualMatchSelectionScreen() {
     setLoading(true);
     try {
       // Format date as YYYY-MM-DD to match database format
-      const dateString = date.getFullYear() + '-' + 
-        String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+      const dateString =
+        date.getFullYear() +
+        '-' +
+        String(date.getMonth() + 1).padStart(2, '0') +
+        '-' +
         String(date.getDate()).padStart(2, '0');
-      
+
       const today = new Date();
-      const todayString = today.getFullYear() + '-' + 
-        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+      const todayString =
+        today.getFullYear() +
+        '-' +
+        String(today.getMonth() + 1).padStart(2, '0') +
+        '-' +
         String(today.getDate()).padStart(2, '0');
-      
-              console.log('📅 Fetching matches for date:', dateString);
-        console.log('📅 Today is:', todayString);
-      
+
+      console.log('📅 Fetching matches for date:', dateString);
+      console.log('📅 Today is:', todayString);
+
       // Get matches for the selected date
       console.log('🔍 Query filters: date=', dateString, 'status=scheduled, date>=', todayString);
-      
+
       const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
-        .select(`
+        .select(
+          `
           id,
           date,
           time,
@@ -108,7 +132,8 @@ export default function ManualMatchSelectionScreen() {
           away_team_id,
           competition_id,
           status
-        `)
+        `
+        )
         .eq('date', dateString)
         .eq('status', 'scheduled')
         .gte('date', todayString) // Only future matches (including today)
@@ -121,16 +146,18 @@ export default function ManualMatchSelectionScreen() {
       }
 
       console.log('📅 Raw matches found:', matchesData?.length || 0);
-      
+
       if (matchesData && matchesData.length > 0) {
         // Get unique team IDs
-        const teamIds = [...new Set([
-          ...matchesData.map(m => m.home_team_id),
-          ...matchesData.map(m => m.away_team_id)
-        ])];
+        const teamIds = [
+          ...new Set([
+            ...matchesData.map((m) => m.home_team_id),
+            ...matchesData.map((m) => m.away_team_id),
+          ]),
+        ];
 
         // Get unique competition IDs
-        const competitionIds = [...new Set(matchesData.map(m => m.competition_id))];
+        const competitionIds = [...new Set(matchesData.map((m) => m.competition_id))];
 
         // Fetch teams
         const { data: teamsData, error: teamsError } = await supabase
@@ -161,13 +188,13 @@ export default function ManualMatchSelectionScreen() {
 
         // Create maps for quick lookup
         const teamsMap = new Map();
-        teamsData?.forEach(team => teamsMap.set(team.id, team));
+        teamsData?.forEach((team) => teamsMap.set(team.id, team));
 
         const competitionsMap = new Map();
-        competitionsData?.forEach(comp => competitionsMap.set(comp.id, comp));
+        competitionsData?.forEach((comp) => competitionsMap.set(comp.id, comp));
 
         // Enrich matches with team and competition data
-        const enrichedMatches: Match[] = matchesData.map(match => ({
+        const enrichedMatches: Match[] = matchesData.map((match) => ({
           ...match,
           home_team: teamsMap.get(match.home_team_id),
           away_team: teamsMap.get(match.away_team_id),
@@ -212,20 +239,18 @@ export default function ManualMatchSelectionScreen() {
     loadCapabilities();
   }, [barId]);
 
-
-
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
     setShowCalendar(false);
   };
 
   const toggleMatchSelection = (match: Match) => {
-    setSelectedMatches(prev => {
-      const isAlreadySelected = prev.some(selected => selected.id === match.id);
-      
+    setSelectedMatches((prev) => {
+      const isAlreadySelected = prev.some((selected) => selected.id === match.id);
+
       if (isAlreadySelected) {
         // Remove from selected matches
-        return prev.filter(selected => selected.id !== match.id);
+        return prev.filter((selected) => selected.id !== match.id);
       } else {
         // Add to selected matches
         return [...prev, match];
@@ -267,15 +292,13 @@ export default function ManualMatchSelectionScreen() {
       }
 
       // Insert selected matches into events table
-      const eventsToInsert = selectedMatches.map(match => ({
+      const eventsToInsert = selectedMatches.map((match) => ({
         bar_id: barId,
         match_id: match.id,
         start_time: `${match.date} ${match.time}`,
       }));
 
-      const { error } = await supabase
-        .from('events')
-        .insert(eventsToInsert);
+      const { error } = await supabase.from('events').insert(eventsToInsert);
 
       if (error) {
         console.error('Error saving events:', error);
@@ -283,7 +306,10 @@ export default function ManualMatchSelectionScreen() {
         return;
       }
 
-      const partidosText = selectedMatches.length === 1 ? 'Partido añadido' : `${selectedMatches.length} partidos añadidos`;
+      const partidosText =
+        selectedMatches.length === 1
+          ? 'Partido añadido'
+          : `${selectedMatches.length} partidos añadidos`;
       toast.success(partidosText);
       router.back();
     } catch (error) {
@@ -298,10 +324,12 @@ export default function ManualMatchSelectionScreen() {
     <View style={styles.matchCard}>
       <View style={styles.matchHeader}>
         <View style={styles.teamsContainer}>
-                    <View style={styles.teamContainer}>
+          <View style={styles.teamContainer}>
             <Image
               source={{
-                uri: item.home_team?.logo_url || `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${item.home_team_id}.png`
+                uri:
+                  item.home_team?.logo_url ||
+                  `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${item.home_team_id}.png`,
               }}
               style={styles.teamLogo}
               defaultSource={require('~/assets/icon.png')}
@@ -310,15 +338,17 @@ export default function ManualMatchSelectionScreen() {
               {item.home_team?.name || 'Equipo Local'}
             </AppText>
           </View>
-          
+
           <View style={styles.vsContainer}>
             <AppText style={styles.vsText}>VS</AppText>
           </View>
-          
+
           <View style={styles.teamContainer}>
             <Image
               source={{
-                uri: item.away_team?.logo_url || `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${item.away_team_id}.png`
+                uri:
+                  item.away_team?.logo_url ||
+                  `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${item.away_team_id}.png`,
               }}
               style={styles.teamLogo}
               defaultSource={require('~/assets/icon.png')}
@@ -329,7 +359,7 @@ export default function ManualMatchSelectionScreen() {
           </View>
         </View>
       </View>
-      
+
       <View style={styles.matchDetails}>
         <AppText style={styles.matchTime}>
           {new Date(`${item.date} ${item.time}`).toLocaleTimeString('es-ES', {
@@ -337,34 +367,48 @@ export default function ManualMatchSelectionScreen() {
             minute: '2-digit',
           })}
         </AppText>
-        <AppText style={styles.competitionName}>
-          {item.competition?.name || 'Competición'}
-        </AppText>
+        <AppText style={styles.competitionName}>{item.competition?.name || 'Competición'}</AppText>
       </View>
-      
+
       <TouchableOpacity
-        style={[styles.selectButton, selectedMatches.some(selected => selected.id === item.id) && styles.selectButtonActive]}
-        onPress={() => toggleMatchSelection(item)}
-      >
+        style={[
+          styles.selectButton,
+          selectedMatches.some((selected) => selected.id === item.id) && styles.selectButtonActive,
+        ]}
+        onPress={() => toggleMatchSelection(item)}>
         <Ionicons
-          name={selectedMatches.some(selected => selected.id === item.id) ? 'checkmark-circle' : 'ellipse-outline'}
+          name={
+            selectedMatches.some((selected) => selected.id === item.id)
+              ? 'checkmark-circle'
+              : 'ellipse-outline'
+          }
           size={24}
-          color={selectedMatches.some(selected => selected.id === item.id) ? '#4CAF50' : '#A3B3CC'}
+          color={
+            selectedMatches.some((selected) => selected.id === item.id) ? '#4CAF50' : '#A3B3CC'
+          }
         />
-        <AppText style={[styles.selectButtonText, selectedMatches.some(selected => selected.id === item.id) && styles.selectButtonTextActive]}>
-          {selectedMatches.some(selected => selected.id === item.id) ? 'Seleccionado' : 'Seleccionar'}
+        <AppText
+          style={[
+            styles.selectButtonText,
+            selectedMatches.some((selected) => selected.id === item.id) &&
+              styles.selectButtonTextActive,
+          ]}>
+          {selectedMatches.some((selected) => selected.id === item.id)
+            ? 'Seleccionado'
+            : 'Seleccionar'}
         </AppText>
       </TouchableOpacity>
     </View>
   );
 
   const selectedMatchesCount = selectedMatches.length;
-  const filteredMatches = selectedCompetitionId == null
-    ? matches
-    : matches.filter(m => m.competition_id === selectedCompetitionId);
+  const filteredMatches =
+    selectedCompetitionId == null
+      ? matches
+      : matches.filter((m) => m.competition_id === selectedCompetitionId);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -390,8 +434,7 @@ export default function ManualMatchSelectionScreen() {
               backgroundColor: '#1E3A5F',
               borderRadius: 16,
               padding: 6,
-            }}
-          >
+            }}>
             <Ionicons name="chevron-up" size={20} color="#A3B3CC" />
           </TouchableOpacity>
         </>
@@ -406,8 +449,7 @@ export default function ManualMatchSelectionScreen() {
             backgroundColor: '#1E3A5F',
             borderRadius: 16,
             padding: 6,
-          }}
-        >
+          }}>
           <Ionicons name="chevron-down" size={20} color="#A3B3CC" />
         </TouchableOpacity>
       )}
@@ -422,7 +464,9 @@ export default function ManualMatchSelectionScreen() {
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => {
               const isAll = item.id === -1;
-              const selected = isAll ? selectedCompetitionId === null : selectedCompetitionId === item.id;
+              const selected = isAll
+                ? selectedCompetitionId === null
+                : selectedCompetitionId === item.id;
               const label = isAll ? 'Todas' : item.name;
 
               // Get competition logo
@@ -445,8 +489,7 @@ export default function ManualMatchSelectionScreen() {
                     backgroundColor: selected ? '#1976D2' : '#1E3A5F',
                     borderWidth: selected ? 0 : 1,
                     borderColor: '#28415F',
-                  }}
-                >
+                  }}>
                   {compLogo && (
                     <Image
                       source={{ uri: compLogo }}
@@ -454,7 +497,9 @@ export default function ManualMatchSelectionScreen() {
                       defaultSource={require('~/assets/icon.png')}
                     />
                   )}
-                  <AppText style={{ color: selected ? '#FFFFFF' : '#A3B3CC', fontWeight: '600' }}>{label}</AppText>
+                  <AppText style={{ color: selected ? '#FFFFFF' : '#A3B3CC', fontWeight: '600' }}>
+                    {label}
+                  </AppText>
                 </TouchableOpacity>
               );
             }}
@@ -465,46 +510,41 @@ export default function ManualMatchSelectionScreen() {
       {/* Selected Matches Summary */}
       {selectedMatches.length > 0 && (
         <View style={styles.selectedMatchesSection}>
-          <AppText style={styles.selectedMatchesTitle}>
-            Partidos seleccionados
-          </AppText>
-                      <FlatList
-              data={selectedMatches}
-              renderItem={({ item }) => (
-                <View style={styles.selectedMatchItem}>
-                  <AppText style={styles.selectedMatchText}>
-                    {item.home_team?.name} vs {item.away_team?.name}
-                  </AppText>
-                  <AppText style={styles.selectedMatchDate}>
-                    {new Date(`${item.date} ${item.time}`).toLocaleString('es-ES', {
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </AppText>
-                  <TouchableOpacity
-                    onPress={() => toggleMatchSelection(item)}
-                    style={styles.removeButton}
-                  >
-                    <Ionicons name="close-circle" size={20} color="#FF6B6B" />
-                  </TouchableOpacity>
-                </View>
-              )}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.selectedMatchesList}
-            />
+          <AppText style={styles.selectedMatchesTitle}>Partidos seleccionados</AppText>
+          <FlatList
+            data={selectedMatches}
+            renderItem={({ item }) => (
+              <View style={styles.selectedMatchItem}>
+                <AppText style={styles.selectedMatchText}>
+                  {item.home_team?.name} vs {item.away_team?.name}
+                </AppText>
+                <AppText style={styles.selectedMatchDate}>
+                  {new Date(`${item.date} ${item.time}`).toLocaleString('es-ES', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </AppText>
+                <TouchableOpacity
+                  onPress={() => toggleMatchSelection(item)}
+                  style={styles.removeButton}>
+                  <Ionicons name="close-circle" size={20} color="#FF6B6B" />
+                </TouchableOpacity>
+              </View>
+            )}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.selectedMatchesList}
+          />
         </View>
       )}
 
       {/* Matches List */}
       <View style={styles.matchesSection}>
-        <AppText style={styles.sectionTitle}>
-          Partidos disponibles
-        </AppText>
-        
+        <AppText style={styles.sectionTitle}>Partidos disponibles</AppText>
+
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#4CAF50" />
@@ -533,8 +573,7 @@ export default function ManualMatchSelectionScreen() {
         <TouchableOpacity
           style={[styles.saveButton, selectedMatchesCount === 0 && styles.saveButtonDisabled]}
           onPress={handleSaveSelectedMatches}
-          disabled={selectedMatchesCount === 0 || saving}
-        >
+          disabled={selectedMatchesCount === 0 || saving}>
           <Ionicons name="save" size={20} color="#FFFFFF" />
           <AppText style={styles.saveButtonText}>
             {saving ? 'Guardando...' : `Guardar ${selectedMatchesCount} partido(s)`}
@@ -575,11 +614,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-
-
-
-
-
 
   matchesSection: {
     flex: 1,

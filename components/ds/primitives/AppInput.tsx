@@ -54,13 +54,8 @@ export default function AppInput({
           <TouchableOpacity
             style={styles.toggle}
             onPress={() => setShowPassword(!showPassword)}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={showPassword ? 'eye-off' : 'eye'}
-              size={20}
-              color={colors.text.muted}
-            />
+            activeOpacity={0.7}>
+            <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color={colors.text.muted} />
           </TouchableOpacity>
         )}
       </View>
@@ -69,8 +64,7 @@ export default function AppInput({
         <AppText
           variant="caption"
           color={hasError ? colors.status.error : colors.text.muted}
-          style={styles.helperText}
-        >
+          style={styles.helperText}>
           {error || helperText}
         </AppText>
       )}

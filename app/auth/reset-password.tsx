@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { View, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
@@ -30,7 +23,9 @@ export default function ResetPasswordScreen() {
 
   const checkSession = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       // Una sesión de invitado (anónima) no puede tener contraseña: el enlace no
       // llegó a establecer la sesión de recuperación.
@@ -50,9 +45,7 @@ export default function ResetPasswordScreen() {
     }
   };
 
-  const isFormValid =
-    password.length >= MIN_PASSWORD_LENGTH &&
-    password === confirmPassword;
+  const isFormValid = password.length >= MIN_PASSWORD_LENGTH && password === confirmPassword;
 
   const handleResetPassword = async () => {
     if (!isFormValid) {
@@ -117,8 +110,7 @@ export default function ResetPasswordScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
+          style={styles.keyboardView}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.content}>
               <ScreenTitle title="Nueva Contraseña" color="#FFFFFF" />
@@ -154,10 +146,8 @@ export default function ResetPasswordScreen() {
                     {`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
                   </AppText>
                   <AppText style={styles.requirementItem}>
-                    {password === confirmPassword && password.length > 0
-                      ? '✅'
-                      : '⭕'}{' '}
-                    Las contraseñas coinciden
+                    {password === confirmPassword && password.length > 0 ? '✅' : '⭕'} Las
+                    contraseñas coinciden
                   </AppText>
                 </View>
 
@@ -227,4 +217,3 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
 });
-

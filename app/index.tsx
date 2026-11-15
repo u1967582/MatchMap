@@ -23,8 +23,10 @@ export default function Home() {
   const checkAuthAndRedirect = async () => {
     try {
       // Check if there's an active session
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (session && !session.user.is_anonymous) {
         // User is already authenticated with real account, redirect to map
         console.log('✅ Usuario ya autenticado, redirigiendo al mapa...');
@@ -71,13 +73,19 @@ export default function Home() {
         if (result.error && !result.error.includes('cancel') && !result.error.includes('dismiss')) {
           Alert.alert(
             'Error de Google',
-            formatAuthErrorAlert(result.error, 'No se pudo completar el inicio de sesión con Google')
+            formatAuthErrorAlert(
+              result.error,
+              'No se pudo completar el inicio de sesión con Google'
+            )
           );
         }
       }
     } catch (error: any) {
       console.error('❌ Exception in handleGoogleLogin:', error);
-      Alert.alert('Error', formatAuthErrorAlert(error, 'No se pudo completar el inicio de sesión con Google'));
+      Alert.alert(
+        'Error',
+        formatAuthErrorAlert(error, 'No se pudo completar el inicio de sesión con Google')
+      );
     } finally {
       setLoadingGoogle(false);
     }
@@ -166,5 +174,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#1C2A3A',
   },
 });
-
-

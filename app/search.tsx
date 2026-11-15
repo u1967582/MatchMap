@@ -19,7 +19,12 @@ import { useRouter, Stack } from 'expo-router';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
 import { supabase } from '~/utils/supabase';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import Dropdown from '~/components/ui/Dropdown';
@@ -104,7 +109,9 @@ export default function SearchScreen() {
   // true desde el inicio: evita mostrar "No se encontraron bares" antes de la primera carga
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
+    null
+  );
   // 'pending' mientras se pide el permiso; con 'denied' se buscan bares igualmente
   // (sin distancia), para que la búsqueda funcione sin ubicación.
   const [locationStatus, setLocationStatus] = useState<'pending' | 'granted' | 'denied'>('pending');
@@ -124,7 +131,13 @@ export default function SearchScreen() {
   const [matchPickerOpen, setMatchPickerOpen] = useState(false);
 
   // Load filter data
-  const { barCategories, foodTypes, barFeatures, tvFeatures, loading: filtersLoading } = useFilterData();
+  const {
+    barCategories,
+    foodTypes,
+    barFeatures,
+    tvFeatures,
+    loading: filtersLoading,
+  } = useFilterData();
 
   // Solo el admin puede ver los bares marcados como "de test", y solo si además
   // tiene activado el toggle (compartido con la pantalla de mapa)
@@ -138,9 +151,9 @@ export default function SearchScreen() {
 
   // Load favorites functionality from store (optimistic updates)
   // Suscribir a `favorites` para que el componente re-renderice al cambiar el Set
-  const favorites = useFavoritesStore(state => state.favorites);
-  const isFavorite = useFavoritesStore(state => state.isFavorite);
-  const toggleFavorite = useFavoritesStore(state => state.toggleFavorite);
+  const favorites = useFavoritesStore((state) => state.favorites);
+  const isFavorite = useFavoritesStore((state) => state.isFavorite);
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
 
   // Boost selection context
   const { setSelectedBoostBarIds, setCenterLatLng } = useBoostSelection();
@@ -155,7 +168,9 @@ export default function SearchScreen() {
 
   // Ref for allBoostBarIds so searchBars can read the latest value without being recreated
   const allBoostBarIdsRef = useRef<string[]>([]);
-  useEffect(() => { allBoostBarIdsRef.current = allBoostBarIds; }, [allBoostBarIds]);
+  useEffect(() => {
+    allBoostBarIdsRef.current = allBoostBarIds;
+  }, [allBoostBarIds]);
 
   // Header auto-hide on scroll + scroll-to-top FAB
   const listRef = useRef<FlashListRef<(typeof listRows)[number]>>(null);
@@ -170,11 +185,11 @@ export default function SearchScreen() {
 
   // Split bars: boosted (always shown) + regular (paginated)
   const boostedDisplayBars = useMemo(
-    () => allBars.filter(b => selected3Stable.includes(b.id)),
+    () => allBars.filter((b) => selected3Stable.includes(b.id)),
     [allBars, selected3Stable]
   );
   const regularDisplayBars = useMemo(
-    () => allBars.filter(b => !selected3Stable.includes(b.id)),
+    () => allBars.filter((b) => !selected3Stable.includes(b.id)),
     [allBars, selected3Stable]
   );
   const displayedBars = useMemo(
@@ -252,7 +267,8 @@ export default function SearchScreen() {
       // Paso 2. Cargar los bares activos
       let barsQuery = supabase
         .from('bars')
-        .select(`
+        .select(
+          `
           id,
           name,
           description,
@@ -265,7 +281,8 @@ export default function SearchScreen() {
           review_count,
           bar_images(image_url, image_order),
           is_betting_venue
-        `)
+        `
+        )
         .eq('is_active', true);
 
       // Bares aprobados para todos; el admin además ve los de test aunque
@@ -312,17 +329,16 @@ export default function SearchScreen() {
       }
 
       // Paso 2. Cargar relaciones N:N por separado
-      const barIds = barsData.map(bar => bar.id);
+      const barIds = barsData.map((bar) => bar.id);
 
       // Cargar todos los datos N:N en paralelo
-      const [
-        { data: foodTypes },
-        { data: features },
-        { data: tvFeatures },
-      ] = await Promise.all([
+      const [{ data: foodTypes }, { data: features }, { data: tvFeatures }] = await Promise.all([
         supabase.from('bar_food_types').select('bar_id, food_type_id').in('bar_id', barIds),
         supabase.from('bar_selected_features').select('bar_id, feature_id').in('bar_id', barIds),
-        supabase.from('bar_selected_tv_features').select('bar_id, tv_feature_id').in('bar_id', barIds),
+        supabase
+          .from('bar_selected_tv_features')
+          .select('bar_id, tv_feature_id')
+          .in('bar_id', barIds),
       ]);
 
       // Paso 3. Crear mapas para todos los tipos de datos
@@ -345,7 +361,7 @@ export default function SearchScreen() {
       });
 
       // Paso 4. Fusionar la información por bar
-      const enrichedBars = barsData.map(bar => ({
+      const enrichedBars = barsData.map((bar) => ({
         ...bar,
         bar_food_types: foodTypesMap.get(bar.id) || [],
         bar_selected_features: featuresMap.get(bar.id) || [],
@@ -363,68 +379,74 @@ export default function SearchScreen() {
         .order('start_date', { ascending: true });
 
       const postsMap = new Map<string, any>();
-      (allPosts || []).forEach(post => {
+      (allPosts || []).forEach((post) => {
         if (!postsMap.has(post.bar_id)) postsMap.set(post.bar_id, post);
       });
 
       // Calculate distances and add next match info
       const barsWithDistance = (enrichedBars || []).map((bar) => {
-          let distance = null;
-          if (userLocation && bar.latitude && bar.longitude) {
-            distance = calculateDistance(
-              userLocation.latitude,
-              userLocation.longitude,
-              bar.latitude,
-              bar.longitude
-            );
-          }
+        let distance = null;
+        if (userLocation && bar.latitude && bar.longitude) {
+          distance = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            bar.latitude,
+            bar.longitude
+          );
+        }
 
-          const nextMatch = postsMap.get(bar.id) || null;
+        const nextMatch = postsMap.get(bar.id) || null;
 
-          // Find image with image_order = 1
-          const rawImage = bar.bar_images
-            ?.find((img: any) => img.image_order === 1)?.image_url ||
-            bar.bar_images?.[0]?.image_url || null;
-          const mainImage = rawImage
-            ? `${rawImage}?width=600&quality=75`
-            : null;
+        // Find image with image_order = 1
+        const rawImage =
+          bar.bar_images?.find((img: any) => img.image_order === 1)?.image_url ||
+          bar.bar_images?.[0]?.image_url ||
+          null;
+        const mainImage = rawImage ? `${rawImage}?width=600&quality=75` : null;
 
-          return {
-            ...bar,
-            distance_km: distance,
-            image_url: mainImage,
-            rating: bar.rating || 0, // Use real rating from database
-            review_count: bar.review_count || 0, // Use real review count from database
-            next_match: nextMatch ? {
-              date: nextMatch.start_date,
-            } : undefined,
-          };
-        });
+        return {
+          ...bar,
+          distance_km: distance,
+          image_url: mainImage,
+          rating: bar.rating || 0, // Use real rating from database
+          review_count: bar.review_count || 0, // Use real review count from database
+          next_match: nextMatch
+            ? {
+                date: nextMatch.start_date,
+              }
+            : undefined,
+        };
+      });
 
       // Apply client-side filtering for N:N relationships
       let filteredBars = barsWithDistance;
 
       // Apply food types filter (client-side, ALL selected must match)
       if (selectedFoodTypes.length > 0) {
-        filteredBars = filteredBars.filter(bar => {
-          const foodIds = bar.bar_food_types?.map((ft: { food_type_id: number }) => ft.food_type_id) || [];
-          return selectedFoodTypes.every(id => foodIds.includes(id));
+        filteredBars = filteredBars.filter((bar) => {
+          const foodIds =
+            bar.bar_food_types?.map((ft: { food_type_id: number }) => ft.food_type_id) || [];
+          return selectedFoodTypes.every((id) => foodIds.includes(id));
         });
       }
 
       // Apply features filter (client-side, ALL selected must match)
       if (selectedFeatures.length > 0) {
-        filteredBars = filteredBars.filter(bar => {
-          const featureIds = bar.bar_selected_features?.map((f: { feature_id: number }) => f.feature_id) || [];
-          return selectedFeatures.every(id => featureIds.includes(id));
+        filteredBars = filteredBars.filter((bar) => {
+          const featureIds =
+            bar.bar_selected_features?.map((f: { feature_id: number }) => f.feature_id) || [];
+          return selectedFeatures.every((id) => featureIds.includes(id));
         });
       }
 
       // Apply TV features filter (client-side, ALL selected must match)
       if (selectedTvFeatures.length > 0) {
-        filteredBars = filteredBars.filter(bar => {
-          const tvFeatureIds = bar.bar_selected_tv_features?.map((tf: { tv_feature_id: number }) => tf.tv_feature_id) || [];
-          return selectedTvFeatures.every(id => tvFeatureIds.includes(id));
+        filteredBars = filteredBars.filter((bar) => {
+          const tvFeatureIds =
+            bar.bar_selected_tv_features?.map(
+              (tf: { tv_feature_id: number }) => tf.tv_feature_id
+            ) || [];
+          return selectedTvFeatures.every((id) => tvFeatureIds.includes(id));
         });
       }
 
@@ -462,35 +484,49 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, userLocation, selectedMatch, includeTestBars, includeBettingBars]);
+  }, [
+    searchQuery,
+    selectedSort,
+    selectedBarCategories,
+    selectedFoodTypes,
+    selectedFeatures,
+    selectedTvFeatures,
+    userLocation,
+    selectedMatch,
+    includeTestBars,
+    includeBettingBars,
+  ]);
 
   // La cabecera sigue el scroll 1:1 (misma velocidad/distancia que el dedo), sin easing:
   // se traduce exactamente lo que avanza el scroll, con clamp entre 0 (visible) y -headerHeight (oculta).
-  const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const y = e.nativeEvent.contentOffset.y;
-    const diff = y - lastScrollY.current;
-    lastScrollY.current = y;
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const y = e.nativeEvent.contentOffset.y;
+      const diff = y - lastScrollY.current;
+      lastScrollY.current = y;
 
-    if (y <= 0) {
-      // Bounce elástico en iOS o llegada al principio: cabecera siempre visible
-      headerTranslateY.value = 0;
-      headerOpacity.value = 1;
-    } else {
-      const next = headerTranslateY.value - diff;
-      const clamped = Math.min(0, Math.max(-headerHeight, next));
-      headerTranslateY.value = clamped;
-      // Al llegar al límite (totalmente fuera de pantalla) se oculta del todo,
-      // para que no quede ningún resto visible (sombra/borde) pegado arriba.
-      headerOpacity.value = clamped <= -headerHeight + 0.5 ? 0 : 1;
-    }
+      if (y <= 0) {
+        // Bounce elástico en iOS o llegada al principio: cabecera siempre visible
+        headerTranslateY.value = 0;
+        headerOpacity.value = 1;
+      } else {
+        const next = headerTranslateY.value - diff;
+        const clamped = Math.min(0, Math.max(-headerHeight, next));
+        headerTranslateY.value = clamped;
+        // Al llegar al límite (totalmente fuera de pantalla) se oculta del todo,
+        // para que no quede ningún resto visible (sombra/borde) pegado arriba.
+        headerOpacity.value = clamped <= -headerHeight + 0.5 ? 0 : 1;
+      }
 
-    const shouldShowFab = y > FAB_SHOW_SCROLL_THRESHOLD;
-    if (shouldShowFab !== fabShownRef.current) {
-      fabShownRef.current = shouldShowFab;
-      fabScale.value = withSpring(shouldShowFab ? 1 : 0, springs.bouncy);
-      setFabVisible(shouldShowFab);
-    }
-  }, [headerHeight, headerTranslateY, headerOpacity, fabScale]);
+      const shouldShowFab = y > FAB_SHOW_SCROLL_THRESHOLD;
+      if (shouldShowFab !== fabShownRef.current) {
+        fabShownRef.current = shouldShowFab;
+        fabScale.value = withSpring(shouldShowFab ? 1 : 0, springs.bouncy);
+        setFabVisible(shouldShowFab);
+      }
+    },
+    [headerHeight, headerTranslateY, headerOpacity, fabScale]
+  );
 
   const handleScrollToTop = useCallback(() => {
     listRef.current?.scrollToTop({ animated: true });
@@ -523,7 +559,7 @@ export default function SearchScreen() {
     if (loadingMore || !hasMoreBars) return;
     setLoadingMore(true);
     setTimeout(() => {
-      setRegularPage(prev => prev + 1);
+      setRegularPage((prev) => prev + 1);
       setLoadingMore(false);
     }, 300);
   }, [loadingMore, hasMoreBars]);
@@ -548,13 +584,15 @@ export default function SearchScreen() {
   // Calculate distance between two points using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Earth's radius in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
@@ -580,175 +618,184 @@ export default function SearchScreen() {
   }, []);
 
   // Handle bar selection
-  const handleBarPress = useCallback((barId: string) => {
-    router.push(`/bar-profile/${barId}` as any);
-  }, [router]);
+  const handleBarPress = useCallback(
+    (barId: string) => {
+      router.push(`/bar-profile/${barId}` as any);
+    },
+    [router]
+  );
 
   // Render bar card
-  const renderBarCard = useCallback(({ item }: { item: Bar }) => {
-    const handleFavoriteToggle = async (e: any) => {
-      e.stopPropagation(); // Prevent triggering the card press
-      // Igual que en la ficha y en BarInfoCard: el invitado ve el aviso de
-      // registro y un fallo de red se notifica (antes se revertía en silencio).
-      if (await getIsGuest()) {
-        showGuestLoginAlert(router);
-        return;
-      }
-      const success = await toggleFavorite(item.id);
-      if (success) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        toast.error('No se pudo actualizar favoritos', 'Inténtalo de nuevo');
-      }
-    };
+  const renderBarCard = useCallback(
+    ({ item }: { item: Bar }) => {
+      const handleFavoriteToggle = async (e: any) => {
+        e.stopPropagation(); // Prevent triggering the card press
+        // Igual que en la ficha y en BarInfoCard: el invitado ve el aviso de
+        // registro y un fallo de red se notifica (antes se revertía en silencio).
+        if (await getIsGuest()) {
+          showGuestLoginAlert(router);
+          return;
+        }
+        const success = await toggleFavorite(item.id);
+        if (success) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          toast.error('No se pudo actualizar favoritos', 'Inténtalo de nuevo');
+        }
+      };
 
-    // Check if this bar is boosted
-    const isBoosted = selected3Stable.includes(item.id);
+      // Check if this bar is boosted
+      const isBoosted = selected3Stable.includes(item.id);
 
-    const handleViewOnMap = (e: any) => {
-      e.stopPropagation(); // Prevent triggering the card press
-      // Navigate to map with bar pre-selected
-      router.push({
-        pathname: '/(protected)/map',
-        params: {
-          selectedBarId: item.id,
-          selectedBarLat: item.latitude,
-          selectedBarLng: item.longitude,
-          selectedBarName: item.name,
-        },
-      });
-    };
+      const handleViewOnMap = (e: any) => {
+        e.stopPropagation(); // Prevent triggering the card press
+        // Navigate to map with bar pre-selected
+        router.push({
+          pathname: '/(protected)/map',
+          params: {
+            selectedBarId: item.id,
+            selectedBarLat: item.latitude,
+            selectedBarLng: item.longitude,
+            selectedBarName: item.name,
+          },
+        });
+      };
 
-    const cardInner = (
-      <>
-        <View style={styles.imageContainer}>
-          {item.image_url ? (
-            <Image
-              source={{ uri: item.image_url }}
-              style={[styles.barImage, { backgroundColor: '#1A2332' }]}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-              recyclingKey={item.id}
-            />
-          ) : (
-            <View style={styles.placeholderContainer}>
-              <Ionicons name="image-outline" size={32} color={colors.text.muted} />
-              <AppText variant="caption" color={colors.text.muted}>
-                Sin imagen
-              </AppText>
-            </View>
-          )}
-
-          {/* Favorites Button — top-left for boosted, top-right for normal */}
-          <TouchableOpacity
-            style={[
-              isBoosted ? styles.favoritesButtonLeft : styles.favoritesButton,
-              isFavorite(item.id) && styles.favoritesButtonActive,
-            ]}
-            onPress={handleFavoriteToggle}
-          >
-            <Ionicons
-              name={isFavorite(item.id) ? "heart" : "heart-outline"}
-              size={20}
-              color={colors.text.primary}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.barInfo}>
-          <AppText variant="title" style={styles.barName}>{item.name}</AppText>
-
-          <View style={styles.barMeta}>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color={colors.status.warning} />
-              <AppText variant="body">
-                {(typeof item.rating === 'number' ? item.rating.toFixed(1) : 'N/A')} ({item.review_count || 0} reseñas)
-              </AppText>
-            </View>
-
-            {typeof item.distance_km === 'number' && !isNaN(item.distance_km) && (
-              <AppText variant="body" color={colors.brand.accent} style={styles.distanceText}>
-                {item.distance_km.toFixed(1)} km
-              </AppText>
+      const cardInner = (
+        <>
+          <View style={styles.imageContainer}>
+            {item.image_url ? (
+              <Image
+                source={{ uri: item.image_url }}
+                style={[styles.barImage, { backgroundColor: '#1A2332' }]}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+                recyclingKey={item.id}
+              />
+            ) : (
+              <View style={styles.placeholderContainer}>
+                <Ionicons name="image-outline" size={32} color={colors.text.muted} />
+                <AppText variant="caption" color={colors.text.muted}>
+                  Sin imagen
+                </AppText>
+              </View>
             )}
+
+            {/* Favorites Button — top-left for boosted, top-right for normal */}
+            <TouchableOpacity
+              style={[
+                isBoosted ? styles.favoritesButtonLeft : styles.favoritesButton,
+                isFavorite(item.id) && styles.favoritesButtonActive,
+              ]}
+              onPress={handleFavoriteToggle}>
+              <Ionicons
+                name={isFavorite(item.id) ? 'heart' : 'heart-outline'}
+                size={20}
+                color={colors.text.primary}
+              />
+            </TouchableOpacity>
           </View>
 
-          {item.next_match?.date && (
-            <View style={styles.nextMatchContainer}>
-              <Ionicons name="calendar" size={14} color={colors.brand.accent} />
-              <AppText variant="body" color={colors.brand.accent} style={styles.nextMatchText}>
-                Próximo evento: {(madridWallTimeToDate(item.next_match.date, '12:00') ?? new Date(item.next_match.date)).toLocaleDateString('es-ES')}
+          <View style={styles.barInfo}>
+            <AppText variant="title" style={styles.barName}>
+              {item.name}
+            </AppText>
+
+            <View style={styles.barMeta}>
+              <View style={styles.ratingContainer}>
+                <Ionicons name="star" size={16} color={colors.status.warning} />
+                <AppText variant="body">
+                  {typeof item.rating === 'number' ? item.rating.toFixed(1) : 'N/A'} (
+                  {item.review_count || 0} reseñas)
+                </AppText>
+              </View>
+
+              {typeof item.distance_km === 'number' && !isNaN(item.distance_km) && (
+                <AppText variant="body" color={colors.brand.accent} style={styles.distanceText}>
+                  {item.distance_km.toFixed(1)} km
+                </AppText>
+              )}
+            </View>
+
+            {item.next_match?.date && (
+              <View style={styles.nextMatchContainer}>
+                <Ionicons name="calendar" size={14} color={colors.brand.accent} />
+                <AppText variant="body" color={colors.brand.accent} style={styles.nextMatchText}>
+                  Próximo evento:{' '}
+                  {(
+                    madridWallTimeToDate(item.next_match.date, '12:00') ??
+                    new Date(item.next_match.date)
+                  ).toLocaleDateString('es-ES')}
+                </AppText>
+              </View>
+            )}
+
+            {item.address && item.city && (
+              <View style={styles.addressRow}>
+                <Ionicons name="location-outline" size={14} color={colors.text.muted} />
+                <AppText variant="caption" color={colors.text.secondary} style={styles.barAddress}>
+                  {item.address}, {item.city}
+                </AppText>
+              </View>
+            )}
+
+            {/* View on Map Button */}
+            <TouchableOpacity style={styles.viewOnMapButton} onPress={handleViewOnMap}>
+              <Ionicons name="map-outline" size={16} color={colors.brand.link} />
+              <AppText variant="label" color={colors.brand.link}>
+                Ver en el Mapa
               </AppText>
-            </View>
-          )}
-
-          {item.address && item.city && (
-            <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={14} color={colors.text.muted} />
-              <AppText variant="caption" color={colors.text.secondary} style={styles.barAddress}>
-                {item.address}, {item.city}
-              </AppText>
-            </View>
-          )}
-
-          {/* View on Map Button */}
-          <TouchableOpacity
-            style={styles.viewOnMapButton}
-            onPress={handleViewOnMap}
-          >
-            <Ionicons name="map-outline" size={16} color={colors.brand.link} />
-            <AppText variant="label" color={colors.brand.link}>Ver en el Mapa</AppText>
-          </TouchableOpacity>
-        </View>
-      </>
-    );
-
-    if (isBoosted) {
-      return (
-        <AppCard onPress={() => handleBarPress(item.id)} style={styles.boostCardInner}>
-          {/* Amber top line */}
-          <LinearGradient
-            colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.boostLineTop}
-          />
-          {/* Amber left line */}
-          <LinearGradient
-            colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.boostLineLeft}
-          />
-          {cardInner}
-          {/* TOP BAR Sticker — posición absoluta dentro de la card */}
-          <View style={styles.topBarSticker}>
-            <View style={styles.topBarStickerBorder} />
-            <View style={styles.topBarStickerContent}>
-              <AppText style={styles.topBarStickerTop}>TOP</AppText>
-              <AppText style={styles.topBarStickerBar}>BAR</AppText>
-              <AppText style={styles.topBarStickerStars}>★ ★ ★</AppText>
-            </View>
+            </TouchableOpacity>
           </View>
-        </AppCard>
+        </>
       );
-    }
 
-    return (
-      <AppCard onPress={() => handleBarPress(item.id)}>
-        {cardInner}
-      </AppCard>
-    );
+      if (isBoosted) {
+        return (
+          <AppCard onPress={() => handleBarPress(item.id)} style={styles.boostCardInner}>
+            {/* Amber top line */}
+            <LinearGradient
+              colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.boostLineTop}
+            />
+            {/* Amber left line */}
+            <LinearGradient
+              colors={['transparent', '#f59e0b', '#fbbf24', '#f59e0b', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.boostLineLeft}
+            />
+            {cardInner}
+            {/* TOP BAR Sticker — posición absoluta dentro de la card */}
+            <View style={styles.topBarSticker}>
+              <View style={styles.topBarStickerBorder} />
+              <View style={styles.topBarStickerContent}>
+                <AppText style={styles.topBarStickerTop}>TOP</AppText>
+                <AppText style={styles.topBarStickerBar}>BAR</AppText>
+                <AppText style={styles.topBarStickerStars}>★ ★ ★</AppText>
+              </View>
+            </View>
+          </AppCard>
+        );
+      }
 
-  }, [handleBarPress, toggleFavorite, isFavorite, selected3Stable, favorites, router]);
+      return <AppCard onPress={() => handleBarPress(item.id)}>{cardInner}</AppCard>;
+    },
+    [handleBarPress, toggleFavorite, isFavorite, selected3Stable, favorites, router]
+  );
 
-  const renderRow = useCallback(({ item }: { item: (typeof listRows)[number] }) => {
-    if (item.kind === 'ad') {
-      return <AdBanner placement="search-inline" />;
-    }
-    return renderBarCard({ item: item.data });
-  }, [renderBarCard]);
+  const renderRow = useCallback(
+    ({ item }: { item: (typeof listRows)[number] }) => {
+      if (item.kind === 'ad') {
+        return <AdBanner placement="search-inline" />;
+      }
+      return renderBarCard({ item: item.data });
+    },
+    [renderBarCard]
+  );
 
   // Load initial data
   useEffect(() => {
@@ -760,8 +807,16 @@ export default function SearchScreen() {
     if (locationStatus !== 'pending') {
       searchBars();
     }
-  }, [selectedSort, selectedBarCategories, selectedFoodTypes, selectedFeatures, selectedTvFeatures, selectedMatch, locationStatus, searchBars]);
-
+  }, [
+    selectedSort,
+    selectedBarCategories,
+    selectedFoodTypes,
+    selectedFeatures,
+    selectedTvFeatures,
+    selectedMatch,
+    locationStatus,
+    searchBars,
+  ]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -806,21 +861,35 @@ export default function SearchScreen() {
                 selectedMatch
                   ? 'No hay bares transmitiendo este partido'
                   : searchQuery
-                  ? `No hay bares que coincidan con "${searchQuery}"`
-                  : (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0)
-                    ? 'No hay bares que cumplan con los filtros seleccionados'
-                    : 'No hay bares disponibles en tu área'
+                    ? `No hay bares que coincidan con "${searchQuery}"`
+                    : selectedBarCategories.length > 0 ||
+                        selectedFoodTypes.length > 0 ||
+                        selectedFeatures.length > 0 ||
+                        selectedTvFeatures.length > 0
+                      ? 'No hay bares que cumplan con los filtros seleccionados'
+                      : 'No hay bares disponibles en tu área'
               }
             />
             <View style={styles.emptyActions}>
-              {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
+              {(selectedBarCategories.length > 0 ||
+                selectedFoodTypes.length > 0 ||
+                selectedFeatures.length > 0 ||
+                selectedTvFeatures.length > 0) && (
                 <AppButton text="Limpiar filtros" variant="dark" onPress={handleClearAllFilters} />
               )}
               {searchQuery ? (
-                <AppButton text="Limpiar búsqueda" variant="dark" onPress={() => setSearchQuery('')} />
+                <AppButton
+                  text="Limpiar búsqueda"
+                  variant="dark"
+                  onPress={() => setSearchQuery('')}
+                />
               ) : null}
               {selectedMatch ? (
-                <AppButton text="Quitar partido" variant="dark" onPress={() => setSelectedMatch(null)} />
+                <AppButton
+                  text="Quitar partido"
+                  variant="dark"
+                  onPress={() => setSelectedMatch(null)}
+                />
               ) : null}
             </View>
           </View>
@@ -830,12 +899,16 @@ export default function SearchScreen() {
       {/* Cabecera: barra de búsqueda + filtros (se desliza a la velocidad del scroll) */}
       <Animated.View
         style={[styles.headerOverlay, { top: insets.top }, headerAnimatedStyle]}
-        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-      >
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
         <View style={styles.searchContainer}>
           <View style={styles.searchRow}>
             <View style={[styles.searchBar, { flex: 1 }]}>
-              <Ionicons name="search" size={18} color={colors.text.secondary} style={styles.searchIcon} />
+              <Ionicons
+                name="search"
+                size={18}
+                color={colors.text.secondary}
+                style={styles.searchIcon}
+              />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Buscar nombre de bar..."
@@ -854,14 +927,18 @@ export default function SearchScreen() {
             <TouchableOpacity
               style={[
                 styles.filterIconButton,
-                (selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && styles.filterIconButtonActive
+                (selectedBarCategories.length > 0 ||
+                  selectedFoodTypes.length > 0 ||
+                  selectedFeatures.length > 0 ||
+                  selectedTvFeatures.length > 0) &&
+                  styles.filterIconButtonActive,
               ]}
-              onPress={() => setFilterModalVisible(true)}
-            >
+              onPress={() => setFilterModalVisible(true)}>
               <Ionicons name="filter" size={18} color={colors.text.secondary} />
-              {(selectedBarCategories.length > 0 || selectedFoodTypes.length > 0 || selectedFeatures.length > 0 || selectedTvFeatures.length > 0) && (
-                <View style={styles.filterDot} />
-              )}
+              {(selectedBarCategories.length > 0 ||
+                selectedFoodTypes.length > 0 ||
+                selectedFeatures.length > 0 ||
+                selectedTvFeatures.length > 0) && <View style={styles.filterDot} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -871,7 +948,9 @@ export default function SearchScreen() {
           <View style={styles.filtersRow}>
             {/* Ordenar */}
             <View style={styles.filterColumn}>
-              <AppText variant="label" style={styles.filterLabelSpacing}>Ordenar por</AppText>
+              <AppText variant="label" style={styles.filterLabelSpacing}>
+                Ordenar por
+              </AppText>
               <Dropdown
                 label="Ordenar"
                 options={SORT_OPTIONS}
@@ -883,11 +962,12 @@ export default function SearchScreen() {
 
             {/* Partido */}
             <View style={styles.filterColumn}>
-              <AppText variant="label" style={styles.filterLabelSpacing}>Partido</AppText>
+              <AppText variant="label" style={styles.filterLabelSpacing}>
+                Partido
+              </AppText>
               <TouchableOpacity
                 style={styles.filterButton}
-                onPress={() => setMatchPickerOpen(true)}
-              >
+                onPress={() => setMatchPickerOpen(true)}>
                 <AppText style={styles.iconEmoji}>⚽</AppText>
                 <AppText variant="caption" color={colors.text.secondary}>
                   {selectedMatch ? 'Cambiar partido' : 'Seleccionar partido'}
@@ -900,7 +980,9 @@ export default function SearchScreen() {
 
       {/* Floating Match Banner - Above BottomTabBar */}
       {selectedMatch && (
-        <View style={styles.floatingMatchBanner} onLayout={(e) => setBannerHeight(e.nativeEvent.layout.height)}>
+        <View
+          style={styles.floatingMatchBanner}
+          onLayout={(e) => setBannerHeight(e.nativeEvent.layout.height)}>
           <View style={styles.matchBannerContent}>
             <View style={styles.matchTeam}>
               {selectedMatch.home_team?.logo_url ? (
@@ -911,11 +993,17 @@ export default function SearchScreen() {
               ) : (
                 <Ionicons name="shield-outline" size={14} color="#FFFFFF" />
               )}
-              <AppText variant="caption" color="#FFFFFF" numberOfLines={1} style={styles.matchTeamName}>
+              <AppText
+                variant="caption"
+                color="#FFFFFF"
+                numberOfLines={1}
+                style={styles.matchTeamName}>
                 {selectedMatch.home_team?.name || 'Local'}
               </AppText>
             </View>
-            <AppText variant="caption" color="rgba(255,255,255,0.7)" style={styles.matchVsBanner}>vs</AppText>
+            <AppText variant="caption" color="rgba(255,255,255,0.7)" style={styles.matchVsBanner}>
+              vs
+            </AppText>
             <View style={styles.matchTeam}>
               {selectedMatch.away_team?.logo_url ? (
                 <RNImage
@@ -925,7 +1013,11 @@ export default function SearchScreen() {
               ) : (
                 <Ionicons name="shield-outline" size={14} color="#FFFFFF" />
               )}
-              <AppText variant="caption" color="#FFFFFF" numberOfLines={1} style={styles.matchTeamName}>
+              <AppText
+                variant="caption"
+                color="#FFFFFF"
+                numberOfLines={1}
+                style={styles.matchTeamName}>
                 {selectedMatch.away_team?.name || 'Visitante'}
               </AppText>
             </View>
@@ -933,8 +1025,7 @@ export default function SearchScreen() {
           <TouchableOpacity
             onPress={() => setSelectedMatch(null)}
             style={styles.matchBannerClose}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="close" size={16} color="rgba(255,255,255,0.9)" />
           </TouchableOpacity>
         </View>
@@ -947,8 +1038,7 @@ export default function SearchScreen() {
           styles.scrollTopFab,
           { bottom: FAB_BASE_BOTTOM + (selectedMatch ? bannerHeight + spacing.sm : 0) },
           fabAnimatedStyle,
-        ]}
-      >
+        ]}>
         <Pressable onPress={handleScrollToTop} style={styles.scrollTopFabPressable} hitSlop={8}>
           <Ionicons name="arrow-up" size={22} color={colors.text.primary} />
         </Pressable>

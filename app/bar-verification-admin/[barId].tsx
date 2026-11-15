@@ -66,7 +66,11 @@ type GoogleReview = {
 };
 
 // Los catálogos de características cambian poco: se cachean entre visitas a esta pantalla.
-let catalogCache: { foodTypes: CatalogItem[]; tvFeatures: CatalogItem[]; features: CatalogItem[] } | null = null;
+let catalogCache: {
+  foodTypes: CatalogItem[];
+  tvFeatures: CatalogItem[];
+  features: CatalogItem[];
+} | null = null;
 
 const QUICK_REJECT_PRESETS = [
   'El bar no existe en esta dirección.',
@@ -101,13 +105,18 @@ function BarVerificationDetailScreen() {
   // Se levanta aquí (en vez de dentro de AutomationSection) para que approve()
   // pueda leer la selección y aplicarla justo después de convertir un
   // candidato de scraper, que todavía no tiene fila real en `bars`.
-  const automation = useAutoBroadcastPreferences({ barId: barId ? String(barId) : undefined, forceAdminRpc: true });
+  const automation = useAutoBroadcastPreferences({
+    barId: barId ? String(barId) : undefined,
+    forceAdminRpc: true,
+  });
 
   // ── Loading ──
   const [loading, setLoading] = useState(true);
   const [loadingExtras, setLoadingExtras] = useState(true);
   const [savingInfo, setSavingInfo] = useState(false);
-  const [actionLoading, setActionLoading] = useState<null | 'approve' | 'reject' | 'delete' | 'archive' | 'reactivate'>(null);
+  const [actionLoading, setActionLoading] = useState<
+    null | 'approve' | 'reject' | 'delete' | 'archive' | 'reactivate'
+  >(null);
 
   // ── Reseñas de Google ──
   const [googleReviews, setGoogleReviews] = useState<GoogleReview[]>([]);
@@ -196,11 +205,21 @@ function BarVerificationDetailScreen() {
     const [{ data: barData, error: barErr }, { data: imgs }, { data: menus }] = await Promise.all([
       supabase
         .from('bars')
-        .select('id, name, description, address, city, phone, website, latitude, longitude, created_at, verification_status, verification_notes, flag_bar_photos, flag_menu_photos, place_id')
+        .select(
+          'id, name, description, address, city, phone, website, latitude, longitude, created_at, verification_status, verification_notes, flag_bar_photos, flag_menu_photos, place_id'
+        )
         .eq('id', barId)
         .single(),
-      supabase.from('bar_images').select('id, image_url, image_order').eq('bar_id', barId).order('image_order', { ascending: true }),
-      supabase.from('bar_menus').select('id, image_url, image_order').eq('bar_id', barId).order('image_order', { ascending: true }),
+      supabase
+        .from('bar_images')
+        .select('id, image_url, image_order')
+        .eq('bar_id', barId)
+        .order('image_order', { ascending: true }),
+      supabase
+        .from('bar_menus')
+        .select('id, image_url, image_order')
+        .eq('bar_id', barId)
+        .order('image_order', { ascending: true }),
     ]);
 
     if (barErr) throw barErr;
@@ -219,32 +238,37 @@ function BarVerificationDetailScreen() {
   }, [barId]);
 
   // Fase 2 (en segundo plano): catálogos, selección actual y reseñas de Google.
-  const loadOwnerExtras = useCallback(async (placeId: string | null) => {
-    const [{ data: ftData }, { data: tvData }, { data: featData }] = await Promise.all([
-      supabase.from('bar_food_types').select('food_type_id').eq('bar_id', barId),
-      supabase.from('bar_selected_tv_features').select('tv_feature_id').eq('bar_id', barId),
-      supabase.from('bar_selected_features').select('feature_id').eq('bar_id', barId),
-    ]);
+  const loadOwnerExtras = useCallback(
+    async (placeId: string | null) => {
+      const [{ data: ftData }, { data: tvData }, { data: featData }] = await Promise.all([
+        supabase.from('bar_food_types').select('food_type_id').eq('bar_id', barId),
+        supabase.from('bar_selected_tv_features').select('tv_feature_id').eq('bar_id', barId),
+        supabase.from('bar_selected_features').select('feature_id').eq('bar_id', barId),
+      ]);
 
-    const ftIds = (ftData || []).map((r: any) => r.food_type_id as number);
-    const tvIds = (tvData || []).map((r: any) => r.tv_feature_id as number);
-    const fIds = (featData || []).map((r: any) => r.feature_id as number);
+      const ftIds = (ftData || []).map((r: any) => r.food_type_id as number);
+      const tvIds = (tvData || []).map((r: any) => r.tv_feature_id as number);
+      const fIds = (featData || []).map((r: any) => r.feature_id as number);
 
-    setSelectedFoodTypeIds(ftIds);
-    setSelectedTvFeatureIds(tvIds);
-    setSelectedFeatureIds(fIds);
-    setOrigFoodTypeIds(ftIds);
-    setOrigTvFeatureIds(tvIds);
-    setOrigFeatureIds(fIds);
+      setSelectedFoodTypeIds(ftIds);
+      setSelectedTvFeatureIds(tvIds);
+      setSelectedFeatureIds(fIds);
+      setOrigFoodTypeIds(ftIds);
+      setOrigTvFeatureIds(tvIds);
+      setOrigFeatureIds(fIds);
 
-    await loadCatalogs();
-    if (placeId) await loadGoogleReviews(placeId);
-  }, [barId, loadCatalogs, loadGoogleReviews]);
+      await loadCatalogs();
+      if (placeId) await loadGoogleReviews(placeId);
+    },
+    [barId, loadCatalogs, loadGoogleReviews]
+  );
 
   const loadScrapedCore = useCallback(async () => {
     const { data, error } = await supabase
       .from('bars_scraped')
-      .select('id, name, description, address, city, postal_code, phone, email, website, latitude, longitude, place_id, confidence, created_at, status, verification_notes, image_urls, carta_urls, selected_feature_ids, selected_tv_feature_ids, selected_food_type_ids')
+      .select(
+        'id, name, description, address, city, postal_code, phone, email, website, latitude, longitude, place_id, confidence, created_at, status, verification_notes, image_urls, carta_urls, selected_feature_ids, selected_tv_feature_ids, selected_food_type_ids'
+      )
       .eq('id', barId)
       .single();
     if (error) throw error;
@@ -262,12 +286,13 @@ function BarVerificationDetailScreen() {
       latitude: data.latitude,
       longitude: data.longitude,
       created_at: data.created_at,
-      verification_status: (
-        data.status === 'rejected' ? 'rejected'
-        : data.status === 'converted' ? 'approved'
-        : data.status === 'archived' ? 'archived'
-        : 'pending'
-      ) as VerificationStatus,
+      verification_status: (data.status === 'rejected'
+        ? 'rejected'
+        : data.status === 'converted'
+          ? 'approved'
+          : data.status === 'archived'
+            ? 'archived'
+            : 'pending') as VerificationStatus,
       verification_notes: data.verification_notes,
       place_id: data.place_id,
       confidence: data.confidence,
@@ -278,8 +303,16 @@ function BarVerificationDetailScreen() {
     setEditPhone(b.phone || '');
     setEditWebsite(b.website || '');
 
-    const imgs: ImgRow[] = ((data.image_urls as string[]) || []).map((url, i) => ({ id: `img-${i}`, image_url: url, image_order: i }));
-    const menus: ImgRow[] = ((data.carta_urls as string[]) || []).map((url, i) => ({ id: `menu-${i}`, image_url: url, image_order: i }));
+    const imgs: ImgRow[] = ((data.image_urls as string[]) || []).map((url, i) => ({
+      id: `img-${i}`,
+      image_url: url,
+      image_order: i,
+    }));
+    const menus: ImgRow[] = ((data.carta_urls as string[]) || []).map((url, i) => ({
+      id: `menu-${i}`,
+      image_url: url,
+      image_order: i,
+    }));
     setBarImages(imgs);
     setMenuImages(menus);
 
@@ -296,10 +329,13 @@ function BarVerificationDetailScreen() {
     return b;
   }, [barId]);
 
-  const loadScrapedExtras = useCallback(async (placeId: string | null) => {
-    await loadCatalogs();
-    if (placeId) await loadGoogleReviews(placeId);
-  }, [loadCatalogs, loadGoogleReviews]);
+  const loadScrapedExtras = useCallback(
+    async (placeId: string | null) => {
+      await loadCatalogs();
+      if (placeId) await loadGoogleReviews(placeId);
+    },
+    [loadCatalogs, loadGoogleReviews]
+  );
 
   const load = useCallback(async () => {
     if (!barId) return;
@@ -324,7 +360,9 @@ function BarVerificationDetailScreen() {
     }
   }, [barId, isScraped, loadOwnerCore, loadScrapedCore, loadOwnerExtras, loadScrapedExtras]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // ─── Derived ──────────────────────────────────────────────────────────────
 
@@ -341,16 +379,28 @@ function BarVerificationDetailScreen() {
   const featuresDirty = useMemo(() => {
     const same = (a: number[], b: number[]) =>
       a.length === b.length && [...a].sort().every((v, i) => v === [...b].sort()[i]);
-    return !same(selectedFoodTypeIds, origFoodTypeIds) ||
+    return (
+      !same(selectedFoodTypeIds, origFoodTypeIds) ||
       !same(selectedTvFeatureIds, origTvFeatureIds) ||
-      !same(selectedFeatureIds, origFeatureIds);
-  }, [selectedFoodTypeIds, selectedTvFeatureIds, selectedFeatureIds, origFoodTypeIds, origTvFeatureIds, origFeatureIds]);
+      !same(selectedFeatureIds, origFeatureIds)
+    );
+  }, [
+    selectedFoodTypeIds,
+    selectedTvFeatureIds,
+    selectedFeatureIds,
+    origFoodTypeIds,
+    origTvFeatureIds,
+    origFeatureIds,
+  ]);
 
   const showStickyBar = infoDirty || featuresDirty;
 
   const mainImageUrl = useMemo(
-    () => barImages.find((i) => i.image_order === 1 || i.image_order === 0)?.image_url || barImages[0]?.image_url || null,
-    [barImages],
+    () =>
+      barImages.find((i) => i.image_order === 1 || i.image_order === 0)?.image_url ||
+      barImages[0]?.image_url ||
+      null,
+    [barImages]
   );
 
   // ─── Actions: save info ───────────────────────────────────────────────────
@@ -358,10 +408,19 @@ function BarVerificationDetailScreen() {
   const saveAll = useCallback(async () => {
     if (!bar) return;
     const name = editName.trim();
-    if (!name) { toast.warning('El nombre no puede estar vacío'); return; }
+    if (!name) {
+      toast.warning('El nombre no puede estar vacío');
+      return;
+    }
 
     const prevBar = bar;
-    const optimisticBar = { ...bar, name, description: editDescription.trim() || null, phone: editPhone.trim() || null, website: editWebsite.trim() || null };
+    const optimisticBar = {
+      ...bar,
+      name,
+      description: editDescription.trim() || null,
+      phone: editPhone.trim() || null,
+      website: editWebsite.trim() || null,
+    };
     const prevOrig = { ft: origFoodTypeIds, tv: origTvFeatureIds, feat: origFeatureIds };
 
     if (infoDirty) setBar(optimisticBar);
@@ -378,22 +437,28 @@ function BarVerificationDetailScreen() {
       if (infoDirty) {
         const table = isScraped ? 'bars_scraped' : 'bars';
         ops.push(
-          supabase.from(table).update({
-            name,
-            description: editDescription.trim() || null,
-            phone: editPhone.trim() || null,
-            website: editWebsite.trim() || null,
-          }).eq('id', bar.id) as unknown as Promise<any>,
+          supabase
+            .from(table)
+            .update({
+              name,
+              description: editDescription.trim() || null,
+              phone: editPhone.trim() || null,
+              website: editWebsite.trim() || null,
+            })
+            .eq('id', bar.id) as unknown as Promise<any>
         );
       }
 
       if (featuresDirty && isScraped) {
         ops.push(
-          supabase.from('bars_scraped').update({
-            selected_feature_ids: selectedFeatureIds,
-            selected_tv_feature_ids: selectedTvFeatureIds,
-            selected_food_type_ids: selectedFoodTypeIds,
-          }).eq('id', bar.id) as unknown as Promise<any>,
+          supabase
+            .from('bars_scraped')
+            .update({
+              selected_feature_ids: selectedFeatureIds,
+              selected_tv_feature_ids: selectedTvFeatureIds,
+              selected_food_type_ids: selectedFoodTypeIds,
+            })
+            .eq('id', bar.id) as unknown as Promise<any>
         );
       } else if (featuresDirty) {
         ops.push(
@@ -405,16 +470,24 @@ function BarVerificationDetailScreen() {
             ]);
             await Promise.all([
               selectedFoodTypeIds.length > 0
-                ? supabase.from('bar_food_types').insert(selectedFoodTypeIds.map((id) => ({ bar_id: bar.id, food_type_id: id })))
+                ? supabase
+                    .from('bar_food_types')
+                    .insert(selectedFoodTypeIds.map((id) => ({ bar_id: bar.id, food_type_id: id })))
                 : Promise.resolve(),
               selectedTvFeatureIds.length > 0
-                ? supabase.from('bar_selected_tv_features').insert(selectedTvFeatureIds.map((id) => ({ bar_id: bar.id, tv_feature_id: id })))
+                ? supabase
+                    .from('bar_selected_tv_features')
+                    .insert(
+                      selectedTvFeatureIds.map((id) => ({ bar_id: bar.id, tv_feature_id: id }))
+                    )
                 : Promise.resolve(),
               selectedFeatureIds.length > 0
-                ? supabase.from('bar_selected_features').insert(selectedFeatureIds.map((id) => ({ bar_id: bar.id, feature_id: id })))
+                ? supabase
+                    .from('bar_selected_features')
+                    .insert(selectedFeatureIds.map((id) => ({ bar_id: bar.id, feature_id: id })))
                 : Promise.resolve(),
             ]);
-          })(),
+          })()
         );
       }
 
@@ -433,60 +506,94 @@ function BarVerificationDetailScreen() {
     } finally {
       setSavingInfo(false);
     }
-  }, [bar, isScraped, editName, editDescription, editPhone, editWebsite, infoDirty, featuresDirty, selectedFoodTypeIds, selectedTvFeatureIds, selectedFeatureIds, origFoodTypeIds, origTvFeatureIds, origFeatureIds]);
+  }, [
+    bar,
+    isScraped,
+    editName,
+    editDescription,
+    editPhone,
+    editWebsite,
+    infoDirty,
+    featuresDirty,
+    selectedFoodTypeIds,
+    selectedTvFeatureIds,
+    selectedFeatureIds,
+    origFoodTypeIds,
+    origTvFeatureIds,
+    origFeatureIds,
+  ]);
 
   // ─── Reorder ──────────────────────────────────────────────────────────────
 
-  const persistScrapedImages = useCallback(async (column: 'image_urls' | 'carta_urls', urls: string[]) => {
-    if (!bar) return;
-    const { error } = await supabase.from('bars_scraped').update({ [column]: urls }).eq('id', bar.id);
-    if (error) throw error;
-  }, [bar]);
+  const persistScrapedImages = useCallback(
+    async (column: 'image_urls' | 'carta_urls', urls: string[]) => {
+      if (!bar) return;
+      const { error } = await supabase
+        .from('bars_scraped')
+        .update({ [column]: urls })
+        .eq('id', bar.id);
+      if (error) throw error;
+    },
+    [bar]
+  );
 
-  const reorderBarPhotos = useCallback(async (reordered: DraggableImage[]) => {
-    const prev = barImages;
-    setBarImages(reordered as ImgRow[]);
-    try {
-      if (isScraped) {
-        await persistScrapedImages('image_urls', reordered.map((img) => img.image_url));
-      } else {
-        await Promise.all(
-          reordered.map((img) =>
-            supabase.from('bar_images').update({ image_order: img.image_order }).eq('id', img.id)
-          )
-        );
+  const reorderBarPhotos = useCallback(
+    async (reordered: DraggableImage[]) => {
+      const prev = barImages;
+      setBarImages(reordered as ImgRow[]);
+      try {
+        if (isScraped) {
+          await persistScrapedImages(
+            'image_urls',
+            reordered.map((img) => img.image_url)
+          );
+        } else {
+          await Promise.all(
+            reordered.map((img) =>
+              supabase.from('bar_images').update({ image_order: img.image_order }).eq('id', img.id)
+            )
+          );
+        }
+      } catch (e: any) {
+        setBarImages(prev);
+        toast.supabaseError(e, 'No se pudo actualizar el orden');
       }
-    } catch (e: any) {
-      setBarImages(prev);
-      toast.supabaseError(e, 'No se pudo actualizar el orden');
-    }
-  }, [barImages, isScraped, persistScrapedImages]);
+    },
+    [barImages, isScraped, persistScrapedImages]
+  );
 
-  const reorderMenuPhotos = useCallback(async (reordered: DraggableImage[]) => {
-    const prev = menuImages;
-    setMenuImages(reordered as ImgRow[]);
-    try {
-      if (isScraped) {
-        await persistScrapedImages('carta_urls', reordered.map((img) => img.image_url));
-      } else {
-        await Promise.all(
-          reordered.map((img) =>
-            supabase.from('bar_menus').update({ image_order: img.image_order }).eq('id', img.id)
-          )
-        );
+  const reorderMenuPhotos = useCallback(
+    async (reordered: DraggableImage[]) => {
+      const prev = menuImages;
+      setMenuImages(reordered as ImgRow[]);
+      try {
+        if (isScraped) {
+          await persistScrapedImages(
+            'carta_urls',
+            reordered.map((img) => img.image_url)
+          );
+        } else {
+          await Promise.all(
+            reordered.map((img) =>
+              supabase.from('bar_menus').update({ image_order: img.image_order }).eq('id', img.id)
+            )
+          );
+        }
+      } catch (e: any) {
+        setMenuImages(prev);
+        toast.supabaseError(e, 'No se pudo actualizar el orden');
       }
-    } catch (e: any) {
-      setMenuImages(prev);
-      toast.supabaseError(e, 'No se pudo actualizar el orden');
-    }
-  }, [menuImages, isScraped, persistScrapedImages]);
+    },
+    [menuImages, isScraped, persistScrapedImages]
+  );
 
   // ─── Toggle selección ─────────────────────────────────────────────────────
 
   const toggleBarSelect = useCallback((id: string) => {
     setSelectedBarIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
@@ -494,7 +601,8 @@ function BarVerificationDetailScreen() {
   const toggleMenuSelect = useCallback((id: string) => {
     setSelectedMenuIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
@@ -520,7 +628,8 @@ function BarVerificationDetailScreen() {
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Eliminar', style: 'destructive',
+          text: 'Eliminar',
+          style: 'destructive',
           onPress: async () => {
             const prev = barImages;
             const next = prev.filter((i) => !selectedBarIds.has(i.id));
@@ -529,9 +638,14 @@ function BarVerificationDetailScreen() {
             setSelectModeBar(false);
             try {
               if (isScraped) {
-                await persistScrapedImages('image_urls', next.map((i) => i.image_url));
+                await persistScrapedImages(
+                  'image_urls',
+                  next.map((i) => i.image_url)
+                );
               } else {
-                await Promise.all(ids.map((id) => supabase.from('bar_images').delete().eq('id', id)));
+                await Promise.all(
+                  ids.map((id) => supabase.from('bar_images').delete().eq('id', id))
+                );
               }
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               toast.success(`${ids.length} foto${ids.length > 1 ? 's eliminadas' : ' eliminada'}`);
@@ -554,7 +668,8 @@ function BarVerificationDetailScreen() {
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Eliminar', style: 'destructive',
+          text: 'Eliminar',
+          style: 'destructive',
           onPress: async () => {
             const prev = menuImages;
             const next = prev.filter((i) => !selectedMenuIds.has(i.id));
@@ -563,12 +678,19 @@ function BarVerificationDetailScreen() {
             setSelectModeMenu(false);
             try {
               if (isScraped) {
-                await persistScrapedImages('carta_urls', next.map((i) => i.image_url));
+                await persistScrapedImages(
+                  'carta_urls',
+                  next.map((i) => i.image_url)
+                );
               } else {
-                await Promise.all(ids.map((id) => supabase.from('bar_menus').delete().eq('id', id)));
+                await Promise.all(
+                  ids.map((id) => supabase.from('bar_menus').delete().eq('id', id))
+                );
               }
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              toast.success(`${ids.length} imagen${ids.length > 1 ? 'es eliminadas' : ' eliminada'}`);
+              toast.success(
+                `${ids.length} imagen${ids.length > 1 ? 'es eliminadas' : ' eliminada'}`
+              );
             } catch (e: any) {
               setMenuImages(prev);
               toast.supabaseError(e, 'No se pudieron eliminar las imágenes');
@@ -579,86 +701,106 @@ function BarVerificationDetailScreen() {
     );
   }, [menuImages, selectedMenuIds, isScraped, persistScrapedImages]);
 
-  const deleteBarPhoto = useCallback((imgId: string) => {
-    Alert.alert('Eliminar foto', '¿Eliminar esta foto del bar?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar', style: 'destructive',
-        onPress: async () => {
-          const prev = barImages;
-          const next = prev.filter((i) => i.id !== imgId);
-          setBarImages(next);
-          try {
-            if (isScraped) {
-              await persistScrapedImages('image_urls', next.map((i) => i.image_url));
-            } else {
-              const { error } = await supabase.from('bar_images').delete().eq('id', imgId);
-              if (error) throw error;
+  const deleteBarPhoto = useCallback(
+    (imgId: string) => {
+      Alert.alert('Eliminar foto', '¿Eliminar esta foto del bar?', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const prev = barImages;
+            const next = prev.filter((i) => i.id !== imgId);
+            setBarImages(next);
+            try {
+              if (isScraped) {
+                await persistScrapedImages(
+                  'image_urls',
+                  next.map((i) => i.image_url)
+                );
+              } else {
+                const { error } = await supabase.from('bar_images').delete().eq('id', imgId);
+                if (error) throw error;
+              }
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              toast.success('Foto eliminada');
+            } catch (e: any) {
+              setBarImages(prev);
+              toast.supabaseError(e, 'No se pudo eliminar la foto');
             }
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            toast.success('Foto eliminada');
-          } catch (e: any) {
-            setBarImages(prev);
-            toast.supabaseError(e, 'No se pudo eliminar la foto');
-          }
+          },
         },
-      },
-    ]);
-  }, [barImages, isScraped, persistScrapedImages]);
+      ]);
+    },
+    [barImages, isScraped, persistScrapedImages]
+  );
 
-  const deleteMenuPhoto = useCallback((imgId: string) => {
-    Alert.alert('Eliminar imagen', '¿Eliminar esta imagen de la carta?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar', style: 'destructive',
-        onPress: async () => {
-          const prev = menuImages;
-          const next = prev.filter((i) => i.id !== imgId);
-          setMenuImages(next);
-          try {
-            if (isScraped) {
-              await persistScrapedImages('carta_urls', next.map((i) => i.image_url));
-            } else {
-              const { error } = await supabase.from('bar_menus').delete().eq('id', imgId);
-              if (error) throw error;
+  const deleteMenuPhoto = useCallback(
+    (imgId: string) => {
+      Alert.alert('Eliminar imagen', '¿Eliminar esta imagen de la carta?', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const prev = menuImages;
+            const next = prev.filter((i) => i.id !== imgId);
+            setMenuImages(next);
+            try {
+              if (isScraped) {
+                await persistScrapedImages(
+                  'carta_urls',
+                  next.map((i) => i.image_url)
+                );
+              } else {
+                const { error } = await supabase.from('bar_menus').delete().eq('id', imgId);
+                if (error) throw error;
+              }
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              toast.success('Imagen eliminada');
+            } catch (e: any) {
+              setMenuImages(prev);
+              toast.supabaseError(e, 'No se pudo eliminar la imagen');
             }
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            toast.success('Imagen eliminada');
-          } catch (e: any) {
-            setMenuImages(prev);
-            toast.supabaseError(e, 'No se pudo eliminar la imagen');
-          }
+          },
         },
-      },
-    ]);
-  }, [menuImages, isScraped, persistScrapedImages]);
+      ]);
+    },
+    [menuImages, isScraped, persistScrapedImages]
+  );
 
   // ─── Reseñas de Google ────────────────────────────────────────────────────
 
-  const deleteGoogleReview = useCallback((reviewId: string) => {
-    Alert.alert('Eliminar reseña', '¿Eliminar esta reseña de Google? No se puede deshacer.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar', style: 'destructive',
-        onPress: async () => {
-          const prev = googleReviews;
-          setDeletingReviewId(reviewId);
-          setGoogleReviews((cur) => cur.filter((r) => r.id !== reviewId));
-          try {
-            const { error } = await supabase.rpc('admin_delete_bar_review', { p_review_id: reviewId });
-            if (error) throw error;
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            toast.success('Reseña eliminada');
-          } catch (e: any) {
-            setGoogleReviews(prev);
-            toast.supabaseError(e, 'No se pudo eliminar la reseña');
-          } finally {
-            setDeletingReviewId(null);
-          }
+  const deleteGoogleReview = useCallback(
+    (reviewId: string) => {
+      Alert.alert('Eliminar reseña', '¿Eliminar esta reseña de Google? No se puede deshacer.', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const prev = googleReviews;
+            setDeletingReviewId(reviewId);
+            setGoogleReviews((cur) => cur.filter((r) => r.id !== reviewId));
+            try {
+              const { error } = await supabase.rpc('admin_delete_bar_review', {
+                p_review_id: reviewId,
+              });
+              if (error) throw error;
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              toast.success('Reseña eliminada');
+            } catch (e: any) {
+              setGoogleReviews(prev);
+              toast.supabaseError(e, 'No se pudo eliminar la reseña');
+            } finally {
+              setDeletingReviewId(null);
+            }
+          },
         },
-      },
-    ]);
-  }, [googleReviews]);
+      ]);
+    },
+    [googleReviews]
+  );
 
   // ─── Actions: approve / reject / delete ───────────────────────────────────
 
@@ -693,10 +835,11 @@ function BarVerificationDetailScreen() {
         // fila real en `bars` (sin eso, bar_selected_competitions/teams no
         // tienen a qué engancharse) — se aplica aquí, justo tras crearla.
         if (automation.hasSelection && newBarId) {
-          const { competition_ids, team_ids, team_competition_ids } = buildBroadcastPreferencesPayload(
-            automation.selectedCompetitions,
-            automation.selectedTeams,
-          );
+          const { competition_ids, team_ids, team_competition_ids } =
+            buildBroadcastPreferencesPayload(
+              automation.selectedCompetitions,
+              automation.selectedTeams
+            );
           const { error: automationError } = await supabase.rpc('fn_sync_bar_preferences_admin', {
             _bar_id: newBarId,
             _competition_ids: competition_ids,
@@ -705,7 +848,10 @@ function BarVerificationDetailScreen() {
           });
           if (automationError) {
             console.error('❌ Error aplicando automatización preseleccionada:', automationError);
-            toast.warning('Bar aprobado, pero no se pudo aplicar la automatización', 'Configúrala manualmente desde el bar ya aprobado');
+            toast.warning(
+              'Bar aprobado, pero no se pudo aplicar la automatización',
+              'Configúrala manualmente desde el bar ya aprobado'
+            );
           }
         }
 
@@ -720,7 +866,12 @@ function BarVerificationDetailScreen() {
       if (!user) throw new Error('No auth user');
       const { error } = await supabase
         .from('bars')
-        .update({ verification_status: 'approved', verified_at: new Date().toISOString(), verified_by: user.id, verification_notes: null })
+        .update({
+          verification_status: 'approved',
+          verified_at: new Date().toISOString(),
+          verified_by: user.id,
+          verification_notes: null,
+        })
         .eq('id', bar.id);
       if (error) throw error;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -730,12 +881,31 @@ function BarVerificationDetailScreen() {
       toast.supabaseError(e, 'No se pudo aprobar el bar');
       setActionLoading(null);
     }
-  }, [bar, isScraped, editName, editDescription, editPhone, editWebsite, barImages, menuImages, selectedFeatureIds, selectedTvFeatureIds, selectedFoodTypeIds, router, automation.hasSelection, automation.selectedCompetitions, automation.selectedTeams]);
+  }, [
+    bar,
+    isScraped,
+    editName,
+    editDescription,
+    editPhone,
+    editWebsite,
+    barImages,
+    menuImages,
+    selectedFeatureIds,
+    selectedTvFeatureIds,
+    selectedFoodTypeIds,
+    router,
+    automation.hasSelection,
+    automation.selectedCompetitions,
+    automation.selectedTeams,
+  ]);
 
   const reject = useCallback(async () => {
     if (!bar) return;
     const notes = rejectNotes.trim();
-    if (!notes) { toast.warning('Escribe un motivo para rechazar'); return; }
+    if (!notes) {
+      toast.warning('Escribe un motivo para rechazar');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setActionLoading('reject');
     try {
@@ -746,19 +916,32 @@ function BarVerificationDetailScreen() {
       if (isScraped) {
         const { error } = await supabase
           .from('bars_scraped')
-          .update({ status: 'rejected', verification_notes: notes, reviewed_at: new Date().toISOString(), reviewed_by: user.id })
+          .update({
+            status: 'rejected',
+            verification_notes: notes,
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id,
+          })
           .eq('id', bar.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('bars')
-          .update({ verification_status: 'rejected', verified_at: new Date().toISOString(), verified_by: user.id, verification_notes: notes })
+          .update({
+            verification_status: 'rejected',
+            verified_at: new Date().toISOString(),
+            verified_by: user.id,
+            verification_notes: notes,
+          })
           .eq('id', bar.id);
         if (error) throw error;
       }
       setSheetMode(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      toast.info('Bar rechazado', isScraped ? 'Se descarta de la cola de revisión' : 'El propietario verá el motivo');
+      toast.info(
+        'Bar rechazado',
+        isScraped ? 'Se descarta de la cola de revisión' : 'El propietario verá el motivo'
+      );
       router.back();
     } catch (e: any) {
       toast.supabaseError(e, 'No se pudo rechazar el bar');
@@ -779,13 +962,23 @@ function BarVerificationDetailScreen() {
       if (isScraped) {
         const { error } = await supabase
           .from('bars_scraped')
-          .update({ status: 'archived', verification_notes: notes, reviewed_at: new Date().toISOString(), reviewed_by: user.id })
+          .update({
+            status: 'archived',
+            verification_notes: notes,
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id,
+          })
           .eq('id', bar.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('bars')
-          .update({ verification_status: 'archived', verified_at: new Date().toISOString(), verified_by: user.id, verification_notes: notes })
+          .update({
+            verification_status: 'archived',
+            verified_at: new Date().toISOString(),
+            verified_by: user.id,
+            verification_notes: notes,
+          })
           .eq('id', bar.id);
         if (error) throw error;
       }
@@ -810,10 +1003,16 @@ function BarVerificationDetailScreen() {
           setActionLoading('reactivate');
           try {
             if (isScraped) {
-              const { error } = await supabase.from('bars_scraped').update({ status: 'pending' }).eq('id', bar.id);
+              const { error } = await supabase
+                .from('bars_scraped')
+                .update({ status: 'pending' })
+                .eq('id', bar.id);
               if (error) throw error;
             } else {
-              const { error } = await supabase.from('bars').update({ verification_status: 'pending' }).eq('id', bar.id);
+              const { error } = await supabase
+                .from('bars')
+                .update({ verification_status: 'pending' })
+                .eq('id', bar.id);
               if (error) throw error;
             }
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -834,36 +1033,41 @@ function BarVerificationDetailScreen() {
     const message = isScraped
       ? `¿Eliminar definitivamente "${bar.name}" de los datos scrapeados? No se puede deshacer.`
       : `¿Eliminar "${bar.name}" permanentemente? No se puede deshacer.`;
-    Alert.alert(
-      title,
-      message,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar', style: 'destructive',
-          onPress: () => Alert.alert('Confirmar', isScraped ? 'Se borrará el registro scrapeado.' : 'Se borrarán el bar, fotos y características.', [
-            { text: 'Cancelar', style: 'cancel' },
-            {
-              text: 'Eliminar definitivamente', style: 'destructive',
-              onPress: async () => {
-                setActionLoading('delete');
-                try {
-                  const table = isScraped ? 'bars_scraped' : 'bars';
-                  const { error } = await supabase.from(table).delete().eq('id', bar.id);
-                  if (error) throw error;
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  toast.success(isScraped ? 'Candidato eliminado' : 'Bar eliminado');
-                  router.back();
-                } catch (e: any) {
-                  toast.supabaseError(e, 'No se pudo eliminar');
-                  setActionLoading(null);
-                }
+    Alert.alert(title, message, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert(
+            'Confirmar',
+            isScraped
+              ? 'Se borrará el registro scrapeado.'
+              : 'Se borrarán el bar, fotos y características.',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              {
+                text: 'Eliminar definitivamente',
+                style: 'destructive',
+                onPress: async () => {
+                  setActionLoading('delete');
+                  try {
+                    const table = isScraped ? 'bars_scraped' : 'bars';
+                    const { error } = await supabase.from(table).delete().eq('id', bar.id);
+                    if (error) throw error;
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    toast.success(isScraped ? 'Candidato eliminado' : 'Bar eliminado');
+                    router.back();
+                  } catch (e: any) {
+                    toast.supabaseError(e, 'No se pudo eliminar');
+                    setActionLoading(null);
+                  }
+                },
               },
-            },
-          ]),
-        },
-      ],
-    );
+            ]
+          ),
+      },
+    ]);
   }, [bar, isScraped, router]);
 
   // ─── Viewer ───────────────────────────────────────────────────────────────
@@ -891,97 +1095,109 @@ function BarVerificationDetailScreen() {
 
     if (!targetImg) return;
 
-    Alert.alert(
-      'Eliminar foto',
-      `¿Eliminar esta foto ${isBar ? 'del bar' : 'de la carta'}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar', style: 'destructive',
-          onPress: async () => {
-            const newViewerImages = viewerImages.filter((_, i) => i !== idx);
+    Alert.alert('Eliminar foto', `¿Eliminar esta foto ${isBar ? 'del bar' : 'de la carta'}?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          const newViewerImages = viewerImages.filter((_, i) => i !== idx);
 
-            const applyViewerUpdate = () => {
-              setViewerImages(newViewerImages);
-              if (newViewerImages.length === 0) {
-                setViewerVisible(false);
-              } else if (idx >= newViewerImages.length) {
-                const newI = newViewerImages.length - 1;
-                setViewerIndex(newI);
-                currentViewerIdxRef.current = newI;
-              }
-            };
-
-            if (isBar) {
-              const prev = barImages;
-              const next = prev.filter((i) => i.id !== targetImg.id);
-              setBarImages(next);
-              applyViewerUpdate();
-              try {
-                if (isScraped) {
-                  await persistScrapedImages('image_urls', next.map((i) => i.image_url));
-                } else {
-                  const { error } = await supabase.from('bar_images').delete().eq('id', targetImg.id);
-                  if (error) throw error;
-                }
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                toast.success('Foto eliminada');
-              } catch (e: any) {
-                setBarImages(prev);
-                setViewerImages(viewerImages);
-                toast.supabaseError(e, 'No se pudo eliminar la foto');
-              }
-            } else {
-              const prev = menuImages;
-              const next = prev.filter((i) => i.id !== targetImg.id);
-              setMenuImages(next);
-              applyViewerUpdate();
-              try {
-                if (isScraped) {
-                  await persistScrapedImages('carta_urls', next.map((i) => i.image_url));
-                } else {
-                  const { error } = await supabase.from('bar_menus').delete().eq('id', targetImg.id);
-                  if (error) throw error;
-                }
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                toast.success('Imagen eliminada');
-              } catch (e: any) {
-                setMenuImages(prev);
-                setViewerImages(viewerImages);
-                toast.supabaseError(e, 'No se pudo eliminar la imagen');
-              }
+          const applyViewerUpdate = () => {
+            setViewerImages(newViewerImages);
+            if (newViewerImages.length === 0) {
+              setViewerVisible(false);
+            } else if (idx >= newViewerImages.length) {
+              const newI = newViewerImages.length - 1;
+              setViewerIndex(newI);
+              currentViewerIdxRef.current = newI;
             }
-          },
+          };
+
+          if (isBar) {
+            const prev = barImages;
+            const next = prev.filter((i) => i.id !== targetImg.id);
+            setBarImages(next);
+            applyViewerUpdate();
+            try {
+              if (isScraped) {
+                await persistScrapedImages(
+                  'image_urls',
+                  next.map((i) => i.image_url)
+                );
+              } else {
+                const { error } = await supabase.from('bar_images').delete().eq('id', targetImg.id);
+                if (error) throw error;
+              }
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              toast.success('Foto eliminada');
+            } catch (e: any) {
+              setBarImages(prev);
+              setViewerImages(viewerImages);
+              toast.supabaseError(e, 'No se pudo eliminar la foto');
+            }
+          } else {
+            const prev = menuImages;
+            const next = prev.filter((i) => i.id !== targetImg.id);
+            setMenuImages(next);
+            applyViewerUpdate();
+            try {
+              if (isScraped) {
+                await persistScrapedImages(
+                  'carta_urls',
+                  next.map((i) => i.image_url)
+                );
+              } else {
+                const { error } = await supabase.from('bar_menus').delete().eq('id', targetImg.id);
+                if (error) throw error;
+              }
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              toast.success('Imagen eliminada');
+            } catch (e: any) {
+              setMenuImages(prev);
+              setViewerImages(viewerImages);
+              toast.supabaseError(e, 'No se pudo eliminar la imagen');
+            }
+          }
         },
-      ],
-    );
+      },
+    ]);
   }, [viewerImages, viewerType, barImages, menuImages, isScraped, persistScrapedImages]);
 
   // ─── Flag toggle (solo source === 'owner') ───────────────────────────────
 
-  const toggleFlag = useCallback(async (field: 'flag_bar_photos' | 'flag_menu_photos', current: boolean) => {
-    if (!bar) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newVal = !current;
-    if (field === 'flag_bar_photos') setFlagBarPhotos(newVal);
-    else setFlagMenuPhotos(newVal);
-    try {
-      const { error } = await supabase.from('bars').update({ [field]: newVal }).eq('id', bar.id);
-      if (error) throw error;
-      toast.success(newVal ? 'Marcado para revisión' : 'Flag eliminado');
-    } catch (e: any) {
-      if (field === 'flag_bar_photos') setFlagBarPhotos(current);
-      else setFlagMenuPhotos(current);
-      toast.supabaseError(e, 'No se pudo actualizar');
-    }
-  }, [bar]);
+  const toggleFlag = useCallback(
+    async (field: 'flag_bar_photos' | 'flag_menu_photos', current: boolean) => {
+      if (!bar) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const newVal = !current;
+      if (field === 'flag_bar_photos') setFlagBarPhotos(newVal);
+      else setFlagMenuPhotos(newVal);
+      try {
+        const { error } = await supabase
+          .from('bars')
+          .update({ [field]: newVal })
+          .eq('id', bar.id);
+        if (error) throw error;
+        toast.success(newVal ? 'Marcado para revisión' : 'Flag eliminado');
+      } catch (e: any) {
+        if (field === 'flag_bar_photos') setFlagBarPhotos(current);
+        else setFlagMenuPhotos(current);
+        toast.supabaseError(e, 'No se pudo actualizar');
+      }
+    },
+    [bar]
+  );
 
   // ─── Chip toggle ──────────────────────────────────────────────────────────
 
-  const toggleId = useCallback((id: number, setter: React.Dispatch<React.SetStateAction<number[]>>) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setter((prev) => prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]);
-  }, []);
+  const toggleId = useCallback(
+    (id: number, setter: React.Dispatch<React.SetStateAction<number[]>>) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setter((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));
+    },
+    []
+  );
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -991,7 +1207,9 @@ function BarVerificationDetailScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.centered}>
           <ActivityIndicator color={colors.status.boost} />
-          <AppText variant="caption" color={colors.text.secondary}>Cargando…</AppText>
+          <AppText variant="caption" color={colors.text.secondary}>
+            Cargando…
+          </AppText>
         </View>
       </SafeAreaView>
     );
@@ -1004,7 +1222,9 @@ function BarVerificationDetailScreen() {
         <ScreenHeader title="Verificación" onBack={() => router.back()} />
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={34} color={colors.text.secondary} />
-          <AppText variant="subtitle" color={colors.text.primary}>No encontrado</AppText>
+          <AppText variant="subtitle" color={colors.text.primary}>
+            No encontrado
+          </AppText>
         </View>
       </SafeAreaView>
     );
@@ -1016,7 +1236,9 @@ function BarVerificationDetailScreen() {
   const { width: screenWidth } = Dimensions.get('window');
   const gridColumns = 3;
   const gridGap = 8;
-  const gridItemSize = Math.floor((screenWidth - 2 * spacing.xl - (gridColumns - 1) * gridGap) / gridColumns);
+  const gridItemSize = Math.floor(
+    (screenWidth - 2 * spacing.xl - (gridColumns - 1) * gridGap) / gridColumns
+  );
   const hasBarSelection = selectedBarIds.size > 0;
   const hasMenuSelection = selectedMenuIds.size > 0;
   const statusColor = STATUS_COLOR[bar.verification_status];
@@ -1036,23 +1258,34 @@ function BarVerificationDetailScreen() {
         confidence={bar.confidence}
       />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.content, showStickyBar && { paddingBottom: 80 }]}
-          keyboardShouldPersistTaps="handled"
-        >
+          keyboardShouldPersistTaps="handled">
           {/* ── Hero ── */}
           {mainImageUrl ? (
-            <TouchableOpacity activeOpacity={0.92} onPress={() => openViewer(barUrls, 0, 'bar')} style={styles.heroWrap}>
+            <TouchableOpacity
+              activeOpacity={0.92}
+              onPress={() => openViewer(barUrls, 0, 'bar')}
+              style={styles.heroWrap}>
               <Image source={{ uri: mainImageUrl }} style={styles.heroImage} />
               <View style={styles.heroOverlay}>
-                <AppText variant="subtitle" color={colors.text.primary} numberOfLines={1} maxScale={1.0}>
+                <AppText
+                  variant="subtitle"
+                  color={colors.text.primary}
+                  numberOfLines={1}
+                  maxScale={1.0}>
                   {bar.name}
                 </AppText>
                 <View style={[styles.heroStatusBadge, { backgroundColor: `${statusColor}33` }]}>
                   <View style={[styles.heroDot, { backgroundColor: statusColor }]} />
-                  <AppText variant="caption" style={{ color: statusColor, fontWeight: '800' }} maxScale={1.0}>
+                  <AppText
+                    variant="caption"
+                    style={{ color: statusColor, fontWeight: '800' }}
+                    maxScale={1.0}>
                     {STATUS_LABEL[bar.verification_status]}
                   </AppText>
                 </View>
@@ -1061,7 +1294,9 @@ function BarVerificationDetailScreen() {
           ) : (
             <View style={styles.heroFallback}>
               <Ionicons name="image-outline" size={32} color={colors.text.muted} />
-              <AppText variant="caption" color={colors.text.muted}>Sin foto de portada</AppText>
+              <AppText variant="caption" color={colors.text.muted}>
+                Sin foto de portada
+              </AppText>
             </View>
           )}
 
@@ -1070,17 +1305,36 @@ function BarVerificationDetailScreen() {
             title="Fotos del bar"
             count={barImages.length}
             flagActive={isScraped ? undefined : flagBarPhotos}
-            onFlagToggle={isScraped ? undefined : () => toggleFlag('flag_bar_photos', flagBarPhotos)}
+            onFlagToggle={
+              isScraped ? undefined : () => toggleFlag('flag_bar_photos', flagBarPhotos)
+            }
             selectActive={selectModeBar}
-            onSelect={barImages.length > 0 ? () => { cancelSelectBar(); setSelectModeBar((v) => !v); } : undefined}
+            onSelect={
+              barImages.length > 0
+                ? () => {
+                    cancelSelectBar();
+                    setSelectModeBar((v) => !v);
+                  }
+                : undefined
+            }
           />
           {barImages.length > 0 ? (
             <View style={styles.gridWrap}>
               <DraggableImageGrid
-                images={barImages.map((i) => ({ id: i.id, image_url: i.image_url, image_order: i.image_order ?? 0 }))}
+                images={barImages.map((i) => ({
+                  id: i.id,
+                  image_url: i.image_url,
+                  image_order: i.image_order ?? 0,
+                }))}
                 onReorder={reorderBarPhotos}
                 onDelete={deleteBarPhoto}
-                onImagePress={(id) => openViewer(barUrls, barImages.findIndex((i) => i.id === id), 'bar')}
+                onImagePress={(id) =>
+                  openViewer(
+                    barUrls,
+                    barImages.findIndex((i) => i.id === id),
+                    'bar'
+                  )
+                }
                 columns={gridColumns}
                 itemSize={gridItemSize}
                 gap={gridGap}
@@ -1090,7 +1344,9 @@ function BarVerificationDetailScreen() {
               />
             </View>
           ) : (
-            <AppText variant="caption" color={colors.text.muted} style={styles.emptyText}>Sin fotos del bar</AppText>
+            <AppText variant="caption" color={colors.text.muted} style={styles.emptyText}>
+              Sin fotos del bar
+            </AppText>
           )}
 
           {/* ── Fotos de la carta ── */}
@@ -1098,17 +1354,36 @@ function BarVerificationDetailScreen() {
             title="Fotos de la carta"
             count={menuImages.length}
             flagActive={isScraped ? undefined : flagMenuPhotos}
-            onFlagToggle={isScraped ? undefined : () => toggleFlag('flag_menu_photos', flagMenuPhotos)}
+            onFlagToggle={
+              isScraped ? undefined : () => toggleFlag('flag_menu_photos', flagMenuPhotos)
+            }
             selectActive={selectModeMenu}
-            onSelect={menuImages.length > 0 ? () => { cancelSelectMenu(); setSelectModeMenu((v) => !v); } : undefined}
+            onSelect={
+              menuImages.length > 0
+                ? () => {
+                    cancelSelectMenu();
+                    setSelectModeMenu((v) => !v);
+                  }
+                : undefined
+            }
           />
           {menuImages.length > 0 ? (
             <View style={styles.gridWrap}>
               <DraggableImageGrid
-                images={menuImages.map((i) => ({ id: i.id, image_url: i.image_url, image_order: i.image_order ?? 0 }))}
+                images={menuImages.map((i) => ({
+                  id: i.id,
+                  image_url: i.image_url,
+                  image_order: i.image_order ?? 0,
+                }))}
                 onReorder={reorderMenuPhotos}
                 onDelete={deleteMenuPhoto}
-                onImagePress={(id) => openViewer(menuUrls, menuImages.findIndex((i) => i.id === id), 'menu')}
+                onImagePress={(id) =>
+                  openViewer(
+                    menuUrls,
+                    menuImages.findIndex((i) => i.id === id),
+                    'menu'
+                  )
+                }
                 columns={gridColumns}
                 itemSize={gridItemSize}
                 gap={gridGap}
@@ -1118,19 +1393,45 @@ function BarVerificationDetailScreen() {
               />
             </View>
           ) : (
-            <AppText variant="caption" color={colors.text.muted} style={styles.emptyText}>Sin fotos de la carta</AppText>
+            <AppText variant="caption" color={colors.text.muted} style={styles.emptyText}>
+              Sin fotos de la carta
+            </AppText>
           )}
 
           {/* ── Información básica ── */}
           <SectionTitle title="Información básica" />
           <View style={styles.card}>
-            <FieldInput label="Nombre" value={editName} onChangeText={setEditName} placeholder="Nombre del bar" />
+            <FieldInput
+              label="Nombre"
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Nombre del bar"
+            />
             <Divider />
-            <FieldInput label="Descripción" value={editDescription} onChangeText={setEditDescription} placeholder="Sin descripción" multiline />
+            <FieldInput
+              label="Descripción"
+              value={editDescription}
+              onChangeText={setEditDescription}
+              placeholder="Sin descripción"
+              multiline
+            />
             <Divider />
-            <FieldInput label="Teléfono" value={editPhone} onChangeText={setEditPhone} placeholder="Sin teléfono" keyboardType="phone-pad" />
+            <FieldInput
+              label="Teléfono"
+              value={editPhone}
+              onChangeText={setEditPhone}
+              placeholder="Sin teléfono"
+              keyboardType="phone-pad"
+            />
             <Divider />
-            <FieldInput label="Web" value={editWebsite} onChangeText={setEditWebsite} placeholder="Sin web" keyboardType="url" autoCapitalize="none" />
+            <FieldInput
+              label="Web"
+              value={editWebsite}
+              onChangeText={setEditWebsite}
+              placeholder="Sin web"
+              keyboardType="url"
+              autoCapitalize="none"
+            />
             <Divider />
             <InfoReadOnly
               label="Dirección"
@@ -1139,7 +1440,11 @@ function BarVerificationDetailScreen() {
             <Divider />
             <InfoReadOnly
               label="Coordenadas"
-              value={bar.latitude && bar.longitude ? `${bar.latitude.toFixed(5)}, ${bar.longitude.toFixed(5)}` : '—'}
+              value={
+                bar.latitude && bar.longitude
+                  ? `${bar.latitude.toFixed(5)}, ${bar.longitude.toFixed(5)}`
+                  : '—'
+              }
             />
           </View>
 
@@ -1149,11 +1454,19 @@ function BarVerificationDetailScreen() {
             {allFeatures.map((item) => {
               const active = selectedFeatureIds.includes(item.id);
               return (
-                <Chip key={item.id} label={item.name} active={active} activeColor={colors.tags.feature} onPress={() => toggleId(item.id, setSelectedFeatureIds)} />
+                <Chip
+                  key={item.id}
+                  label={item.name}
+                  active={active}
+                  activeColor={colors.tags.feature}
+                  onPress={() => toggleId(item.id, setSelectedFeatureIds)}
+                />
               );
             })}
             {allFeatures.length === 0 && (
-              <AppText variant="caption" color={colors.text.muted}>{loadingExtras ? 'Cargando…' : 'Sin características'}</AppText>
+              <AppText variant="caption" color={colors.text.muted}>
+                {loadingExtras ? 'Cargando…' : 'Sin características'}
+              </AppText>
             )}
           </View>
 
@@ -1162,11 +1475,19 @@ function BarVerificationDetailScreen() {
             {allTvFeatures.map((item) => {
               const active = selectedTvFeatureIds.includes(item.id);
               return (
-                <Chip key={item.id} label={item.name} active={active} activeColor={colors.tags.tv} onPress={() => toggleId(item.id, setSelectedTvFeatureIds)} />
+                <Chip
+                  key={item.id}
+                  label={item.name}
+                  active={active}
+                  activeColor={colors.tags.tv}
+                  onPress={() => toggleId(item.id, setSelectedTvFeatureIds)}
+                />
               );
             })}
             {allTvFeatures.length === 0 && (
-              <AppText variant="caption" color={colors.text.muted}>{loadingExtras ? 'Cargando…' : 'Sin características'}</AppText>
+              <AppText variant="caption" color={colors.text.muted}>
+                {loadingExtras ? 'Cargando…' : 'Sin características'}
+              </AppText>
             )}
           </View>
 
@@ -1175,11 +1496,19 @@ function BarVerificationDetailScreen() {
             {allFoodTypes.map((item) => {
               const active = selectedFoodTypeIds.includes(item.id);
               return (
-                <Chip key={item.id} label={item.name} active={active} activeColor={colors.tags.food} onPress={() => toggleId(item.id, setSelectedFoodTypeIds)} />
+                <Chip
+                  key={item.id}
+                  label={item.name}
+                  active={active}
+                  activeColor={colors.tags.food}
+                  onPress={() => toggleId(item.id, setSelectedFoodTypeIds)}
+                />
               );
             })}
             {allFoodTypes.length === 0 && (
-              <AppText variant="caption" color={colors.text.muted}>{loadingExtras ? 'Cargando…' : 'Sin tipos'}</AppText>
+              <AppText variant="caption" color={colors.text.muted}>
+                {loadingExtras ? 'Cargando…' : 'Sin tipos'}
+              </AppText>
             )}
           </View>
 
@@ -1187,7 +1516,12 @@ function BarVerificationDetailScreen() {
           {bar.place_id && (
             <>
               <SectionTitle title="Reseñas de Google" count={googleReviews.length} />
-              <View style={{ paddingHorizontal: spacing.xl, marginBottom: spacing.xl, gap: spacing.sm }}>
+              <View
+                style={{
+                  paddingHorizontal: spacing.xl,
+                  marginBottom: spacing.xl,
+                  gap: spacing.sm,
+                }}>
                 {googleReviews.length === 0 && (
                   <AppText variant="caption" color={colors.text.muted}>
                     {loadingExtras ? 'Cargando…' : 'Este bar no tiene reseñas de Google'}
@@ -1224,8 +1558,7 @@ function BarVerificationDetailScreen() {
                         activeOpacity={0.8}
                         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         disabled={deletingReviewId === review.id}
-                        onPress={() => deleteGoogleReview(review.id)}
-                      >
+                        onPress={() => deleteGoogleReview(review.id)}>
                         {deletingReviewId === review.id ? (
                           <ActivityIndicator size="small" color={colors.status.error} />
                         ) : (
@@ -1234,7 +1567,11 @@ function BarVerificationDetailScreen() {
                       </TouchableOpacity>
                     </View>
                     {review.review_text && (
-                      <AppText variant="body" color={colors.text.secondary} style={{ marginTop: spacing.xs }} maxScale={1.0}>
+                      <AppText
+                        variant="body"
+                        color={colors.text.secondary}
+                        style={{ marginTop: spacing.xs }}
+                        maxScale={1.0}>
                         {review.review_text}
                       </AppText>
                     )}
@@ -1260,21 +1597,28 @@ function BarVerificationDetailScreen() {
               activeOpacity={0.85}
               style={[styles.rejectBtn, busy && styles.btnDisabled]}
               disabled={busy}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSheetMode('reject'); }}
-            >
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSheetMode('reject');
+              }}>
               <Ionicons name="close-circle" size={18} color="#FFFFFF" />
-              <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Rechazar</AppText>
+              <AppText variant="button" color="#FFFFFF" maxScale={1.0}>
+                Rechazar
+              </AppText>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.85}
               style={[styles.approveBtn, busy && styles.btnDisabled]}
               disabled={busy}
-              onPress={approve}
-            >
-              {actionLoading === 'approve' ? <ActivityIndicator color="#FFFFFF" /> : (
+              onPress={approve}>
+              {actionLoading === 'approve' ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
                 <>
                   <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-                  <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Aprobar</AppText>
+                  <AppText variant="button" color="#FFFFFF" maxScale={1.0}>
+                    Aprobar
+                  </AppText>
                 </>
               )}
             </TouchableOpacity>
@@ -1286,12 +1630,15 @@ function BarVerificationDetailScreen() {
               activeOpacity={0.85}
               style={[styles.reactivateBtn, busy && styles.btnDisabled]}
               disabled={busy}
-              onPress={reactivateBar}
-            >
-              {actionLoading === 'reactivate' ? <ActivityIndicator color="#FFFFFF" /> : (
+              onPress={reactivateBar}>
+              {actionLoading === 'reactivate' ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
                 <>
                   <Ionicons name="refresh" size={18} color="#FFFFFF" />
-                  <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Reactivar</AppText>
+                  <AppText variant="button" color="#FFFFFF" maxScale={1.0}>
+                    Reactivar
+                  </AppText>
                 </>
               )}
             </TouchableOpacity>
@@ -1302,9 +1649,13 @@ function BarVerificationDetailScreen() {
             activeOpacity={0.85}
             style={[styles.archiveBarBtn, busy && styles.btnDisabled]}
             disabled={busy}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSheetMode('archive'); }}
-          >
-            {actionLoading === 'archive' ? <ActivityIndicator color={colors.text.secondary} /> : (
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setSheetMode('archive');
+            }}>
+            {actionLoading === 'archive' ? (
+              <ActivityIndicator color={colors.text.secondary} />
+            ) : (
               <>
                 <Ionicons name="archive-outline" size={15} color={colors.text.secondary} />
                 <AppText variant="label" style={{ color: colors.text.secondary }} maxScale={1.0}>
@@ -1319,18 +1670,20 @@ function BarVerificationDetailScreen() {
             activeOpacity={0.85}
             style={[styles.deleteBarBtn, busy && styles.btnDisabled]}
             disabled={busy}
-            onPress={deleteBar}
-          >
-            {actionLoading === 'delete' ? <ActivityIndicator color={colors.status.error} /> : (
+            onPress={deleteBar}>
+            {actionLoading === 'delete' ? (
+              <ActivityIndicator color={colors.status.error} />
+            ) : (
               <>
                 <Ionicons name="trash-outline" size={15} color={colors.status.error} />
                 <AppText variant="label" style={{ color: colors.status.error }} maxScale={1.0}>
-                  {isScraped ? 'Descartar candidato definitivamente' : 'Eliminar bar definitivamente'}
+                  {isScraped
+                    ? 'Descartar candidato definitivamente'
+                    : 'Eliminar bar definitivamente'}
                 </AppText>
               </>
             )}
           </TouchableOpacity>
-
         </ScrollView>
 
         {/* ── Barra de selección ── */}
@@ -1339,10 +1692,11 @@ function BarVerificationDetailScreen() {
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.selectionCancelBtn}
-              onPress={selectModeBar ? cancelSelectBar : cancelSelectMenu}
-            >
+              onPress={selectModeBar ? cancelSelectBar : cancelSelectMenu}>
               <Ionicons name="close" size={16} color={colors.text.secondary} />
-              <AppText variant="label" color={colors.text.secondary} maxScale={1.0}>Cancelar</AppText>
+              <AppText variant="label" color={colors.text.secondary} maxScale={1.0}>
+                Cancelar
+              </AppText>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.85}
@@ -1351,14 +1705,16 @@ function BarVerificationDetailScreen() {
                 !(hasBarSelection || hasMenuSelection) && styles.btnDisabled,
               ]}
               disabled={!(hasBarSelection || hasMenuSelection)}
-              onPress={selectModeBar ? deleteSelectedBarPhotos : deleteSelectedMenuPhotos}
-            >
+              onPress={selectModeBar ? deleteSelectedBarPhotos : deleteSelectedMenuPhotos}>
               <Ionicons name="trash-outline" size={15} color="#FFFFFF" />
               <AppText variant="label" color="#FFFFFF" maxScale={1.0}>
                 {selectModeBar
-                  ? hasBarSelection ? `Eliminar ${selectedBarIds.size}` : 'Selecciona fotos'
-                  : hasMenuSelection ? `Eliminar ${selectedMenuIds.size}` : 'Selecciona imágenes'
-                }
+                  ? hasBarSelection
+                    ? `Eliminar ${selectedBarIds.size}`
+                    : 'Selecciona fotos'
+                  : hasMenuSelection
+                    ? `Eliminar ${selectedMenuIds.size}`
+                    : 'Selecciona imágenes'}
               </AppText>
             </TouchableOpacity>
           </View>
@@ -1371,12 +1727,15 @@ function BarVerificationDetailScreen() {
               activeOpacity={0.85}
               style={[styles.stickyBtn, savingInfo && styles.btnDisabled]}
               onPress={saveAll}
-              disabled={savingInfo}
-            >
-              {savingInfo ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
+              disabled={savingInfo}>
+              {savingInfo ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
                 <>
                   <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                  <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Guardar cambios</AppText>
+                  <AppText variant="button" color="#FFFFFF" maxScale={1.0}>
+                    Guardar cambios
+                  </AppText>
                 </>
               )}
             </TouchableOpacity>
@@ -1389,12 +1748,19 @@ function BarVerificationDetailScreen() {
         visible={sheetMode !== null}
         transparent
         animationType="slide"
-        onRequestClose={() => setSheetMode(null)}
-      >
-        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setSheetMode(null)} />
+        onRequestClose={() => setSheetMode(null)}>
+        <TouchableOpacity
+          style={styles.sheetOverlay}
+          activeOpacity={1}
+          onPress={() => setSheetMode(null)}
+        />
         <View style={styles.sheetContent}>
           <View style={styles.sheetHandle} />
-          <AppText variant="title" color={colors.text.primary} style={{ marginBottom: spacing.lg }} maxScale={1.0}>
+          <AppText
+            variant="title"
+            color={colors.text.primary}
+            style={{ marginBottom: spacing.lg }}
+            maxScale={1.0}>
             {sheetMode === 'archive' ? 'Nota de archivado (opcional)' : 'Motivo de rechazo'}
           </AppText>
           {sheetMode === 'reject' && (
@@ -1404,9 +1770,14 @@ function BarVerificationDetailScreen() {
                   key={p}
                   activeOpacity={0.8}
                   style={[styles.presetChip, rejectNotes === p && styles.presetChipActive]}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setRejectNotes(p); }}
-                >
-                  <AppText variant="caption" style={[styles.presetText, rejectNotes === p && styles.presetTextActive]} maxScale={1.0}>
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setRejectNotes(p);
+                  }}>
+                  <AppText
+                    variant="caption"
+                    style={[styles.presetText, rejectNotes === p && styles.presetTextActive]}
+                    maxScale={1.0}>
                     {p}
                   </AppText>
                 </TouchableOpacity>
@@ -1414,7 +1785,11 @@ function BarVerificationDetailScreen() {
             </View>
           )}
           <TextInput
-            placeholder={sheetMode === 'archive' ? 'Explica qué le falta a este bar (opcional)…' : 'O escribe un motivo personalizado…'}
+            placeholder={
+              sheetMode === 'archive'
+                ? 'Explica qué le falta a este bar (opcional)…'
+                : 'O escribe un motivo personalizado…'
+            }
             placeholderTextColor={colors.text.muted}
             value={rejectNotes}
             onChangeText={setRejectNotes}
@@ -1425,18 +1800,22 @@ function BarVerificationDetailScreen() {
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.cancelBtn}
-              onPress={() => setSheetMode(null)}
-            >
-              <AppText variant="button" color={colors.text.secondary} maxScale={1.0}>Cancelar</AppText>
+              onPress={() => setSheetMode(null)}>
+              <AppText variant="button" color={colors.text.secondary} maxScale={1.0}>
+                Cancelar
+              </AppText>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[styles.rejectConfirmBtn, (busy) && styles.btnDisabled]}
+              style={[styles.rejectConfirmBtn, busy && styles.btnDisabled]}
               disabled={busy}
-              onPress={sheetMode === 'archive' ? archiveBar : reject}
-            >
-              {(actionLoading === 'reject' || actionLoading === 'archive') ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
-                <AppText variant="button" color="#FFFFFF" maxScale={1.0}>{sheetMode === 'archive' ? 'Archivar' : 'Rechazar'}</AppText>
+              onPress={sheetMode === 'archive' ? archiveBar : reject}>
+              {actionLoading === 'reject' || actionLoading === 'archive' ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <AppText variant="button" color="#FFFFFF" maxScale={1.0}>
+                  {sheetMode === 'archive' ? 'Archivar' : 'Rechazar'}
+                </AppText>
               )}
             </TouchableOpacity>
           </View>
@@ -1448,7 +1827,9 @@ function BarVerificationDetailScreen() {
         imageIndex={viewerIndex}
         visible={viewerVisible}
         onRequestClose={() => setViewerVisible(false)}
-        onImageIndexChange={(i) => { currentViewerIdxRef.current = i; }}
+        onImageIndexChange={(i) => {
+          currentViewerIdxRef.current = i;
+        }}
         swipeToCloseEnabled
         doubleTapToZoomEnabled
         FooterComponent={({ imageIndex }) => (
@@ -1459,10 +1840,11 @@ function BarVerificationDetailScreen() {
             <TouchableOpacity
               style={styles.viewerDeleteBtn}
               onPress={deleteViewerPhoto}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-              <AppText variant="caption" color="#FFFFFF" maxScale={1.0}>Eliminar</AppText>
+              <AppText variant="caption" color="#FFFFFF" maxScale={1.0}>
+                Eliminar
+              </AppText>
             </TouchableOpacity>
           </View>
         )}
@@ -1474,7 +1856,14 @@ function BarVerificationDetailScreen() {
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function ScreenHeader({
-  title, onBack, onRefresh, refreshDisabled, statusLabel, statusColor, sourceLabel, confidence,
+  title,
+  onBack,
+  onRefresh,
+  refreshDisabled,
+  statusLabel,
+  statusColor,
+  sourceLabel,
+  confidence,
 }: {
   title: string;
   onBack: () => void;
@@ -1491,25 +1880,55 @@ function ScreenHeader({
         <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
       </TouchableOpacity>
       <View style={styles.headerCenter}>
-        <AppText variant="subtitle" color={colors.text.primary} numberOfLines={1} style={{ flexShrink: 1 }} maxScale={1.0}>
+        <AppText
+          variant="subtitle"
+          color={colors.text.primary}
+          numberOfLines={1}
+          style={{ flexShrink: 1 }}
+          maxScale={1.0}>
           {title}
         </AppText>
         {statusLabel && statusColor && (
-          <View style={[styles.statusPill, { backgroundColor: `${statusColor}22`, borderColor: `${statusColor}44` }]}>
+          <View
+            style={[
+              styles.statusPill,
+              { backgroundColor: `${statusColor}22`, borderColor: `${statusColor}44` },
+            ]}>
             <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <AppText variant="caption" style={{ color: statusColor, fontWeight: '800' }} maxScale={1.0}>{statusLabel}</AppText>
+            <AppText
+              variant="caption"
+              style={{ color: statusColor, fontWeight: '800' }}
+              maxScale={1.0}>
+              {statusLabel}
+            </AppText>
           </View>
         )}
         {sourceLabel && (
-          <View style={[styles.sourcePill, sourceLabel === 'Scraper' ? styles.sourcePillScraped : styles.sourcePillOwner]}>
-            <AppText variant="caption" style={{ color: sourceLabel === 'Scraper' ? colors.tags.tv : colors.brand.primary, fontWeight: '800' }} maxScale={1.0}>
+          <View
+            style={[
+              styles.sourcePill,
+              sourceLabel === 'Scraper' ? styles.sourcePillScraped : styles.sourcePillOwner,
+            ]}>
+            <AppText
+              variant="caption"
+              style={{
+                color: sourceLabel === 'Scraper' ? colors.tags.tv : colors.brand.primary,
+                fontWeight: '800',
+              }}
+              maxScale={1.0}>
               {sourceLabel}
             </AppText>
           </View>
         )}
         {confidence && (
           <View style={styles.sourcePill}>
-            <AppText variant="caption" color={colors.text.secondary} style={{ fontWeight: '700' }} maxScale={1.0}>{confidence}</AppText>
+            <AppText
+              variant="caption"
+              color={colors.text.secondary}
+              style={{ fontWeight: '700' }}
+              maxScale={1.0}>
+              {confidence}
+            </AppText>
           </View>
         )}
       </View>
@@ -1517,12 +1936,21 @@ function ScreenHeader({
         <TouchableOpacity onPress={onRefresh} style={styles.iconBtn} disabled={refreshDisabled}>
           <Ionicons name="refresh" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
-      ) : <View style={{ width: 32 }} />}
+      ) : (
+        <View style={{ width: 32 }} />
+      )}
     </View>
   );
 }
 
-function SectionTitle({ title, count, flagActive, onFlagToggle, selectActive, onSelect }: {
+function SectionTitle({
+  title,
+  count,
+  flagActive,
+  onFlagToggle,
+  selectActive,
+  onSelect,
+}: {
   title: string;
   count?: number;
   flagActive?: boolean;
@@ -1532,10 +1960,14 @@ function SectionTitle({ title, count, flagActive, onFlagToggle, selectActive, on
 }) {
   return (
     <View style={styles.sectionRow}>
-      <AppText variant="label" color={colors.text.primary} maxScale={1.0}>{title}</AppText>
+      <AppText variant="label" color={colors.text.primary} maxScale={1.0}>
+        {title}
+      </AppText>
       {count !== undefined && (
         <View style={styles.sectionBadge}>
-          <AppText variant="caption" color={colors.text.secondary} maxScale={1.0}>{count}</AppText>
+          <AppText variant="caption" color={colors.text.secondary} maxScale={1.0}>
+            {count}
+          </AppText>
         </View>
       )}
       {onFlagToggle && (
@@ -1543,8 +1975,7 @@ function SectionTitle({ title, count, flagActive, onFlagToggle, selectActive, on
           activeOpacity={0.8}
           style={[styles.flagChip, flagActive && styles.flagChipActive]}
           onPress={onFlagToggle}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-        >
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
           <Ionicons
             name={flagActive ? 'warning' : 'warning-outline'}
             size={12}
@@ -1552,9 +1983,11 @@ function SectionTitle({ title, count, flagActive, onFlagToggle, selectActive, on
           />
           <AppText
             variant="caption"
-            style={{ color: flagActive ? colors.status.warning : colors.text.muted, fontWeight: '700' }}
-            maxScale={1.0}
-          >
+            style={{
+              color: flagActive ? colors.status.warning : colors.text.muted,
+              fontWeight: '700',
+            }}
+            maxScale={1.0}>
             {flagActive ? 'Mejorar' : 'OK'}
           </AppText>
         </TouchableOpacity>
@@ -1564,8 +1997,7 @@ function SectionTitle({ title, count, flagActive, onFlagToggle, selectActive, on
           activeOpacity={0.8}
           style={[styles.selectChip, selectActive && styles.selectChipActive]}
           onPress={onSelect}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-        >
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
           <Ionicons
             name={selectActive ? 'close-circle-outline' : 'checkmark-circle-outline'}
             size={12}
@@ -1573,9 +2005,11 @@ function SectionTitle({ title, count, flagActive, onFlagToggle, selectActive, on
           />
           <AppText
             variant="caption"
-            style={{ color: selectActive ? colors.brand.primary : colors.text.muted, fontWeight: '700' }}
-            maxScale={1.0}
-          >
+            style={{
+              color: selectActive ? colors.brand.primary : colors.text.muted,
+              fontWeight: '700',
+            }}
+            maxScale={1.0}>
             {selectActive ? 'Cancelar' : 'Seleccionar'}
           </AppText>
         </TouchableOpacity>
@@ -1585,7 +2019,13 @@ function SectionTitle({ title, count, flagActive, onFlagToggle, selectActive, on
 }
 
 function FieldInput({
-  label, value, onChangeText, placeholder, multiline, keyboardType, autoCapitalize,
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  multiline,
+  keyboardType,
+  autoCapitalize,
 }: {
   label: string;
   value: string;
@@ -1597,7 +2037,13 @@ function FieldInput({
 }) {
   return (
     <View style={styles.fieldWrap}>
-      <AppText variant="caption" color={colors.text.secondary} style={{ fontWeight: '800' }} maxScale={1.0}>{label}</AppText>
+      <AppText
+        variant="caption"
+        color={colors.text.secondary}
+        style={{ fontWeight: '800' }}
+        maxScale={1.0}>
+        {label}
+      </AppText>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -1615,21 +2061,44 @@ function FieldInput({
 function InfoReadOnly({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.fieldWrap}>
-      <AppText variant="caption" color={colors.text.secondary} style={{ fontWeight: '800' }} maxScale={1.0}>{label}</AppText>
-      <AppText variant="body" color={colors.text.muted} maxScale={1.0}>{value}</AppText>
+      <AppText
+        variant="caption"
+        color={colors.text.secondary}
+        style={{ fontWeight: '800' }}
+        maxScale={1.0}>
+        {label}
+      </AppText>
+      <AppText variant="body" color={colors.text.muted} maxScale={1.0}>
+        {value}
+      </AppText>
     </View>
   );
 }
 
-function Chip({ label, active, activeColor, onPress }: { label: string; active: boolean; activeColor: string; onPress: () => void }) {
+function Chip({
+  label,
+  active,
+  activeColor,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  activeColor: string;
+  onPress: () => void;
+}) {
   return (
     <TouchableOpacity
       activeOpacity={0.8}
-      style={[styles.chip, active && { borderColor: activeColor, backgroundColor: `${activeColor}22` }]}
-      onPress={onPress}
-    >
+      style={[
+        styles.chip,
+        active && { borderColor: activeColor, backgroundColor: `${activeColor}22` },
+      ]}
+      onPress={onPress}>
       {active && <View style={[styles.chipDot, { backgroundColor: activeColor }]} />}
-      <AppText variant="caption" style={[styles.chipText, active && { color: activeColor, fontWeight: '800' }]} maxScale={1.0}>
+      <AppText
+        variant="caption"
+        style={[styles.chipText, active && { color: activeColor, fontWeight: '800' }]}
+        maxScale={1.0}>
         {label}
       </AppText>
     </TouchableOpacity>
@@ -1640,10 +2109,22 @@ function Chip({ label, active, activeColor, onPress }: { label: string; active: 
 // de la ficha del bar. Reutiliza la misma lógica (hook) y UI (selector) que
 // la pantalla completa /auto-broadcasts/[barId], pero sin navegar al guardar.
 function AutomationSection({
-  competitions, loadingComps, expanded, teamsCache,
-  selectedCompetitions, selectedTeams, hasAutomation, hasSelection, hasChanges,
-  toggleExpand, toggleCompetitionSelected, toggleTeamSelected,
-  save, clearAll, saving, clearingAll,
+  competitions,
+  loadingComps,
+  expanded,
+  teamsCache,
+  selectedCompetitions,
+  selectedTeams,
+  hasAutomation,
+  hasSelection,
+  hasChanges,
+  toggleExpand,
+  toggleCompetitionSelected,
+  toggleTeamSelected,
+  save,
+  clearAll,
+  saving,
+  clearingAll,
   deferred,
 }: ReturnType<typeof useAutoBroadcastPreferences> & {
   /** Candidato de scraper aún sin fila real en `bars`: la selección se
@@ -1654,7 +2135,10 @@ function AutomationSection({
 
   return (
     <View style={styles.automationCard}>
-      <TouchableOpacity onPress={() => setOpen((v) => !v)} style={styles.automationHeader} activeOpacity={0.8}>
+      <TouchableOpacity
+        onPress={() => setOpen((v) => !v)}
+        style={styles.automationHeader}
+        activeOpacity={0.8}>
         <View style={styles.automationIconWrap}>
           <Ionicons name="tv-outline" size={14} color={colors.status.boost} />
         </View>
@@ -1663,7 +2147,9 @@ function AutomationSection({
         </AppText>
         {hasAutomation && (
           <View style={styles.automationActiveBadge}>
-            <AppText variant="caption" color={colors.status.success} maxScale={1.0}>Activa</AppText>
+            <AppText variant="caption" color={colors.status.success} maxScale={1.0}>
+              Activa
+            </AppText>
           </View>
         )}
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.text.muted} />
@@ -1688,16 +2174,27 @@ function AutomationSection({
               />
               <View style={styles.automationActions}>
                 {hasAutomation && (
-                  <TouchableOpacity onPress={clearAll} disabled={clearingAll} style={styles.automationClearBtn}>
-                    {clearingAll ? <ActivityIndicator size="small" color={colors.status.error} /> : (
-                      <AppText variant="caption" color={colors.status.error} maxScale={1.0}>Eliminar automatizaciones</AppText>
+                  <TouchableOpacity
+                    onPress={clearAll}
+                    disabled={clearingAll}
+                    style={styles.automationClearBtn}>
+                    {clearingAll ? (
+                      <ActivityIndicator size="small" color={colors.status.error} />
+                    ) : (
+                      <AppText variant="caption" color={colors.status.error} maxScale={1.0}>
+                        Eliminar automatizaciones
+                      </AppText>
                     )}
                   </TouchableOpacity>
                 )}
                 {deferred ? (
                   hasSelection && (
                     <View style={styles.automationDeferredHint}>
-                      <Ionicons name="checkmark-circle-outline" size={14} color={colors.status.success} />
+                      <Ionicons
+                        name="checkmark-circle-outline"
+                        size={14}
+                        color={colors.status.success}
+                      />
                       <AppText variant="caption" color={colors.text.secondary} maxScale={1.0}>
                         Se guardará al aprobar este bar
                       </AppText>
@@ -1707,10 +2204,16 @@ function AutomationSection({
                   <TouchableOpacity
                     onPress={save}
                     disabled={!hasChanges || saving}
-                    style={[styles.automationSaveBtn, (!hasChanges || saving) && styles.btnDisabled]}
-                  >
-                    {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
-                      <AppText variant="button" color="#FFFFFF" maxScale={1.0}>Guardar preferencias</AppText>
+                    style={[
+                      styles.automationSaveBtn,
+                      (!hasChanges || saving) && styles.btnDisabled,
+                    ]}>
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <AppText variant="button" color="#FFFFFF" maxScale={1.0}>
+                        Guardar preferencias
+                      </AppText>
                     )}
                   </TouchableOpacity>
                 )}
@@ -1738,20 +2241,36 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   backBtn: { padding: spacing.xs },
-  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  headerCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
   iconBtn: { padding: spacing.xs + 2 },
   statusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: spacing.sm, paddingVertical: 3,
-    borderRadius: radius.pill, borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    borderWidth: 1,
   },
   statusDot: { width: 6, height: 6, borderRadius: radius.round },
   sourcePill: {
-    paddingHorizontal: spacing.sm, paddingVertical: 3,
-    borderRadius: radius.pill, borderWidth: 1,
-    borderColor: colors.border.subtle, backgroundColor: colors.bg.elevated,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.elevated,
   },
-  sourcePillOwner: { borderColor: `${colors.brand.primary}44`, backgroundColor: `${colors.brand.primary}18` },
+  sourcePillOwner: {
+    borderColor: `${colors.brand.primary}44`,
+    backgroundColor: `${colors.brand.primary}18`,
+  },
   sourcePillScraped: { borderColor: `${colors.tags.tv}44`, backgroundColor: `${colors.tags.tv}18` },
 
   // Content
@@ -1767,38 +2286,62 @@ const styles = StyleSheet.create({
   },
   heroImage: { width: '100%', height: 240, backgroundColor: colors.bg.elevated },
   heroOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     backgroundColor: 'rgba(0,0,0,0.52)',
     gap: spacing.sm,
   },
   heroStatusBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
     borderRadius: radius.pill,
   },
   heroDot: { width: 6, height: 6, borderRadius: radius.round },
   heroFallback: {
-    marginHorizontal: spacing.xl, marginBottom: spacing.xl,
-    height: 140, borderRadius: radius.xxl,
-    backgroundColor: colors.bg.elevated, alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
+    height: 140,
+    borderRadius: radius.xxl,
+    backgroundColor: colors.bg.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
 
   // Section title
   sectionRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginBottom: spacing.sm, paddingHorizontal: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xl,
   },
   sectionBadge: {
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
-    borderRadius: radius.pill, backgroundColor: colors.bg.elevated,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.bg.elevated,
   },
   flagChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingVertical: 3, paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill, borderWidth: 1,
-    borderColor: colors.border.subtle, backgroundColor: colors.bg.elevated,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 3,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.elevated,
     marginLeft: 'auto' as any,
   },
   flagChipActive: {
@@ -1812,10 +2355,15 @@ const styles = StyleSheet.create({
 
   // Select chip in SectionTitle
   selectChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingVertical: 3, paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill, borderWidth: 1,
-    borderColor: colors.border.subtle, backgroundColor: colors.bg.elevated,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 3,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.elevated,
   },
   selectChipActive: {
     borderColor: `${colors.brand.primary}60`,
@@ -1824,113 +2372,197 @@ const styles = StyleSheet.create({
 
   // Selection action bar
   selectionBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', gap: spacing.sm,
-    paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, paddingTop: spacing.sm,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
     backgroundColor: colors.bg.primary,
-    borderTopWidth: 1, borderTopColor: colors.border.subtle,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
   },
   selectionCancelBtn: {
-    flex: 1, height: 48, borderRadius: radius.xl, borderWidth: 1,
-    borderColor: colors.border.subtle, backgroundColor: colors.bg.elevated,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    flex: 1,
+    height: 48,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.elevated,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
   },
   selectionDeleteBtn: {
-    flex: 1, height: 48, borderRadius: radius.xl,
+    flex: 1,
+    height: 48,
+    borderRadius: radius.xl,
     backgroundColor: colors.status.error,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
     ...shadows.sm,
   },
 
   // Info card
   card: {
-    marginHorizontal: spacing.xl, marginBottom: spacing.xl,
-    backgroundColor: colors.bg.card, borderRadius: radius.xxl,
-    borderWidth: 1, borderColor: colors.border.subtle,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.xxl,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
     paddingVertical: spacing.xs,
     ...shadows.sm,
   },
   fieldWrap: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
   fieldInput: {
-    color: colors.text.primary, fontSize: 14,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    color: colors.text.primary,
+    fontSize: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.bg.input,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border.subtle,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
     minHeight: 40,
   },
   fieldInputMulti: { minHeight: 72, textAlignVertical: 'top' },
 
   // Chips
-  chipGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingHorizontal: spacing.xl },
+  chipGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingVertical: spacing.xs + 2, paddingHorizontal: spacing.md,
-    borderRadius: radius.pill, borderWidth: 1,
-    borderColor: colors.border.subtle, backgroundColor: colors.bg.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.card,
   },
   chipDot: { width: 5, height: 5, borderRadius: radius.round },
   chipText: { color: colors.text.muted, fontWeight: '600' },
 
   // Reseñas de Google
   reviewCard: {
-    backgroundColor: colors.bg.card, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
     padding: spacing.md,
   },
   reviewHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   reviewMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
   reviewStars: { flexDirection: 'row', gap: 1 },
   reviewOwnerAnswer: {
-    marginTop: spacing.xs, paddingTop: spacing.xs,
-    borderTopWidth: 1, borderTopColor: colors.border.subtle,
+    marginTop: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
   },
 
   // Sticky save bar
   stickyBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, paddingTop: spacing.sm,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
     backgroundColor: colors.bg.primary,
-    borderTopWidth: 1, borderTopColor: colors.border.subtle,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
   },
   stickyBtn: {
-    height: 52, borderRadius: radius.pill,
+    height: 52,
+    borderRadius: radius.pill,
     backgroundColor: colors.brand.primary,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     ...shadows.md,
   },
 
   // Action buttons
-  actionsRow: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.xl, marginBottom: spacing.sm },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.sm,
+  },
   approveBtn: {
-    flex: 1, height: 50, borderRadius: radius.xl,
+    flex: 1,
+    height: 50,
+    borderRadius: radius.xl,
     backgroundColor: colors.status.success,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     ...shadows.sm,
   },
   rejectBtn: {
-    flex: 1, height: 50, borderRadius: radius.xl,
+    flex: 1,
+    height: 50,
+    borderRadius: radius.xl,
     backgroundColor: colors.status.error,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     ...shadows.sm,
   },
   reactivateBtn: {
-    height: 50, marginHorizontal: spacing.xl, marginTop: spacing.sm,
+    height: 50,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.sm,
     borderRadius: radius.xl,
     backgroundColor: colors.status.boost,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     ...shadows.sm,
   },
   archiveBarBtn: {
-    height: 46, marginHorizontal: spacing.xl, marginTop: spacing.sm,
-    borderRadius: radius.xl, borderWidth: 1,
-    borderColor: colors.border.subtle, backgroundColor: colors.bg.elevated,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    height: 46,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.sm,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.elevated,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
   deleteBarBtn: {
-    height: 46, marginHorizontal: spacing.xl, marginTop: spacing.sm,
-    borderRadius: radius.xl, borderWidth: 1,
-    borderColor: `${colors.status.error}40`, backgroundColor: `${colors.status.error}0A`,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    height: 46,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.sm,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: `${colors.status.error}40`,
+    backgroundColor: `${colors.status.error}0A`,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
   btnDisabled: { opacity: 0.55 },
 
@@ -1938,93 +2570,150 @@ const styles = StyleSheet.create({
   // redondeado — cabecera llamativa (icono + insignia), cuerpo minimalista
   // (filas separadas por líneas finas, sin tarjetas anidadas).
   automationCard: {
-    marginHorizontal: spacing.xl, marginBottom: spacing.xxl,
-    backgroundColor: colors.bg.elevated, borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border.subtle,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xxl,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
     overflow: 'hidden',
   },
   automationHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   automationIconWrap: {
-    width: 26, height: 26, borderRadius: radius.round,
+    width: 26,
+    height: 26,
+    borderRadius: radius.round,
     backgroundColor: `${colors.status.boost}1f`,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   automationActiveBadge: {
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
     borderRadius: radius.pill,
     backgroundColor: `${colors.status.success}1f`,
   },
   automationBody: {
-    paddingHorizontal: spacing.lg, paddingBottom: spacing.lg,
-    borderTopWidth: 1, borderTopColor: colors.border.subtle,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
   },
   automationDeferredHint: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    alignSelf: 'flex-start', paddingVertical: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
   },
   automationActions: {
-    marginTop: spacing.xs, gap: spacing.sm,
+    marginTop: spacing.xs,
+    gap: spacing.sm,
   },
   automationClearBtn: {
-    alignSelf: 'flex-start', paddingVertical: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
   },
   automationSaveBtn: {
-    height: 44, borderRadius: radius.lg,
+    height: 44,
+    borderRadius: radius.lg,
     backgroundColor: colors.status.success,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
 
   // Viewer footer
   viewerFooter: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl, paddingTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxxl,
+    paddingTop: spacing.lg,
   },
   viewerDeleteBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill, backgroundColor: `${colors.status.error}CC`,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    backgroundColor: `${colors.status.error}CC`,
   },
 
   // Bottom sheet (rechazar)
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   sheetContent: {
     backgroundColor: colors.bg.card,
-    borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl,
-    paddingHorizontal: spacing.xl, paddingBottom: 40, paddingTop: spacing.lg,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 40,
+    paddingTop: spacing.lg,
   },
   sheetHandle: {
-    width: 36, height: 4, borderRadius: radius.pill,
-    backgroundColor: colors.bg.elevated, alignSelf: 'center', marginBottom: spacing.xl,
+    width: 36,
+    height: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.bg.elevated,
+    alignSelf: 'center',
+    marginBottom: spacing.xl,
   },
   presetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   presetChip: {
-    paddingVertical: spacing.xs + 1, paddingHorizontal: spacing.md,
-    borderRadius: radius.pill, borderWidth: 1,
-    borderColor: colors.border.subtle, backgroundColor: colors.bg.elevated,
+    paddingVertical: spacing.xs + 1,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.elevated,
   },
-  presetChipActive: { borderColor: colors.status.error, backgroundColor: `${colors.status.error}18` },
+  presetChipActive: {
+    borderColor: colors.status.error,
+    backgroundColor: `${colors.status.error}18`,
+  },
   presetText: { color: colors.text.secondary, fontWeight: '700' },
   presetTextActive: { color: colors.status.error },
   rejectInput: {
-    minHeight: 80, borderRadius: radius.lg, borderWidth: 1,
-    borderColor: colors.border.subtle, backgroundColor: colors.bg.elevated,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    color: colors.text.primary, fontSize: 14, lineHeight: 20, textAlignVertical: 'top',
+    minHeight: 80,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.elevated,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    color: colors.text.primary,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlignVertical: 'top',
     marginBottom: spacing.lg,
   },
   sheetButtons: { flexDirection: 'row', gap: spacing.md },
   cancelBtn: {
-    flex: 1, height: 48, borderRadius: radius.xl, borderWidth: 1,
-    borderColor: colors.border.subtle, backgroundColor: colors.bg.elevated,
-    alignItems: 'center', justifyContent: 'center',
+    flex: 1,
+    height: 48,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rejectConfirmBtn: {
-    flex: 1, height: 48, borderRadius: radius.xl,
+    flex: 1,
+    height: 48,
+    borderRadius: radius.xl,
     backgroundColor: colors.status.error,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
     ...shadows.sm,
   },
 });

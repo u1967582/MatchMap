@@ -4,7 +4,13 @@ import Svg, { Defs, LinearGradient, Stop, Path, Line, Circle } from 'react-nativ
 import AppText from '../primitives/AppText';
 import { colors } from '../tokens/colors';
 import { spacing } from '../tokens/spacing';
-import { computeChartDomain, scalePoints, buildLinePath, buildAreaPath, pickAxisTicks } from './chartMath';
+import {
+  computeChartDomain,
+  scalePoints,
+  buildLinePath,
+  buildAreaPath,
+  pickAxisTicks,
+} from './chartMath';
 
 export interface StatsAreaChartPoint {
   day: string;
@@ -41,7 +47,9 @@ export default function StatsAreaChart({
   if (!hasData) {
     return (
       <View style={[styles.emptyContainer, { height }]} onLayout={handleLayout}>
-        <AppText variant="caption" align="center">{emptyLabel}</AppText>
+        <AppText variant="caption" align="center">
+          {emptyLabel}
+        </AppText>
       </View>
     );
   }
@@ -66,9 +74,23 @@ export default function StatsAreaChart({
                 <Stop offset="1" stopColor={color} stopOpacity={0} />
               </LinearGradient>
             </Defs>
-            <Line x1={0} y1={height - 0.5} x2={width} y2={height - 0.5} stroke={colors.border.subtle} strokeWidth={1} />
+            <Line
+              x1={0}
+              y1={height - 0.5}
+              x2={width}
+              y2={height - 0.5}
+              stroke={colors.border.subtle}
+              strokeWidth={1}
+            />
             <Path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
-            <Path d={linePath} stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            <Path
+              d={linePath}
+              stroke={color}
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
             {lastPoint && <Circle cx={lastPoint.x} cy={lastPoint.y} r={4} fill={color} />}
           </Svg>
           <View style={styles.axisRow}>
@@ -80,10 +102,10 @@ export default function StatsAreaChart({
           </View>
           <View style={styles.footerRow}>
             <AppText variant="caption">Máximo del período</AppText>
-            <AppText variant="label" color={color}>{formatValue(max)}</AppText>
-            {lastValue > 0 && (
-              <AppText variant="caption">· hoy: {formatValue(lastValue)}</AppText>
-            )}
+            <AppText variant="label" color={color}>
+              {formatValue(max)}
+            </AppText>
+            {lastValue > 0 && <AppText variant="caption">· hoy: {formatValue(lastValue)}</AppText>}
           </View>
         </>
       )}

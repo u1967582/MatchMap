@@ -10,7 +10,12 @@ const OWNER = {
   is_anonymous: false,
 };
 
-const PRE_BAR = { converted_bar_id: null, status: 'pre_registered', name: 'Bar', email: 'dueno@bar.com ' };
+const PRE_BAR = {
+  converted_bar_id: null,
+  status: 'pre_registered',
+  name: 'Bar',
+  email: 'dueno@bar.com ',
+};
 
 function setup({
   user = OWNER as any,
@@ -52,8 +57,11 @@ Deno.test('extractBarId acepta string, objetos con distintas claves o null', () 
 
 Deno.test('toBucketPath convierte URLs públicas en paths del bucket', () => {
   assertEquals(
-    toBucketPath('https://x.supabase.co/storage/v1/object/public/bar-images/pre/1/a.jpg', 'bar-images'),
-    'pre/1/a.jpg',
+    toBucketPath(
+      'https://x.supabase.co/storage/v1/object/public/bar-images/pre/1/a.jpg',
+      'bar-images'
+    ),
+    'pre/1/a.jpg'
   );
   assertEquals(toBucketPath('pre/1/a.jpg', 'bar-images'), 'pre/1/a.jpg');
 });
@@ -79,18 +87,34 @@ Deno.test('400 (no 500) con body malformado o parámetros que no son string', as
 
 Deno.test('no filtra mensajes internos de la BD ni del RPC al cliente', async () => {
   const notFound = setup({
-    tables: { auto_pre_register_bars: () => ({ data: null, error: { message: 'JSON object requested, multiple (or no) rows returned' } }) },
+    tables: {
+      auto_pre_register_bars: () => ({
+        data: null,
+        error: { message: 'JSON object requested, multiple (or no) rows returned' },
+      }),
+    },
   });
   const r1 = await quiet(() => notFound.handler(req(BODY)));
   assertEquals(r1.status, 400);
   assertEquals(JSON.stringify(await r1.json()).includes('rows returned'), false);
 
-  const rpcFail = setup({ rpc: () => ({ data: null, error: { message: 'violates foreign key constraint "bars_owner_id_fkey"' } }) });
+  const rpcFail = setup({
+    rpc: () => ({
+      data: null,
+      error: { message: 'violates foreign key constraint "bars_owner_id_fkey"' },
+    }),
+  });
   const r2 = await quiet(() => rpcFail.handler(req(BODY)));
   assertEquals(r2.status, 400);
   assertEquals(JSON.stringify(await r2.json()).includes('constraint'), false);
 
-  const crash = setup({ tables: { auto_pre_register_bars: () => { throw new Error('stack interno'); } } });
+  const crash = setup({
+    tables: {
+      auto_pre_register_bars: () => {
+        throw new Error('stack interno');
+      },
+    },
+  });
   const r3 = await quiet(() => crash.handler(req(BODY)));
   assertEquals(r3.status, 500);
   assertEquals(await r3.json(), { error: 'Unexpected error' });
@@ -98,8 +122,16 @@ Deno.test('no filtra mensajes internos de la BD ni del RPC al cliente', async ()
 
 Deno.test('401 sin token, con usuario anónimo o con email sin confirmar', async () => {
   assertEquals((await quiet(() => setup().handler(req(BODY, null)))).status, 401);
-  assertEquals((await quiet(() => setup({ user: { ...OWNER, is_anonymous: true } }).handler(req(BODY)))).status, 401);
-  assertEquals((await quiet(() => setup({ user: { ...OWNER, email_confirmed_at: null } }).handler(req(BODY)))).status, 401);
+  assertEquals(
+    (await quiet(() => setup({ user: { ...OWNER, is_anonymous: true } }).handler(req(BODY))))
+      .status,
+    401
+  );
+  assertEquals(
+    (await quiet(() => setup({ user: { ...OWNER, email_confirmed_at: null } }).handler(req(BODY))))
+      .status,
+    401
+  );
 });
 
 Deno.test('403 si ownerId no es el usuario autenticado', async () => {
@@ -124,23 +156,40 @@ Deno.test('promoción completa: crea el bar y migra imágenes del bar y del men�
   const { handler, rpcCalls, calls, storageCalls } = setup({
     tables: {
       auto_pre_register_bar_images: () => ({
-        data: [{ file_path: 'https://x/storage/v1/object/public/bar-images/pre/1/a.jpg', image_order: 1, description: 'bar' }],
+        data: [
+          {
+            file_path: 'https://x/storage/v1/object/public/bar-images/pre/1/a.jpg',
+            image_order: 1,
+            description: 'bar',
+          },
+        ],
       }),
       auto_pre_register_bar_menus: () => ({ data: [{ file_path: 'pre/1/m.jpg', image_order: 1 }] }),
     },
   });
   const res = await quiet(() => handler(req(BODY)));
   assertEquals(res.status, 200);
-  assertEquals(await res.json(), { success: true, barId: 'bar-new', barImagesCount: 1, menuImagesCount: 1 });
+  assertEquals(await res.json(), {
+    success: true,
+    barId: 'bar-new',
+    barImagesCount: 1,
+    menuImagesCount: 1,
+  });
 
-  assertEquals(rpcCalls[0], { fn: 'promote_pre_registered_bar', args: { p_pre_bar_id: 'pre-1', p_owner_id: 'owner-1' } });
+  assertEquals(rpcCalls[0], {
+    fn: 'promote_pre_registered_bar',
+    args: { p_pre_bar_id: 'pre-1', p_owner_id: 'owner-1' },
+  });
   const moves = storageCalls.filter((c) => c.method === 'move').map((c) => c.args);
   assertEquals(moves, [
     ['pre/1/a.jpg', 'bar-new/bar/a.jpg'],
     ['pre/1/m.jpg', 'bar-new/menu/m.jpg'],
   ]);
   const imgInsert = calls.find((c) => c.table === 'bar_images' && op(c, 'insert'))!;
-  assertEquals(op(imgInsert, 'insert')!.args[0].image_url, 'https://test.supabase.co/storage/v1/object/public/bar-images/bar-new/bar/a.jpg');
+  assertEquals(
+    op(imgInsert, 'insert')!.args[0].image_url,
+    'https://test.supabase.co/storage/v1/object/public/bar-images/bar-new/bar/a.jpg'
+  );
 });
 
 Deno.test('500 si el RPC no devuelve un barId válido', async () => {
@@ -176,16 +225,21 @@ Deno.test('bar ya convertido con imágenes: no hace nada', async () => {
   assertEquals(storageCalls.filter((c) => c.method === 'move').length, 0);
 });
 
-Deno.test('bar convertido sin imágenes: reanuda la migración sin volver a crear el bar', async () => {
-  const { handler, rpcCalls } = setup({
-    preBar: { ...PRE_BAR, converted_bar_id: 'bar-9', status: 'converted' },
-    tables: {
-      auto_pre_register_bar_images: () => ({ data: [{ file_path: 'pre/1/a.jpg', image_order: 1 }] }),
-    },
-  });
-  const res = await quiet(() => handler(req(BODY)));
-  const body = await res.json();
-  assertEquals(body.barId, 'bar-9');
-  assertEquals(body.barImagesCount, 1);
-  assertEquals(rpcCalls.length, 0);
-});
+Deno.test(
+  'bar convertido sin imágenes: reanuda la migración sin volver a crear el bar',
+  async () => {
+    const { handler, rpcCalls } = setup({
+      preBar: { ...PRE_BAR, converted_bar_id: 'bar-9', status: 'converted' },
+      tables: {
+        auto_pre_register_bar_images: () => ({
+          data: [{ file_path: 'pre/1/a.jpg', image_order: 1 }],
+        }),
+      },
+    });
+    const res = await quiet(() => handler(req(BODY)));
+    const body = await res.json();
+    assertEquals(body.barId, 'bar-9');
+    assertEquals(body.barImagesCount, 1);
+    assertEquals(rpcCalls.length, 0);
+  }
+);

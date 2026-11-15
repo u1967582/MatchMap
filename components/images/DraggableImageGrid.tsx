@@ -66,7 +66,7 @@ const DraggableImageGrid: React.FC<DraggableImageGridProps> = ({
   const handleReorder = (draggedId: string, newOrder: number) => {
     try {
       const reorderedImages = [...images];
-      const draggedIndex = images.findIndex(img => img.id === draggedId);
+      const draggedIndex = images.findIndex((img) => img.id === draggedId);
 
       // Validate draggedIndex
       if (draggedIndex === -1) {
@@ -132,9 +132,12 @@ const DraggableImageGrid: React.FC<DraggableImageGridProps> = ({
                   height: itemSize,
                 },
               ]}
-              onPress={() => onToggleSelect?.(image.id)}
-            >
-              <Image source={{ uri: image.image_url }} style={styles.selectImage} resizeMode="cover" />
+              onPress={() => onToggleSelect?.(image.id)}>
+              <Image
+                source={{ uri: image.image_url }}
+                style={styles.selectImage}
+                resizeMode="cover"
+              />
               {selected && (
                 <View style={styles.selectOverlay}>
                   <Ionicons name="checkmark-circle" size={28} color="#FFFFFF" />

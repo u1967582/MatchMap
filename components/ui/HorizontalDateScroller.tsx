@@ -30,13 +30,13 @@ export default function HorizontalDateScroller({
   const generateDates = () => {
     const dates = [];
     const startDate = new Date(minimumDate);
-    
+
     for (let i = 0; i < daysToShow; i++) {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + i);
       dates.push(date);
     }
-    
+
     return dates;
   };
 
@@ -50,7 +50,20 @@ export default function HorizontalDateScroller({
 
   // Format month (short)
   const formatMonth = (date: Date) => {
-    const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+    const months = [
+      'ENE',
+      'FEB',
+      'MAR',
+      'ABR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AGO',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DIC',
+    ];
     return months[date.getMonth()];
   };
 
@@ -67,10 +80,10 @@ export default function HorizontalDateScroller({
 
   // Scroll to selected date on mount
   useEffect(() => {
-    const selectedIndex = dates.findIndex(date => isSelected(date));
+    const selectedIndex = dates.findIndex((date) => isSelected(date));
     if (selectedIndex !== -1 && scrollViewRef.current) {
       // Scroll to center the selected date (56px width + 8px gap)
-      const offset = Math.max(0, (selectedIndex * 64) - (width / 2) + 32);
+      const offset = Math.max(0, selectedIndex * 64 - width / 2 + 32);
       setTimeout(() => {
         scrollViewRef.current?.scrollTo({ x: offset, animated: true });
       }, 100);
@@ -88,8 +101,7 @@ export default function HorizontalDateScroller({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        decelerationRate="fast"
-      >
+        decelerationRate="fast">
         {dates.map((date, index) => {
           const selected = isSelected(date);
           const today = isToday(date);
@@ -97,34 +109,33 @@ export default function HorizontalDateScroller({
           return (
             <TouchableOpacity
               key={index}
-              style={[
-                styles.dateItem,
-                selected && styles.dateItemSelected,
-              ]}
+              style={[styles.dateItem, selected && styles.dateItemSelected]}
               onPress={() => handleDatePress(date)}
-              activeOpacity={0.7}
-            >
-              <AppText style={[
-                styles.dayOfWeek,
-                selected && styles.dayOfWeekSelected,
-                today && !selected && styles.dayOfWeekToday,
-              ]}>
+              activeOpacity={0.7}>
+              <AppText
+                style={[
+                  styles.dayOfWeek,
+                  selected && styles.dayOfWeekSelected,
+                  today && !selected && styles.dayOfWeekToday,
+                ]}>
                 {formatDayOfWeek(date)}
               </AppText>
-              
-              <AppText style={[
-                styles.dayNumber,
-                selected && styles.dayNumberSelected,
-                today && !selected && styles.dayNumberToday,
-              ]}>
+
+              <AppText
+                style={[
+                  styles.dayNumber,
+                  selected && styles.dayNumberSelected,
+                  today && !selected && styles.dayNumberToday,
+                ]}>
                 {date.getDate()}
               </AppText>
-              
-              <AppText style={[
-                styles.month,
-                selected && styles.monthSelected,
-                today && !selected && styles.monthToday,
-              ]}>
+
+              <AppText
+                style={[
+                  styles.month,
+                  selected && styles.monthSelected,
+                  today && !selected && styles.monthToday,
+                ]}>
                 {formatMonth(date)}
               </AppText>
             </TouchableOpacity>
@@ -197,4 +208,3 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
   },
 });
-

@@ -17,5 +17,3 @@ const Gradient: React.FC<Props> = ({ colors, style, children }) => {
 };
 
 export default Gradient;
-
-

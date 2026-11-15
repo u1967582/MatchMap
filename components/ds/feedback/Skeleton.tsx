@@ -20,20 +20,11 @@ interface SkeletonBoxProps {
   style?: ViewStyle;
 }
 
-export function SkeletonBox({
-  width,
-  height,
-  borderRadius = radius.md,
-  style,
-}: SkeletonBoxProps) {
+export function SkeletonBox({ width, height, borderRadius = radius.md, style }: SkeletonBoxProps) {
   const opacity = useSharedValue(0.3);
 
   useEffect(() => {
-    opacity.value = withRepeat(
-      withTiming(0.7, timings.pulse),
-      -1,
-      true
-    );
+    opacity.value = withRepeat(withTiming(0.7, timings.pulse), -1, true);
   }, [opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -260,8 +251,18 @@ export function EditBarSkeleton() {
           <SkeletonBox width="45%" height={16} style={{ marginBottom: spacing.sm }} />
           <Animated.View style={styles.imagesRow}>
             <SkeletonBox width={100} height={100} borderRadius={radius.md} />
-            <SkeletonBox width={100} height={100} borderRadius={radius.md} style={{ marginLeft: spacing.md }} />
-            <SkeletonBox width={100} height={100} borderRadius={radius.md} style={{ marginLeft: spacing.md }} />
+            <SkeletonBox
+              width={100}
+              height={100}
+              borderRadius={radius.md}
+              style={{ marginLeft: spacing.md }}
+            />
+            <SkeletonBox
+              width={100}
+              height={100}
+              borderRadius={radius.md}
+              style={{ marginLeft: spacing.md }}
+            />
           </Animated.View>
         </Animated.View>
 
@@ -270,8 +271,18 @@ export function EditBarSkeleton() {
           <SkeletonBox width="40%" height={16} style={{ marginBottom: spacing.sm }} />
           <Animated.View style={styles.tagsRow}>
             <SkeletonBox width={90} height={32} borderRadius={radius.pill} />
-            <SkeletonBox width={110} height={32} borderRadius={radius.pill} style={{ marginLeft: spacing.sm }} />
-            <SkeletonBox width={85} height={32} borderRadius={radius.pill} style={{ marginLeft: spacing.sm }} />
+            <SkeletonBox
+              width={110}
+              height={32}
+              borderRadius={radius.pill}
+              style={{ marginLeft: spacing.sm }}
+            />
+            <SkeletonBox
+              width={85}
+              height={32}
+              borderRadius={radius.pill}
+              style={{ marginLeft: spacing.sm }}
+            />
           </Animated.View>
         </Animated.View>
       </Animated.View>
@@ -317,8 +328,18 @@ export function BarProfileSkeleton() {
       <Animated.View style={styles.barTagsSection}>
         <Animated.View style={styles.tagsRow}>
           <SkeletonBox width={100} height={32} borderRadius={radius.pill} />
-          <SkeletonBox width={120} height={32} borderRadius={radius.pill} style={{ marginLeft: spacing.sm }} />
-          <SkeletonBox width={90} height={32} borderRadius={radius.pill} style={{ marginLeft: spacing.sm }} />
+          <SkeletonBox
+            width={120}
+            height={32}
+            borderRadius={radius.pill}
+            style={{ marginLeft: spacing.sm }}
+          />
+          <SkeletonBox
+            width={90}
+            height={32}
+            borderRadius={radius.pill}
+            style={{ marginLeft: spacing.sm }}
+          />
         </Animated.View>
       </Animated.View>
 
@@ -331,7 +352,11 @@ export function BarProfileSkeleton() {
             <SkeletonBox width={40} height={20} style={{ marginHorizontal: spacing.lg }} />
             <SkeletonBox width={64} height={64} borderRadius={radius.md} />
           </Animated.View>
-          <SkeletonBox width="60%" height={16} style={{ marginTop: spacing.md, alignSelf: 'center' }} />
+          <SkeletonBox
+            width="60%"
+            height={16}
+            style={{ marginTop: spacing.md, alignSelf: 'center' }}
+          />
         </Animated.View>
       </Animated.View>
 

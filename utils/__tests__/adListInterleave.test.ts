@@ -33,7 +33,15 @@ describe('interleaveWithAds', () => {
   });
 
   it('inserta varios anuncios intercalados para listas más largas que el intervalo', () => {
-    const items = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'f' }, { id: 'g' }];
+    const items = [
+      { id: 'a' },
+      { id: 'b' },
+      { id: 'c' },
+      { id: 'd' },
+      { id: 'e' },
+      { id: 'f' },
+      { id: 'g' },
+    ];
 
     const result = interleaveWithAds(items, getKey, 3);
 

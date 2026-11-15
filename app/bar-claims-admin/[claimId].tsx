@@ -27,7 +27,13 @@ type ClaimDetail = {
   document_path: string | null;
   status: string;
   created_at: string;
-  bars: { name: string; address?: string | null; city?: string | null; phone?: string | null; owner_id: string | null } | null;
+  bars: {
+    name: string;
+    address?: string | null;
+    city?: string | null;
+    phone?: string | null;
+    owner_id: string | null;
+  } | null;
 };
 
 function BarClaimDetailScreen() {
@@ -48,7 +54,9 @@ function BarClaimDetailScreen() {
     try {
       const { data, error } = await supabase
         .from('bar_claims')
-        .select('id, bar_id, contact_name, contact_phone, message, document_path, status, created_at, bars(name, address, city, phone, owner_id)')
+        .select(
+          'id, bar_id, contact_name, contact_phone, message, document_path, status, created_at, bars(name, address, city, phone, owner_id)'
+        )
         .eq('id', claimId)
         .single();
       if (error) throw error;
@@ -86,26 +94,32 @@ function BarClaimDetailScreen() {
 
   const approve = useCallback(async () => {
     if (!claim) return;
-    Alert.alert('Aprobar reclamo', `¿Confirmas que "${claim.contact_name}" es el propietario de "${claim.bars?.name}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Aprobar',
-        style: 'default',
-        onPress: async () => {
-          try {
-            setActionLoading('approve');
-            const { error } = await supabase.rpc('approve_bar_claim', { p_claim_id: claim.id });
-            if (error) throw error;
-            Alert.alert('Aprobado', 'El bar ha quedado vinculado a este propietario.', [{ text: 'OK', onPress: () => router.back() }]);
-          } catch (e: any) {
-            console.error('❌ approve claim error:', e);
-            Alert.alert('Error', userFacingErrorMessage(e, 'No se pudo aprobar el reclamo.'));
-          } finally {
-            setActionLoading(null);
-          }
+    Alert.alert(
+      'Aprobar reclamo',
+      `¿Confirmas que "${claim.contact_name}" es el propietario de "${claim.bars?.name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Aprobar',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setActionLoading('approve');
+              const { error } = await supabase.rpc('approve_bar_claim', { p_claim_id: claim.id });
+              if (error) throw error;
+              Alert.alert('Aprobado', 'El bar ha quedado vinculado a este propietario.', [
+                { text: 'OK', onPress: () => router.back() },
+              ]);
+            } catch (e: any) {
+              console.error('❌ approve claim error:', e);
+              Alert.alert('Error', userFacingErrorMessage(e, 'No se pudo aprobar el reclamo.'));
+            } finally {
+              setActionLoading(null);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   }, [claim, router]);
 
   const reject = useCallback(async () => {
@@ -137,7 +151,9 @@ function BarClaimDetailScreen() {
               })
               .eq('id', claim.id);
             if (error) throw error;
-            Alert.alert('Rechazado', 'La solicitud ha sido rechazada.', [{ text: 'OK', onPress: () => router.back() }]);
+            Alert.alert('Rechazado', 'La solicitud ha sido rechazada.', [
+              { text: 'OK', onPress: () => router.back() },
+            ]);
           } catch (e: any) {
             console.error('❌ reject claim error:', e);
             Alert.alert('Error', userFacingErrorMessage(e, 'No se pudo rechazar el reclamo.'));
@@ -203,8 +219,16 @@ function BarClaimDetailScreen() {
           <InfoRow
             label="Teléfono"
             value={claim.contact_phone}
-            hint={phoneMatches === true ? 'Coincide con el teléfono guardado' : phoneMatches === false ? 'No coincide con el teléfono guardado' : undefined}
-            hintColor={phoneMatches === true ? '#10B981' : phoneMatches === false ? '#F59E0B' : undefined}
+            hint={
+              phoneMatches === true
+                ? 'Coincide con el teléfono guardado'
+                : phoneMatches === false
+                  ? 'No coincide con el teléfono guardado'
+                  : undefined
+            }
+            hintColor={
+              phoneMatches === true ? '#10B981' : phoneMatches === false ? '#F59E0B' : undefined
+            }
           />
           <InfoRow label="Mensaje" value={claim.message || '—'} />
           <InfoRow label="Enviado" value={new Date(claim.created_at).toLocaleString('es-ES')} />
@@ -223,7 +247,10 @@ function BarClaimDetailScreen() {
 
         <View style={styles.infoCard}>
           <AppText style={styles.sectionTitle}>Datos actuales del bar</AppText>
-          <InfoRow label="Dirección" value={(claim.bars?.address || '—') + (claim.bars?.city ? `, ${claim.bars.city}` : '')} />
+          <InfoRow
+            label="Dirección"
+            value={(claim.bars?.address || '—') + (claim.bars?.city ? `, ${claim.bars.city}` : '')}
+          />
           <InfoRow label="Teléfono guardado" value={claim.bars?.phone || '—'} />
         </View>
 
@@ -241,19 +268,21 @@ function BarClaimDetailScreen() {
             activeOpacity={0.85}
             style={[styles.approveBtn, (actionLoading || alreadyOwned) && styles.btnDisabled]}
             disabled={!!actionLoading || alreadyOwned}
-            onPress={approve}
-          >
-            {actionLoading === 'approve' ? <ActivityIndicator color="#FFFFFF" /> : <>
-              <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-              <AppText style={styles.approveText}>Aprobar</AppText>
-            </>}
+            onPress={approve}>
+            {actionLoading === 'approve' ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                <AppText style={styles.approveText}>Aprobar</AppText>
+              </>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.85}
             style={[styles.rejectBtn, actionLoading && styles.btnDisabled]}
             disabled={!!actionLoading}
-            onPress={() => setShowReject((v) => !v)}
-          >
+            onPress={() => setShowReject((v) => !v)}>
             <Ionicons name="close" size={18} color="#FFFFFF" />
             <AppText style={styles.rejectText}>Rechazar</AppText>
           </TouchableOpacity>
@@ -274,12 +303,15 @@ function BarClaimDetailScreen() {
               activeOpacity={0.85}
               style={[styles.rejectConfirmBtn, actionLoading && styles.btnDisabled]}
               disabled={!!actionLoading}
-              onPress={reject}
-            >
-              {actionLoading === 'reject' ? <ActivityIndicator color="#FFFFFF" /> : <>
-                <Ionicons name="close-circle-outline" size={18} color="#FFFFFF" />
-                <AppText style={styles.rejectConfirmText}>Confirmar rechazo</AppText>
-              </>}
+              onPress={reject}>
+              {actionLoading === 'reject' ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="close-circle-outline" size={18} color="#FFFFFF" />
+                  <AppText style={styles.rejectConfirmText}>Confirmar rechazo</AppText>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         ) : null}
@@ -303,7 +335,9 @@ function InfoRow(props: { label: string; value: string; hint?: string; hintColor
       <AppText style={styles.infoLabel}>{props.label}</AppText>
       <AppText style={styles.infoValue}>{props.value}</AppText>
       {props.hint ? (
-        <AppText style={[styles.infoHint, props.hintColor ? { color: props.hintColor } : null]}>{props.hint}</AppText>
+        <AppText style={[styles.infoHint, props.hintColor ? { color: props.hintColor } : null]}>
+          {props.hint}
+        </AppText>
       ) : null}
     </View>
   );

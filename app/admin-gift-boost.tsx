@@ -13,14 +13,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { supabase } from '~/utils/supabase';
-import {
-  AppText,
-  AppCard,
-  EmptyState,
-  colors,
-  spacing,
-  radius,
-} from '~/components/ds';
+import { AppText, AppCard, EmptyState, colors, spacing, radius } from '~/components/ds';
 import { useIsAdmin } from '~/hooks/useIsAdmin';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { TestBarsFlagButton } from '~/components/admin/TestBarsFlagButton';
@@ -99,9 +92,7 @@ function AdminGiftBoostScreen() {
       let barsWithData = (data || []).map((bar: any) => ({
         ...bar,
         image_url: bar.bar_images?.[0]?.image_url || null,
-        has_active_boost: bar.bar_boosts?.some(
-          (b: any) => b.status === 'active' && b.end_at > now
-        ),
+        has_active_boost: bar.bar_boosts?.some((b: any) => b.status === 'active' && b.end_at > now),
       }));
 
       if (userLocation?.coords) {
@@ -167,9 +158,7 @@ function AdminGiftBoostScreen() {
     if (searchText.trim()) {
       const text = searchText.toLowerCase();
       result = result.filter(
-        (bar) =>
-          bar.name.toLowerCase().includes(text) ||
-          bar.city.toLowerCase().includes(text)
+        (bar) => bar.name.toLowerCase().includes(text) || bar.city.toLowerCase().includes(text)
       );
     }
 
@@ -179,9 +168,7 @@ function AdminGiftBoostScreen() {
   const renderBarCard = useCallback(
     ({ item }: { item: Bar }) => (
       <AppCard style={styles.barCard} onPress={() => handleBarPress(item.id)}>
-        {item.image_url && (
-          <Image source={{ uri: item.image_url }} style={styles.barImage} />
-        )}
+        {item.image_url && <Image source={{ uri: item.image_url }} style={styles.barImage} />}
         <View style={styles.barInfo}>
           <View style={styles.barHeader}>
             <AppText variant="subtitle" style={styles.barName}>
@@ -204,15 +191,8 @@ function AdminGiftBoostScreen() {
           </AppText>
           {item.distance_km !== undefined && (
             <View style={styles.distanceContainer}>
-              <Ionicons
-                name="location-outline"
-                size={14}
-                color={colors.status.success}
-              />
-              <AppText
-                variant="caption"
-                color={colors.status.success}
-                style={styles.distanceText}>
+              <Ionicons name="location-outline" size={14} color={colors.status.success} />
+              <AppText variant="caption" color={colors.status.success} style={styles.distanceText}>
                 {item.distance_km.toFixed(1)} km
               </AppText>
             </View>
@@ -235,16 +215,17 @@ function AdminGiftBoostScreen() {
           <View style={styles.headerActions}>
             {isAdmin && <TestBarsFlagButton />}
             <TouchableOpacity onPress={handleToggleSearch} style={styles.headerIconButton}>
-              <Ionicons name={searchOpen ? 'close' : 'search'} size={22} color={colors.text.primary} />
+              <Ionicons
+                name={searchOpen ? 'close' : 'search'}
+                size={22}
+                color={colors.text.primary}
+              />
             </TouchableOpacity>
           </View>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.brand.primary} />
-          <AppText
-            variant="body"
-            color={colors.text.secondary}
-            style={{ marginTop: spacing.lg }}>
+          <AppText variant="body" color={colors.text.secondary} style={{ marginTop: spacing.lg }}>
             Cargando bares...
           </AppText>
         </View>
@@ -265,7 +246,11 @@ function AdminGiftBoostScreen() {
         <View style={styles.headerActions}>
           {isAdmin && <TestBarsFlagButton />}
           <TouchableOpacity onPress={handleToggleSearch} style={styles.headerIconButton}>
-            <Ionicons name={searchOpen ? 'close' : 'search'} size={22} color={colors.text.primary} />
+            <Ionicons
+              name={searchOpen ? 'close' : 'search'}
+              size={22}
+              color={colors.text.primary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -274,12 +259,7 @@ function AdminGiftBoostScreen() {
       {searchOpen && (
         <View style={styles.searchContainer}>
           <View style={styles.searchInputWrapper}>
-            <Ionicons
-              name="search"
-              size={20}
-              color={colors.text.muted}
-              style={styles.searchIcon}
-            />
+            <Ionicons name="search" size={20} color={colors.text.muted} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Buscar por nombre o ciudad..."
@@ -303,15 +283,8 @@ function AdminGiftBoostScreen() {
 
       {/* Info */}
       <View style={styles.infoContainer}>
-        <Ionicons
-          name="information-circle-outline"
-          size={16}
-          color={colors.text.muted}
-        />
-        <AppText
-          variant="caption"
-          color={colors.text.muted}
-          style={{ marginLeft: spacing.xs }}>
+        <Ionicons name="information-circle-outline" size={16} color={colors.text.muted} />
+        <AppText variant="caption" color={colors.text.muted} style={{ marginLeft: spacing.xs }}>
           {filteredBars.length} bar{filteredBars.length !== 1 ? 'es' : ''}
           {userLocation ? ' · Ordenados por proximidad' : ''}
         </AppText>

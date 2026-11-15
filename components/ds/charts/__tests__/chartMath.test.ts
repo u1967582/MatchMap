@@ -78,17 +78,23 @@ describe('buildLinePath / buildAreaPath', () => {
 });
 
 describe('pickAxisTicks', () => {
-  it.each([1, 2, 4, 14, 30, 90, 365])('para longitud %i incluye siempre el primer y último índice', (length) => {
-    const ticks = pickAxisTicks(length, 4);
-    expect(ticks[0]).toBe(0);
-    expect(ticks[ticks.length - 1]).toBe(length - 1);
-  });
+  it.each([1, 2, 4, 14, 30, 90, 365])(
+    'para longitud %i incluye siempre el primer y último índice',
+    (length) => {
+      const ticks = pickAxisTicks(length, 4);
+      expect(ticks[0]).toBe(0);
+      expect(ticks[ticks.length - 1]).toBe(length - 1);
+    }
+  );
 
-  it.each([1, 2, 4, 14, 30, 90, 365])('para longitud %i no supera maxTicks ni tiene duplicados', (length) => {
-    const ticks = pickAxisTicks(length, 4);
-    expect(ticks.length).toBeLessThanOrEqual(4);
-    expect(new Set(ticks).size).toBe(ticks.length);
-  });
+  it.each([1, 2, 4, 14, 30, 90, 365])(
+    'para longitud %i no supera maxTicks ni tiene duplicados',
+    (length) => {
+      const ticks = pickAxisTicks(length, 4);
+      expect(ticks.length).toBeLessThanOrEqual(4);
+      expect(new Set(ticks).size).toBe(ticks.length);
+    }
+  );
 
   it('devuelve un array vacío para longitud 0', () => {
     expect(pickAxisTicks(0, 4)).toEqual([]);

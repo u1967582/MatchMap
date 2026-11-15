@@ -90,17 +90,17 @@ declare module '@rnmapbox/maps' {
 
   export function setAccessToken(token: string): void;
   export function setTelemetryEnabled(enabled: boolean): void;
-  export { 
-    MapView, 
-    PointAnnotation, 
-    Camera, 
-    UserLocation, 
-    LocationPuck, 
+  export {
+    MapView,
+    PointAnnotation,
+    Camera,
+    UserLocation,
+    LocationPuck,
     ShapeSource,
     SymbolLayer,
     CircleLayer,
     LineLayer,
     Images,
-    StyleURL 
+    StyleURL,
   };
-} 
+}

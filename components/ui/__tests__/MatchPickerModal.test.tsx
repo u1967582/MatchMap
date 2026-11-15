@@ -47,7 +47,9 @@ describe('MatchPickerModal (auditoría 12)', () => {
 
     await render(<MatchPickerModal visible onClose={jest.fn()} onSelectMatch={jest.fn()} />);
 
-    await waitFor(() => expect(screen.getByText('No se pudieron cargar los partidos')).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText('No se pudieron cargar los partidos')).toBeTruthy()
+    );
     expect(screen.queryByText('No hay partidos programados para esta fecha')).toBeNull();
 
     // Reintentar con red ya disponible carga los partidos

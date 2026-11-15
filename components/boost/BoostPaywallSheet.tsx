@@ -1,10 +1,6 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-  BottomSheetBackdrop,
-} from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetDefaultBackdropProps } from '@gorhom/bottom-sheet/lib/typescript/components/bottomSheetBackdrop/types';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, AppButton, colors, spacing, radius, typography } from '~/components/ds';
@@ -36,9 +32,21 @@ const BENEFITS = [
 ];
 
 const PLAN_FEATURES: Record<BoostPackageInfo['plan'], string[]> = {
-  '7d': ['Posición prioritaria en el mapa', 'Badge "Destacado" visible', 'Apareces antes en búsquedas'],
-  '1m': ['Todo lo del plan semanal', 'Ideal para jornadas y partidos clave', 'Mejor relación calidad-precio'],
-  '1y': ['Todo lo del plan mensual', 'Destacado durante toda la temporada', 'El precio por mes más bajo'],
+  '7d': [
+    'Posición prioritaria en el mapa',
+    'Badge "Destacado" visible',
+    'Apareces antes en búsquedas',
+  ],
+  '1m': [
+    'Todo lo del plan semanal',
+    'Ideal para jornadas y partidos clave',
+    'Mejor relación calidad-precio',
+  ],
+  '1y': [
+    'Todo lo del plan mensual',
+    'Destacado durante toda la temporada',
+    'El precio por mes más bajo',
+  ],
 };
 
 export default function BoostPaywallSheet({
@@ -62,14 +70,9 @@ export default function BoostPaywallSheet({
 
   const renderBackdrop = useCallback(
     (props: BottomSheetDefaultBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.6}
-      />
+      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />
     ),
-    [],
+    []
   );
 
   const handlePurchase = useCallback(
@@ -80,7 +83,7 @@ export default function BoostPaywallSheet({
         onPurchaseComplete?.();
       }
     },
-    [purchaseBoost, barId, userId, onPurchaseComplete],
+    [purchaseBoost, barId, userId, onPurchaseComplete]
   );
 
   return (
@@ -93,20 +96,17 @@ export default function BoostPaywallSheet({
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBackground}
-      handleIndicatorStyle={styles.handleIndicator}
-    >
+      handleIndicatorStyle={styles.handleIndicator}>
       <BottomSheetScrollView
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         {/* Close button */}
         <TouchableOpacity
           onPress={onClose}
           style={styles.closeButton}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Cerrar"
-        >
+          accessibilityLabel="Cerrar">
           <Ionicons name="close" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
 
@@ -128,7 +128,12 @@ export default function BoostPaywallSheet({
           {BENEFITS.map((b) => (
             <View key={b.label} style={styles.benefitPill}>
               <Ionicons name={b.icon} size={20} color={colors.status.boost} />
-              <AppText variant="caption" color={colors.text.light} align="center" maxScale={1.0} style={styles.benefitLabel}>
+              <AppText
+                variant="caption"
+                color={colors.text.light}
+                align="center"
+                maxScale={1.0}
+                style={styles.benefitLabel}>
                 {b.label}
               </AppText>
             </View>
@@ -159,8 +164,7 @@ export default function BoostPaywallSheet({
             return (
               <View
                 key={item.pkg.identifier}
-                style={[styles.card, item.isPopular && styles.cardPopular]}
-              >
+                style={[styles.card, item.isPopular && styles.cardPopular]}>
                 {item.isPopular && (
                   <View style={styles.popularBadge}>
                     <Ionicons name="star" size={11} color={colors.text.inverse} />
@@ -210,7 +214,11 @@ export default function BoostPaywallSheet({
                   </View>
                   <View style={styles.roiPill}>
                     <Ionicons name="trending-up-outline" size={13} color={colors.status.success} />
-                    <AppText variant="caption" color={colors.status.success} maxScale={1.0} style={styles.roiText}>
+                    <AppText
+                      variant="caption"
+                      color={colors.status.success}
+                      maxScale={1.0}
+                      style={styles.roiText}>
                       {item.amortization}
                     </AppText>
                   </View>
@@ -221,7 +229,11 @@ export default function BoostPaywallSheet({
                   {features.map((feat) => (
                     <View key={feat} style={styles.featureItem}>
                       <Ionicons name="checkmark-circle" size={15} color={colors.status.boost} />
-                      <AppText variant="caption" color={colors.text.secondary} maxScale={1.0} style={styles.featureText}>
+                      <AppText
+                        variant="caption"
+                        color={colors.text.secondary}
+                        maxScale={1.0}
+                        style={styles.featureText}>
                         {feat}
                       </AppText>
                     </View>
@@ -244,7 +256,8 @@ export default function BoostPaywallSheet({
         <View style={styles.roiNote}>
           <Ionicons name="information-circle-outline" size={14} color={colors.text.muted} />
           <AppText variant="caption" maxScale={1.0} style={styles.roiNoteText}>
-            Cada cliente nuevo genera ~{AVG_PROFIT_PER_CUSTOMER_EUR}€ de beneficio medio. El Boost se amortiza rápidamente.
+            Cada cliente nuevo genera ~{AVG_PROFIT_PER_CUSTOMER_EUR}€ de beneficio medio. El Boost
+            se amortiza rápidamente.
           </AppText>
         </View>
 
@@ -252,17 +265,23 @@ export default function BoostPaywallSheet({
         <View style={styles.trustRow}>
           <View style={styles.trustItem}>
             <Ionicons name="shield-checkmark-outline" size={16} color={colors.text.muted} />
-            <AppText variant="caption" maxScale={1.0}>Sin suscripción</AppText>
+            <AppText variant="caption" maxScale={1.0}>
+              Sin suscripción
+            </AppText>
           </View>
           <View style={styles.trustDot} />
           <View style={styles.trustItem}>
             <Ionicons name="lock-closed-outline" size={16} color={colors.text.muted} />
-            <AppText variant="caption" maxScale={1.0}>Pago seguro</AppText>
+            <AppText variant="caption" maxScale={1.0}>
+              Pago seguro
+            </AppText>
           </View>
           <View style={styles.trustDot} />
           <View style={styles.trustItem}>
             <Ionicons name="flash-outline" size={16} color={colors.text.muted} />
-            <AppText variant="caption" maxScale={1.0}>Se activa en segundos</AppText>
+            <AppText variant="caption" maxScale={1.0}>
+              Se activa en segundos
+            </AppText>
           </View>
         </View>
 

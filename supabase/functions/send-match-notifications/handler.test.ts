@@ -42,7 +42,10 @@ function setup({
 }
 
 const req = (secret: string | null = 'cron-secret') =>
-  new Request('http://localhost', { method: 'POST', headers: secret ? { 'x-cron-secret': secret } : {} });
+  new Request('http://localhost', {
+    method: 'POST',
+    headers: secret ? { 'x-cron-secret': secret } : {},
+  });
 
 Deno.test('chunk parte arrays en trozos', () => {
   assertEquals(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
@@ -61,7 +64,10 @@ Deno.test('401 sin secreto o con secreto incorrecto', async () => {
   const { handler, rpcCalls } = setup();
   assertEquals((await quiet(() => handler(req(null)))).status, 401);
   assertEquals((await quiet(() => handler(req('mal')))).status, 401);
-  assertEquals(rpcCalls.some((c) => c.fn === 'fn_get_pending_match_notifications'), false);
+  assertEquals(
+    rpcCalls.some((c) => c.fn === 'fn_get_pending_match_notifications'),
+    false
+  );
 });
 
 Deno.test('401 si no se puede leer el secreto del Vault', async () => {
@@ -87,8 +93,16 @@ Deno.test('envía a todos los dispositivos y marca cada usuario+partido una sola
   });
   const res = await quiet(() => handler(req()));
   const { results } = await res.json();
-  assertEquals(results, { matches: 1, users_notified: 2, push_messages_sent: 3, tokens_removed: 0 });
-  assertEquals(sent[0].map((m: any) => m.to), ['A', 'B', 'C']);
+  assertEquals(results, {
+    matches: 1,
+    users_notified: 2,
+    push_messages_sent: 3,
+    tokens_removed: 0,
+  });
+  assertEquals(
+    sent[0].map((m: any) => m.to),
+    ['A', 'B', 'C']
+  );
   // mismo copy para los dispositivos del mismo usuario
   assertEquals(sent[0][0].title, sent[0][1].title);
   assertEquals(sent[0][0].data, { matchId: 'm1', type: 'favorite_team_match' });
@@ -100,18 +114,26 @@ Deno.test('envía a todos los dispositivos y marca cada usuario+partido una sola
   ]);
 });
 
-Deno.test('borra tokens DeviceNotRegistered y no marca al usuario si todos sus envíos fallan', async () => {
-  const { handler, calls } = setup({
-    pending: [row({ push_token_id: 'dead' })],
-    tickets: () => [{ status: 'error', message: 'gone', details: { error: 'DeviceNotRegistered' } }],
-  });
-  const { results } = await (await quiet(() => handler(req()))).json();
-  assertEquals(results.tokens_removed, 1);
-  assertEquals(results.users_notified, 0);
-  const del = calls.find((c) => c.table === 'push_tokens')!;
-  assertEquals(op(del, 'eq')!.args, ['id', 'dead']);
-  assertEquals(calls.some((c) => c.table === 'match_notifications_sent'), false);
-});
+Deno.test(
+  'borra tokens DeviceNotRegistered y no marca al usuario si todos sus envíos fallan',
+  async () => {
+    const { handler, calls } = setup({
+      pending: [row({ push_token_id: 'dead' })],
+      tickets: () => [
+        { status: 'error', message: 'gone', details: { error: 'DeviceNotRegistered' } },
+      ],
+    });
+    const { results } = await (await quiet(() => handler(req()))).json();
+    assertEquals(results.tokens_removed, 1);
+    assertEquals(results.users_notified, 0);
+    const del = calls.find((c) => c.table === 'push_tokens')!;
+    assertEquals(op(del, 'eq')!.args, ['id', 'dead']);
+    assertEquals(
+      calls.some((c) => c.table === 'match_notifications_sent'),
+      false
+    );
+  }
+);
 
 Deno.test('los logs de error no incluyen el token push del dispositivo', async () => {
   const { handler } = setup({
@@ -126,27 +148,42 @@ Deno.test('los logs de error no incluyen el token push del dispositivo', async (
   });
   const logged: string[] = [];
   const { log, warn, error } = console;
-  console.log = console.warn = console.error = (...args: unknown[]) => {
-    logged.push(args.map(String).join(' '));
-  };
+  console.log =
+    console.warn =
+    console.error =
+      (...args: unknown[]) => {
+        logged.push(args.map(String).join(' '));
+      };
   try {
     await handler(req());
   } finally {
     Object.assign(console, { log, warn, error });
   }
-  assertEquals(logged.some((l) => l.includes('ExponentPushToken[secreto]')), false);
-  assertEquals(logged.some((l) => l.includes('push_token_id=dead')), true);
+  assertEquals(
+    logged.some((l) => l.includes('ExponentPushToken[secreto]')),
+    false
+  );
+  assertEquals(
+    logged.some((l) => l.includes('push_token_id=dead')),
+    true
+  );
 });
 
-Deno.test('envía en lotes de 100 y si Expo falla no marca ese lote (reintento en el siguiente cron)', async () => {
-  const pending = Array.from({ length: 150 }, (_, i) =>
-    row({ user_id: `u${i}`, push_token_id: `t${i}`, expo_push_token: `T${i}` })
-  );
-  const { handler, sent } = setup({ pending, httpStatus: 500 });
-  const { results } = await (await quiet(() => handler(req()))).json();
-  assertEquals(sent.map((s) => s.length), [100, 50]);
-  assertEquals(results.users_notified, 0);
-});
+Deno.test(
+  'envía en lotes de 100 y si Expo falla no marca ese lote (reintento en el siguiente cron)',
+  async () => {
+    const pending = Array.from({ length: 150 }, (_, i) =>
+      row({ user_id: `u${i}`, push_token_id: `t${i}`, expo_push_token: `T${i}` })
+    );
+    const { handler, sent } = setup({ pending, httpStatus: 500 });
+    const { results } = await (await quiet(() => handler(req()))).json();
+    assertEquals(
+      sent.map((s) => s.length),
+      [100, 50]
+    );
+    assertEquals(results.users_notified, 0);
+  }
+);
 
 Deno.test('500 si falla la RPC de pendientes', async () => {
   const fake = createFakeSupabase({

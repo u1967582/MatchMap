@@ -1,12 +1,5 @@
 import { useState, useRef } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  FlatList,
-  Dimensions,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Modal, FlatList, Dimensions } from 'react-native';
 import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -37,7 +30,7 @@ export default function Dropdown({
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0, width: 0 });
   const buttonRef = useRef<any>(null);
 
-  const selectedOption = options.find(option => option.value === selectedValue);
+  const selectedOption = options.find((option) => option.value === selectedValue);
   const displayText = String(selectedOption?.label || placeholder);
 
   const handlePress = () => {
@@ -65,34 +58,20 @@ export default function Dropdown({
 
   return (
     <>
-      <AppText style={{ position: 'absolute', left: -1000, width: 1, height: 1, opacity: 0 }}>{String(label)}</AppText>
+      <AppText style={{ position: 'absolute', left: -1000, width: 1, height: 1, opacity: 0 }}>
+        {String(label)}
+      </AppText>
       <TouchableOpacity
         ref={buttonRef}
         style={styles.dropdownButton}
         onPress={handlePress}
-        activeOpacity={0.7}
-      >
-        <AppText style={styles.dropdownButtonText}>
-          {String(displayText)}
-        </AppText>
-        <Ionicons
-          name={isOpen ? "chevron-up" : "chevron-down"}
-          size={12}
-          color="#A3B3CC"
-        />
+        activeOpacity={0.7}>
+        <AppText style={styles.dropdownButtonText}>{String(displayText)}</AppText>
+        <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={12} color="#A3B3CC" />
       </TouchableOpacity>
 
-      <Modal
-        visible={isOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={handleClose}
-      >
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={handleClose}
-        >
+      <Modal visible={isOpen} transparent animationType="fade" onRequestClose={handleClose}>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={handleClose}>
           <View
             style={[
               styles.dropdownMenu,
@@ -100,9 +79,8 @@ export default function Dropdown({
                 left: dropdownPosition.x,
                 top: dropdownPosition.y,
                 width: Math.max(dropdownPosition.width, 150),
-              }
-            ]}
-          >
+              },
+            ]}>
             <FlatList
               data={options}
               keyExtractor={(item) => item.id}
@@ -112,23 +90,23 @@ export default function Dropdown({
                   return null;
                 }
                 return (
-                <TouchableOpacity
-                  style={[
-                    styles.dropdownItem,
-                    selectedValue === item.value && styles.dropdownItemActive
-                  ]}
-                  onPress={() => handleSelect(item.value)}
-                >
-                  <AppText style={[
-                    styles.dropdownItemText,
-                    selectedValue === item.value && styles.dropdownItemTextActive
-                  ]}>
-                    {String(item.label)}
-                  </AppText>
-                  {selectedValue === item.value && (
-                    <Ionicons name="checkmark" size={16} color="#1976D2" />
-                  )}
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.dropdownItem,
+                      selectedValue === item.value && styles.dropdownItemActive,
+                    ]}
+                    onPress={() => handleSelect(item.value)}>
+                    <AppText
+                      style={[
+                        styles.dropdownItemText,
+                        selectedValue === item.value && styles.dropdownItemTextActive,
+                      ]}>
+                      {String(item.label)}
+                    </AppText>
+                    {selectedValue === item.value && (
+                      <Ionicons name="checkmark" size={16} color="#1976D2" />
+                    )}
+                  </TouchableOpacity>
                 );
               }}
               showsVerticalScrollIndicator={false}
@@ -209,4 +187,4 @@ const styles = StyleSheet.create({
     color: '#1976D2',
     fontWeight: '600',
   },
-}); 
+});

@@ -26,7 +26,7 @@ const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
 }) => {
   const handleToggle = (id: string) => {
     const newSelection = selectedIds.includes(id)
-      ? selectedIds.filter(selectedId => selectedId !== id)
+      ? selectedIds.filter((selectedId) => selectedId !== id)
       : [...selectedIds, id];
     onSelectionChange(newSelection);
   };
@@ -43,9 +43,9 @@ const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
             key={option.id}
             style={styles.option}
             onPress={() => handleToggle(option.id)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.checkbox, selectedIds.includes(option.id) && styles.checkboxSelected]}>
+            activeOpacity={0.7}>
+            <View
+              style={[styles.checkbox, selectedIds.includes(option.id) && styles.checkboxSelected]}>
               {selectedIds.includes(option.id) && (
                 <Ionicons name="checkmark" size={16} color="#FFFFFF" />
               )}
@@ -106,4 +106,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CheckboxGroup; 
+export default CheckboxGroup;

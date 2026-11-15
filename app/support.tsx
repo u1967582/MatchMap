@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Pressable, ScrollView, LayoutAnimation, UIManager, Platform, StyleSheet } from 'react-native';
+import {
+  View,
+  Pressable,
+  ScrollView,
+  LayoutAnimation,
+  UIManager,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -11,25 +19,25 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 type Faq = { q: string; a: string };
 const FAQS: Faq[] = [
-  { 
-    q: '¿Qué es MatchMap y para qué sirve?', 
-    a: 'MatchMap ayuda a los aficionados a encontrar bares que emiten partidos de fútbol cerca de ellos, y permite a los bares ganar visibilidad los días de partido con un perfil sencillo y actualizable.' 
+  {
+    q: '¿Qué es MatchMap y para qué sirve?',
+    a: 'MatchMap ayuda a los aficionados a encontrar bares que emiten partidos de fútbol cerca de ellos, y permite a los bares ganar visibilidad los días de partido con un perfil sencillo y actualizable.',
   },
-  { 
-    q: '¿Cómo encuentro un bar que emita mi partido?', 
-    a: 'Usa el buscador por equipo/competición/fecha o abre el mapa y aplica filtros (proximidad, tipo de local, comida, etc.). Verás los bares disponibles y podrás entrar en su perfil para confirmar horario y detalles del evento.' 
+  {
+    q: '¿Cómo encuentro un bar que emita mi partido?',
+    a: 'Usa el buscador por equipo/competición/fecha o abre el mapa y aplica filtros (proximidad, tipo de local, comida, etc.). Verás los bares disponibles y podrás entrar en su perfil para confirmar horario y detalles del evento.',
   },
-  { 
-    q: 'Soy dueño/a de un bar, ¿cómo puedo aparecer en la app?', 
-    a: 'Completa el pre-registro y crea tu perfil con dirección, fotos y horarios. Después podrás publicar los partidos que emites y actualizar tu información cuando quieras.' 
+  {
+    q: 'Soy dueño/a de un bar, ¿cómo puedo aparecer en la app?',
+    a: 'Completa el pre-registro y crea tu perfil con dirección, fotos y horarios. Después podrás publicar los partidos que emites y actualizar tu información cuando quieras.',
   },
-  { 
-    q: '¿La app es gratuita?', 
-    a: 'Para usuarios, sí: buscar, guardar favoritos y dejar reseñas es gratis. Para bares, hay un perfil básico gratuito y opciones de promoción opcionales para destacar en el mapa los días de partido.' 
+  {
+    q: '¿La app es gratuita?',
+    a: 'Para usuarios, sí: buscar, guardar favoritos y dejar reseñas es gratis. Para bares, hay un perfil básico gratuito y opciones de promoción opcionales para destacar en el mapa los días de partido.',
   },
-  { 
-    q: '¿Qué pasa con mi privacidad y la ubicación?', 
-    a: 'Solo usamos tu ubicación para mostrarte bares cercanos. Puedes desactivarla cuando quieras; la app sigue funcionando con búsqueda manual. No compartimos tus datos personales con terceros sin tu consentimiento.' 
+  {
+    q: '¿Qué pasa con mi privacidad y la ubicación?',
+    a: 'Solo usamos tu ubicación para mostrarte bares cercanos. Puedes desactivarla cuando quieras; la app sigue funcionando con búsqueda manual. No compartimos tus datos personales con terceros sin tu consentimiento.',
   },
 ];
 
@@ -38,11 +46,11 @@ export default function SupportScreen() {
   const router = useRouter();
   const toggle = (i: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setOpenIndex(prev => (prev === i ? null : i));
+    setOpenIndex((prev) => (prev === i ? null : i));
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
@@ -50,24 +58,40 @@ export default function SupportScreen() {
         <Pressable onPress={() => router.back()} style={styles.headerBack} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <AppText maxScale={1.0} style={styles.headerTitle}>Preguntas Frecuentes</AppText>
+        <AppText maxScale={1.0} style={styles.headerTitle}>
+          Preguntas Frecuentes
+        </AppText>
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         <AppText style={styles.lead}>
           Encuentra respuestas a las preguntas más comunes sobre MatchMap.
         </AppText>
 
         {FAQS.map((item, i) => (
           <View key={i} style={styles.card}>
-            <Pressable onPress={() => toggle(i)} style={styles.cardHeader} android_ripple={{ color: '#0D1A2B' }}>
-              <AppText maxScale={1.2} style={styles.cardTitle}>{item.q}</AppText>
-              <Ionicons name={openIndex === i ? 'chevron-up' : 'chevron-down'} size={22} color="#007AFF" />
+            <Pressable
+              onPress={() => toggle(i)}
+              style={styles.cardHeader}
+              android_ripple={{ color: '#0D1A2B' }}>
+              <AppText maxScale={1.2} style={styles.cardTitle}>
+                {item.q}
+              </AppText>
+              <Ionicons
+                name={openIndex === i ? 'chevron-up' : 'chevron-down'}
+                size={22}
+                color="#007AFF"
+              />
             </Pressable>
             {openIndex === i && (
               <View style={styles.cardBody}>
-                <AppText maxScale={1.5} style={styles.cardText}>{item.a}</AppText>
+                <AppText maxScale={1.5} style={styles.cardText}>
+                  {item.a}
+                </AppText>
               </View>
             )}
           </View>
@@ -147,5 +171,3 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
-
-

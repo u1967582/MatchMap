@@ -28,12 +28,7 @@ export default function ErrorState({
         {subtitle}
       </AppText>
       {onRetry && (
-        <AppButton
-          text={retryLabel}
-          onPress={onRetry}
-          variant="primary"
-          fullWidth={false}
-        />
+        <AppButton text={retryLabel} onPress={onRetry} variant="primary" fullWidth={false} />
       )}
     </View>
   );

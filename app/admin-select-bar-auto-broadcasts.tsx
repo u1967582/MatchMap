@@ -13,14 +13,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { supabase } from '~/utils/supabase';
-import {
-  AppText,
-  AppCard,
-  EmptyState,
-  colors,
-  spacing,
-  radius,
-} from '~/components/ds';
+import { AppText, AppCard, EmptyState, colors, spacing, radius } from '~/components/ds';
 import { useIsAdmin } from '~/hooks/useIsAdmin';
 import { useTestBarsVisibilityStore } from '~/stores/testBarsVisibilityStore';
 import { TestBarsFlagButton } from '~/components/admin/TestBarsFlagButton';
@@ -69,17 +62,22 @@ function AdminSelectBarAutoBroadcastsScreen() {
   }, []);
 
   // Calculate distance between two points
-  const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  }, []);
+  const calculateDistance = useCallback(
+    (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const R = 6371; // Earth's radius in kilometers
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+          Math.cos((lat2 * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    },
+    []
+  );
 
   // Load all bars
   const loadBars = useCallback(async () => {
@@ -87,7 +85,9 @@ function AdminSelectBarAutoBroadcastsScreen() {
     try {
       const { data, error } = await supabase
         .from('bars')
-        .select('id, name, address, city, latitude, longitude, verification_status, is_test, bar_images(image_url, image_order)')
+        .select(
+          'id, name, address, city, latitude, longitude, verification_status, is_test, bar_images(image_url, image_order)'
+        )
         .order('name');
 
       if (error) {
@@ -103,7 +103,7 @@ function AdminSelectBarAutoBroadcastsScreen() {
 
       // Add distance if user location is available
       if (userLocation && userLocation.coords) {
-        barsWithDistance = barsWithDistance.map(bar => {
+        barsWithDistance = barsWithDistance.map((bar) => {
           if (bar.latitude && bar.longitude) {
             const distance = calculateDistance(
               userLocation.coords.latitude,
@@ -148,9 +148,12 @@ function AdminSelectBarAutoBroadcastsScreen() {
   }, []);
 
   // Handle bar selection
-  const handleBarPress = useCallback((barId: string) => {
-    router.push(`/auto-broadcasts/${barId}` as any);
-  }, [router]);
+  const handleBarPress = useCallback(
+    (barId: string) => {
+      router.push(`/auto-broadcasts/${barId}` as any);
+    },
+    [router]
+  );
 
   // Load data on mount
   useEffect(() => {
@@ -163,13 +166,12 @@ function AdminSelectBarAutoBroadcastsScreen() {
 
   // Recalculate visible bars when the source list, search text or test-bars visibility changes
   useEffect(() => {
-    let result = includeTestBars ? bars : bars.filter(bar => !bar.is_test);
+    let result = includeTestBars ? bars : bars.filter((bar) => !bar.is_test);
 
     if (searchText.trim()) {
       const text = searchText.toLowerCase();
-      result = result.filter(bar =>
-        bar.name.toLowerCase().includes(text) ||
-        bar.city.toLowerCase().includes(text)
+      result = result.filter(
+        (bar) => bar.name.toLowerCase().includes(text) || bar.city.toLowerCase().includes(text)
       );
     }
 
@@ -177,51 +179,57 @@ function AdminSelectBarAutoBroadcastsScreen() {
   }, [bars, searchText, includeTestBars]);
 
   // Render bar card
-  const renderBarCard = useCallback(({ item }: { item: Bar }) => {
-    const isPending = item.verification_status === 'pending';
-    const isRejected = item.verification_status === 'rejected';
+  const renderBarCard = useCallback(
+    ({ item }: { item: Bar }) => {
+      const isPending = item.verification_status === 'pending';
+      const isRejected = item.verification_status === 'rejected';
 
-    return (
-      <AppCard style={styles.barCard} onPress={() => handleBarPress(item.id)}>
-        {item.image_url && (
-          <Image
-            source={{ uri: item.image_url }}
-            style={styles.barImage}
-          />
-        )}
-        <View style={styles.barInfo}>
-          <View style={styles.barHeader}>
-            <AppText variant="subtitle" style={styles.barName}>{item.name}</AppText>
-            {isPending && (
-              <View style={styles.statusBadge}>
-                <AppText variant="caption" color={colors.status.warning} style={styles.statusText}>
-                  Pendiente
-                </AppText>
-              </View>
-            )}
-            {isRejected && (
-              <View style={[styles.statusBadge, styles.statusBadgeRejected]}>
-                <AppText variant="caption" color={colors.status.error} style={styles.statusText}>
-                  Rechazado
+      return (
+        <AppCard style={styles.barCard} onPress={() => handleBarPress(item.id)}>
+          {item.image_url && <Image source={{ uri: item.image_url }} style={styles.barImage} />}
+          <View style={styles.barInfo}>
+            <View style={styles.barHeader}>
+              <AppText variant="subtitle" style={styles.barName}>
+                {item.name}
+              </AppText>
+              {isPending && (
+                <View style={styles.statusBadge}>
+                  <AppText
+                    variant="caption"
+                    color={colors.status.warning}
+                    style={styles.statusText}>
+                    Pendiente
+                  </AppText>
+                </View>
+              )}
+              {isRejected && (
+                <View style={[styles.statusBadge, styles.statusBadgeRejected]}>
+                  <AppText variant="caption" color={colors.status.error} style={styles.statusText}>
+                    Rechazado
+                  </AppText>
+                </View>
+              )}
+            </View>
+            <AppText variant="caption" color={colors.text.secondary}>
+              {item.address}, {item.city}
+            </AppText>
+            {item.distance_km !== undefined && (
+              <View style={styles.distanceContainer}>
+                <Ionicons name="location-outline" size={14} color={colors.status.success} />
+                <AppText
+                  variant="caption"
+                  color={colors.status.success}
+                  style={styles.distanceText}>
+                  {item.distance_km.toFixed(1)} km
                 </AppText>
               </View>
             )}
           </View>
-          <AppText variant="caption" color={colors.text.secondary}>
-            {item.address}, {item.city}
-          </AppText>
-          {item.distance_km !== undefined && (
-            <View style={styles.distanceContainer}>
-              <Ionicons name="location-outline" size={14} color={colors.status.success} />
-              <AppText variant="caption" color={colors.status.success} style={styles.distanceText}>
-                {item.distance_km.toFixed(1)} km
-              </AppText>
-            </View>
-          )}
-        </View>
-      </AppCard>
-    );
-  }, [handleBarPress]);
+        </AppCard>
+      );
+    },
+    [handleBarPress]
+  );
 
   if (loading) {
     return (
@@ -235,7 +243,11 @@ function AdminSelectBarAutoBroadcastsScreen() {
           <View style={styles.headerActions}>
             {isAdmin && <TestBarsFlagButton />}
             <TouchableOpacity onPress={handleToggleSearch} style={styles.headerIconButton}>
-              <Ionicons name={searchOpen ? 'close' : 'search'} size={22} color={colors.text.primary} />
+              <Ionicons
+                name={searchOpen ? 'close' : 'search'}
+                size={22}
+                color={colors.text.primary}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -262,7 +274,11 @@ function AdminSelectBarAutoBroadcastsScreen() {
         <View style={styles.headerActions}>
           {isAdmin && <TestBarsFlagButton />}
           <TouchableOpacity onPress={handleToggleSearch} style={styles.headerIconButton}>
-            <Ionicons name={searchOpen ? 'close' : 'search'} size={22} color={colors.text.primary} />
+            <Ionicons
+              name={searchOpen ? 'close' : 'search'}
+              size={22}
+              color={colors.text.primary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -283,7 +299,9 @@ function AdminSelectBarAutoBroadcastsScreen() {
               autoFocus
             />
             {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => handleSearchTextChange('')} style={styles.clearButton}>
+              <TouchableOpacity
+                onPress={() => handleSearchTextChange('')}
+                style={styles.clearButton}>
                 <Ionicons name="close-circle" size={20} color={colors.text.muted} />
               </TouchableOpacity>
             )}
@@ -315,8 +333,12 @@ function AdminSelectBarAutoBroadcastsScreen() {
             <EmptyState
               icon="search-outline"
               title="No se encontraron bares"
-              subtitle={searchText ? `No hay bares que coincidan con "${searchText}"` : 'No hay bares registrados'}
-              actionLabel={searchText ? "Limpiar búsqueda" : undefined}
+              subtitle={
+                searchText
+                  ? `No hay bares que coincidan con "${searchText}"`
+                  : 'No hay bares registrados'
+              }
+              actionLabel={searchText ? 'Limpiar búsqueda' : undefined}
               onAction={searchText ? () => handleSearchTextChange('') : undefined}
             />
           </View>

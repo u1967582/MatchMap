@@ -27,7 +27,9 @@ describe('useAutoBroadcastPreferences', () => {
   it('con forceAdminRpc=true, save() usa fn_sync_bar_preferences_admin sin consultar el rol del usuario', async () => {
     mockEmptyLoad();
 
-    const { result } = await renderHook(() => useAutoBroadcastPreferences({ barId: 'bar-1', forceAdminRpc: true }));
+    const { result } = await renderHook(() =>
+      useAutoBroadcastPreferences({ barId: 'bar-1', forceAdminRpc: true })
+    );
 
     await waitFor(() => expect(result.current.loadingComps).toBe(false));
     expect(mockedGetUser).not.toHaveBeenCalled();
@@ -38,14 +40,16 @@ describe('useAutoBroadcastPreferences', () => {
 
     expect(mockedRpc).toHaveBeenCalledWith(
       'fn_sync_bar_preferences_admin',
-      expect.objectContaining({ _bar_id: 'bar-1' }),
+      expect.objectContaining({ _bar_id: 'bar-1' })
     );
   });
 
   it('sin forceAdminRpc, usa fn_sync_bar_preferences para un usuario no admin', async () => {
     mockEmptyLoad();
     mockedGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null });
-    mockedFrom.mockReturnValueOnce(createQueryBuilderMock({ data: { is_super_user: false }, error: null }));
+    mockedFrom.mockReturnValueOnce(
+      createQueryBuilderMock({ data: { is_super_user: false }, error: null })
+    );
 
     const { result } = await renderHook(() => useAutoBroadcastPreferences({ barId: 'bar-1' }));
 
@@ -57,17 +61,21 @@ describe('useAutoBroadcastPreferences', () => {
 
     expect(mockedRpc).toHaveBeenCalledWith(
       'fn_sync_bar_preferences',
-      expect.objectContaining({ _bar_id: 'bar-1' }),
+      expect.objectContaining({ _bar_id: 'bar-1' })
     );
   });
 
   it('deriva hasAutomation/hasSelection de las preferencias ya guardadas', async () => {
     mockedFrom
-      .mockReturnValueOnce(createQueryBuilderMock({ data: [{ id: 1, name: 'Liga', gender: null }], error: null }))
+      .mockReturnValueOnce(
+        createQueryBuilderMock({ data: [{ id: 1, name: 'Liga', gender: null }], error: null })
+      )
       .mockReturnValueOnce(createQueryBuilderMock({ data: [{ competition_id: 1 }], error: null }))
       .mockReturnValueOnce(createQueryBuilderMock({ data: [], error: null }));
 
-    const { result } = await renderHook(() => useAutoBroadcastPreferences({ barId: 'bar-1', forceAdminRpc: true }));
+    const { result } = await renderHook(() =>
+      useAutoBroadcastPreferences({ barId: 'bar-1', forceAdminRpc: true })
+    );
 
     await waitFor(() => expect(result.current.loadingComps).toBe(false));
 
@@ -78,11 +86,15 @@ describe('useAutoBroadcastPreferences', () => {
 
   it('hasChanges es true al desmarcar la única competición guardada, aunque hasSelection quede en false', async () => {
     mockedFrom
-      .mockReturnValueOnce(createQueryBuilderMock({ data: [{ id: 1, name: 'Liga', gender: null }], error: null }))
+      .mockReturnValueOnce(
+        createQueryBuilderMock({ data: [{ id: 1, name: 'Liga', gender: null }], error: null })
+      )
       .mockReturnValueOnce(createQueryBuilderMock({ data: [{ competition_id: 1 }], error: null }))
       .mockReturnValueOnce(createQueryBuilderMock({ data: [], error: null }));
 
-    const { result } = await renderHook(() => useAutoBroadcastPreferences({ barId: 'bar-1', forceAdminRpc: true }));
+    const { result } = await renderHook(() =>
+      useAutoBroadcastPreferences({ barId: 'bar-1', forceAdminRpc: true })
+    );
     await waitFor(() => expect(result.current.loadingComps).toBe(false));
 
     expect(result.current.hasChanges).toBe(false);
@@ -98,7 +110,9 @@ describe('useAutoBroadcastPreferences', () => {
   it('toggleTeamSelected añade y quita la clave teamId|competitionId', async () => {
     mockEmptyLoad();
 
-    const { result } = await renderHook(() => useAutoBroadcastPreferences({ barId: 'bar-1', forceAdminRpc: true }));
+    const { result } = await renderHook(() =>
+      useAutoBroadcastPreferences({ barId: 'bar-1', forceAdminRpc: true })
+    );
     await waitFor(() => expect(result.current.loadingComps).toBe(false));
 
     await act(async () => {

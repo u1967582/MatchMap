@@ -12,19 +12,100 @@ const mockedFrom = supabase.from as jest.Mock;
 // 8 reseñas: 3 de Google (más recientes que las de la app, para probar
 // que la prioridad de app-primero gana a la fecha) y 5 de la app.
 const REVIEWS = [
-  { id: 'g1', rating: 5, comment: 'Google review 1', created_at: '2026-08-10T00:00:00Z', likes: 0, is_google_review: true, google_author_name: 'Google User 1', user: null },
-  { id: 'g2', rating: 4, comment: 'Google review 2', created_at: '2026-08-09T00:00:00Z', likes: 0, is_google_review: true, google_author_name: 'Google User 2', user: null },
-  { id: 'g3', rating: 3, comment: 'Google review 3', created_at: '2026-08-08T00:00:00Z', likes: 0, is_google_review: true, google_author_name: 'Google User 3', user: null },
-  { id: 'a1', rating: 5, comment: 'App review 1', created_at: '2026-08-01T00:00:00Z', likes: 0, is_google_review: false, google_author_name: null, user: { username: 'user1', profile_image_url: '' } },
-  { id: 'a2', rating: 4, comment: 'App review 2', created_at: '2026-08-02T00:00:00Z', likes: 0, is_google_review: false, google_author_name: null, user: { username: 'user2', profile_image_url: '' } },
-  { id: 'a3', rating: 3, comment: 'App review 3', created_at: '2026-08-03T00:00:00Z', likes: 0, is_google_review: false, google_author_name: null, user: { username: 'user3', profile_image_url: '' } },
-  { id: 'a4', rating: 2, comment: 'App review 4', created_at: '2026-08-04T00:00:00Z', likes: 0, is_google_review: false, google_author_name: null, user: { username: 'user4', profile_image_url: '' } },
-  { id: 'a5', rating: 1, comment: 'App review 5', created_at: '2026-08-05T00:00:00Z', likes: 0, is_google_review: false, google_author_name: null, user: { username: 'user5', profile_image_url: '' } },
+  {
+    id: 'g1',
+    rating: 5,
+    comment: 'Google review 1',
+    created_at: '2026-08-10T00:00:00Z',
+    likes: 0,
+    is_google_review: true,
+    google_author_name: 'Google User 1',
+    user: null,
+  },
+  {
+    id: 'g2',
+    rating: 4,
+    comment: 'Google review 2',
+    created_at: '2026-08-09T00:00:00Z',
+    likes: 0,
+    is_google_review: true,
+    google_author_name: 'Google User 2',
+    user: null,
+  },
+  {
+    id: 'g3',
+    rating: 3,
+    comment: 'Google review 3',
+    created_at: '2026-08-08T00:00:00Z',
+    likes: 0,
+    is_google_review: true,
+    google_author_name: 'Google User 3',
+    user: null,
+  },
+  {
+    id: 'a1',
+    rating: 5,
+    comment: 'App review 1',
+    created_at: '2026-08-01T00:00:00Z',
+    likes: 0,
+    is_google_review: false,
+    google_author_name: null,
+    user: { username: 'user1', profile_image_url: '' },
+  },
+  {
+    id: 'a2',
+    rating: 4,
+    comment: 'App review 2',
+    created_at: '2026-08-02T00:00:00Z',
+    likes: 0,
+    is_google_review: false,
+    google_author_name: null,
+    user: { username: 'user2', profile_image_url: '' },
+  },
+  {
+    id: 'a3',
+    rating: 3,
+    comment: 'App review 3',
+    created_at: '2026-08-03T00:00:00Z',
+    likes: 0,
+    is_google_review: false,
+    google_author_name: null,
+    user: { username: 'user3', profile_image_url: '' },
+  },
+  {
+    id: 'a4',
+    rating: 2,
+    comment: 'App review 4',
+    created_at: '2026-08-04T00:00:00Z',
+    likes: 0,
+    is_google_review: false,
+    google_author_name: null,
+    user: { username: 'user4', profile_image_url: '' },
+  },
+  {
+    id: 'a5',
+    rating: 1,
+    comment: 'App review 5',
+    created_at: '2026-08-05T00:00:00Z',
+    likes: 0,
+    is_google_review: false,
+    google_author_name: null,
+    user: { username: 'user5', profile_image_url: '' },
+  },
 ];
 
 // Orden esperado tras la prioridad (app primero, por fecha desc dentro de
 // cada grupo; luego Google, por fecha desc): a5, a4, a3, a2, a1, g1, g2, g3
-const EXPECTED_ORDER = ['App review 5', 'App review 4', 'App review 3', 'App review 2', 'App review 1', 'Google review 1', 'Google review 2', 'Google review 3'];
+const EXPECTED_ORDER = [
+  'App review 5',
+  'App review 4',
+  'App review 3',
+  'App review 2',
+  'App review 1',
+  'Google review 1',
+  'Google review 2',
+  'Google review 3',
+];
 
 const mockFetch = (reviews: any[]) => {
   mockedFrom.mockReturnValueOnce(createQueryBuilderMock({ data: reviews, error: null }));

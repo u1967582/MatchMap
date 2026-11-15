@@ -37,10 +37,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_WIDTH = SCREEN_WIDTH * 0.9;
 
 function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
+  return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 function getTeamLogoUri(team: { id: string; logo_url: string | null }): string {
@@ -101,7 +98,12 @@ export default function FavoriteTeamPopup({
       setQuery('');
       setSelectedLeagueId(null);
       Animated.parallel([
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 70, friction: 10 }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 70,
+          friction: 10,
+        }),
         Animated.timing(opacityAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
       ]).start();
     } else {
@@ -176,8 +178,7 @@ export default function FavoriteTeamPopup({
         style={[styles.teamRow, isSelected && styles.teamRowSelected]}
         onPress={() => handleSelect(item)}
         disabled={savingId !== null}
-        activeOpacity={0.7}
-      >
+        activeOpacity={0.7}>
         <Image source={{ uri: getTeamLogoUri(item) }} style={styles.teamLogo} />
         <AppText variant="body" style={styles.teamName} numberOfLines={1}>
           {item.name}
@@ -195,8 +196,7 @@ export default function FavoriteTeamPopup({
     <View style={styles.overlay} pointerEvents="box-none">
       <Animated.View
         style={[styles.container, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}
-        pointerEvents="auto"
-      >
+        pointerEvents="auto">
         <LinearGradient
           colors={['rgba(25,118,210,0.18)', C.bg, C.bg]}
           start={{ x: 0, y: 0 }}
@@ -206,7 +206,9 @@ export default function FavoriteTeamPopup({
 
         <View style={styles.header}>
           <View style={styles.headerTextContainer}>
-            <AppText variant="h2" maxScale={1.2}>¿Cuál es tu equipo?</AppText>
+            <AppText variant="h2" maxScale={1.2}>
+              ¿Cuál es tu equipo?
+            </AppText>
             <AppText variant="body" color={colors.text.secondary} style={styles.subtitle}>
               Elige tu club favorito. Podrás cambiarlo cuando quieras desde tu perfil.
             </AppText>
@@ -214,8 +216,7 @@ export default function FavoriteTeamPopup({
           <TouchableOpacity
             style={styles.closeButton}
             onPress={onClose}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={18} color="rgba(255,255,255,0.5)" />
           </TouchableOpacity>
         </View>
@@ -244,15 +245,11 @@ export default function FavoriteTeamPopup({
                 return (
                   <TouchableOpacity
                     onPress={() => setSelectedLeagueId(item.id)}
-                    style={[styles.leagueChip, selected && styles.leagueChipSelected]}
-                  >
-                    {logoUri && (
-                      <Image source={{ uri: logoUri }} style={styles.leagueChipLogo} />
-                    )}
+                    style={[styles.leagueChip, selected && styles.leagueChipSelected]}>
+                    {logoUri && <Image source={{ uri: logoUri }} style={styles.leagueChipLogo} />}
                     <AppText
                       variant="label"
-                      style={[styles.leagueChipText, selected && styles.leagueChipTextSelected]}
-                    >
+                      style={[styles.leagueChipText, selected && styles.leagueChipTextSelected]}>
                       {label}
                     </AppText>
                   </TouchableOpacity>
@@ -280,8 +277,13 @@ export default function FavoriteTeamPopup({
         </View>
 
         {mode === 'onboarding' && (
-          <TouchableOpacity style={styles.skipButton} onPress={handleSkip} disabled={savingId !== null}>
-            <AppText variant="label" color={colors.text.muted}>Ahora no</AppText>
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={handleSkip}
+            disabled={savingId !== null}>
+            <AppText variant="label" color={colors.text.muted}>
+              Ahora no
+            </AppText>
           </TouchableOpacity>
         )}
       </Animated.View>

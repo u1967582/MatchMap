@@ -78,17 +78,27 @@ export interface AuthErrorMessage {
  */
 export function getAuthErrorMessage(error: any, fallback: string): AuthErrorMessage {
   const code: string = (error?.code ?? '').toString().toLowerCase();
-  const msg: string = (typeof error === 'string' ? error : error?.message ?? '').toLowerCase();
+  const msg: string = (typeof error === 'string' ? error : (error?.message ?? '')).toLowerCase();
   const has = (...needles: string[]) => needles.some((n) => code === n || msg.includes(n));
 
   if (has('invalid_credentials', 'invalid login credentials')) {
     return { kind: 'invalid_credentials', title: 'Email o contraseña incorrectos' };
   }
   if (has('email_not_confirmed', 'email not confirmed')) {
-    return { kind: 'email_not_confirmed', title: 'Email no verificado', subtitle: 'Revisa tu correo para confirmar tu cuenta' };
+    return {
+      kind: 'email_not_confirmed',
+      title: 'Email no verificado',
+      subtitle: 'Revisa tu correo para confirmar tu cuenta',
+    };
   }
-  if (has('user_already_exists', 'email_exists', 'user already registered', 'already been registered')) {
-    return { kind: 'user_exists', title: 'Este email ya está registrado', subtitle: 'Inicia sesión o recupera tu contraseña' };
+  if (
+    has('user_already_exists', 'email_exists', 'user already registered', 'already been registered')
+  ) {
+    return {
+      kind: 'user_exists',
+      title: 'Este email ya está registrado',
+      subtitle: 'Inicia sesión o recupera tu contraseña',
+    };
   }
   if (has('weak_password', 'pwned', 'weak and easy to guess', 'password should')) {
     return {
@@ -111,7 +121,11 @@ export function getAuthErrorMessage(error: any, fallback: string): AuthErrorMess
     ) ||
     error?.status === 429
   ) {
-    return { kind: 'rate_limit', title: 'Demasiados intentos', subtitle: 'Espera unos minutos y vuelve a intentarlo' };
+    return {
+      kind: 'rate_limit',
+      title: 'Demasiados intentos',
+      subtitle: 'Espera unos minutos y vuelve a intentarlo',
+    };
   }
   if (
     has('email_address_invalid', 'invalid format', 'unable to validate email') ||
@@ -119,14 +133,36 @@ export function getAuthErrorMessage(error: any, fallback: string): AuthErrorMess
   ) {
     return { kind: 'invalid_email', title: 'El email no es válido' };
   }
-  if (has('signup_disabled', 'signups not allowed', 'email_provider_disabled', 'anonymous_provider_disabled', 'anonymous sign-ins are disabled')) {
-    return { kind: 'signup_disabled', title: 'El registro no está disponible ahora mismo', subtitle: 'Inténtalo más tarde' };
+  if (
+    has(
+      'signup_disabled',
+      'signups not allowed',
+      'email_provider_disabled',
+      'anonymous_provider_disabled',
+      'anonymous sign-ins are disabled'
+    )
+  ) {
+    return {
+      kind: 'signup_disabled',
+      title: 'El registro no está disponible ahora mismo',
+      subtitle: 'Inténtalo más tarde',
+    };
   }
-  if (has('session_not_found', 'session_expired', 'refresh_token_not_found', 'auth session missing')) {
-    return { kind: 'session_expired', title: 'Tu sesión ha caducado', subtitle: 'Vuelve a iniciar sesión' };
+  if (
+    has('session_not_found', 'session_expired', 'refresh_token_not_found', 'auth session missing')
+  ) {
+    return {
+      kind: 'session_expired',
+      title: 'Tu sesión ha caducado',
+      subtitle: 'Vuelve a iniciar sesión',
+    };
   }
   if (has('network', 'fetch failed', 'failed to fetch', 'timeout', 'timed out')) {
-    return { kind: 'network', title: 'Error de conexión', subtitle: 'Revisa tu conexión a internet' };
+    return {
+      kind: 'network',
+      title: 'Error de conexión',
+      subtitle: 'Revisa tu conexión a internet',
+    };
   }
   return { kind: 'unknown', title: fallback, subtitle: 'Inténtalo de nuevo' };
 }

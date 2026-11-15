@@ -39,9 +39,7 @@ describe('useBoostBars - filtro de bares de test', () => {
   });
 
   it('no consulta nada si enabled=false', async () => {
-    const { result } = await renderHook(() =>
-      useBoostBars({ centerLatLng: null, enabled: false })
-    );
+    const { result } = await renderHook(() => useBoostBars({ centerLatLng: null, enabled: false }));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(mockedFrom).not.toHaveBeenCalled();
@@ -85,7 +83,9 @@ describe('useBarBoost - espera de activación tras la compra', () => {
     mockedFrom
       .mockReturnValueOnce(createQueryBuilderMock({ data: null, error: null })) // carga inicial
       .mockReturnValueOnce(createQueryBuilderMock({ data: null, error: null })) // aún pending
-      .mockReturnValueOnce(createQueryBuilderMock({ data: { end_at: endAt, status: 'active' }, error: null }));
+      .mockReturnValueOnce(
+        createQueryBuilderMock({ data: { end_at: endAt, status: 'active' }, error: null })
+      );
 
     const { result } = await renderHook(() => useBarBoost('bar-1'));
     await waitFor(() => expect(result.current.isLoading).toBe(false));

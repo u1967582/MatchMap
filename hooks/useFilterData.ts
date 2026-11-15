@@ -5,26 +5,26 @@ import { supabase } from '~/utils/supabase';
 const getCategoryEmoji = (name: string): string => {
   const categoryMap: { [key: string]: string } = {
     'Bar deportivo': '⚽️',
-    'Cervecería': '🍺',
-    'Lounge': '🍸',
-    'Pub': '🍻',
-    'Restaurante': '🍽️',
+    Cervecería: '🍺',
+    Lounge: '🍸',
+    Pub: '🍻',
+    Restaurante: '🍽️',
   };
   return categoryMap[name] || '🏪';
 };
 
 const getFoodEmoji = (name: string): string => {
   const foodMap: { [key: string]: string } = {
-    'Americana': '🍔',
+    Americana: '🍔',
     'Asador / Parrilla': '🍖',
-    'Italiana': '🍕',
-    'Japonesa': '🍱',
-    'Kebab': '🌮',
-    'Mediterránea': '🐠',
-    'Mexicana': '🌵',
+    Italiana: '🍕',
+    Japonesa: '🍱',
+    Kebab: '🌮',
+    Mediterránea: '🐠',
+    Mexicana: '🌵',
     'Tapas / Raciones': '🍷',
-    'Vegana': '🌱',
-    'Vegetariana': '🥦',
+    Vegana: '🌱',
+    Vegetariana: '🥦',
   };
   return foodMap[name] || '🍽️';
 };
@@ -34,8 +34,8 @@ const getFeatureEmoji = (name: string): string => {
     'Acceso para personas con movilidad reducida': '♿',
     'Admite mascotas': '🐶',
     'Aire acondicionado': '❄️',
-    'Parking': '🅿️',
-    'Terraza': '🌞',
+    Parking: '🅿️',
+    Terraza: '🌞',
     'Zona infantil': '👶',
     'Zona para fumadores': '🚬',
   };
@@ -142,10 +142,19 @@ export function useFilterData(): FilterData {
         ]);
 
         // Use fallback data if any table doesn't exist or has errors
-        const useFallback = categoriesError || foodError || featuresError || tvFeaturesError ||
-                           !categoriesData || !foodData || !featuresData || !tvFeaturesData ||
-                           categoriesData.length === 0 || foodData.length === 0 || 
-                           featuresData.length === 0 || tvFeaturesData.length === 0;
+        const useFallback =
+          categoriesError ||
+          foodError ||
+          featuresError ||
+          tvFeaturesError ||
+          !categoriesData ||
+          !foodData ||
+          !featuresData ||
+          !tvFeaturesData ||
+          categoriesData.length === 0 ||
+          foodData.length === 0 ||
+          featuresData.length === 0 ||
+          tvFeaturesData.length === 0;
 
         if (useFallback) {
           setBarCategories(FALLBACK_CATEGORIES);
@@ -154,27 +163,27 @@ export function useFilterData(): FilterData {
           setTvFeatures(FALLBACK_TV_FEATURES);
         } else {
           // Add emojis to categories
-          const categoriesWithEmojis = categoriesData.map(category => ({
+          const categoriesWithEmojis = categoriesData.map((category) => ({
             ...category,
-            emoji: getCategoryEmoji(category.name)
+            emoji: getCategoryEmoji(category.name),
           }));
 
           // Add emojis to food types
-          const foodTypesWithEmojis = foodData.map(food => ({
+          const foodTypesWithEmojis = foodData.map((food) => ({
             ...food,
-            emoji: getFoodEmoji(food.name)
+            emoji: getFoodEmoji(food.name),
           }));
 
           // Add emojis to features
-          const featuresWithEmojis = featuresData.map(feature => ({
+          const featuresWithEmojis = featuresData.map((feature) => ({
             ...feature,
-            emoji: getFeatureEmoji(feature.name)
+            emoji: getFeatureEmoji(feature.name),
           }));
 
           // Add emojis to TV features
-          const tvFeaturesWithEmojis = tvFeaturesData.map(tvFeature => ({
+          const tvFeaturesWithEmojis = tvFeaturesData.map((tvFeature) => ({
             ...tvFeature,
-            emoji: getTVFeatureEmoji(tvFeature.name)
+            emoji: getTVFeatureEmoji(tvFeature.name),
           }));
 
           setBarCategories(categoriesWithEmojis);
@@ -182,11 +191,10 @@ export function useFilterData(): FilterData {
           setBarFeatures(featuresWithEmojis);
           setTvFeatures(tvFeaturesWithEmojis);
         }
-
       } catch (err) {
         console.error('💥 Error loading filter data:', err);
         setError('Error al cargar los filtros');
-        
+
         setBarCategories(FALLBACK_CATEGORIES);
         setFoodTypes(FALLBACK_FOOD_TYPES);
         setBarFeatures(FALLBACK_FEATURES);
@@ -207,4 +215,4 @@ export function useFilterData(): FilterData {
     loading,
     error,
   };
-} 
+}

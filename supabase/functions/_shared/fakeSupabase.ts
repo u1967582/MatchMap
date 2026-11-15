@@ -13,17 +13,19 @@ export function op(call: QueryCall, method: string) {
   return call.ops.find((o) => o.method === method);
 }
 
-export function createFakeSupabase(opts: {
-  respond?: Responder;
-  rpc?: (fn: string, args: any) => { data?: any; error?: any };
-  getUser?: (token?: string) => { data: { user: any }; error?: any };
-  deleteUser?: (id: string) => { error?: any };
-  storage?: {
-    list?: (bucket: string, prefix: string, options?: any) => { data?: any; error?: any };
-    remove?: (bucket: string, paths: string[]) => { error?: any };
-    move?: (bucket: string, from: string, to: string) => { error?: any };
-  };
-} = {}) {
+export function createFakeSupabase(
+  opts: {
+    respond?: Responder;
+    rpc?: (fn: string, args: any) => { data?: any; error?: any };
+    getUser?: (token?: string) => { data: { user: any }; error?: any };
+    deleteUser?: (id: string) => { error?: any };
+    storage?: {
+      list?: (bucket: string, prefix: string, options?: any) => { data?: any; error?: any };
+      remove?: (bucket: string, paths: string[]) => { error?: any };
+      move?: (bucket: string, from: string, to: string) => { error?: any };
+    };
+  } = {}
+) {
   const calls: QueryCall[] = [];
   const rpcCalls: { fn: string; args: any }[] = [];
   const storageCalls: { bucket: string; method: string; args: any[] }[] = [];
@@ -44,7 +46,7 @@ export function createFakeSupabase(opts: {
             return b;
           };
         },
-      },
+      }
     );
     return b;
   };
@@ -59,25 +61,40 @@ export function createFakeSupabase(opts: {
       getUser: (token?: string) =>
         Promise.resolve(opts.getUser?.(token) ?? { data: { user: null }, error: null }),
       admin: {
-        deleteUser: (id: string) => Promise.resolve({ error: null, ...(opts.deleteUser?.(id) ?? {}) }),
+        deleteUser: (id: string) =>
+          Promise.resolve({ error: null, ...(opts.deleteUser?.(id) ?? {}) }),
       },
     },
     storage: {
       from: (bucket: string) => ({
         list: (prefix: string, options?: any) => {
           storageCalls.push({ bucket, method: 'list', args: [prefix, options] });
-          return Promise.resolve({ data: [], error: null, ...(opts.storage?.list?.(bucket, prefix, options) ?? {}) });
+          return Promise.resolve({
+            data: [],
+            error: null,
+            ...(opts.storage?.list?.(bucket, prefix, options) ?? {}),
+          });
         },
         remove: (paths: string[]) => {
           storageCalls.push({ bucket, method: 'remove', args: [paths] });
-          return Promise.resolve({ data: null, error: null, ...(opts.storage?.remove?.(bucket, paths) ?? {}) });
+          return Promise.resolve({
+            data: null,
+            error: null,
+            ...(opts.storage?.remove?.(bucket, paths) ?? {}),
+          });
         },
         move: (from: string, to: string) => {
           storageCalls.push({ bucket, method: 'move', args: [from, to] });
-          return Promise.resolve({ data: null, error: null, ...(opts.storage?.move?.(bucket, from, to) ?? {}) });
+          return Promise.resolve({
+            data: null,
+            error: null,
+            ...(opts.storage?.move?.(bucket, from, to) ?? {}),
+          });
         },
         getPublicUrl: (path: string) => ({
-          data: { publicUrl: `https://test.supabase.co/storage/v1/object/public/${bucket}/${path}` },
+          data: {
+            publicUrl: `https://test.supabase.co/storage/v1/object/public/${bucket}/${path}`,
+          },
         }),
       }),
     },

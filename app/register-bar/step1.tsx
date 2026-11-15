@@ -14,16 +14,18 @@ export default function Step1() {
   const [user, setUser] = useState<any>(null);
   const [canProceed, setCanProceed] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Check if this is auto pre-register mode (super user cold registration)
   const isAutoPreRegister = mode === 'auto_pre_register';
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
       if (currentUser) {
         setUser(currentUser);
-        
+
         // All users can proceed directly
         setCanProceed(true);
         setIsLoading(false);
@@ -77,4 +79,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 16,
   },
-}); 
+});

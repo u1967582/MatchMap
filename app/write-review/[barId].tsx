@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Keyboard, Alert } from 'react-native';
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  ScrollView,
+  Keyboard,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,14 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { supabase } from '~/utils/supabase';
 import { useReviews } from '~/hooks/useReviews';
-import {
-  AppText,
-  AppButton,
-  toast,
-  colors,
-  spacing,
-  radius,
-} from '~/components/ds';
+import { AppText, AppButton, toast, colors, spacing, radius } from '~/components/ds';
 
 interface Bar {
   id: string;
@@ -61,8 +63,7 @@ function RatingStar({ value, selected, onPress }: RatingStarProps) {
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.7}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         <Ionicons
           name={selected ? 'star' : 'star-outline'}
           size={32}
@@ -80,7 +81,7 @@ export default function WriteReviewScreen() {
   const [user, setUser] = useState<any>(null);
   const [existingReview, setExistingReview] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  
+
   const router = useRouter();
   const { barId } = useLocalSearchParams<{ barId: string }>();
   const { createReview, updateReview, getUserReview, deleteReview } = useReviews();
@@ -88,7 +89,9 @@ export default function WriteReviewScreen() {
   // Get current user
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
       setUser(authUser);
     };
     getUser();
@@ -98,18 +101,20 @@ export default function WriteReviewScreen() {
   useEffect(() => {
     const fetchBarAndReview = async () => {
       if (!barId || !user?.id) return;
-      
+
       try {
         // Fetch bar data
         const { data: barData, error } = await supabase
           .from('bars')
-          .select(`
+          .select(
+            `
             id,
             name,
             description,
             bar_categories(name),
             bar_images(image_url, image_order)
-          `)
+          `
+          )
           .eq('id', barId)
           .single();
 
@@ -124,8 +129,10 @@ export default function WriteReviewScreen() {
           name: barData.name,
           description: barData.description,
           // Get the image with image_order = 1, or the first image if none found
-          image_url: barData.bar_images?.find((img: any) => img.image_order === 1)?.image_url || 
-                    barData.bar_images?.[0]?.image_url || undefined,
+          image_url:
+            barData.bar_images?.find((img: any) => img.image_order === 1)?.image_url ||
+            barData.bar_images?.[0]?.image_url ||
+            undefined,
           category: barData.bar_categories?.[0] || null,
         };
 
@@ -201,10 +208,14 @@ export default function WriteReviewScreen() {
   };
 
   const confirmDelete = () => {
-    Alert.alert('Eliminar reseña', '¿Seguro que quieres eliminar tu reseña? No se puede deshacer.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: handleDelete },
-    ]);
+    Alert.alert(
+      'Eliminar reseña',
+      '¿Seguro que quieres eliminar tu reseña? No se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Eliminar', style: 'destructive', onPress: handleDelete },
+      ]
+    );
   };
 
   const handleBack = () => {
@@ -216,7 +227,7 @@ export default function WriteReviewScreen() {
       <Stack.Screen
         options={{
           headerShown: false,
-          title: 'Escribir reseña'
+          title: 'Escribir reseña',
         }}
       />
 
@@ -225,32 +236,33 @@ export default function WriteReviewScreen() {
         <TouchableOpacity onPress={handleBack} activeOpacity={0.6}>
           <Ionicons name="chevron-back" size={28} color={colors.text.primary} />
         </TouchableOpacity>
-        <AppText variant="h2">
-          {existingReview ? 'Editar reseña' : 'Nueva reseña'}
-        </AppText>
+        <AppText variant="h2">{existingReview ? 'Editar reseña' : 'Nueva reseña'}</AppText>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={existingReview ? styles.scrollContentWithDelete : styles.scrollContent}
+        contentContainerStyle={
+          existingReview ? styles.scrollContentWithDelete : styles.scrollContent
+        }
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         {/* Bar Info - Minimal Design */}
         {bar && (
           <View style={styles.barInfo}>
             <View style={styles.barImageWrapper}>
               <Image
                 source={{
-                  uri: bar.image_url || 'https://via.placeholder.com/56x56/2A3A4A/A3B3CC?text=Bar'
+                  uri: bar.image_url || 'https://via.placeholder.com/56x56/2A3A4A/A3B3CC?text=Bar',
                 }}
                 style={styles.barAvatar}
                 resizeMode="cover"
               />
             </View>
             <View style={styles.barDetails}>
-              <AppText variant="h2" numberOfLines={1}>{bar.name}</AppText>
+              <AppText variant="h2" numberOfLines={1}>
+                {bar.name}
+              </AppText>
               <View style={styles.categoryRow}>
                 <Ionicons name="location-sharp" size={14} color={colors.text.secondary} />
                 <AppText variant="caption" color={colors.text.secondary}>
@@ -291,9 +303,16 @@ export default function WriteReviewScreen() {
                     ? colors.status.boost
                     : colors.status.error
               }
-              style={styles.ratingLabel}
-            >
-              {rating === 5 ? '¡Excelente!' : rating === 4 ? 'Muy bueno' : rating === 3 ? 'Bueno' : rating === 2 ? 'Regular' : 'Mejorable'}
+              style={styles.ratingLabel}>
+              {rating === 5
+                ? '¡Excelente!'
+                : rating === 4
+                  ? 'Muy bueno'
+                  : rating === 3
+                    ? 'Bueno'
+                    : rating === 2
+                      ? 'Regular'
+                      : 'Mejorable'}
             </AppText>
           )}
         </View>
@@ -311,8 +330,7 @@ export default function WriteReviewScreen() {
             activeOpacity={1}
             onPress={() => {
               // Focus the input when tapping the container
-            }}
-          >
+            }}>
             <View style={styles.textInputWrapper}>
               <TextInput
                 placeholder="Comparte detalles sobre tu visita: ambiente, atención, bebidas, música..."
@@ -331,8 +349,7 @@ export default function WriteReviewScreen() {
           <View style={styles.charCountRow}>
             <AppText
               variant="caption"
-              color={comment.length > 450 ? colors.status.warning : colors.text.muted}
-            >
+              color={comment.length > 450 ? colors.status.warning : colors.text.muted}>
               {comment.length}/500 caracteres
             </AppText>
           </View>
@@ -493,4 +510,4 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border.subtle,
   },
-}); 
+});

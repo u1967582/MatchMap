@@ -18,13 +18,21 @@ describe('AdminOnly', () => {
 
   it('no monta la pantalla mientras comprueba el rol', async () => {
     mockedUseIsAdmin.mockReturnValue({ isAdmin: false, loading: true });
-    const { queryByText } = await render(<AdminOnly><Text>secreto</Text></AdminOnly>);
+    const { queryByText } = await render(
+      <AdminOnly>
+        <Text>secreto</Text>
+      </AdminOnly>
+    );
     expect(queryByText('secreto')).toBeNull();
   });
 
   it('bloquea a un usuario normal y deja volver', async () => {
     mockedUseIsAdmin.mockReturnValue({ isAdmin: false, loading: false });
-    const { queryByText, getByText } = await render(<AdminOnly><Text>secreto</Text></AdminOnly>);
+    const { queryByText, getByText } = await render(
+      <AdminOnly>
+        <Text>secreto</Text>
+      </AdminOnly>
+    );
     expect(queryByText('secreto')).toBeNull();
     fireEvent.press(getByText('Volver'));
     expect(useRouter().back).toHaveBeenCalled();

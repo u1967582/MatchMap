@@ -1,13 +1,13 @@
 // supabase/functions/sync-football/index.ts
 // Sincroniza equipos y partidos desde API-Football. Ver handler.ts para la
 // lógica (separada para poder testearla).
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createHandler } from './handler.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createHandler } from './handler.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-)
+);
 
 Deno.serve(
   createHandler({
@@ -16,4 +16,4 @@ Deno.serve(
     apiKey: Deno.env.get('API_FOOTBALL_KEY')!,
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
   })
-)
+);

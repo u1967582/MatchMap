@@ -69,8 +69,7 @@ const InputField: React.FC<InputFieldProps> = ({
         <TouchableOpacity
           style={styles.passwordToggle}
           onPress={togglePasswordVisibility}
-          activeOpacity={0.7}
-        >
+          activeOpacity={0.7}>
           <Ionicons
             name={isPasswordVisible ? 'eye-off' : 'eye'}
             size={20}
@@ -116,4 +115,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default InputField; 
+export default InputField;

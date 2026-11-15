@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Platform } from 'react-native';
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '~/utils/supabase';
 import { claimDocumentPath, STORAGE_BUCKETS } from '~/utils/storagePaths';
-import {
-  AppText,
-  AppButton,
-  AppInput,
-  toast,
-  colors,
-  spacing,
-  radius,
-} from '~/components/ds';
+import { AppText, AppButton, AppInput, toast, colors, spacing, radius } from '~/components/ds';
 
 interface BarSummary {
   id: string;
@@ -81,7 +81,9 @@ export default function ClaimBarScreen() {
 
     setUploadingDocument(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Debes iniciar sesión');
         return;
@@ -138,7 +140,9 @@ export default function ClaimBarScreen() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Debes iniciar sesión');
         return;
@@ -172,7 +176,12 @@ export default function ClaimBarScreen() {
     }
   };
 
-  const canSubmit = !loading && !uploadingDocument && !!contactName.trim() && !!contactPhone.trim() && !!documentPath;
+  const canSubmit =
+    !loading &&
+    !uploadingDocument &&
+    !!contactName.trim() &&
+    !!contactPhone.trim() &&
+    !!documentPath;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -190,18 +199,21 @@ export default function ClaimBarScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         {bar && (
           <View style={styles.barCard}>
             <Ionicons name="storefront-outline" size={22} color={colors.brand.link} />
             <View style={styles.barCardText}>
-              <AppText variant="title" numberOfLines={1}>{bar.name}</AppText>
+              <AppText variant="title" numberOfLines={1}>
+                {bar.name}
+              </AppText>
               <AppText variant="caption" color={colors.text.secondary} numberOfLines={1}>
                 {(bar.address || 'Sin dirección') + (bar.city ? `, ${bar.city}` : '')}
               </AppText>
               {bar.phone ? (
-                <AppText variant="caption" color={colors.text.secondary}>Tel. guardado: {bar.phone}</AppText>
+                <AppText variant="caption" color={colors.text.secondary}>
+                  Tel. guardado: {bar.phone}
+                </AppText>
               ) : null}
             </View>
           </View>
@@ -211,13 +223,15 @@ export default function ClaimBarScreen() {
           <View style={styles.warningBox}>
             <Ionicons name="information-circle-outline" size={16} color={colors.status.warning} />
             <AppText variant="caption" color={colors.text.secondary} style={styles.warningText}>
-              Este bar ya tiene un propietario asignado. Si crees que es un error, contacta con soporte.
+              Este bar ya tiene un propietario asignado. Si crees que es un error, contacta con
+              soporte.
             </AppText>
           </View>
         ) : (
           <View style={styles.section}>
             <AppText variant="body" color={colors.text.secondary} style={styles.intro}>
-              Cuéntanos quién eres para poder verificar que este bar es tuyo. Revisaremos tu solicitud manualmente.
+              Cuéntanos quién eres para poder verificar que este bar es tuyo. Revisaremos tu
+              solicitud manualmente.
             </AppText>
 
             <AppInput
@@ -236,9 +250,12 @@ export default function ClaimBarScreen() {
               keyboardType="phone-pad"
             />
 
-            <AppText variant="label" style={styles.messageLabel}>Documento de verificación</AppText>
+            <AppText variant="label" style={styles.messageLabel}>
+              Documento de verificación
+            </AppText>
             <AppText variant="caption" color={colors.text.secondary} style={styles.documentHint}>
-              Sube una foto de un documento que demuestre que este bar es tuyo (licencia de actividad, factura o recibo a nombre del bar).
+              Sube una foto de un documento que demuestre que este bar es tuyo (licencia de
+              actividad, factura o recibo a nombre del bar).
             </AppText>
 
             {documentUri ? (
@@ -246,10 +263,14 @@ export default function ClaimBarScreen() {
                 <Image source={{ uri: documentUri }} style={styles.documentPreview} />
                 {uploadingDocument ? (
                   <View style={styles.documentUploadingOverlay}>
-                    <AppText variant="caption" color="#FFFFFF">Subiendo...</AppText>
+                    <AppText variant="caption" color="#FFFFFF">
+                      Subiendo...
+                    </AppText>
                   </View>
                 ) : (
-                  <TouchableOpacity style={styles.documentRemoveButton} onPress={handleRemoveDocument}>
+                  <TouchableOpacity
+                    style={styles.documentRemoveButton}
+                    onPress={handleRemoveDocument}>
                     <Ionicons name="close" size={16} color="#FFFFFF" />
                   </TouchableOpacity>
                 )}
@@ -257,11 +278,15 @@ export default function ClaimBarScreen() {
             ) : (
               <TouchableOpacity style={styles.documentPickButton} onPress={handlePickDocument}>
                 <Ionicons name="camera-outline" size={20} color={colors.brand.link} />
-                <AppText variant="label" color={colors.brand.link}>Subir foto del documento</AppText>
+                <AppText variant="label" color={colors.brand.link}>
+                  Subir foto del documento
+                </AppText>
               </TouchableOpacity>
             )}
 
-            <AppText variant="label" style={styles.messageLabel}>Contexto adicional (opcional)</AppText>
+            <AppText variant="label" style={styles.messageLabel}>
+              Contexto adicional (opcional)
+            </AppText>
             <View style={styles.textInputWrapper}>
               <TextInput
                 placeholder="Añade cualquier detalle que nos ayude a verificar tu solicitud..."

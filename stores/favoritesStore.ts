@@ -64,7 +64,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         return;
       }
 
-      const favoriteBarIds = new Set(data?.map(f => f.bar_id) || []);
+      const favoriteBarIds = new Set(data?.map((f) => f.bar_id) || []);
       set({ favorites: favoriteBarIds, initialized: true });
       console.log('✅ Favorites initialized:', favoriteBarIds.size);
     } catch (error) {
@@ -92,9 +92,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
     // Server sync
     try {
-      const { error } = await supabase
-        .from('favorites')
-        .insert({ user_id: userId, bar_id: barId });
+      const { error } = await supabase.from('favorites').insert({ user_id: userId, bar_id: barId });
 
       if (error) {
         console.error('❌ Error adding favorite:', error);
@@ -180,7 +178,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('favorites')
-        .select(`
+        .select(
+          `
           bar_id,
           bars (
             id,
@@ -194,7 +193,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             longitude,
             bar_images(image_url, image_order)
           )
-        `)
+        `
+        )
         .eq('user_id', userId);
 
       if (error) {
@@ -205,12 +205,17 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
       }
 
       // Si un bar favorito deja de ser visible (RLS), el join devuelve bars: null
-      return data?.filter((item: any) => item.bars).map((item: any) => ({
-        ...item.bars,
-        image_url: item.bars.bar_images
-          ?.find((img: any) => img.image_order === 1)?.image_url ||
-          item.bars.bar_images?.[0]?.image_url || null,
-      })) || [];
+      return (
+        data
+          ?.filter((item: any) => item.bars)
+          .map((item: any) => ({
+            ...item.bars,
+            image_url:
+              item.bars.bar_images?.find((img: any) => img.image_order === 1)?.image_url ||
+              item.bars.bar_images?.[0]?.image_url ||
+              null,
+          })) || []
+      );
     } catch (error) {
       console.error('❌ Error in getFavoriteBars:', error);
       throw error;

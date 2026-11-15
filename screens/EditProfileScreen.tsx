@@ -69,12 +69,12 @@ export default function EditProfileScreen() {
   // Form validation
   const formValidation = useMemo((): FormValidation => {
     const errors: string[] = [];
-    
+
     // Only validate if fields have been modified (not empty)
     if (formData.full_name.trim() && formData.full_name.length < 2) {
       errors.push('El nombre debe tener al menos 2 caracteres');
     }
-    
+
     if (formData.username.trim() && formData.username.length < 3) {
       errors.push('El nombre de usuario debe tener al menos 3 caracteres');
     }
@@ -98,8 +98,11 @@ export default function EditProfileScreen() {
   // Load current user profile
   const fetchUserProfile = useCallback(async () => {
     try {
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-      
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+
       if (authError || !authUser) {
         console.error('Error getting user:', authError);
         router.replace('/');
@@ -147,26 +150,26 @@ export default function EditProfileScreen() {
 
   // Handle form field changes
   const handleFullNameChange = useCallback((full_name: string) => {
-    setFormData(prev => ({ ...prev, full_name }));
+    setFormData((prev) => ({ ...prev, full_name }));
   }, []);
 
   const handleUsernameChange = useCallback((username: string) => {
-    setFormData(prev => ({ ...prev, username }));
+    setFormData((prev) => ({ ...prev, username }));
   }, []);
 
   const handlePasswordChange = useCallback((password: string) => {
-    setFormData(prev => ({ ...prev, password }));
+    setFormData((prev) => ({ ...prev, password }));
   }, []);
 
   const handleConfirmPasswordChange = useCallback((confirmPassword: string) => {
-    setFormData(prev => ({ ...prev, confirmPassword }));
+    setFormData((prev) => ({ ...prev, confirmPassword }));
   }, []);
 
   const togglePasswordFields = useCallback(() => {
-    setShowPasswordFields(prev => {
+    setShowPasswordFields((prev) => {
       if (!prev) {
         // Clear password fields when showing
-        setFormData(prevForm => ({
+        setFormData((prevForm) => ({
           ...prevForm,
           password: '',
           confirmPassword: '',
@@ -195,21 +198,17 @@ export default function EditProfileScreen() {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
-    Alert.alert(
-      'Seleccionar imagen',
-      'Elige una opción',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Galería', onPress: () => pickImageFromGallery() },
-        { text: 'Cámara', onPress: () => pickImageFromCamera() },
-      ]
-    );
+    Alert.alert('Seleccionar imagen', 'Elige una opción', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Galería', onPress: () => pickImageFromGallery() },
+      { text: 'Cámara', onPress: () => pickImageFromCamera() },
+    ]);
   }, [requestPermissions]);
 
   const pickImageFromGallery = useCallback(async () => {
     try {
       console.log('📱 Iniciando selección desde galería...');
-      
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -236,7 +235,7 @@ export default function EditProfileScreen() {
         height: file.height,
         fileSize: file.fileSize,
       });
-      
+
       if (!file.uri) {
         toast.error('No se pudo obtener la imagen');
         return;
@@ -258,7 +257,6 @@ export default function EditProfileScreen() {
 
       console.log('✅ Imagen válida seleccionada desde galería');
       setProfileImage(await resizeForUpload(file, 'avatar'));
-      
     } catch (error) {
       console.error('Error picking image from gallery:', error);
       toast.error('No se pudo seleccionar la imagen');
@@ -268,14 +266,12 @@ export default function EditProfileScreen() {
   const pickImageFromCamera = useCallback(async () => {
     try {
       console.log('📷 Iniciando toma de foto con cámara...');
-      
+
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permiso denegado', 
-          'Se necesita acceso a la cámara para tomar una foto.',
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Permiso denegado', 'Se necesita acceso a la cámara para tomar una foto.', [
+          { text: 'OK' },
+        ]);
         return;
       }
 
@@ -303,7 +299,7 @@ export default function EditProfileScreen() {
         height: file.height,
         fileSize: file.fileSize,
       });
-      
+
       if (!file.uri) {
         toast.error('No se pudo obtener la foto');
         return;
@@ -325,163 +321,164 @@ export default function EditProfileScreen() {
 
       console.log('✅ Foto válida tomada con cámara');
       setProfileImage(await resizeForUpload(file, 'avatar'));
-      
     } catch (error) {
       console.error('Error taking photo:', error);
       toast.error('No se pudo tomar la foto');
     }
   }, []);
 
-    const uploadProfileImage = useCallback(async (uri: string): Promise<string | null> => {
-    if (!user) return null;
+  const uploadProfileImage = useCallback(
+    async (uri: string): Promise<string | null> => {
+      if (!user) return null;
 
-    try {
-      setUploadingImage(true);
-      console.log('📸 Iniciando subida de imagen para usuario:', user.id);
-      console.log('📁 URI recibida:', uri);
-
-      // Verificar que el archivo existe y obtener información
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      console.log('📋 Información del archivo:', fileInfo);
-
-      if (!fileInfo.exists) {
-        throw new Error('El archivo no existe en la URI proporcionada');
-      }
-
-      if (fileInfo.size === 0) {
-        throw new Error('El archivo está vacío');
-      }
-
-      const filePath = avatarPath(user.id);
-      
-      // Método 1: Usando base64 (más confiable en simuladores iOS)
       try {
-        console.log('🔄 Intentando método base64...');
-        
-        const base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
+        setUploadingImage(true);
+        console.log('📸 Iniciando subida de imagen para usuario:', user.id);
+        console.log('📁 URI recibida:', uri);
 
-        console.log('📦 Base64 length:', base64.length);
-        console.log('📦 Base64 preview:', base64.substring(0, 50) + '...');
+        // Verificar que el archivo existe y obtener información
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        console.log('📋 Información del archivo:', fileInfo);
 
-        if (!base64 || base64.length === 0) {
-          throw new Error('Base64 string está vacío');
+        if (!fileInfo.exists) {
+          throw new Error('El archivo no existe en la URI proporcionada');
         }
 
-        // Convertir base64 a ArrayBuffer
-        const binaryString = atob(base64);
-        const arrayBuffer = new Uint8Array(binaryString.length);
-        
-        for (let i = 0; i < binaryString.length; i++) {
-          arrayBuffer[i] = binaryString.charCodeAt(i);
+        if (fileInfo.size === 0) {
+          throw new Error('El archivo está vacío');
         }
 
-        console.log('📦 ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
+        const filePath = avatarPath(user.id);
 
-        const { data, error } = await supabase.storage
-          .from(STORAGE_BUCKETS.avatars)
-          .upload(filePath, arrayBuffer, {
-            contentType: 'image/jpeg',
-            upsert: true,
+        // Método 1: Usando base64 (más confiable en simuladores iOS)
+        try {
+          console.log('🔄 Intentando método base64...');
+
+          const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
           });
 
-        if (error) {
-          console.error('❌ Error subiendo con base64:', error);
-          throw error;
+          console.log('📦 Base64 length:', base64.length);
+          console.log('📦 Base64 preview:', base64.substring(0, 50) + '...');
+
+          if (!base64 || base64.length === 0) {
+            throw new Error('Base64 string está vacío');
+          }
+
+          // Convertir base64 a ArrayBuffer
+          const binaryString = atob(base64);
+          const arrayBuffer = new Uint8Array(binaryString.length);
+
+          for (let i = 0; i < binaryString.length; i++) {
+            arrayBuffer[i] = binaryString.charCodeAt(i);
+          }
+
+          console.log('📦 ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
+
+          const { data, error } = await supabase.storage
+            .from(STORAGE_BUCKETS.avatars)
+            .upload(filePath, arrayBuffer, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+
+          if (error) {
+            console.error('❌ Error subiendo con base64:', error);
+            throw error;
+          }
+
+          console.log('✅ Imagen subida exitosamente con base64:', data);
+        } catch (base64Error) {
+          console.warn('⚠️ Método base64 falló, intentando con fetch:', base64Error);
+
+          // Método 2: Usando fetch como fallback
+          const response = await fetch(uri);
+          console.log('🌐 Fetch response status:', response.status);
+          console.log('🌐 Fetch response headers:', response.headers);
+
+          if (!response.ok) {
+            throw new Error(`Fetch failed with status: ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          console.log('📦 Blob size:', blob.size, 'bytes');
+          console.log('📦 Blob type:', blob.type);
+
+          if (blob.size === 0) {
+            throw new Error('El blob está vacío');
+          }
+
+          const { data, error } = await supabase.storage
+            .from(STORAGE_BUCKETS.avatars)
+            .upload(filePath, blob, {
+              contentType: blob.type || 'image/jpeg',
+              upsert: true,
+            });
+
+          if (error) {
+            console.error('❌ Error subiendo con fetch:', error);
+            throw error;
+          }
+
+          console.log('✅ Imagen subida exitosamente con fetch:', data);
         }
 
-        console.log('✅ Imagen subida exitosamente con base64:', data);
-
-      } catch (base64Error) {
-        console.warn('⚠️ Método base64 falló, intentando con fetch:', base64Error);
-        
-        // Método 2: Usando fetch como fallback
-        const response = await fetch(uri);
-        console.log('🌐 Fetch response status:', response.status);
-        console.log('🌐 Fetch response headers:', response.headers);
-
-        if (!response.ok) {
-          throw new Error(`Fetch failed with status: ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        console.log('📦 Blob size:', blob.size, 'bytes');
-        console.log('📦 Blob type:', blob.type);
-
-        if (blob.size === 0) {
-          throw new Error('El blob está vacío');
-        }
-
-        const { data, error } = await supabase.storage
+        // Obtener URL pública
+        const { data: urlData } = supabase.storage
           .from(STORAGE_BUCKETS.avatars)
-          .upload(filePath, blob, {
-            contentType: blob.type || 'image/jpeg',
-            upsert: true,
-          });
+          .getPublicUrl(filePath);
 
-        if (error) {
-          console.error('❌ Error subiendo con fetch:', error);
-          throw error;
+        const avatarUrl = urlData?.publicUrl;
+
+        if (!avatarUrl) {
+          throw new Error('No se pudo obtener la URL pública');
         }
 
-        console.log('✅ Imagen subida exitosamente con fetch:', data);
+        console.log('🔗 Public URL:', avatarUrl);
+
+        // Actualizar perfil en la base de datos
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            profile_image_url: avatarUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('❌ Error actualizando perfil:', updateError);
+          throw updateError;
+        }
+
+        console.log('✅ Perfil actualizado correctamente con nueva imagen');
+        return avatarUrl;
+      } catch (error) {
+        console.error('❌ Error completo en uploadProfileImage:', error);
+
+        // Proporcionar más contexto del error
+        if (error instanceof Error) {
+          throw new Error(`Error subiendo imagen: ${error.message}`);
+        } else {
+          throw new Error('Error desconocido subiendo imagen');
+        }
+      } finally {
+        setUploadingImage(false);
       }
-
-      // Obtener URL pública
-      const { data: urlData } = supabase.storage
-        .from(STORAGE_BUCKETS.avatars)
-        .getPublicUrl(filePath);
-
-      const avatarUrl = urlData?.publicUrl;
-
-      if (!avatarUrl) {
-        throw new Error('No se pudo obtener la URL pública');
-      }
-
-      console.log('🔗 Public URL:', avatarUrl);
-
-      // Actualizar perfil en la base de datos
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ 
-          profile_image_url: avatarUrl, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', user.id);
-
-      if (updateError) {
-        console.error('❌ Error actualizando perfil:', updateError);
-        throw updateError;
-      }
-
-      console.log('✅ Perfil actualizado correctamente con nueva imagen');
-      return avatarUrl;
-
-    } catch (error) {
-      console.error('❌ Error completo en uploadProfileImage:', error);
-      
-      // Proporcionar más contexto del error
-      if (error instanceof Error) {
-        throw new Error(`Error subiendo imagen: ${error.message}`);
-      } else {
-        throw new Error('Error desconocido subiendo imagen');
-      }
-    } finally {
-      setUploadingImage(false);
-    }
-  }, [user]);
-  
+    },
+    [user]
+  );
 
   // Check if any changes were made
   const hasChanges = useMemo(() => {
     if (!user) return false;
-    
+
     const imageChanged = profileImage !== user.profile_image_url;
-    const nameChanged = formData.full_name.trim() !== '' && formData.full_name.trim() !== user.full_name;
-    const usernameChanged = formData.username.trim() !== '' && formData.username.trim() !== user.username;
+    const nameChanged =
+      formData.full_name.trim() !== '' && formData.full_name.trim() !== user.full_name;
+    const usernameChanged =
+      formData.username.trim() !== '' && formData.username.trim() !== user.username;
     const passwordChanged = showPasswordFields && formData.password.trim() !== '';
-    
+
     return imageChanged || nameChanged || usernameChanged || passwordChanged;
   }, [user, profileImage, formData, showPasswordFields]);
 
@@ -504,27 +501,30 @@ export default function EditProfileScreen() {
     try {
       let imageUrl: string | undefined = user.profile_image_url || undefined;
 
-              // Upload new image if selected (this also updates the database)
-        if (profileImage && profileImage !== user.profile_image_url) {
-          try {
-            const uploadedUrl = await uploadProfileImage(profileImage);
-            imageUrl = uploadedUrl || undefined;
-            
-            // Refresh user data to show the new image immediately
-            await fetchUserProfile();
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-            Alert.alert(
-              'Error subiendo imagen', 
-              `${errorMessage}\n\n¿Deseas continuar sin cambiar la imagen?`, 
-              [
-                { text: 'Cancelar', style: 'cancel', onPress: () => setSaving(false) },
-                { text: 'Continuar', onPress: () => saveProfileData(user.profile_image_url || undefined) },
-              ]
-            );
-            return;
-          }
+      // Upload new image if selected (this also updates the database)
+      if (profileImage && profileImage !== user.profile_image_url) {
+        try {
+          const uploadedUrl = await uploadProfileImage(profileImage);
+          imageUrl = uploadedUrl || undefined;
+
+          // Refresh user data to show the new image immediately
+          await fetchUserProfile();
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+          Alert.alert(
+            'Error subiendo imagen',
+            `${errorMessage}\n\n¿Deseas continuar sin cambiar la imagen?`,
+            [
+              { text: 'Cancelar', style: 'cancel', onPress: () => setSaving(false) },
+              {
+                text: 'Continuar',
+                onPress: () => saveProfileData(user.profile_image_url || undefined),
+              },
+            ]
+          );
+          return;
         }
+      }
 
       await saveProfileData(imageUrl);
     } catch (error) {
@@ -535,64 +535,68 @@ export default function EditProfileScreen() {
     }
   }, [formValidation, user, profileImage, uploadProfileImage, hasChanges]);
 
-  const saveProfileData = useCallback(async (imageUrl?: string) => {
-    if (!user) return;
+  const saveProfileData = useCallback(
+    async (imageUrl?: string) => {
+      if (!user) return;
 
-    try {
-      // Prepare update data with only changed fields
-      const updateData: any = {
-        updated_at: new Date().toISOString(),
-      };
+      try {
+        // Prepare update data with only changed fields
+        const updateData: any = {
+          updated_at: new Date().toISOString(),
+        };
 
-      // Only update fields that have been modified
-      if (formData.full_name.trim() !== '' && formData.full_name.trim() !== user.full_name) {
-        updateData.full_name = formData.full_name.trim();
-      }
-
-      if (formData.username.trim() !== '' && formData.username.trim() !== user.username) {
-        updateData.username = formData.username.trim();
-      }
-
-      if (imageUrl !== user.profile_image_url) {
-        updateData.profile_image_url = imageUrl;
-      }
-
-      // Update users table if there are changes
-      if (Object.keys(updateData).length > 1) { // More than just updated_at
-        const { error: profileError } = await supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', user.id);
-
-        if (profileError) {
-          console.error('Profile update error:', profileError);
-          throw new Error(profileError.message);
+        // Only update fields that have been modified
+        if (formData.full_name.trim() !== '' && formData.full_name.trim() !== user.full_name) {
+          updateData.full_name = formData.full_name.trim();
         }
-      }
 
-      // Update password in auth if changed
-      if (showPasswordFields && formData.password.trim() !== '') {
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: formData.password.trim(),
-        });
-
-        if (passwordError) {
-          console.error('Password update error:', passwordError);
-          Alert.alert(
-            'Perfil actualizado parcialmente',
-            'Los datos del perfil se actualizaron correctamente, pero hubo un problema al cambiar la contraseña.',
-            [{ text: 'OK', onPress: () => router.back() }]
-          );
-          return;
+        if (formData.username.trim() !== '' && formData.username.trim() !== user.username) {
+          updateData.username = formData.username.trim();
         }
-      }
 
-      toast.success('Perfil actualizado');
-      router.back();
-    } catch (error) {
-      throw error;
-    }
-  }, [user, formData, showPasswordFields, router]);
+        if (imageUrl !== user.profile_image_url) {
+          updateData.profile_image_url = imageUrl;
+        }
+
+        // Update users table if there are changes
+        if (Object.keys(updateData).length > 1) {
+          // More than just updated_at
+          const { error: profileError } = await supabase
+            .from('users')
+            .update(updateData)
+            .eq('id', user.id);
+
+          if (profileError) {
+            console.error('Profile update error:', profileError);
+            throw new Error(profileError.message);
+          }
+        }
+
+        // Update password in auth if changed
+        if (showPasswordFields && formData.password.trim() !== '') {
+          const { error: passwordError } = await supabase.auth.updateUser({
+            password: formData.password.trim(),
+          });
+
+          if (passwordError) {
+            console.error('Password update error:', passwordError);
+            Alert.alert(
+              'Perfil actualizado parcialmente',
+              'Los datos del perfil se actualizaron correctamente, pero hubo un problema al cambiar la contraseña.',
+              [{ text: 'OK', onPress: () => router.back() }]
+            );
+            return;
+          }
+        }
+
+        toast.success('Perfil actualizado');
+        router.back();
+      } catch (error) {
+        throw error;
+      }
+    },
+    [user, formData, showPasswordFields, router]
+  );
 
   const handleBack = useCallback(() => {
     if (hasChanges) {
@@ -612,7 +616,7 @@ export default function EditProfileScreen() {
   const getProfileImageUrl = useCallback(() => {
     if (profileImage) return profileImage;
     if (user?.profile_image_url) return user.profile_image_url;
-    
+
     const displayName = user?.full_name || user?.username || 'Usuario';
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=2A3A4A&color=A3B3CC&size=240`;
   }, [profileImage, user?.profile_image_url, user?.full_name, user?.username]);
@@ -626,7 +630,9 @@ export default function EditProfileScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.brand.link} />
-          <AppText variant="body" style={styles.loadingText}>Cargando perfil...</AppText>
+          <AppText variant="body" style={styles.loadingText}>
+            Cargando perfil...
+          </AppText>
         </View>
       </SafeAreaView>
     );
@@ -641,8 +647,7 @@ export default function EditProfileScreen() {
             style={styles.backButton}
             onPress={handleBack}
             disabled={saving}
-            activeOpacity={0.7}
-          >
+            activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <AppText variant="title">Editar Perfil</AppText>
@@ -657,12 +662,8 @@ export default function EditProfileScreen() {
                 style={styles.imageContainer}
                 onPress={handleSelectImage}
                 disabled={saving || uploadingImage}
-                activeOpacity={0.9}
-              >
-                <Image
-                  source={{ uri: getProfileImageUrl() }}
-                  style={styles.profileImage}
-                />
+                activeOpacity={0.9}>
+                <Image source={{ uri: getProfileImageUrl() }} style={styles.profileImage} />
                 <View style={styles.imageOverlay}>
                   {uploadingImage ? (
                     <ActivityIndicator color={colors.text.primary} size="small" />
@@ -717,13 +718,12 @@ export default function EditProfileScreen() {
                   style={styles.passwordToggle}
                   onPress={togglePasswordFields}
                   disabled={saving}
-                  activeOpacity={0.7}
-                >
+                  activeOpacity={0.7}>
                   <AppText variant="subtitle" color={colors.brand.link}>
                     {showPasswordFields ? 'Cancelar cambio de contraseña' : 'Cambiar contraseña'}
                   </AppText>
                   <Ionicons
-                    name={showPasswordFields ? "chevron-up" : "chevron-down"}
+                    name={showPasswordFields ? 'chevron-up' : 'chevron-down'}
                     size={20}
                     color={colors.brand.link}
                   />
@@ -773,7 +773,11 @@ export default function EditProfileScreen() {
               />
 
               {!hasChanges && !loading && (
-                <AppText variant="caption" color={colors.text.muted} align="center" style={styles.noChangesText}>
+                <AppText
+                  variant="caption"
+                  color={colors.text.muted}
+                  align="center"
+                  style={styles.noChangesText}>
                   Modifica algún campo para guardar cambios
                 </AppText>
               )}
@@ -791,8 +795,7 @@ export default function EditProfileScreen() {
               }
               disabled={deletingAccount}
               activeOpacity={0.7}
-              accessibilityRole="button"
-            >
+              accessibilityRole="button">
               {deletingAccount ? (
                 <ActivityIndicator size="small" color={colors.status.error} />
               ) : (
@@ -899,4 +902,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     marginTop: spacing.xxxl,
   },
-}); 
+});

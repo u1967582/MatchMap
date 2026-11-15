@@ -1,6 +1,4 @@
-export type AdListRow<T> =
-  | { kind: 'item'; key: string; data: T }
-  | { kind: 'ad'; key: string };
+export type AdListRow<T> = { kind: 'item'; key: string; data: T } | { kind: 'ad'; key: string };
 
 /**
  * Inserta una fila de anuncio cada `interval` elementos. Si la lista tiene

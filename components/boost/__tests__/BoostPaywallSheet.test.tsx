@@ -84,9 +84,7 @@ beforeEach(() => {
 
 describe('BoostPaywallSheet - configuración del bottom sheet', () => {
   it('deshabilita explícitamente el dynamic sizing para no romper el snap point fijo del 95%', async () => {
-    await render(
-      <BoostPaywallSheet isVisible userId="user-1" barId="bar-1" onClose={jest.fn()} />
-    );
+    await render(<BoostPaywallSheet isVisible userId="user-1" barId="bar-1" onClose={jest.fn()} />);
 
     const props = __getLastBottomSheetModalProps();
     expect(props.enableDynamicSizing).toBe(false);
@@ -94,9 +92,7 @@ describe('BoostPaywallSheet - configuración del bottom sheet', () => {
   });
 
   it('presenta el sheet cuando isVisible es true', async () => {
-    await render(
-      <BoostPaywallSheet isVisible userId="user-1" barId="bar-1" onClose={jest.fn()} />
-    );
+    await render(<BoostPaywallSheet isVisible userId="user-1" barId="bar-1" onClose={jest.fn()} />);
 
     expect(mockPresent).toHaveBeenCalled();
   });

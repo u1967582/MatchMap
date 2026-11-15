@@ -2,10 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '~/utils/supabase';
 import { toast } from '~/components/ds';
-import { buildBroadcastPreferencesPayload, teamSelectionKey as teamKey } from '~/lib/broadcastPreferences';
+import {
+  buildBroadcastPreferencesPayload,
+  teamSelectionKey as teamKey,
+} from '~/lib/broadcastPreferences';
 
 export type Competition = { id: number | string; name: string; gender?: string | null };
-export type Team = { id: string; name: string; short_name?: string | null; logo_url?: string | null };
+export type Team = {
+  id: string;
+  name: string;
+  short_name?: string | null;
+  logo_url?: string | null;
+};
 
 interface UseAutoBroadcastPreferencesOptions {
   barId: string | undefined;
@@ -21,11 +29,16 @@ interface UseAutoBroadcastPreferencesOptions {
  * equipos sueltos por competición), extraída de app/auto-broadcasts/[barId].tsx
  * para poder reutilizarse también como panel embebido en otras pantallas.
  */
-export function useAutoBroadcastPreferences({ barId, forceAdminRpc = false }: UseAutoBroadcastPreferencesOptions) {
+export function useAutoBroadcastPreferences({
+  barId,
+  forceAdminRpc = false,
+}: UseAutoBroadcastPreferencesOptions) {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loadingComps, setLoadingComps] = useState<boolean>(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [teamsCache, setTeamsCache] = useState<Record<string, { loading: boolean; teams: Team[]; error?: string }>>({});
+  const [teamsCache, setTeamsCache] = useState<
+    Record<string, { loading: boolean; teams: Team[]; error?: string }>
+  >({});
   const [selectedCompetitions, setSelectedCompetitions] = useState<Record<string, boolean>>({});
   // Cada entrada es "teamId|competitionId" — el equipo queda ligado a la competición donde se seleccionó.
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
@@ -40,7 +53,9 @@ export function useAutoBroadcastPreferences({ barId, forceAdminRpc = false }: Us
 
   // A diferencia de hasSelection, hasChanges también es true al pasar de "algo"
   // a "nada" (desautomatizar la última competición), que es un guardado válido.
-  const currentCompIds = Object.keys(selectedCompetitions).filter((id) => selectedCompetitions[id]).sort();
+  const currentCompIds = Object.keys(selectedCompetitions)
+    .filter((id) => selectedCompetitions[id])
+    .sort();
   const currentTeamKeys = Array.from(selectedTeams).sort();
   const sortedOrigComps = [...origComps].sort();
   const sortedOrigTeams = [...origTeams].sort();
@@ -86,14 +101,16 @@ export function useAutoBroadcastPreferences({ barId, forceAdminRpc = false }: Us
             }
           },
         },
-      ],
+      ]
     );
   }, [barId]);
 
   useEffect(() => {
     if (forceAdminRpc) return;
     const checkSuperAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
       const { data, error } = await supabase
         .from('users')
@@ -114,12 +131,17 @@ export function useAutoBroadcastPreferences({ barId, forceAdminRpc = false }: Us
           .select('id,name,gender')
           .order('name', { ascending: true });
         if (error) throw error;
-        setCompetitions((data ?? []).map((c: any) => ({ id: c.id, name: c.name, gender: c.gender })));
+        setCompetitions(
+          (data ?? []).map((c: any) => ({ id: c.id, name: c.name, gender: c.gender }))
+        );
 
         if (barId) {
           const [compSel, teamSel] = await Promise.all([
             supabase.from('bar_selected_competitions').select('competition_id').eq('bar_id', barId),
-            supabase.from('bar_selected_teams').select('team_id,competition_id').eq('bar_id', barId),
+            supabase
+              .from('bar_selected_teams')
+              .select('team_id,competition_id')
+              .eq('bar_id', barId),
           ]);
 
           const compMap: Record<string, boolean> = {};
@@ -151,35 +173,52 @@ export function useAutoBroadcastPreferences({ barId, forceAdminRpc = false }: Us
     loadCompetitions();
   }, [barId]);
 
-  const toggleExpand = useCallback(async (compId: string | number) => {
-    const key = String(compId);
-    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
-    if (!teamsCache[key]) {
-      setTeamsCache((prev) => ({ ...prev, [key]: { loading: true, teams: [] } }));
-      try {
-        const { data: matchRows, error: matchesError } = await supabase
-          .from('matches')
-          .select('home_team_id,away_team_id', { head: false })
-          .eq('competition_id', compId)
-          .eq('status', 'scheduled')
-          .limit(10000);
-        if (matchesError) throw matchesError;
-        const teamIds = Array.from(new Set((matchRows ?? []).flatMap((r: any) => [r.home_team_id, r.away_team_id]).filter(Boolean)));
-        let teams: Team[] = [];
-        if (teamIds.length > 0) {
-          const { data: teamsData, error: teamsError } = await supabase
-            .from('teams')
-            .select('id,name,short_name,logo_url')
-            .in('id', teamIds);
-          if (teamsError) throw teamsError;
-          teams = (teamsData ?? []).map((t: any) => ({ id: t.id, name: t.name, short_name: t.short_name, logo_url: t.logo_url }));
+  const toggleExpand = useCallback(
+    async (compId: string | number) => {
+      const key = String(compId);
+      setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+      if (!teamsCache[key]) {
+        setTeamsCache((prev) => ({ ...prev, [key]: { loading: true, teams: [] } }));
+        try {
+          const { data: matchRows, error: matchesError } = await supabase
+            .from('matches')
+            .select('home_team_id,away_team_id', { head: false })
+            .eq('competition_id', compId)
+            .eq('status', 'scheduled')
+            .limit(10000);
+          if (matchesError) throw matchesError;
+          const teamIds = Array.from(
+            new Set(
+              (matchRows ?? [])
+                .flatMap((r: any) => [r.home_team_id, r.away_team_id])
+                .filter(Boolean)
+            )
+          );
+          let teams: Team[] = [];
+          if (teamIds.length > 0) {
+            const { data: teamsData, error: teamsError } = await supabase
+              .from('teams')
+              .select('id,name,short_name,logo_url')
+              .in('id', teamIds);
+            if (teamsError) throw teamsError;
+            teams = (teamsData ?? []).map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              short_name: t.short_name,
+              logo_url: t.logo_url,
+            }));
+          }
+          setTeamsCache((prev) => ({ ...prev, [key]: { loading: false, teams } }));
+        } catch (e: any) {
+          setTeamsCache((prev) => ({
+            ...prev,
+            [key]: { loading: false, teams: [], error: 'No se pudieron cargar los equipos' },
+          }));
         }
-        setTeamsCache((prev) => ({ ...prev, [key]: { loading: false, teams } }));
-      } catch (e: any) {
-        setTeamsCache((prev) => ({ ...prev, [key]: { loading: false, teams: [], error: 'No se pudieron cargar los equipos' } }));
       }
-    }
-  }, [teamsCache]);
+    },
+    [teamsCache]
+  );
 
   const toggleCompetitionSelected = useCallback((compId: string | number) => {
     setSelectedCompetitions((prev) => ({ ...prev, [String(compId)]: !prev[String(compId)] }));
@@ -189,7 +228,8 @@ export function useAutoBroadcastPreferences({ barId, forceAdminRpc = false }: Us
     const key = teamKey(teamId, compId);
     setSelectedTeams((prev) => {
       const updated = new Set(prev);
-      if (updated.has(key)) updated.delete(key); else updated.add(key);
+      if (updated.has(key)) updated.delete(key);
+      else updated.add(key);
       return updated;
     });
   }, []);
@@ -202,10 +242,11 @@ export function useAutoBroadcastPreferences({ barId, forceAdminRpc = false }: Us
     try {
       const { competition_ids, team_ids, team_competition_ids } = buildBroadcastPreferencesPayload(
         selectedCompetitions,
-        selectedTeams,
+        selectedTeams
       );
 
-      const rpcFunction = forceAdminRpc || isSuperAdmin ? 'fn_sync_bar_preferences_admin' : 'fn_sync_bar_preferences';
+      const rpcFunction =
+        forceAdminRpc || isSuperAdmin ? 'fn_sync_bar_preferences_admin' : 'fn_sync_bar_preferences';
       const { error } = await supabase.rpc(rpcFunction, {
         _bar_id: barId,
         _competition_ids: competition_ids,

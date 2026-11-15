@@ -9,8 +9,14 @@ export default function Step0() {
     router.replace('/register-bar/step1' as any);
   }, [router]);
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#1C2A3A', justifyContent: 'center', alignItems: 'center' }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: '#1C2A3A',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
       <AppText style={{ color: '#FFFFFF' }}>Redirigiendo…</AppText>
     </SafeAreaView>
   );
-} 
+}

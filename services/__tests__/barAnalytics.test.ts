@@ -69,10 +69,7 @@ describe('trackBarEvent', () => {
     expect(() => trackBarEvent('bar-1', 'profile_view', false)).not.toThrow();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(console.error).toHaveBeenCalledWith(
-      'Error tracking profile_view:',
-      { message: 'boom' }
-    );
+    expect(console.error).toHaveBeenCalledWith('Error tracking profile_view:', { message: 'boom' });
   });
 
   it('no loguea nada si la RPC no devuelve error', async () => {
@@ -117,7 +114,10 @@ describe('fetchBarStatsSummary', () => {
   it('llama a fn_get_bar_stats_summary con el bar_id y los días exactos', () => {
     fetchBarStatsSummary('bar-1', 30);
 
-    expect(mockedRpc).toHaveBeenCalledWith('fn_get_bar_stats_summary', { p_bar_id: 'bar-1', p_days: 30 });
+    expect(mockedRpc).toHaveBeenCalledWith('fn_get_bar_stats_summary', {
+      p_bar_id: 'bar-1',
+      p_days: 30,
+    });
   });
 });
 
@@ -125,7 +125,10 @@ describe('fetchBarStatsDaily', () => {
   it('llama a fn_get_bar_stats_daily con el bar_id y los días exactos', () => {
     fetchBarStatsDaily('bar-1', 90);
 
-    expect(mockedRpc).toHaveBeenCalledWith('fn_get_bar_stats_daily', { p_bar_id: 'bar-1', p_days: 90 });
+    expect(mockedRpc).toHaveBeenCalledWith('fn_get_bar_stats_daily', {
+      p_bar_id: 'bar-1',
+      p_days: 90,
+    });
   });
 });
 

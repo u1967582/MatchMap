@@ -1,3 +1,3 @@
 import AddBarScreen from '~/screens/AddBarScreen';
- 
-export default AddBarScreen; 
+
+export default AddBarScreen;

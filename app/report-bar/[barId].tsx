@@ -5,14 +5,7 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '~/utils/supabase';
-import {
-  AppText,
-  AppButton,
-  toast,
-  colors,
-  spacing,
-  radius,
-} from '~/components/ds';
+import { AppText, AppButton, toast, colors, spacing, radius } from '~/components/ds';
 
 interface BarSummary {
   id: string;
@@ -70,7 +63,9 @@ export default function ReportBarScreen() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Debes iniciar sesión');
         return;
@@ -114,11 +109,12 @@ export default function ReportBarScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         {bar && (
           <View style={styles.barInfo}>
-            <AppText variant="title" numberOfLines={1}>{bar.name}</AppText>
+            <AppText variant="title" numberOfLines={1}>
+              {bar.name}
+            </AppText>
             <AppText variant="caption" color={colors.text.secondary} numberOfLines={1}>
               {(bar.address || 'Sin dirección') + (bar.city ? `, ${bar.city}` : '')}
             </AppText>
@@ -126,7 +122,9 @@ export default function ReportBarScreen() {
         )}
 
         <View style={styles.section}>
-          <AppText variant="subtitle" style={styles.sectionTitle}>¿Qué está mal?</AppText>
+          <AppText variant="subtitle" style={styles.sectionTitle}>
+            ¿Qué está mal?
+          </AppText>
           <View style={styles.chipsRow}>
             {REASON_OPTIONS.map((option) => {
               const isActive = reason === option.value;
@@ -138,9 +136,10 @@ export default function ReportBarScreen() {
                     Haptics.selectionAsync();
                     setReason(option.value);
                   }}
-                  activeOpacity={0.75}
-                >
-                  <AppText variant="label" color={isActive ? colors.text.primary : colors.brand.link}>
+                  activeOpacity={0.75}>
+                  <AppText
+                    variant="label"
+                    color={isActive ? colors.text.primary : colors.brand.link}>
                     {option.label}
                   </AppText>
                 </TouchableOpacity>
@@ -150,7 +149,9 @@ export default function ReportBarScreen() {
         </View>
 
         <View style={styles.section}>
-          <AppText variant="subtitle" style={styles.sectionTitle}>Cuéntanos más (opcional)</AppText>
+          <AppText variant="subtitle" style={styles.sectionTitle}>
+            Cuéntanos más (opcional)
+          </AppText>
           <View style={styles.textInputWrapper}>
             <TextInput
               placeholder="Describe qué información está mal..."

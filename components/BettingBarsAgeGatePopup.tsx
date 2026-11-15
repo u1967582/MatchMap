@@ -37,7 +37,12 @@ export default function BettingBarsAgeGatePopup({
     if (visible) {
       setStep('age');
       Animated.parallel([
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 70, friction: 10 }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 70,
+          friction: 10,
+        }),
         Animated.timing(opacityAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
       ]).start();
     } else {
@@ -77,8 +82,7 @@ export default function BettingBarsAgeGatePopup({
     <View style={styles.overlay} pointerEvents="box-none">
       <Animated.View
         style={[styles.container, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}
-        pointerEvents="auto"
-      >
+        pointerEvents="auto">
         <LinearGradient
           colors={['rgba(25,118,210,0.18)', C.bg, C.bg]}
           start={{ x: 0, y: 0 }}
@@ -90,7 +94,9 @@ export default function BettingBarsAgeGatePopup({
           <View style={styles.headerTextContainer}>
             {step === 'age' ? (
               <>
-                <AppText variant="h2" maxScale={1.2}>¿Eres mayor de 18 años?</AppText>
+                <AppText variant="h2" maxScale={1.2}>
+                  ¿Eres mayor de 18 años?
+                </AppText>
                 <AppText variant="body" color={colors.text.secondary} style={styles.subtitle}>
                   Algunos locales del mapa son establecimientos de apuestas deportivas. Solo se
                   muestran a usuarios mayores de edad que elijan verlos.
@@ -98,7 +104,9 @@ export default function BettingBarsAgeGatePopup({
               </>
             ) : (
               <>
-                <AppText variant="h2" maxScale={1.2}>¿Quieres verlos en el mapa?</AppText>
+                <AppText variant="h2" maxScale={1.2}>
+                  ¿Quieres verlos en el mapa?
+                </AppText>
                 <AppText variant="body" color={colors.text.secondary} style={styles.subtitle}>
                   Puedes cambiar esta preferencia cuando quieras desde tu perfil.
                 </AppText>
@@ -109,8 +117,7 @@ export default function BettingBarsAgeGatePopup({
             style={styles.closeButton}
             onPress={onClose}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            disabled={saving}
-          >
+            disabled={saving}>
             <Ionicons name="close" size={18} color="rgba(255,255,255,0.5)" />
           </TouchableOpacity>
         </View>
@@ -122,19 +129,27 @@ export default function BettingBarsAgeGatePopup({
         ) : step === 'age' ? (
           <View style={styles.optionsContainer}>
             <TouchableOpacity style={styles.optionButton} onPress={handleAdult}>
-              <AppText variant="body" color={colors.text.primary}>Sí, soy mayor de 18 años</AppText>
+              <AppText variant="body" color={colors.text.primary}>
+                Sí, soy mayor de 18 años
+              </AppText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.optionButton} onPress={handleUnderage}>
-              <AppText variant="body" color={colors.text.primary}>No</AppText>
+              <AppText variant="body" color={colors.text.primary}>
+                No
+              </AppText>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.optionsContainer}>
             <TouchableOpacity style={styles.optionButton} onPress={handleWantsToSee}>
-              <AppText variant="body" color={colors.text.primary}>Sí, quiero verlos</AppText>
+              <AppText variant="body" color={colors.text.primary}>
+                Sí, quiero verlos
+              </AppText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.optionButton} onPress={handleDoesNotWantToSee}>
-              <AppText variant="body" color={colors.text.primary}>No, prefiero no verlos</AppText>
+              <AppText variant="body" color={colors.text.primary}>
+                No, prefiero no verlos
+              </AppText>
             </TouchableOpacity>
           </View>
         )}

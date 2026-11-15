@@ -29,7 +29,11 @@ interface BarReviewsSectionProps {
   title?: string;
 }
 
-const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader = true, title = 'Reseñas' }) => {
+const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({
+  barId,
+  showHeader = true,
+  title = 'Reseñas',
+}) => {
   const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [distribution, setDistribution] = useState<number[]>([0, 0, 0, 0, 0]);
@@ -43,8 +47,8 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   const [visibleCount, setVisibleCount] = useState(5);
 
   // Store de likes (actualizaciones optimistas)
-  const isLiked = useLikesStore(state => state.isLiked);
-  const toggleLikeStore = useLikesStore(state => state.toggleLike);
+  const isLiked = useLikesStore((state) => state.isLiked);
+  const toggleLikeStore = useLikesStore((state) => state.toggleLike);
 
   useEffect(() => {
     const fetchReviewsAndBarData = async () => {
@@ -58,7 +62,9 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         // Fetch reviews
         const { data: reviewsData, error: reviewsError } = await supabase
           .from('reviews')
-          .select(`id, user_id, rating, comment, created_at, likes, is_google_review, google_author_name, user:public_profiles(username, profile_image_url)`)
+          .select(
+            `id, user_id, rating, comment, created_at, likes, is_google_review, google_author_name, user:public_profiles(username, profile_image_url)`
+          )
           .eq('bar_id', barId)
           .order('created_at', { ascending: false });
 
@@ -101,8 +107,8 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
             is_google_review: item.is_google_review ?? false,
             user: {
               username: item.is_google_review
-                ? (item.google_author_name || 'Google')
-                : (item.user?.username || 'Usuario'),
+                ? item.google_author_name || 'Google'
+                : item.user?.username || 'Usuario',
               profile_image_url: item.user?.profile_image_url || '',
             },
           }));
@@ -130,10 +136,11 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           const total = sortedData.length;
           setTotalReviews(total);
 
-          const computedAvg = total > 0
-            ? sortedData.reduce((sum, r) => sum + (r.rating || 0), 0) / total
-            : 0;
-          setAverage(typeof barData?.rating === 'number' && barData.rating > 0 ? barData.rating : computedAvg);
+          const computedAvg =
+            total > 0 ? sortedData.reduce((sum, r) => sum + (r.rating || 0), 0) / total : 0;
+          setAverage(
+            typeof barData?.rating === 'number' && barData.rating > 0 ? barData.rating : computedAvg
+          );
         }
       } catch (error) {
         console.error('❌ Error fetching data:', error);
@@ -160,49 +167,61 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
   );
 
   // Opciones de moderación de una reseña (App Store 1.2): reportar y bloquear
-  const handleBlockUser = useCallback(async (review: Review) => {
-    if (!userId || !review.user_id) return;
-    const result = await blockUser(userId, review.user_id);
-    if (!result.ok && !result.duplicate) {
-      toast.error('No se pudo bloquear al usuario', 'Inténtalo de nuevo');
-      return;
-    }
-    const blockedUserId = review.user_id;
-    setReviews(prev => prev.filter(r => r.user_id !== blockedUserId));
-    toast.success('Usuario bloqueado', 'Ya no verás sus reseñas');
-  }, [userId]);
+  const handleBlockUser = useCallback(
+    async (review: Review) => {
+      if (!userId || !review.user_id) return;
+      const result = await blockUser(userId, review.user_id);
+      if (!result.ok && !result.duplicate) {
+        toast.error('No se pudo bloquear al usuario', 'Inténtalo de nuevo');
+        return;
+      }
+      const blockedUserId = review.user_id;
+      setReviews((prev) => prev.filter((r) => r.user_id !== blockedUserId));
+      toast.success('Usuario bloqueado', 'Ya no verás sus reseñas');
+    },
+    [userId]
+  );
 
-  const openReviewOptions = useCallback(async (review: Review) => {
-    if (await getIsGuest()) {
-      showGuestLoginAlert(router);
-      return;
-    }
+  const openReviewOptions = useCallback(
+    async (review: Review) => {
+      if (await getIsGuest()) {
+        showGuestLoginAlert(router);
+        return;
+      }
 
-    const canBlock = !!review.user_id && !!userId && review.user_id !== userId;
-    Alert.alert('Opciones de la reseña', undefined, [
-      {
-        text: 'Reportar reseña',
-        onPress: () => router.push(`/report-review/${review.id}` as any),
-      },
-      ...(canBlock
-        ? [{
-            text: 'Bloquear a este usuario',
-            style: 'destructive' as const,
-            onPress: () => {
-              Alert.alert(
-                'Bloquear usuario',
-                `No volverás a ver las reseñas de ${review.user.username}.`,
-                [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Bloquear', style: 'destructive', onPress: () => handleBlockUser(review) },
-                ]
-              );
-            },
-          }]
-        : []),
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
-  }, [router, userId, handleBlockUser]);
+      const canBlock = !!review.user_id && !!userId && review.user_id !== userId;
+      Alert.alert('Opciones de la reseña', undefined, [
+        {
+          text: 'Reportar reseña',
+          onPress: () => router.push(`/report-review/${review.id}` as any),
+        },
+        ...(canBlock
+          ? [
+              {
+                text: 'Bloquear a este usuario',
+                style: 'destructive' as const,
+                onPress: () => {
+                  Alert.alert(
+                    'Bloquear usuario',
+                    `No volverás a ver las reseñas de ${review.user.username}.`,
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      {
+                        text: 'Bloquear',
+                        style: 'destructive',
+                        onPress: () => handleBlockUser(review),
+                      },
+                    ]
+                  );
+                },
+              },
+            ]
+          : []),
+        { text: 'Cancelar', style: 'cancel' },
+      ]);
+    },
+    [router, userId, handleBlockUser]
+  );
 
   const renderStars = (value: number, size = 14) => {
     const full = Math.floor(value);
@@ -212,92 +231,104 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
       let icon: any = 'star-outline';
       if (i <= full) icon = 'star';
       else if (i === full + 1 && hasHalf) icon = 'star-half';
-      stars.push(
-        <Ionicons key={`star-${i}`} name={icon} size={size} color="#1976D2" />
-      );
+      stars.push(<Ionicons key={`star-${i}`} name={icon} size={size} color="#1976D2" />);
     }
     return <View style={styles.starsRow}>{stars}</View>;
   };
 
-  const toggleLike = useCallback(async (review: Review) => {
-    const isGuest = await getIsGuest();
-    if (isGuest) {
-      showGuestLoginAlert(router);
-      return;
-    }
-    if (!userId || busyById[review.id]) return;
-    setBusyById(prev => ({ ...prev, [review.id]: true }));
-
-    try {
-      const wasLiked = isLiked(review.id);
-
-      // Actualización optimista del contador de likes local
-      if (wasLiked) {
-        setReviews(prev => prev.map(r =>
-          r.id === review.id ? { ...r, likes: Math.max(0, (r.likes ?? 1) - 1) } : r
-        ));
-      } else {
-        setReviews(prev => prev.map(r =>
-          r.id === review.id ? { ...r, likes: (r.likes ?? 0) + 1 } : r
-        ));
+  const toggleLike = useCallback(
+    async (review: Review) => {
+      const isGuest = await getIsGuest();
+      if (isGuest) {
+        showGuestLoginAlert(router);
+        return;
       }
+      if (!userId || busyById[review.id]) return;
+      setBusyById((prev) => ({ ...prev, [review.id]: true }));
 
-      // Toggle en el store (optimista)
-      const success = await toggleLikeStore(review.id);
+      try {
+        const wasLiked = isLiked(review.id);
 
-      if (success) {
-        if (!wasLiked) {
-          toast.success('Te ha gustado esta reseña');
-        }
-        // No mostrar toast al quitar like (sería molesto)
-      } else {
-        // Rollback del contador si falló
+        // Actualización optimista del contador de likes local
         if (wasLiked) {
-          setReviews(prev => prev.map(r =>
-            r.id === review.id ? { ...r, likes: (r.likes ?? 0) + 1 } : r
-          ));
+          setReviews((prev) =>
+            prev.map((r) =>
+              r.id === review.id ? { ...r, likes: Math.max(0, (r.likes ?? 1) - 1) } : r
+            )
+          );
         } else {
-          setReviews(prev => prev.map(r =>
-            r.id === review.id ? { ...r, likes: Math.max(0, (r.likes ?? 1) - 1) } : r
-          ));
+          setReviews((prev) =>
+            prev.map((r) => (r.id === review.id ? { ...r, likes: (r.likes ?? 0) + 1 } : r))
+          );
         }
-        toast.error(wasLiked ? 'No se pudo quitar el like' : 'No se pudo registrar el like');
+
+        // Toggle en el store (optimista)
+        const success = await toggleLikeStore(review.id);
+
+        if (success) {
+          if (!wasLiked) {
+            toast.success('Te ha gustado esta reseña');
+          }
+          // No mostrar toast al quitar like (sería molesto)
+        } else {
+          // Rollback del contador si falló
+          if (wasLiked) {
+            setReviews((prev) =>
+              prev.map((r) => (r.id === review.id ? { ...r, likes: (r.likes ?? 0) + 1 } : r))
+            );
+          } else {
+            setReviews((prev) =>
+              prev.map((r) =>
+                r.id === review.id ? { ...r, likes: Math.max(0, (r.likes ?? 1) - 1) } : r
+              )
+            );
+          }
+          toast.error(wasLiked ? 'No se pudo quitar el like' : 'No se pudo registrar el like');
+        }
+      } catch (error) {
+        toast.error('Error al actualizar el like', 'Inténtalo de nuevo');
+      } finally {
+        setBusyById((prev) => ({ ...prev, [review.id]: false }));
       }
-    } catch (error) {
-      toast.error('Error al actualizar el like', 'Inténtalo de nuevo');
-    } finally {
-      setBusyById(prev => ({ ...prev, [review.id]: false }));
-    }
-  }, [userId, busyById, isLiked, toggleLikeStore, router]);
+    },
+    [userId, busyById, isLiked, toggleLikeStore, router]
+  );
 
   // Build header consistently on every render to keep hook order stable
-  const header = useMemo(() => (
-    <View style={styles.headerBlock}>
-      {/* título interno eliminado */}
-      <View style={styles.headerRow}>
-        <View style={styles.avgColumn}>
-          <AppText style={styles.avgRating}>{average.toFixed(1)}</AppText>
-          {renderStars(average, 16)}
-          <AppText style={styles.totalReviews}>{totalReviews} reseñas</AppText>
-        </View>
-        <View style={styles.distribution}>
-          {[5, 4, 3, 2, 1].map((star) => {
-            const count = distribution[star - 1];
-            const percent = totalReviews ? (count / totalReviews) * 100 : 0;
-            return (
-              <View key={`dist-${star}`} style={styles.distRow}>
-                <AppText maxScale={1.0} style={styles.distLabel}>{star}</AppText>
-                <View style={styles.distBarBackground}>
-                  <View style={[styles.distBarFill, { width: `${percent}%` }]} />
+  const header = useMemo(
+    () => (
+      <View style={styles.headerBlock}>
+        {/* título interno eliminado */}
+        <View style={styles.headerRow}>
+          <View style={styles.avgColumn}>
+            <AppText style={styles.avgRating}>{average.toFixed(1)}</AppText>
+            {renderStars(average, 16)}
+            <AppText style={styles.totalReviews}>{totalReviews} reseñas</AppText>
+          </View>
+          <View style={styles.distribution}>
+            {[5, 4, 3, 2, 1].map((star) => {
+              const count = distribution[star - 1];
+              const percent = totalReviews ? (count / totalReviews) * 100 : 0;
+              return (
+                <View key={`dist-${star}`} style={styles.distRow}>
+                  <AppText maxScale={1.0} style={styles.distLabel}>
+                    {star}
+                  </AppText>
+                  <View style={styles.distBarBackground}>
+                    <View style={[styles.distBarFill, { width: `${percent}%` }]} />
+                  </View>
+                  <AppText maxScale={1.0} style={styles.distPercent}>
+                    {percent.toFixed(0)}%
+                  </AppText>
                 </View>
-                <AppText maxScale={1.0} style={styles.distPercent}>{percent.toFixed(0)}%</AppText>
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
       </View>
-    </View>
-  ), [average, totalReviews, distribution, title]);
+    ),
+    [average, totalReviews, distribution, title]
+  );
 
   const renderReview = ({ item }: { item: Review }) => {
     const liked = isLiked(item.id);
@@ -305,7 +336,11 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
       <View style={styles.reviewRow}>
         <Image
           source={{
-            uri: item.user.profile_image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(item.user.username || 'U') + '&background=2A3A4A&color=94A3B8&size=64'
+            uri:
+              item.user.profile_image_url ||
+              'https://ui-avatars.com/api/?name=' +
+                encodeURIComponent(item.user.username || 'U') +
+                '&background=2A3A4A&color=94A3B8&size=64',
           }}
           style={styles.avatar}
         />
@@ -314,14 +349,19 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           <Text maxFontSizeMultiplier={1.5} style={styles.commentLine}>
             <Text style={styles.username}>{item.user.username || 'Usuario'}</Text>
             {item.is_google_review && (
-              <>{' '}<Ionicons name="logo-google" size={11} color="#4285F4" /></>
+              <>
+                {' '}
+                <Ionicons name="logo-google" size={11} color="#4285F4" />
+              </>
             )}
             {'  '}
             <Text style={styles.commentText}>{item.comment}</Text>
           </Text>
 
           <View style={styles.metaRow}>
-            <AppText maxScale={1.0} style={styles.metaText}>{formatRelativeDate(item.created_at)}</AppText>
+            <AppText maxScale={1.0} style={styles.metaText}>
+              {formatRelativeDate(item.created_at)}
+            </AppText>
             <View style={styles.metaDot} />
             {renderStars(item.rating, 11)}
           </View>
@@ -331,10 +371,15 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           style={styles.likeButton}
           onPress={() => toggleLike(item)}
           disabled={!userId || busyById[item.id]}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name={liked ? 'heart' : 'heart-outline'} size={16} color={liked ? '#EF4444' : '#94A3B8'} />
-          <AppText maxScale={1.0} style={[styles.likeCount, liked && styles.likeCountActive]}>{item.likes ?? 0}</AppText>
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons
+            name={liked ? 'heart' : 'heart-outline'}
+            size={16}
+            color={liked ? '#EF4444' : '#94A3B8'}
+          />
+          <AppText maxScale={1.0} style={[styles.likeCount, liked && styles.likeCountActive]}>
+            {item.likes ?? 0}
+          </AppText>
         </TouchableOpacity>
 
         {item.user_id !== userId || !userId ? (
@@ -343,8 +388,7 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
             onPress={() => openReviewOptions(item)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
-            accessibilityLabel="Opciones de la reseña"
-          >
+            accessibilityLabel="Opciones de la reseña">
             <Ionicons name="ellipsis-vertical" size={16} color="#94A3B8" />
           </TouchableOpacity>
         ) : null}
@@ -368,7 +412,9 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
         <View style={styles.emptyContainer}>
           <Ionicons name="cloud-offline-outline" size={48} color={colors.status.error} />
           <AppText style={styles.emptyTitle}>No se pudieron cargar las reseñas</AppText>
-          <AppText style={styles.emptySubtitle}>Comprueba tu conexión e inténtalo de nuevo.</AppText>
+          <AppText style={styles.emptySubtitle}>
+            Comprueba tu conexión e inténtalo de nuevo.
+          </AppText>
           <AppButton
             text="Reintentar"
             variant="dark"
@@ -386,13 +432,15 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
     <View style={styles.container}>
       {/* Siempre mostrar el header, incluso cuando no hay reseñas (mostrará 0.0) */}
       {showHeader && header}
-      
+
       {/* Mensaje cuando no hay reseñas */}
       {!hasReviews && (
         <View style={styles.emptyContainer}>
           <Ionicons name="chatbubble-outline" size={48} color="#94A3B8" />
           <AppText style={styles.emptyTitle}>Aún no hay reseñas</AppText>
-          <AppText style={styles.emptySubtitle}>¡Sé el primero en compartir tu experiencia!</AppText>
+          <AppText style={styles.emptySubtitle}>
+            ¡Sé el primero en compartir tu experiencia!
+          </AppText>
         </View>
       )}
 
@@ -407,10 +455,11 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
           }
           router.push(`/write-review/${barId}` as any);
         }}
-        activeOpacity={0.85}
-      >
+        activeOpacity={0.85}>
         <Ionicons name="star-outline" size={18} color="#FFFFFF" />
-        <AppText maxScale={1.0} style={styles.ctaText}>Escribir una reseña</AppText>
+        <AppText maxScale={1.0} style={styles.ctaText}>
+          Escribir una reseña
+        </AppText>
       </TouchableOpacity>
 
       {/* Lista de reseñas - solo cuando hay reseñas */}
@@ -429,9 +478,10 @@ const BarReviewsSection: React.FC<BarReviewsSectionProps> = ({ barId, showHeader
             <TouchableOpacity
               style={styles.loadMoreButton}
               onPress={() => setVisibleCount((prev) => Math.min(prev + 5, reviews.length))}
-              activeOpacity={0.7}
-            >
-              <AppText maxScale={1.0} style={styles.loadMoreText}>Cargar más reseñas</AppText>
+              activeOpacity={0.7}>
+              <AppText maxScale={1.0} style={styles.loadMoreText}>
+                Cargar más reseñas
+              </AppText>
             </TouchableOpacity>
           )}
         </>
@@ -453,14 +503,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 12,
   },
-  headerRow: { 
+  headerRow: {
     flexDirection: 'row',
     backgroundColor: 'transparent',
     borderRadius: 12,
     padding: 0,
     marginBottom: 16,
   },
-  avgColumn: { 
+  avgColumn: {
     marginRight: 24,
     alignItems: 'flex-start',
     minWidth: 120,
@@ -471,27 +521,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
-  starsRow: { 
-    flexDirection: 'row', 
+  starsRow: {
+    flexDirection: 'row',
     marginTop: 6,
     gap: 2,
   },
-  totalReviews: { 
+  totalReviews: {
     fontSize: 14,
     color: '#94A3B8',
     marginTop: 6,
   },
-  distribution: { 
-    flex: 1, 
-    justifyContent: 'center' 
+  distribution: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  distRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  distRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  distLabel: { 
-    color: '#FFFFFF', 
+  distLabel: {
+    color: '#FFFFFF',
     width: 16,
     fontSize: 14,
     fontWeight: '600',
@@ -508,14 +558,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#1976D2',
     borderRadius: 4,
   },
-  distPercent: { 
-    color: '#94A3B8', 
+  distPercent: {
+    color: '#94A3B8',
     width: 44,
     textAlign: 'right',
     fontSize: 14,
   },
-  reviewList: { 
-    marginTop: 8 
+  reviewList: {
+    marginTop: 8,
   },
   reviewRow: {
     flexDirection: 'row',
@@ -638,4 +688,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BarReviewsSection; 
+export default BarReviewsSection;

@@ -33,7 +33,12 @@ type ReportDetail = {
   message: string | null;
   status: string;
   created_at: string;
-  bars: { name: string; address?: string | null; city?: string | null; phone?: string | null } | null;
+  bars: {
+    name: string;
+    address?: string | null;
+    city?: string | null;
+    phone?: string | null;
+  } | null;
 };
 
 function BarReportDetailScreen() {
@@ -96,7 +101,7 @@ function BarReportDetailScreen() {
         setActionLoading(null);
       }
     },
-    [report, adminNotes, router],
+    [report, adminNotes, router]
   );
 
   if (loading) {
@@ -152,14 +157,18 @@ function BarReportDetailScreen() {
         </View>
 
         <View style={styles.infoCard}>
-          <InfoRow label="Dirección" value={(report.bars?.address || '—') + (report.bars?.city ? `, ${report.bars.city}` : '')} />
+          <InfoRow
+            label="Dirección"
+            value={
+              (report.bars?.address || '—') + (report.bars?.city ? `, ${report.bars.city}` : '')
+            }
+          />
           <InfoRow label="Teléfono guardado" value={report.bars?.phone || '—'} />
         </View>
 
         <TouchableOpacity
           style={styles.editBarLink}
-          onPress={() => router.push(`/bar-verification-admin/${report.bar_id}` as any)}
-        >
+          onPress={() => router.push(`/bar-verification-admin/${report.bar_id}` as any)}>
           <Ionicons name="open-outline" size={16} color="#A3B3CC" />
           <AppText style={styles.editBarLinkText}>Ver ficha completa del bar</AppText>
         </TouchableOpacity>
@@ -181,23 +190,29 @@ function BarReportDetailScreen() {
             activeOpacity={0.85}
             style={[styles.reviewedBtn, actionLoading && styles.btnDisabled]}
             disabled={!!actionLoading}
-            onPress={() => resolve('reviewed')}
-          >
-            {actionLoading === 'reviewed' ? <ActivityIndicator color="#FFFFFF" /> : <>
-              <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-              <AppText style={styles.reviewedText}>Marcar revisado</AppText>
-            </>}
+            onPress={() => resolve('reviewed')}>
+            {actionLoading === 'reviewed' ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                <AppText style={styles.reviewedText}>Marcar revisado</AppText>
+              </>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.85}
             style={[styles.dismissBtn, actionLoading && styles.btnDisabled]}
             disabled={!!actionLoading}
-            onPress={() => resolve('dismissed')}
-          >
-            {actionLoading === 'dismissed' ? <ActivityIndicator color="#FFFFFF" /> : <>
-              <Ionicons name="close" size={18} color="#FFFFFF" />
-              <AppText style={styles.dismissText}>Descartar</AppText>
-            </>}
+            onPress={() => resolve('dismissed')}>
+            {actionLoading === 'dismissed' ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="close" size={18} color="#FFFFFF" />
+                <AppText style={styles.dismissText}>Descartar</AppText>
+              </>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>

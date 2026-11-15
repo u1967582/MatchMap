@@ -20,9 +20,9 @@ interface SearchResult {
   door_number?: string;
 }
 
-const AddressSearch: React.FC<AddressSearchProps> = ({ 
-  onAddressSelect, 
-  placeholder = "Buscar dirección..." 
+const AddressSearch: React.FC<AddressSearchProps> = ({
+  onAddressSelect,
+  placeholder = 'Buscar dirección...',
 }) => {
   const [searchText, setSearchText] = useState('');
   const [doorNumber, setDoorNumber] = useState('');
@@ -64,114 +64,120 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     }
   }, []);
 
-  const searchPreciseAddress = useCallback(async (baseAddress: string, doorNumber: string) => {
-    if (!selectedAddress || !doorNumber.trim()) {
-      console.log('⚠️ No selected address or door number');
-      const modifiedAddress: SearchResult = {
-        ...selectedAddress!,
-        place_name: baseAddress,
-        door_number: doorNumber
-      };
-      onAddressSelect(modifiedAddress);
-      return;
-    }
-
-    setPreciseSearchLoading(true);
-    try {
-      const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
-      if (!token) {
-        console.warn('Mapbox token not configured');
+  const searchPreciseAddress = useCallback(
+    async (baseAddress: string, doorNumber: string) => {
+      if (!selectedAddress || !doorNumber.trim()) {
+        console.log('⚠️ No selected address or door number');
+        const modifiedAddress: SearchResult = {
+          ...selectedAddress!,
+          place_name: baseAddress,
+          door_number: doorNumber,
+        };
+        onAddressSelect(modifiedAddress);
         return;
       }
 
-      // Extract address components separately
-      const street = selectedAddress.text;
-      const city = selectedAddress.context?.find((c: any) => c.id.startsWith('place'))?.text;
-      const postal = selectedAddress.context?.find((c: any) => c.id.startsWith('postcode'))?.text;
+      setPreciseSearchLoading(true);
+      try {
+        const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+        if (!token) {
+          console.warn('Mapbox token not configured');
+          return;
+        }
 
-      // Form structured query for precise search
-      const preciseQuery = `${street} ${doorNumber}, ${postal ?? ''} ${city ?? ''}`.trim();
-      const encodedQuery = encodeURIComponent(preciseQuery);
-      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${token}&country=es&language=es&types=address&limit=1`;
+        // Extract address components separately
+        const street = selectedAddress.text;
+        const city = selectedAddress.context?.find((c: any) => c.id.startsWith('place'))?.text;
+        const postal = selectedAddress.context?.find((c: any) => c.id.startsWith('postcode'))?.text;
 
-      console.log('🔍 Searching precise address with structured query:');
-      console.log('📍 Street:', street);
-      console.log('📍 City:', city);
-      console.log('📍 Postal:', postal);
-      console.log('📍 Door number:', doorNumber);
-      console.log('📍 Structured query:', preciseQuery);
-      console.log('🔗 URL:', url);
+        // Form structured query for precise search
+        const preciseQuery = `${street} ${doorNumber}, ${postal ?? ''} ${city ?? ''}`.trim();
+        const encodedQuery = encodeURIComponent(preciseQuery);
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${token}&country=es&language=es&types=address&limit=1`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+        console.log('🔍 Searching precise address with structured query:');
+        console.log('📍 Street:', street);
+        console.log('📍 City:', city);
+        console.log('📍 Postal:', postal);
+        console.log('📍 Door number:', doorNumber);
+        console.log('📍 Structured query:', preciseQuery);
+        console.log('🔗 URL:', url);
 
-      console.log('📊 Mapbox response:', JSON.stringify(data, null, 2));
+        const response = await fetch(url);
+        const data = await response.json();
 
-      if (data.features && data.features.length > 0) {
-        const preciseFeature = data.features[0];
-        console.log('📍 Precise address found:', preciseFeature);
-        console.log('📍 Precise coordinates:', preciseFeature.geometry?.coordinates);
+        console.log('📊 Mapbox response:', JSON.stringify(data, null, 2));
 
-        const modifiedAddress: SearchResult = {
-          ...preciseFeature,
-          place_name: preciseFeature.place_name,
-          door_number: doorNumber,
-          // Use the precise coordinates
-          geometry: preciseFeature.geometry
-        };
+        if (data.features && data.features.length > 0) {
+          const preciseFeature = data.features[0];
+          console.log('📍 Precise address found:', preciseFeature);
+          console.log('📍 Precise coordinates:', preciseFeature.geometry?.coordinates);
 
-        onAddressSelect(modifiedAddress);
-      } else {
-        // Try alternative search with different parameters
-        console.log('⚠️ Precise search failed, trying alternative search...');
-        
-        // Try with different search parameters
-        const alternativeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${token}&country=es&language=es&limit=1`;
-        
-        const altResponse = await fetch(alternativeUrl);
-        const altData = await altResponse.json();
-        
-        if (altData.features && altData.features.length > 0) {
-          const altFeature = altData.features[0];
-          console.log('📍 Alternative address found:', altFeature);
-          
           const modifiedAddress: SearchResult = {
-            ...altFeature,
-            place_name: `${street} ${doorNumber}, ${city || ''}`,
+            ...preciseFeature,
+            place_name: preciseFeature.place_name,
             door_number: doorNumber,
-            geometry: altFeature.geometry
+            // Use the precise coordinates
+            geometry: preciseFeature.geometry,
           };
-          
+
           onAddressSelect(modifiedAddress);
         } else {
-          // Final fallback to base address
-          console.log('⚠️ All precise searches failed, using base address');
-          const modifiedAddress: SearchResult = {
-            ...selectedAddress!,
-            place_name: `${street} ${doorNumber}, ${city || ''}`,
-            door_number: doorNumber
-          };
-          onAddressSelect(modifiedAddress);
-        }
-      }
-    } catch (error) {
-      console.error('Error searching precise address:', error);
-      // Fallback to base address
-      const modifiedAddress: SearchResult = {
-        ...selectedAddress!,
-        place_name: `${selectedAddress.text} ${doorNumber}, ${selectedAddress.context?.find((c: any) => c.id.startsWith('place'))?.text || ''}`,
-        door_number: doorNumber
-      };
-      onAddressSelect(modifiedAddress);
-    } finally {
-      setPreciseSearchLoading(false);
-    }
-  }, [selectedAddress, onAddressSelect]);
+          // Try alternative search with different parameters
+          console.log('⚠️ Precise search failed, trying alternative search...');
 
-  const handleTextChange = useCallback((text: string) => {
-    setSearchText(text);
-    searchAddress(text);
-  }, [searchAddress]);
+          // Try with different search parameters
+          const alternativeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${token}&country=es&language=es&limit=1`;
+
+          const altResponse = await fetch(alternativeUrl);
+          const altData = await altResponse.json();
+
+          if (altData.features && altData.features.length > 0) {
+            const altFeature = altData.features[0];
+            console.log('📍 Alternative address found:', altFeature);
+
+            const modifiedAddress: SearchResult = {
+              ...altFeature,
+              place_name: `${street} ${doorNumber}, ${city || ''}`,
+              door_number: doorNumber,
+              geometry: altFeature.geometry,
+            };
+
+            onAddressSelect(modifiedAddress);
+          } else {
+            // Final fallback to base address
+            console.log('⚠️ All precise searches failed, using base address');
+            const modifiedAddress: SearchResult = {
+              ...selectedAddress!,
+              place_name: `${street} ${doorNumber}, ${city || ''}`,
+              door_number: doorNumber,
+            };
+            onAddressSelect(modifiedAddress);
+          }
+        }
+      } catch (error) {
+        console.error('Error searching precise address:', error);
+        // Fallback to base address
+        const modifiedAddress: SearchResult = {
+          ...selectedAddress!,
+          place_name: `${selectedAddress.text} ${doorNumber}, ${selectedAddress.context?.find((c: any) => c.id.startsWith('place'))?.text || ''}`,
+          door_number: doorNumber,
+        };
+        onAddressSelect(modifiedAddress);
+      } finally {
+        setPreciseSearchLoading(false);
+      }
+    },
+    [selectedAddress, onAddressSelect]
+  );
+
+  const handleTextChange = useCallback(
+    (text: string) => {
+      setSearchText(text);
+      searchAddress(text);
+    },
+    [searchAddress]
+  );
 
   const handleSelectAddress = useCallback((item: SearchResult) => {
     setSelectedAddress(item);
@@ -186,28 +192,28 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       const street = selectedAddress.text;
       const city = selectedAddress.context?.find((c: any) => c.id.startsWith('place'))?.text;
       const postal = selectedAddress.context?.find((c: any) => c.id.startsWith('postcode'))?.text;
-      
+
       console.log('📍 Confirming address with components:');
       console.log('📍 Street:', street);
       console.log('📍 City:', city);
       console.log('📍 Postal:', postal);
       console.log('📍 Door number:', doorNumber);
-      
+
       searchPreciseAddress(street, doorNumber);
     }
   }, [selectedAddress, doorNumber, searchPreciseAddress]);
 
-  const renderSearchResult = useCallback(({ item }: { item: SearchResult }) => (
-    <TouchableOpacity
-      style={styles.resultItem}
-      onPress={() => handleSelectAddress(item)}
-    >
-      <Ionicons name="location" size={16} color="#007AFF" />
-      <AppText style={styles.resultText} numberOfLines={2}>
-        {item.place_name}
-      </AppText>
-    </TouchableOpacity>
-  ), [handleSelectAddress]);
+  const renderSearchResult = useCallback(
+    ({ item }: { item: SearchResult }) => (
+      <TouchableOpacity style={styles.resultItem} onPress={() => handleSelectAddress(item)}>
+        <Ionicons name="location" size={16} color="#007AFF" />
+        <AppText style={styles.resultText} numberOfLines={2}>
+          {item.place_name}
+        </AppText>
+      </TouchableOpacity>
+    ),
+    [handleSelectAddress]
+  );
 
   return (
     <View style={styles.container}>
@@ -222,9 +228,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
           autoCapitalize="none"
           autoCorrect={false}
         />
-        {loading && (
-          <Ionicons name="ellipsis-horizontal" size={20} color="#8E8E93" />
-        )}
+        {loading && <Ionicons name="ellipsis-horizontal" size={20} color="#8E8E93" />}
       </View>
 
       {showResults && results.length > 0 && (
@@ -255,8 +259,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
             <TouchableOpacity
               style={[styles.confirmButton, preciseSearchLoading && styles.confirmButtonDisabled]}
               onPress={handleConfirmAddress}
-              disabled={preciseSearchLoading}
-            >
+              disabled={preciseSearchLoading}>
               {preciseSearchLoading ? (
                 <Ionicons name="ellipsis-horizontal" size={16} color="#FFFFFF" />
               ) : (
@@ -268,9 +271,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
             Dirección: {selectedAddress.place_name} {doorNumber}
           </AppText>
           {preciseSearchLoading && (
-            <AppText style={styles.loadingText}>
-              Buscando coordenadas precisas...
-            </AppText>
+            <AppText style={styles.loadingText}>Buscando coordenadas precisas...</AppText>
           )}
         </View>
       )}
@@ -392,4 +393,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddressSearch; 
+export default AddressSearch;
