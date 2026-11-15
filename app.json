@@ -4,7 +4,6 @@
     "slug": "matchmap",
     "version": "1.0.16",
     "scheme": "matchmap",
-    "jsEngine": "hermes",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "web": {
@@ -48,15 +47,6 @@
               "UIViewControllerBasedStatusBarAppearance": false
             },
             "enableBitcode": false
-          }
-        }
-      ],
-      [
-        "react-native-edge-to-edge",
-        {
-          "android": {
-            "parentTheme": "Default",
-            "enforceNavigationBarContrast": false
           }
         }
       ],
@@ -136,18 +126,29 @@
           ]
         }
       ],
-      "expo-tracking-transparency"
+      "expo-tracking-transparency",
+      "expo-asset",
+      "expo-image",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "tsconfigPaths": true
     },
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,

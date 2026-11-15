@@ -10,10 +10,9 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
-import { useFocusEffect } from '@react-navigation/native';
 import { AppText, AppCard, AppButton, EmptyState, colors, spacing, radius, toast } from '~/components/ds';
 import { approveBars } from '~/services/bars';
 
@@ -605,14 +604,14 @@ export default function BarVerificationAdminScreen() {
               <View style={styles.footerLoading}>
                 <ActivityIndicator color={colors.status.boost} />
               </View>
-            ) : null
+            ) : undefined
           }
           ListHeaderComponent={
             canSelect && !selectionMode && tabState.bars.length > 0 ? (
               <AppText variant="caption" color={colors.text.muted} style={styles.selectHint} maxScale={1.1}>
                 Mantén pulsado un bar para seleccionar varios y aprobarlos a la vez.
               </AppText>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <EmptyState

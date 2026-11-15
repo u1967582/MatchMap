@@ -214,7 +214,7 @@ export default function Layout() {
           <RevenueCatProvider>
             <BoostSelectionProvider>
               <BottomSheetModalProvider>
-                <StatusBar barStyle="light-content" backgroundColor="#1C2A3A" translucent={false} />
+                <StatusBar barStyle="light-content" />
                 <Stack
                   screenOptions={{
                     headerShown: false,

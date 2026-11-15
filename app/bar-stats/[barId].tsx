@@ -350,7 +350,7 @@ function StatCard({
   return (
     <AppCard
       onPress={() => onSelect(metric)}
-      style={StyleSheet.flatten([styles.statCard, isSelected && { borderColor: cfg.color, borderWidth: 1.5 }])}
+      style={StyleSheet.flatten([styles.statCard, isSelected ? { borderColor: cfg.color, borderWidth: 1.5 } : undefined]) ?? undefined}
     >
       <View style={styles.statCardHeader}>
         <Ionicons name={cfg.icon} size={20} color={cfg.color} />

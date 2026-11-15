@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  type ScrollViewInstance,
 } from 'react-native';
 import { AppText } from '~/components/ds';
 
@@ -23,7 +24,7 @@ export default function HorizontalDateScroller({
   minimumDate = new Date(),
   daysToShow = 30,
 }: HorizontalDateScrollerProps) {
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollViewInstance>(null);
 
   // Generate array of dates starting from today
   const generateDates = () => {

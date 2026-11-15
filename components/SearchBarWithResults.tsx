@@ -1,5 +1,5 @@
 // components/SearchBarWithResults.tsx
-import { View, TextInput, StyleSheet, Platform, FlatList, TouchableOpacity, Animated } from 'react-native';
+import { View, TextInput, StyleSheet, Platform, FlatList, TouchableOpacity, Animated, type TextInputInstance } from 'react-native';
 import { AppText } from '~/components/ds';
 import { useCallback, useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,7 +48,7 @@ const SearchBarWithResults = forwardRef<SearchBarRef, SearchBarWithResultsProps>
   onExpandChange
 }, ref) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const widthAnim = useRef(new Animated.Value(0)).current;
   
   const handleCollapse = useCallback(() => {

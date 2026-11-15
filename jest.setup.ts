@@ -4,6 +4,19 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 jest.mock('react-native-url-polyfill/auto', () => ({}));
 
+// Desde Worklets 0.7 (Expo SDK 55) importar Reanimated en Jest lanza
+// "Native part of Worklets doesn't seem to be initialized": se usan los mocks
+// oficiales de ambas librerías.
+jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
+// Reanimated 4.7 (SDK 58): con el preset nativo de jest-expo, su mock carga
+// `initializers.native.ts`, que llama a `setCSSEventHandler` sobre JSReanimated y
+// lanza. Se sustituye por un inicializador vacío (la versión web no hace nada útil
+// en tests).
+jest.mock('react-native-reanimated/src/initializers', () => ({
+  initializeReanimatedModule: () => {},
+}));
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+
 jest.mock('react-native-toast-message', () => {
   const MockToast: any = () => null;
   MockToast.show = jest.fn();
