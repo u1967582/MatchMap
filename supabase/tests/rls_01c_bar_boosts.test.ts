@@ -96,7 +96,11 @@ Deno.test('audit01c: con la migración las columnas de pago no se pueden leer', 
         'permission denied'
       );
     }
-    await assertRejects(() => db.query('SELECT * FROM public.bar_boosts'), Error, 'permission denied');
+    await assertRejects(
+      () => db.query('SELECT * FROM public.bar_boosts'),
+      Error,
+      'permission denied'
+    );
   } finally {
     await db.close();
   }
@@ -109,7 +113,10 @@ Deno.test('audit01c: los demás solo ven boosts activos (lo que pinta el mapa)',
     const { rows } = await db.query<{ bar_id: string; status: string }>(
       'SELECT bar_id, end_at, status FROM public.bar_boosts'
     );
-    assertEquals(rows.map((r) => r.status), ['active']);
+    assertEquals(
+      rows.map((r) => r.status),
+      ['active']
+    );
   } finally {
     await db.close();
   }
@@ -122,7 +129,10 @@ Deno.test('audit01c: el dueño sigue viendo sus boosts y puede crear uno pendien
     const { rows } = await db.query<{ status: string }>(
       'SELECT id, plan, end_at, status FROM public.bar_boosts ORDER BY status'
     );
-    assertEquals(rows.map((r) => r.status), ['active', 'pending']);
+    assertEquals(
+      rows.map((r) => r.status),
+      ['active', 'pending']
+    );
 
     // Mismo INSERT que hace useBoostOfferings (upsert con ignoreDuplicates).
     const upsert = `

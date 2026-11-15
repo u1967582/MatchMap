@@ -54,10 +54,10 @@ export function setupObserve(): void {
     setErrorReporter(observeReporter);
   } catch (error) {
     // Sin Observe la app sigue funcionando con el reporte por consola.
-    consoleReporter.captureError(
-      error instanceof Error ? error : new Error(String(error)),
-      { source: 'manual', extra: { step: 'setupObserve' } }
-    );
+    consoleReporter.captureError(error instanceof Error ? error : new Error(String(error)), {
+      source: 'manual',
+      extra: { step: 'setupObserve' },
+    });
   }
 }
 
