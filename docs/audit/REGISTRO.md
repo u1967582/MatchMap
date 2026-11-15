@@ -18,12 +18,12 @@ Una entrada por cada cambio: PR mergeada, migración aplicada en prod, ajuste en
 ---
 
 ### 2026-11-15 · Área 01 · Repaso de RLS contra prod y fuga de pagos de Boost
-- **Tipo:** código (migración sin aplicar)
+- **Tipo:** código · migración prod
 - **Qué:** repaso de solo lectura de las 47 tablas, sus políticas, permisos, funciones `SECURITY DEFINER` y buckets. Un hallazgo grave (01-H8: `bar_boosts` dejaba leer quién ha pagado y cuánto) y dos menores (01-H9, 01-H10). Migración `20261115120000_audit01c_bar_boosts_privacy.sql`.
 - **Por qué:** G2, 01-H8.
 - **Dónde:** rama `audit/08-observe-rls`.
 - **Verificación:** `supabase/tests/rls_01c_bar_boosts.test.ts` (5 tests en PGlite con la tabla y las políticas de prod: reproduce la fuga sin la migración y comprueba mapa, dueño y upsert de compra con ella).
-- **Pendiente:** aplicarla en prod con aprobación de Roger.
+- **Prod:** aplicada el 2026-11-15 con aprobación de Roger, antes de publicar la rama. Comprobado como invitado: 5 filas activas visibles, sin `user_id` ni importes; `anon` sin permisos.
 - **Rollback:** recrear la política `USING (true)` y `GRANT ALL ON public.bar_boosts TO anon, authenticated` (reabre la fuga).
 - **Quién:** 💻 local.
 

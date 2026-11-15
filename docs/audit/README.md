@@ -21,7 +21,7 @@ La app sale a mercado cuando **todos** estos puntos están en ✅. Cualquier ❌
 | # | Criterio | Cómo se comprueba | Estado |
 |---|---|---|---|
 | G1 | Ningún hallazgo 🔴 abierto | Tablero de la sección 4 | ❌ (06-H1 build nuevo con push, 10-H1 rotar token de Mapbox, 11-H4 publicar la política con los datos del responsable) |
-| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ⏳ Repaso completo de las 47 tablas, funciones y Storage hecho en prod el 2026-11-15: solo queda 01-H8 (`bar_boosts`), con la migración `20261115120000_audit01c_bar_boosts_privacy.sql` pendiente de aplicar |
+| G2 | RLS y Storage: un invitado o un usuario normal no puede leer/escribir datos ajenos | Script de pruebas de RLS del área 01 contra prod | ⏳ Repaso completo de las 47 tablas, funciones y Storage hecho en prod el 2026-11-15: 01-H8 (`bar_boosts`) arreglado y aplicado. Quedan menores: 01-H9 (depende de D3) y 01-H10 |
 | G3 | `npm run typecheck`, `npm run lint` (0 errores) y `npm run test:all` en verde sobre `main` | CI local / sesión en la nube | ⏳ (verde con la PR #42 de Prettier; falta fusionarla) |
 | G4 | Smoke test manual completo en iPhone y Android físicos con el build de producción | Matriz del área 12 | ⏳ |
 | G5 | Compra de Boost real (sandbox) activa el boost en iOS y Android | Área 05 | ❌ |
@@ -91,7 +91,7 @@ Leyenda de ejecución: ☁️ nube · 💻 local · 👤 tú. Estado: ⬜ pendie
 
 | Área | Prioridad | Ejecución | Estado | PR | Notas |
 |---|---|---|---|---|---|
-| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | #39 | Migraciones 01 y 01b aplicadas y PR #39 fusionada. 01-H7 resuelto (Pro). Repaso de RLS hecho (2026-11-15): 01-H8 con migración pendiente de aplicar; quedan 01-H4/H5 (paneles) |
+| [01 Seguridad Supabase (RLS, Storage, anónimos)](areas/01-seguridad-supabase.md) | 🔴 | ☁️ migración → 💻 aplicar | 🔄 | #39 | Migraciones 01 y 01b aplicadas y PR #39 fusionada. 01-H7 resuelto (Pro). Repaso de RLS hecho y 01-H8 aplicado (2026-11-15); quedan 01-H4/H5 (paneles) |
 | [02 Autenticación y cuenta](areas/02-auth-cuenta.md) | 🔴 | ☁️ + 💻 + 👤 | 🔄 | | WIP sin verificar (auth, reset, perfil). Hallazgos 8, 9 |
 | [03 Flujos de usuario](areas/03-flujos-usuario.md) | 🟠 | ☁️ | ✅ | | Migración de reportes y bloqueos aplicada en prod el 2026-11-15 |
 | [04 Flujos de propietario y admin](areas/04-flujos-propietario-admin.md) | 🟠 | ☁️ | ✅ | #39 | 04-H1 (`AdminOnly`) fusionado con la PR #39 |
