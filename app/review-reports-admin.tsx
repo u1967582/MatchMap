@@ -23,6 +23,7 @@ import {
   type ReviewReportAction,
 } from '~/services/moderation';
 import { formatRelativeDate } from '~/utils/dateFormat';
+import { withAdminOnly } from '~/components/AdminOnly';
 
 /**
  * Cola de reseñas reportadas (App Store 1.2: actuar sobre los reportes).
@@ -30,7 +31,7 @@ import { formatRelativeDate } from '~/utils/dateFormat';
  * otro usuario únicamente sus propios reportes, y la RPC
  * admin_resolve_review_report rechaza a quien no sea super admin.
  */
-export default function ReviewReportsAdminScreen() {
+function ReviewReportsAdminScreen() {
   const router = useRouter();
   const [reports, setReports] = useState<PendingReviewReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -257,3 +258,5 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+export default withAdminOnly(ReviewReportsAdminScreen);

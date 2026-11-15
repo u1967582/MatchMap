@@ -20,6 +20,7 @@ import {
   radius,
   toast,
 } from '~/components/ds';
+import { withAdminOnly } from '~/components/AdminOnly';
 
 interface BarInfo {
   id: string;
@@ -65,7 +66,7 @@ function formatDate(iso: string): string {
   });
 }
 
-export default function AdminGiftBoostDetailScreen() {
+function AdminGiftBoostDetailScreen() {
   const { barId } = useLocalSearchParams<{ barId: string }>();
   const router = useRouter();
 
@@ -429,3 +430,5 @@ const styles = StyleSheet.create({
     borderTopColor: colors.bg.elevated,
   },
 });
+
+export default withAdminOnly(AdminGiftBoostDetailScreen);

@@ -3,6 +3,7 @@ import React from 'react';
 import { Alert } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+jest.mock('~/hooks/useIsAdmin', () => ({ useIsAdmin: () => ({ isAdmin: true, loading: false }) }));
 jest.mock('~/utils/supabase');
 jest.mock('~/components/ds', () => {
   const actual = jest.requireActual('~/components/ds');

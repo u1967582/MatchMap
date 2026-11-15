@@ -14,6 +14,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import { userFacingErrorMessage } from '~/utils/userFacingError';
+import { withAdminOnly } from '~/components/AdminOnly';
 
 const REASON_LABELS: Record<string, string> = {
   info_incorrecta: 'Información incorrecta',
@@ -35,7 +36,7 @@ type ReportDetail = {
   bars: { name: string; address?: string | null; city?: string | null; phone?: string | null } | null;
 };
 
-export default function BarReportDetailScreen() {
+function BarReportDetailScreen() {
   const router = useRouter();
   const { reportId } = useLocalSearchParams<{ reportId: string }>();
 
@@ -303,3 +304,5 @@ const styles = StyleSheet.create({
   dismissText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
   btnDisabled: { opacity: 0.6 },
 });
+
+export default withAdminOnly(BarReportDetailScreen);
