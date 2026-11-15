@@ -6,6 +6,7 @@ import Map from '~/components/Map';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import AdBanner from '~/components/ads/AdBanner';
 import { usePendingNotificationStore } from '~/stores/pendingNotificationStore';
+import { useObserve } from 'expo-observe';
 
 const PENDING_MATCH_TTL_MS = 5000;
 
@@ -42,6 +43,12 @@ export default function MapScreen() {
   useEffect(() => {
     StatusBar.setBarStyle('light-content', true);
   }, []);
+
+  // Pantalla de entrada de los usuarios con sesión: fija el TTI (EAS Observe).
+  const { markInteractive } = useObserve();
+  useEffect(() => {
+    markInteractive();
+  }, [markInteractive]);
 
   return (
     <View

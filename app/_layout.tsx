@@ -19,7 +19,12 @@ import { usePendingNotificationStore } from '~/stores/pendingNotificationStore';
 import { configureNotificationHandler } from '~/services/notifications';
 import { parseAuthDeepLink } from '~/utils/authDeepLink';
 import { installGlobalErrorHandlers, reportError } from '~/utils/errorReporting';
+import { setupObserve } from '~/utils/observe';
+import { ObserveRoot } from 'expo-observe';
 import AppErrorFallback from '~/components/AppErrorFallback';
+
+// EAS Observe (D4): debe configurarse antes de montar cualquier pantalla.
+setupObserve();
 
 // Registra errores JS no capturados y promesas rechazadas sin catch (área 08).
 installGlobalErrorHandlers();
@@ -30,7 +35,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return <AppErrorFallback error={error} retry={retry} />;
 }
 
-export default function Layout() {
+function Layout() {
   const router = useRouter();
   const setFavoritesUserId = useFavoritesStore((state) => state.setUserId);
   const setLikesUserId = useLikesStore((state) => state.setUserId);
@@ -234,3 +239,6 @@ export default function Layout() {
     </GestureHandlerRootView>
   );
 }
+
+// Mide el tiempo hasta el primer render (TTR) de la app.
+export default ObserveRoot.wrap(Layout);

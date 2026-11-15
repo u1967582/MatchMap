@@ -27,6 +27,26 @@ jest.mock('react-native-toast-message', () => {
   };
 });
 
+// EAS Observe es nativo: en tests solo se comprueba que se llama.
+jest.mock('expo-observe', () => {
+  const markInteractive = jest.fn();
+  const Observe = {
+    configure: jest.fn(),
+    reportError: jest.fn(),
+    logEvent: jest.fn(),
+    dispatchEvents: jest.fn(() => Promise.resolve()),
+  };
+  return {
+    __esModule: true,
+    Observe,
+    default: Observe,
+    ObserveRoot: { wrap: (Component: unknown) => Component },
+    ObserveErrorBoundary: ({ children }: { children: unknown }) => children,
+    ObserveInteractiveMarker: () => null,
+    useObserve: () => ({ markInteractive }),
+  };
+});
+
 jest.mock('expo-router', () => {
   // Instancia única y estable: los tests pueden importar `useRouter` y llamarlo
   // para obtener las mismas referencias jest.fn() que usa el componente bajo test.

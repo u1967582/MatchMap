@@ -1,11 +1,9 @@
 /**
  * Reporte de errores con adaptador intercambiable.
  *
- * La herramienta de monitorización (Sentry / EAS Observe / Crashlytics) aún no
- * está decidida (docs/audit, decisión D4). Este módulo es el único punto por el
- * que la app reporta errores: cuando se elija la herramienta basta con llamar a
- * `setErrorReporter()` al arrancar con un adaptador que la use, sin tocar el
- * resto del código.
+ * Este módulo es el único punto por el que la app reporta errores. En
+ * producción el destino es EAS Observe (decisión D4): `utils/observe.ts`
+ * registra su adaptador con `setErrorReporter()` al arrancar.
  *
  * Todo lo que sale por aquí pasa antes por `scrubPersonalData` para que no
  * viajen emails, tokens ni ids de usuario completos.
