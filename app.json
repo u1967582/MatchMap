@@ -4,7 +4,6 @@
     "slug": "matchmap",
     "version": "1.0.16",
     "scheme": "matchmap",
-    "jsEngine": "hermes",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "web": {
@@ -48,15 +47,6 @@
               "UIViewControllerBasedStatusBarAppearance": false
             },
             "enableBitcode": false
-          }
-        }
-      ],
-      [
-        "react-native-edge-to-edge",
-        {
-          "android": {
-            "parentTheme": "Default",
-            "enforceNavigationBarContrast": false
           }
         }
       ],
@@ -136,7 +126,9 @@
           ]
         }
       ],
-      "expo-tracking-transparency"
+      "expo-tracking-transparency",
+      "expo-asset",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -186,6 +178,9 @@
         "projectId": "b00dc031-795d-48e3-b948-828096e7382c"
       }
     },
-    "owner": "koala.gost"
+    "owner": "koala.gost",
+    "androidNavigationBar": {
+      "enforceContrast": false
+    }
   }
 }
