@@ -1018,9 +1018,8 @@ export default function ProfileScreen() {
           <View style={styles.settingsContainer}>
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
             <SettingsRow title="Preguntas Frecuentes" onPress={handlePrivacy} />
-            {userBars.length > 0 && (
-              <SettingsRow title="Soporte y Tickets" onPress={handleContactSupport} />
-            )}
+            {/* Visible para todos los registrados: Apple 1.2 pide un contacto publicado (11-H11). */}
+            <SettingsRow title="Soporte y Tickets" onPress={handleContactSupport} />
             <SettingsRow title="Política de Privacidad" onPress={handlePrivacyPolicy} />
             <SettingsRow title="Términos de Servicio" onPress={handleTermsOfService} />
             {privacyOptionsRequired && (

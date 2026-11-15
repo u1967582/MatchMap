@@ -17,6 +17,25 @@ Una entrada por cada cambio: PR mergeada, migración aplicada en prod, ajuste en
 
 ---
 
+### 2026-11-15 · Áreas 06 y 11 · Política de privacidad, contacto, Mapbox y push en frío
+- **Tipo:** código
+- **Qué:** política de privacidad y página para eliminar la cuenta en la web (`matchmap-landing`, `/privacidad` y `/eliminar-cuenta`), redactadas desde el código y prod; se retiran los HTML antiguos de `privacy/`. Buzón único `support@matchmapapp.com` (`constants/legal.ts`). Telemetría de Mapbox desactivada. «Soporte y Tickets» visible para todos. FAQ corregida. El `matchId` de una notificación se guarda en un store para que no se pierda en el arranque en frío.
+- **Por qué:** 11-H4, 11-H6, 11-H7, 11-H9, 11-H11, 06-H5 (y 12-H8).
+- **Dónde:** rama `audit/11-privacidad-mapbox` (sobre la PR #42) y PR u1967582/matchmap-landing#8.
+- **Verificación:** `tsc` ✅, ESLint 0 errores, jest ✅ (8 tests nuevos), `next build` de la landing ✅ y revisión visual a 375 px. **Sin verificar en dispositivo:** push en frío (fila 17 de la matriz 12).
+- **Pendiente 👤:** datos del responsable en la política, desplegar la landing **antes** de la próxima build (la app ya enlaza a `matchmapapp.com/privacidad`) y poner las URLs y el email en las fichas.
+- **Rollback:** revertir los commits; la app volvería a enlazar la política de Notion.
+- **Quién:** 💻 local.
+
+### 2026-11-15 · General · Prod operativo, migraciones pendientes aplicadas y Expo SDK 58
+- **Tipo:** migración prod · panel · código
+- **Qué:** Supabase pasa a Pro (01-H7). Aplicadas `20261015130000_review_reports_and_user_blocks` y `20261020000000_perf_rls_initplan_and_fk_indexes`; redesplegadas las 5 edge functions. Expo SDK 58 (PR #41) y PR #39 fusionadas en `main`.
+- **Por qué:** 01-H7, áreas 03 y 07, mantenimiento previo al lanzamiento.
+- **Dónde:** proyecto `hmtfxpihkoisncglllmq`; PR #39, #40 y #41.
+- **Verificación:** API HTTP 200; tablas nuevas presentes; jest 700 tests ✅ sobre `main`.
+- **Rollback:** ver `docs/deployment/RELEASE_RUNBOOK.md` §9.
+- **Quién:** 💻 local con aprobación de Roger.
+
 ### 2026-11-05 · Áreas 01 y 04 · Fuga de `public.users`, escalado a super admin y guardia de admin
 - **Tipo:** código
 - **Qué:** migración `20261105212402_audit01b_users_privacy.sql` (cada usuario lee solo su fila, sin INSERT/DELETE desde cliente, vista `public_profiles` para el autor de las reseñas). Se recupera `AdminOnly` (04-H1), que estaba en `release/qa-final` pero no llegó a `main` con la PR #38.
