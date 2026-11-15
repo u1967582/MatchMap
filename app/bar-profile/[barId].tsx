@@ -662,7 +662,7 @@ export default function BarProfileScreen() {
                 renderItem={({ item }) => renderPostItem({ item })}
                 keyExtractor={(item) => item.id}
                 scrollEnabled={false}
-                ListEmptyComponent={null}
+                ListEmptyComponent={undefined}
                 contentContainerStyle={{ gap: 0 }}
               />
             ) : (

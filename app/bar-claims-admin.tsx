@@ -9,10 +9,9 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
-import { useFocusEffect } from '@react-navigation/native';
 import { AppText } from '~/components/ds';
 
 type ClaimRow = {

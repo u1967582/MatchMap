@@ -39,7 +39,7 @@ describe('buildMapsUrls', () => {
 
 describe('openInMaps', () => {
   it('abre la primera URL de la plataforma', async () => {
-    openURL.mockResolvedValueOnce(true);
+    openURL.mockResolvedValueOnce(undefined);
 
     expect(await openInMaps(BAR, 'ios')).toBe(true);
     expect(openURL).toHaveBeenCalledTimes(1);
@@ -47,7 +47,7 @@ describe('openInMaps', () => {
   });
 
   it('si la app de mapas no se puede abrir, usa Google Maps en el navegador', async () => {
-    openURL.mockRejectedValueOnce(new Error('no handler')).mockResolvedValueOnce(true);
+    openURL.mockRejectedValueOnce(new Error('no handler')).mockResolvedValueOnce(undefined);
 
     expect(await openInMaps(BAR, 'android')).toBe(true);
     expect(openURL).toHaveBeenCalledTimes(2);
@@ -71,7 +71,7 @@ describe('openInMaps', () => {
 
 describe('openPhoneDialer', () => {
   it('limpia el número y abre tel:', async () => {
-    openURL.mockResolvedValueOnce(true);
+    openURL.mockResolvedValueOnce(undefined);
     expect(await openPhoneDialer('+34 932 12-34-56')).toBe(true);
     expect(openURL).toHaveBeenCalledWith('tel:+34932123456');
   });

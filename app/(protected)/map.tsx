@@ -20,9 +20,6 @@ export default function MapScreen() {
   // Set status bar style when component mounts
   useEffect(() => {
     StatusBar.setBarStyle('light-content', true);
-    if (Platform.OS === 'android' && StatusBar.setBackgroundColor) {
-      StatusBar.setBackgroundColor('transparent', true);
-    }
   }, []);
 
 

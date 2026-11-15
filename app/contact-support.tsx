@@ -576,7 +576,7 @@ export default function ContactSupportScreen() {
                 Respondemos en menos de 48 horas
               </AppText>
             </View>
-          ) : null
+          ) : undefined
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

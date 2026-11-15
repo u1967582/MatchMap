@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { ImageBackground, StyleSheet, View, StatusBar, Platform } from 'react-native';
+import { ImageBackground, StyleSheet, View, StatusBar } from 'react-native';
 
 interface BackgroundImageProps {
   children: ReactNode;
@@ -16,11 +16,7 @@ const BackgroundImage: React.FC<BackgroundImageProps> = ({
 }) => {
   return (
     <ImageBackground source={source} style={styles.backgroundImage} resizeMode="cover">
-      <StatusBar 
-        barStyle="light-content" 
-        backgroundColor={Platform.OS === 'android' ? '#1C2A3A' : 'transparent'} 
-        translucent={false}
-      />
+      <StatusBar barStyle="light-content" />
       
       {overlay && <View style={[styles.overlay, { backgroundColor: overlayColor }]} />}
       
