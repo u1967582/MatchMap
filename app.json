@@ -128,18 +128,27 @@
       ],
       "expo-tracking-transparency",
       "expo-asset",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "tsconfigPaths": true
     },
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
@@ -178,9 +187,6 @@
         "projectId": "b00dc031-795d-48e3-b948-828096e7382c"
       }
     },
-    "owner": "koala.gost",
-    "androidNavigationBar": {
-      "enforceContrast": false
-    }
+    "owner": "koala.gost"
   }
 }

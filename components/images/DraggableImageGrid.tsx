@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   selectOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 122, 255, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
