@@ -5,6 +5,9 @@ import { useCallback, useEffect } from 'react';
 import Map from '~/components/Map';
 import BottomTabBar from '~/components/ui/BottomTabBar';
 import AdBanner from '~/components/ads/AdBanner';
+import { usePendingNotificationStore } from '~/stores/pendingNotificationStore';
+
+const PENDING_MATCH_TTL_MS = 5000;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
@@ -19,7 +22,21 @@ export default function MapScreen() {
     ? parseFloat(params.selectedBarLng as string)
     : undefined;
   const selectedBarName = params.selectedBarName as string | undefined;
-  const matchId = params.matchId as string | undefined;
+  // El partido de una notificación puede llegar por la ruta o, si otra
+  // navegación reemplazó la pantalla sin parámetros, por el store (06-H5).
+  const pendingMatchId = usePendingNotificationStore((state) => state.matchId);
+  const matchId = (params.matchId as string | undefined) ?? pendingMatchId ?? undefined;
+
+  // Se mantiene unos segundos por si el arranque vuelve a montar el mapa sin
+  // parámetros justo después; luego se olvida para no reaplicarlo más tarde.
+  useEffect(() => {
+    if (!pendingMatchId) return;
+    const timer = setTimeout(
+      () => usePendingNotificationStore.getState().clear(),
+      PENDING_MATCH_TTL_MS
+    );
+    return () => clearTimeout(timer);
+  }, [pendingMatchId]);
 
   // Set status bar style when component mounts
   useEffect(() => {

@@ -10,12 +10,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
 import { AppText } from '~/components/ds';
+import { SUPPORT_EMAIL } from '~/constants/legal';
 
 type SupportCategory = 'technical' | 'account' | 'payment' | 'feature' | 'other';
 type TabType = 'new' | 'my-tickets';
@@ -521,10 +523,14 @@ export default function ContactSupportScreen() {
         {/* Quick Contact Options */}
         <View style={styles.section}>
           <AppText style={styles.sectionTitle}>Otras Formas de Contacto</AppText>
-          <View style={styles.quickContactCard}>
+          <TouchableOpacity
+            style={styles.quickContactCard}
+            onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+            accessibilityRole="link"
+            accessibilityLabel={`Escribir a ${SUPPORT_EMAIL}`}>
             <Ionicons name="mail" size={20} color="#A3B3CC" />
-            <AppText style={styles.quickContactText}>support@matchmap.com</AppText>
-          </View>
+            <AppText style={styles.quickContactText}>{SUPPORT_EMAIL}</AppText>
+          </TouchableOpacity>
           <View style={styles.quickContactCard}>
             <Ionicons name="time-outline" size={20} color="#A3B3CC" />
             <AppText style={styles.quickContactText}>Lun - Vie: 9:00 - 18:00 CET</AppText>
