@@ -17,6 +17,15 @@ Una entrada por cada cambio: PR mergeada, migración aplicada en prod, ajuste en
 
 ---
 
+### 2026-11-15 · Área 10 · Tokens secretos de Mapbox revocados
+- **Tipo:** panel
+- **Qué:** Roger borra en Mapbox los dos tokens secretos (`iOS Downloads Token` y `MatchMap`). Ya no los usaba ningún build; queda solo el `pk.` público.
+- **Por qué:** 10-H1 (token `sk.` en el historial de git, repo público).
+- **Dónde:** console.mapbox.com → Access tokens.
+- **Verificación:** captura del panel; la build de simulador desde `main` compila sin token de descarga.
+- **Rollback:** n/a (crear un token nuevo si algún día hiciera falta).
+- **Quién:** 👤 Roger.
+
 ### 2026-11-15 · Área 01 · Repaso de RLS contra prod y fuga de pagos de Boost
 - **Tipo:** código · migración prod
 - **Qué:** repaso de solo lectura de las 47 tablas, sus políticas, permisos, funciones `SECURITY DEFINER` y buckets. Un hallazgo grave (01-H8: `bar_boosts` dejaba leer quién ha pagado y cuánto) y dos menores (01-H9, 01-H10). Migración `20261115120000_audit01c_bar_boosts_privacy.sql`.

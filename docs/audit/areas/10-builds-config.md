@@ -9,7 +9,7 @@ Generar builds de producción firmados, reproducibles y con la configuración co
 `app.json`, `eas.json`, `ios/`, `android/`, credenciales de EAS, variables de entorno.
 
 ## Checklist
-- [ ] **Identificadores (HALLAZGOS #5, D1):** decidir el package de Android antes del primer envío a Play; el bundle ID de iOS se mantiene. → ⏳ **D1 sin responder**: no se ha tocado `com.tuorg.matchmap` (10-H14).
+- [ ] **Identificadores (HALLAZGOS #5, D1):** decidir el package de Android antes del primer envío a Play; el bundle ID de iOS se mantiene. → ✅ **D1 = mantener** (app ya publicada): no se ha tocado `com.tuorg.matchmap` (10-H14).
 - [x] **Versiones:** `version` 1.0.16; `buildNumber` / `versionCode` autoincrementales (`"autoIncrement": true` en el perfil de producción o `appVersionSource: remote`). → `appVersionSource: remote` + `autoIncrement: true` en `production` para ambas plataformas (10-H4).
 - [x] **`eas.json` (HALLAZGOS #19):** dejar `development`, `preview` y `production`; mover variables a *EAS Environment Variables*; borrar `preview2/3/4`, `preview-aab` si no se usan. → hecho (10-H2); **las variables hay que crearlas en EAS antes del próximo build** (10-H5, tabla más abajo).
 - [x] **Mapbox:** el token de descarga de SDK (`MAPBOX_DOWNLOADS_TOKEN`) debe ser `sk.` en EAS Secrets, no un `pk.` en el repo; el token público de runtime restringido por bundle/package en Mapbox. → el token de descarga ya no hace falta y se ha quitado (10-H3). ⏳ 👤 restringir el `pk.` de runtime en el panel de Mapbox y **revocar el `sk.` del historial** (10-H1).
@@ -44,7 +44,7 @@ Perfiles mínimos esperados: `development` (developmentClient, internal, + `ios.
 ## Hallazgos
 | ID | Severidad | Descripción | Estado |
 |---|---|---|---|
-| 10-H1 | 🔴 | **Token secreto de Mapbox (`sk.`) en el historial de git** de `app.json` (opción `RNMapboxMapsDownloadToken` del plugin `@rnmapbox/maps`, commits de jul-2025 a feb-2026). El repo es **público**, así que hay que darlo por filtrado. No está en `HEAD` y no se copia aquí. | ⏳ 👤 revocarlo en Mapbox (Account › Tokens). Reescribir el historial no basta: el token ya es público |
+| 10-H1 | 🔴 | **Token secreto de Mapbox (`sk.`) en el historial de git** de `app.json` (opción `RNMapboxMapsDownloadToken` del plugin `@rnmapbox/maps`, commits de jul-2025 a feb-2026). El repo es **público**, así que hay que darlo por filtrado. No está en `HEAD` y no se copia aquí. | ✅ Revocados en Mapbox los dos tokens `sk.` («iOS Downloads Token» y «MatchMap») el 2026-11-15; solo queda el `pk.` público de runtime |
 | 10-H2 | 🟠 | `eas.json` con 9 perfiles y las mismas variables copiadas en cada uno (HALLAZGOS #19). | ✅ quedan `development`, `development-ios-simulator`, `preview` y `production` |
 | 10-H3 | 🟠 | `MAPBOX_DOWNLOADS_TOKEN` en `production` y `preview-aab` con un token `pk.`. Ningún paso lo lee (Gradle lee la *propiedad* `MAPBOX_DOWNLOADS_TOKEN` o la variable `RNMAPBOX_MAPS_DOWNLOAD_TOKEN`) y Mapbox ya no exige token para descargar el SDK (`@rnmapbox/maps` 10.3.7). | ✅ eliminado |
 | 10-H4 | 🟠 | El autoincremento de iOS solo estaba en `production-ios`; `production` solo incrementaba Android. | ✅ `autoIncrement: true` en `production` (ambas plataformas) |
@@ -57,7 +57,7 @@ Perfiles mínimos esperados: `development` (developmentClient, internal, + `ios.
 | 10-H11 | 🟡 | `constants/ads.ts` sirve anuncios **reales** en cualquier build sin `__DEV__`, incluido `preview` (testers internos). Riesgo de clics inválidos en AdMob. Los App IDs de AdMob de `app.json` son de producción ✅. | Anotado para el área 11 (no se toca código de anuncios) |
 | 10-H12 | 🟡 | Con `appVersionSource: remote`, `ios.buildNumber` (12) y `android.versionCode` (17) de `app.json` se ignoran en EAS; el valor real está en EAS. Varios documentos antiguos (`docs/deployment/*`) citan el perfil `production-ios`, que ya no existe. | ⏳ 👤 `eas build:version:get` antes del build; docs antiguos → HALLAZGOS #23 |
 | 10-H13 | 🟡 | `submit.production.ios.appleId` (email personal) en un repo público. Se puede quitar y usar una *App Store Connect API Key* (`eas credentials`) para `eas submit`. | Anotado |
-| 10-H14 | 🟠 | Package de Android `com.tuorg.matchmap` (placeholder, HALLAZGOS #5). | ⏳ pendiente de D1 (no se toca) |
+| 10-H14 | 🟠 | Package de Android `com.tuorg.matchmap` (placeholder, HALLAZGOS #5). | ✅ D1 = mantener: la app ya está publicada en Play con este package |
 | 10-H15 | 🟡 | `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` en el manifest final. Se **mantienen**: `expo-image-picker` los pide en Android ≤ 12 (`requestMediaLibraryPermissionsAsync`); bloquearlos rompería la selección de fotos en esos móviles. Mejora posible: limitarlos con `maxSdkVersion="32"` mediante un config plugin. | Anotado |
 
 ### Perfiles de `eas.json`
