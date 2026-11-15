@@ -13,13 +13,13 @@ export function extractBarId(data: unknown): string | null {
   if (!data) return null;
 
   // Si es string directamente, retornar
-  if (typeof data === "string") return data;
+  if (typeof data === 'string') return data;
 
   // Si es objeto, buscar en propiedades comunes
-  if (typeof data === "object") {
+  if (typeof data === 'object') {
     const o = data as Record<string, unknown>;
-    for (const k of ["bar_id", "id", "barId", "barid"]) {
-      if (typeof o[k] === "string") return o[k] as string;
+    for (const k of ['bar_id', 'id', 'barId', 'barid']) {
+      if (typeof o[k] === 'string') return o[k] as string;
     }
   }
 
@@ -38,7 +38,7 @@ export function toBucketPath(pathOrUrl: string, bucket: string): string {
 const json = (body: Record<string, unknown>, status: number) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { 'Content-Type': 'application/json' },
   });
 
 export function createHandler(deps: Deps) {
@@ -49,18 +49,15 @@ export function createHandler(deps: Deps) {
       try {
         body = await req.json();
       } catch {
-        return json({ error: "Invalid JSON body" }, 400);
+        return json({ error: 'Invalid JSON body' }, 400);
       }
       const preBarId = body?.preBarId;
       const ownerId = body?.ownerId;
 
       // Validación de parámetros
-      if (
-        typeof preBarId !== "string" || !preBarId ||
-        typeof ownerId !== "string" || !ownerId
-      ) {
-        console.error("[ERROR] Missing required parameters");
-        return json({ error: "preBarId and ownerId required" }, 400);
+      if (typeof preBarId !== 'string' || !preBarId || typeof ownerId !== 'string' || !ownerId) {
+        console.error('[ERROR] Missing required parameters');
+        return json({ error: 'preBarId and ownerId required' }, 400);
       }
 
       console.log(`[START] Promoting pre-bar ${preBarId} for owner ${ownerId}`);
@@ -68,33 +65,42 @@ export function createHandler(deps: Deps) {
       const supabase = deps.getClient();
 
       // El owner debe ser el propio usuario autenticado (no anónimo y con email confirmado)
-      const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
-      const { data: { user: caller }, error: authError } = await supabase.auth.getUser(token);
+      const token = (req.headers.get('Authorization') ?? '').replace('Bearer ', '');
+      const {
+        data: { user: caller },
+        error: authError,
+      } = await supabase.auth.getUser(token);
 
-      if (authError || !caller || caller.is_anonymous || !caller.email || !caller.email_confirmed_at) {
-        return json({ error: "Unauthorized" }, 401);
+      if (
+        authError ||
+        !caller ||
+        caller.is_anonymous ||
+        !caller.email ||
+        !caller.email_confirmed_at
+      ) {
+        return json({ error: 'Unauthorized' }, 401);
       }
 
       if (caller.id !== ownerId) {
-        return json({ error: "ownerId must match the authenticated user" }, 403);
+        return json({ error: 'ownerId must match the authenticated user' }, 403);
       }
 
-      const bucket = "bar-images";
+      const bucket = 'bar-images';
 
       // ========================================
       // 0) VERIFICAR ESTADO DEL PRE-BAR
       // ========================================
-      console.log("[CHECK] Verifying pre-bar state...");
+      console.log('[CHECK] Verifying pre-bar state...');
       const { data: preBarRow, error: preBarErr } = await supabase
-        .from("auto_pre_register_bars")
-        .select("converted_bar_id, status, name, email")
-        .eq("id", preBarId)
+        .from('auto_pre_register_bars')
+        .select('converted_bar_id, status, name, email')
+        .eq('id', preBarId)
         .single();
 
       if (preBarErr) {
         // No se devuelve el mensaje de Postgres/PostgREST al cliente
-        console.error("[CHECK ERROR]", preBarErr);
-        return json({ error: "Pre-registered bar not found" }, 400);
+        console.error('[CHECK ERROR]', preBarErr);
+        return json({ error: 'Pre-registered bar not found' }, 400);
       }
 
       // Solo quien usa el email con el que se pre-registró el bar puede reclamarlo
@@ -102,7 +108,10 @@ export function createHandler(deps: Deps) {
         !preBarRow?.email ||
         preBarRow.email.trim().toLowerCase() !== caller.email.trim().toLowerCase()
       ) {
-        return json({ error: "This pre-registered bar does not belong to the authenticated user" }, 403);
+        return json(
+          { error: 'This pre-registered bar does not belong to the authenticated user' },
+          403
+        );
       }
 
       let barId: string | null = null;
@@ -111,28 +120,29 @@ export function createHandler(deps: Deps) {
       // CASO 1: Bar ya creado, verificar si imágenes fueron migradas
       // ========================================
       if (preBarRow?.converted_bar_id) {
-        console.log("[PARTIAL CONVERSION] Bar already created, checking images...");
+        console.log('[PARTIAL CONVERSION] Bar already created, checking images...');
         console.log(`  - Bar ID: ${preBarRow.converted_bar_id}`);
         console.log(`  - Status: ${preBarRow.status}`);
 
         // Verificar si las imágenes ya fueron migradas
         const { data: existingImages } = await supabase
-          .from("bar_images")
-          .select("id")
-          .eq("bar_id", preBarRow.converted_bar_id)
+          .from('bar_images')
+          .select('id')
+          .eq('bar_id', preBarRow.converted_bar_id)
           .limit(1);
 
         const { data: existingMenus } = await supabase
-          .from("bar_menus")
-          .select("id")
-          .eq("bar_id", preBarRow.converted_bar_id)
+          .from('bar_menus')
+          .select('id')
+          .eq('bar_id', preBarRow.converted_bar_id)
           .limit(1);
 
-        const hasImages = (existingImages && existingImages.length > 0) ||
-                         (existingMenus && existingMenus.length > 0);
+        const hasImages =
+          (existingImages && existingImages.length > 0) ||
+          (existingMenus && existingMenus.length > 0);
 
         if (hasImages) {
-          console.log("[ALREADY COMPLETE] Images already migrated, nothing to do");
+          console.log('[ALREADY COMPLETE] Images already migrated, nothing to do');
           return new Response(
             JSON.stringify({
               success: true,
@@ -140,17 +150,17 @@ export function createHandler(deps: Deps) {
               alreadyConverted: true,
               barImagesCount: 0,
               menuImagesCount: 0,
-              message: "Bar and images already migrated"
+              message: 'Bar and images already migrated',
             }),
             {
               status: 200,
-              headers: { "Content-Type": "application/json" }
+              headers: { 'Content-Type': 'application/json' },
             }
           );
         }
 
         // Bar creado pero imágenes NO migradas → usar converted_bar_id y migrar imágenes
-        console.log("[RESUME] Bar created but images not migrated. Resuming migration...");
+        console.log('[RESUME] Bar created but images not migrated. Resuming migration...');
         barId = preBarRow.converted_bar_id;
       }
       // ========================================
@@ -158,39 +168,39 @@ export function createHandler(deps: Deps) {
       // ========================================
       else {
         // Verificar status (solo permitir pre_registered para creación nueva)
-        if (preBarRow?.status !== "pre_registered") {
-          console.error("[INVALID STATUS]", preBarRow?.status);
-          return json({ error: `Invalid status: ${preBarRow?.status}. Expected "pre_registered"` }, 400);
+        if (preBarRow?.status !== 'pre_registered') {
+          console.error('[INVALID STATUS]', preBarRow?.status);
+          return json(
+            { error: `Invalid status: ${preBarRow?.status}. Expected "pre_registered"` },
+            400
+          );
         }
 
-        console.log("[NEW CONVERSION] Creating new bar with RPC...");
+        console.log('[NEW CONVERSION] Creating new bar with RPC...');
         console.log(`  - Status: ${preBarRow.status}`);
         console.log(`  - converted_bar_id: NULL (not created yet)`);
 
         // Llamar RPC para crear el bar
-        console.log("[RPC] Calling promote_pre_registered_bar...");
-        const { data: rpcData, error: rpcErr } = await supabase.rpc(
-          "promote_pre_registered_bar",
-          {
+        console.log('[RPC] Calling promote_pre_registered_bar...');
+        const { data: rpcData, error: rpcErr } = await supabase.rpc('promote_pre_registered_bar', {
           p_pre_bar_id: preBarId,
           p_owner_id: ownerId,
-          }
-        );
+        });
 
         if (rpcErr) {
-          console.error("[RPC ERROR]", rpcErr);
-          return json({ error: "Could not promote the pre-registered bar" }, 400);
+          console.error('[RPC ERROR]', rpcErr);
+          return json({ error: 'Could not promote the pre-registered bar' }, 400);
         }
 
-        console.log("[RPC] Response data:", rpcData);
+        console.log('[RPC] Response data:', rpcData);
 
         // Extraer barId del retorno (puede ser string u objeto)
         barId = extractBarId(rpcData);
 
         // FAIL FAST: Si no se obtiene un UUID válido, detener
         if (!barId) {
-          console.error("[CRITICAL] RPC did not return a valid barId", { rpcData });
-          return json({ error: "RPC did not return a valid barId" }, 500);
+          console.error('[CRITICAL] RPC did not return a valid barId', { rpcData });
+          return json({ error: 'RPC did not return a valid barId' }, 500);
         }
 
         console.log(`[SUCCESS] Bar created with ID: ${barId}`);
@@ -207,15 +217,15 @@ export function createHandler(deps: Deps) {
       // ========================================
       // 2) MIGRAR IMÁGENES DEL BAR
       // ========================================
-      console.log("[BAR IMAGES] Fetching from auto_pre_register_bar_images...");
+      console.log('[BAR IMAGES] Fetching from auto_pre_register_bar_images...');
       const { data: barImgs, error: barImgsErr } = await supabase
-        .from("auto_pre_register_bar_images")
-        .select("file_path, image_order, description")
-        .eq("auto_pre_bar_id", preBarId)
-        .order("image_order", { ascending: true });
+        .from('auto_pre_register_bar_images')
+        .select('file_path, image_order, description')
+        .eq('auto_pre_bar_id', preBarId)
+        .order('image_order', { ascending: true });
 
       if (barImgsErr) {
-        console.error("[BAR IMAGES ERROR]", barImgsErr);
+        console.error('[BAR IMAGES ERROR]', barImgsErr);
       } else {
         console.log(`[BAR IMAGES] Found ${barImgs?.length || 0} images`);
       }
@@ -225,37 +235,33 @@ export function createHandler(deps: Deps) {
         try {
           // Normalizar path (por si viene como URL completa)
           const oldPath = toBucketPath(img.file_path, bucket);
-          const fileName = oldPath.split("/").pop();
+          const fileName = oldPath.split('/').pop();
 
           if (!fileName) {
             console.error(`[BAR IMAGE] Invalid file path: ${oldPath}`);
             continue;
           }
 
-        const newPath = `${barId}/bar/${fileName}`;
+          const newPath = `${barId}/bar/${fileName}`;
 
           console.log(`[BAR IMAGE] Moving: ${oldPath} → ${newPath}`);
 
           // Mover archivo en storage
-          const { error: moveErr } = await supabase.storage
-          .from(bucket)
-          .move(oldPath, newPath);
+          const { error: moveErr } = await supabase.storage.from(bucket).move(oldPath, newPath);
 
           if (moveErr) {
             console.error(`[BAR IMAGE] Move error:`, moveErr);
-          continue;
-        }
+            continue;
+          }
 
           // Insertar en bar_images con URL pública COMPLETA
           const publicUrl = getPublicUrl(newPath);
-          const { error: insertErr } = await supabase
-          .from("bar_images")
-          .insert({
+          const { error: insertErr } = await supabase.from('bar_images').insert({
             bar_id: barId,
-              image_url: publicUrl,  // ✅ URL PÚBLICA COMPLETA
-              image_order: img.image_order,
-              description: img.description ?? null,
-            });
+            image_url: publicUrl, // ✅ URL PÚBLICA COMPLETA
+            image_order: img.image_order,
+            description: img.description ?? null,
+          });
 
           if (insertErr) {
             console.error(`[BAR IMAGE] Insert error:`, insertErr);
@@ -274,15 +280,15 @@ export function createHandler(deps: Deps) {
       // ========================================
       // 3) MIGRAR IMÁGENES DEL MENÚ
       // ========================================
-      console.log("[MENU IMAGES] Fetching from auto_pre_register_bar_menus...");
+      console.log('[MENU IMAGES] Fetching from auto_pre_register_bar_menus...');
       const { data: menuImgs, error: menuImgsErr } = await supabase
-        .from("auto_pre_register_bar_menus")
-        .select("file_path, image_order")
-        .eq("auto_pre_bar_id", preBarId)
-        .order("image_order", { ascending: true });
+        .from('auto_pre_register_bar_menus')
+        .select('file_path, image_order')
+        .eq('auto_pre_bar_id', preBarId)
+        .order('image_order', { ascending: true });
 
       if (menuImgsErr) {
-        console.error("[MENU IMAGES ERROR]", menuImgsErr);
+        console.error('[MENU IMAGES ERROR]', menuImgsErr);
       } else {
         console.log(`[MENU IMAGES] Found ${menuImgs?.length || 0} images`);
       }
@@ -292,7 +298,7 @@ export function createHandler(deps: Deps) {
         try {
           // Normalizar path (por si viene como URL completa)
           const oldPath = toBucketPath(img.file_path, bucket);
-          const fileName = oldPath.split("/").pop();
+          const fileName = oldPath.split('/').pop();
 
           if (!fileName) {
             console.error(`[MENU IMAGE] Invalid file path: ${oldPath}`);
@@ -304,9 +310,7 @@ export function createHandler(deps: Deps) {
           console.log(`[MENU IMAGE] Moving: ${oldPath} → ${newPath}`);
 
           // Mover archivo en storage
-          const { error: moveErr } = await supabase.storage
-            .from(bucket)
-            .move(oldPath, newPath);
+          const { error: moveErr } = await supabase.storage.from(bucket).move(oldPath, newPath);
 
           if (moveErr) {
             console.error(`[MENU IMAGE] Move error:`, moveErr);
@@ -315,13 +319,11 @@ export function createHandler(deps: Deps) {
 
           // Insertar en bar_menus con URL pública COMPLETA
           const publicUrl = getPublicUrl(newPath);
-          const { error: insertErr } = await supabase
-            .from("bar_menus")
-            .insert({
-              bar_id: barId,
-              image_url: publicUrl,  // ✅ URL PÚBLICA COMPLETA
+          const { error: insertErr } = await supabase.from('bar_menus').insert({
+            bar_id: barId,
+            image_url: publicUrl, // ✅ URL PÚBLICA COMPLETA
             image_order: img.image_order,
-            });
+          });
 
           if (insertErr) {
             console.error(`[MENU IMAGE] Insert error:`, insertErr);
@@ -353,14 +355,13 @@ export function createHandler(deps: Deps) {
         }),
         {
           status: 200,
-          headers: { "Content-Type": "application/json" }
+          headers: { 'Content-Type': 'application/json' },
         }
       );
-
     } catch (err) {
-      console.error("[CRITICAL ERROR]", err);
+      console.error('[CRITICAL ERROR]', err);
       // El detalle se queda en los logs de la función, no en la respuesta
-      return json({ error: "Unexpected error" }, 500);
+      return json({ error: 'Unexpected error' }, 500);
     }
   };
 }

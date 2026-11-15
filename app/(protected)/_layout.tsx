@@ -19,7 +19,9 @@ export default function ProtectedLayout() {
 
   useEffect(() => {
     const checkAuthState = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const authenticated = !!session;
 
       if (!authenticated) {
@@ -75,18 +77,18 @@ export default function ProtectedLayout() {
     checkAuthState();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        const authenticated = !!session;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const authenticated = !!session;
 
-        if (!authenticated) {
-          // Redirect to home if user logs out
-          router.replace('/');
-        } else {
-          setIsAuthenticated(authenticated);
-        }
+      if (!authenticated) {
+        // Redirect to home if user logs out
+        router.replace('/');
+      } else {
+        setIsAuthenticated(authenticated);
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, [router]);
@@ -108,7 +110,7 @@ export default function ProtectedLayout() {
           headerShown: false,
           presentation: 'card',
           animation: 'none',
-          contentStyle: { backgroundColor: 'transparent' }
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       />
       {favoriteTeamUserId && (
@@ -145,4 +147,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1C2A3A',
   },
-}); 
+});

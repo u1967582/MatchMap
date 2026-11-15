@@ -3,7 +3,14 @@ import { assertEquals } from 'jsr:@std/assert@1';
 import { createFakeSupabase, op, quiet } from '../_shared/fakeSupabase.ts';
 import { chunk, createHandler, STATUS_MAP } from './handler.ts';
 
-const COMP = { id: 'comp-uuid', name: 'LaLiga', gender: 'male', scope: 'national', api_football_id: 140, api_football_season: 2025 };
+const COMP = {
+  id: 'comp-uuid',
+  name: 'LaLiga',
+  gender: 'male',
+  scope: 'national',
+  api_football_id: 140,
+  api_football_season: 2025,
+};
 
 const TEAMS = [
   { team: { id: 1, name: 'Betis', code: 'BET', logo: 'b.png' } },
@@ -11,7 +18,12 @@ const TEAMS = [
 ];
 
 const fixture = (o: any = {}) => ({
-  fixture: { id: 1001, date: '2026-03-14T20:00:00+00:00', venue: { name: 'Villamarín' }, status: { short: 'NS' } },
+  fixture: {
+    id: 1001,
+    date: '2026-03-14T20:00:00+00:00',
+    venue: { name: 'Villamarín' },
+    status: { short: 'NS' },
+  },
   league: { round: 'Regular Season - 27', group: undefined },
   teams: { home: { id: 1, name: 'Betis' }, away: { id: 2, name: 'Sevilla' } },
   goals: { home: null, away: null },
@@ -30,7 +42,12 @@ function setup({
       if (c.table === 'competitions') return { data: competitions };
       if (c.table === 'teams') {
         const rows = op(c, 'upsert')!.args[0];
-        return { data: rows.map((r: any) => ({ id: `uuid-${r.api_football_id}`, api_football_id: r.api_football_id })) };
+        return {
+          data: rows.map((r: any) => ({
+            id: `uuid-${r.api_football_id}`,
+            api_football_id: r.api_football_id,
+          })),
+        };
       }
       return { data: null };
     },
@@ -42,12 +59,20 @@ function setup({
     const response = url.includes('/teams') ? TEAMS : fixtures;
     return new Response(JSON.stringify({ errors: apiErrors ?? [], response }));
   }) as any;
-  const handler = createHandler({ supabase: fake.client, fetch: fetchMock, apiKey: 'api-key', sleep: async () => {} });
+  const handler = createHandler({
+    supabase: fake.client,
+    fetch: fetchMock,
+    apiKey: 'api-key',
+    sleep: async () => {},
+  });
   return { ...fake, handler, requested };
 }
 
 const req = (secret = 'cron-secret', query = '') =>
-  new Request(`http://localhost/sync-football${query}`, { method: 'POST', headers: { 'x-cron-secret': secret } });
+  new Request(`http://localhost/sync-football${query}`, {
+    method: 'POST',
+    headers: { 'x-cron-secret': secret },
+  });
 
 const matchRows = (calls: any[]) => {
   const upsert = calls.find((c) => c.table === 'matches')!;
@@ -78,7 +103,11 @@ Deno.test('sincroniza equipos y partidos de la temporada de la competición', as
 
   const teamUpsert = calls.find((c) => c.table === 'teams')!;
   assertEquals(op(teamUpsert, 'upsert')!.args[0][0], {
-    name: 'Betis', short_name: 'BET', logo_url: 'b.png', gender: 'male', api_football_id: 1,
+    name: 'Betis',
+    short_name: 'BET',
+    logo_url: 'b.png',
+    gender: 'male',
+    api_football_id: 1,
   });
 
   const [m] = matchRows(calls);
@@ -93,26 +122,39 @@ Deno.test('sincroniza equipos y partidos de la temporada de la competición', as
   assertEquals(m.time, '21:00'); // 20:00 UTC = 21:00 Madrid (CET)
 });
 
-Deno.test('date y time están ambos en hora de Madrid (partidos de madrugada, p.ej. Mundial en América)', async () => {
-  // 22:30 UTC del 3 de julio = 00:30 del 4 de julio en Madrid (CEST)
-  const { handler, calls } = setup({
-    fixtures: [fixture({ fixture: { id: 7, date: '2026-07-03T22:30:00+00:00', status: { short: 'NS' } } })],
-  });
-  await quiet(() => handler(req()));
-  const [m] = matchRows(calls);
-  assertEquals(m.time, '00:30');
-  assertEquals(m.date, '2026-07-04');
-});
+Deno.test(
+  'date y time están ambos en hora de Madrid (partidos de madrugada, p.ej. Mundial en América)',
+  async () => {
+    // 22:30 UTC del 3 de julio = 00:30 del 4 de julio en Madrid (CEST)
+    const { handler, calls } = setup({
+      fixtures: [
+        fixture({ fixture: { id: 7, date: '2026-07-03T22:30:00+00:00', status: { short: 'NS' } } }),
+      ],
+    });
+    await quiet(() => handler(req()));
+    const [m] = matchRows(calls);
+    assertEquals(m.time, '00:30');
+    assertEquals(m.date, '2026-07-04');
+  }
+);
 
 Deno.test('competiciones de ámbito mundial usan temporada de un solo año', async () => {
-  const { handler, calls } = setup({ competitions: [{ ...COMP, scope: 'world', api_football_season: 2026 }] });
+  const { handler, calls } = setup({
+    competitions: [{ ...COMP, scope: 'world', api_football_season: 2026 }],
+  });
   await quiet(() => handler(req()));
   assertEquals(matchRows(calls)[0].season, '2026');
 });
 
 Deno.test('omite partidos con equipos desconocidos', async () => {
   const { handler, calls } = setup({
-    fixtures: [fixture(), fixture({ fixture: { id: 2, date: '2026-03-14T20:00:00Z', status: { short: 'FT' } }, teams: { home: { id: 1 }, away: { id: 999 } } })],
+    fixtures: [
+      fixture(),
+      fixture({
+        fixture: { id: 2, date: '2026-03-14T20:00:00Z', status: { short: 'FT' } },
+        teams: { home: { id: 1 }, away: { id: 999 } },
+      }),
+    ],
   });
   const res = await quiet(() => handler(req()));
   const { results } = await res.json();
@@ -120,34 +162,52 @@ Deno.test('omite partidos con equipos desconocidos', async () => {
   assertEquals(results[0].fixtures_skipped, 1);
 });
 
-Deno.test('un error de la API (p.ej. temporada no permitida en el plan free) se reporta por competición', async () => {
-  const { handler } = setup({ apiErrors: { plan: 'Free plans do not have access to this season' } });
-  const res = await quiet(() => handler(req()));
-  // Única competición y falla: el sync entero ha fallado → 502 visible en net._http_response
-  assertEquals(res.status, 502);
-  const { results, success, failed } = await res.json();
-  assertEquals(success, false);
-  assertEquals(failed, 1);
-  assertEquals(results[0].error.includes('Free plans'), true);
-});
+Deno.test(
+  'un error de la API (p.ej. temporada no permitida en el plan free) se reporta por competición',
+  async () => {
+    const { handler } = setup({
+      apiErrors: { plan: 'Free plans do not have access to this season' },
+    });
+    const res = await quiet(() => handler(req()));
+    // Única competición y falla: el sync entero ha fallado → 502 visible en net._http_response
+    assertEquals(res.status, 502);
+    const { results, success, failed } = await res.json();
+    assertEquals(success, false);
+    assertEquals(failed, 1);
+    assertEquals(results[0].error.includes('Free plans'), true);
+  }
+);
 
 Deno.test('si solo falla alguna competición, 200 con el detalle del fallo', async () => {
   const fake = createFakeSupabase({
     rpc: () => ({ data: 'cron-secret' }),
     respond: (c) => {
-      if (c.table === 'competitions') return { data: [COMP, { ...COMP, id: 'c2', name: 'Rota', api_football_id: 999 }] };
+      if (c.table === 'competitions')
+        return { data: [COMP, { ...COMP, id: 'c2', name: 'Rota', api_football_id: 999 }] };
       if (c.table === 'teams') {
         const rows = op(c, 'upsert')!.args[0];
-        return { data: rows.map((r: any) => ({ id: `uuid-${r.api_football_id}`, api_football_id: r.api_football_id })) };
+        return {
+          data: rows.map((r: any) => ({
+            id: `uuid-${r.api_football_id}`,
+            api_football_id: r.api_football_id,
+          })),
+        };
       }
       return { data: null };
     },
   });
   const fetchMock = (async (url: string) => {
     if (url.includes('league=999')) return new Response('down', { status: 503 });
-    return new Response(JSON.stringify({ errors: [], response: url.includes('/teams') ? TEAMS : [fixture()] }));
+    return new Response(
+      JSON.stringify({ errors: [], response: url.includes('/teams') ? TEAMS : [fixture()] })
+    );
   }) as any;
-  const handler = createHandler({ supabase: fake.client, fetch: fetchMock, apiKey: 'api-key', sleep: async () => {} });
+  const handler = createHandler({
+    supabase: fake.client,
+    fetch: fetchMock,
+    apiKey: 'api-key',
+    sleep: async () => {},
+  });
   const res = await quiet(() => handler(req()));
   assertEquals(res.status, 200);
   const body = await res.json();

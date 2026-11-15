@@ -29,7 +29,9 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
     const initialize = async () => {
       try {
         // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
         // Initialize RevenueCat with user ID if available
         await RevenueCatService.initializeRevenueCat(user?.id);
@@ -143,18 +145,22 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
   // Show loading screen while initializing
   if (!isInitialized) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1C2A3A' }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#1C2A3A',
+        }}>
         <ActivityIndicator size="large" color="#1976D2" />
-        <AppText style={{ color: '#FFFFFF', marginTop: 16, fontSize: 16 }}>Iniciando MatchMap...</AppText>
+        <AppText style={{ color: '#FFFFFF', marginTop: 16, fontSize: 16 }}>
+          Iniciando MatchMap...
+        </AppText>
       </View>
     );
   }
 
-  return (
-    <RevenueCatContext.Provider value={value}>
-      {children}
-    </RevenueCatContext.Provider>
-  );
+  return <RevenueCatContext.Provider value={value}>{children}</RevenueCatContext.Provider>;
 }
 
 export function useRevenueCat() {

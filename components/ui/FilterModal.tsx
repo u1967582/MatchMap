@@ -67,33 +67,33 @@ export default function FilterModal({
     foodTypesLength: foodTypes?.length || 0,
     barFeaturesLength: barFeatures?.length || 0,
     tvFeaturesLength: tvFeatures?.length || 0,
-    loading
+    loading,
   });
 
   const toggleCategory = (categoryId: number) => {
     const newCategories = selectedBarCategories.includes(categoryId)
-      ? selectedBarCategories.filter(id => id !== categoryId)
+      ? selectedBarCategories.filter((id) => id !== categoryId)
       : [...selectedBarCategories, categoryId];
     onBarCategoriesChange(newCategories);
   };
 
   const toggleFoodType = (foodTypeId: number) => {
     const newFoodTypes = selectedFoodTypes.includes(foodTypeId)
-      ? selectedFoodTypes.filter(id => id !== foodTypeId)
+      ? selectedFoodTypes.filter((id) => id !== foodTypeId)
       : [...selectedFoodTypes, foodTypeId];
     onFoodTypesChange(newFoodTypes);
   };
 
   const toggleFeature = (featureId: number) => {
     const newFeatures = selectedFeatures.includes(featureId)
-      ? selectedFeatures.filter(id => id !== featureId)
+      ? selectedFeatures.filter((id) => id !== featureId)
       : [...selectedFeatures, featureId];
     onFeaturesChange(newFeatures);
   };
 
   const toggleTvFeature = (tvFeatureId: number) => {
     const newTvFeatures = selectedTvFeatures.includes(tvFeatureId)
-      ? selectedTvFeatures.filter(id => id !== tvFeatureId)
+      ? selectedTvFeatures.filter((id) => id !== tvFeatureId)
       : [...selectedTvFeatures, tvFeatureId];
     onTvFeaturesChange(newTvFeatures);
   };
@@ -107,8 +107,12 @@ export default function FilterModal({
   };
 
   const getActiveFiltersCount = () => {
-    return selectedBarCategories.length + selectedFoodTypes.length + 
-           selectedFeatures.length + selectedTvFeatures.length;
+    return (
+      selectedBarCategories.length +
+      selectedFoodTypes.length +
+      selectedFeatures.length +
+      selectedTvFeatures.length
+    );
   };
 
   console.log('🔍 FilterModal - About to render, visible:', visible);
@@ -122,7 +126,7 @@ export default function FilterModal({
     return (
       <View style={styles.section}>
         <AppText style={styles.sectionTitle}>{title}</AppText>
-  
+
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#1976D2" />
@@ -146,8 +150,6 @@ export default function FilterModal({
       </View>
     );
   };
-  
-  
 
   function handleApplyFilters(event: GestureResponderEvent): void {
     console.log('✅ Aplicando filtros...');
@@ -165,58 +167,53 @@ export default function FilterModal({
   }
 
   return (
-      <Modal
-    visible={visible}
-    animationType="slide"
-    transparent={true}
-    onRequestClose={onClose}
-  >
-    <View style={styles.overlay}>
-      <View style={styles.modalContainer}>
-        {/* Close button */}
-        <TouchableOpacity 
-          style={styles.closeButton}
-          onPress={onClose}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="close" size={20} color="rgba(163, 179, 204, 0.6)" />
-        </TouchableOpacity>
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          <AppText style={styles.title}>🎯 Filtros disponibles</AppText>
-
-          {renderSection('Tipo de bar', barCategories, selectedBarCategories, toggleCategory)}
-          {renderSection('Características de TV', tvFeatures, selectedTvFeatures, toggleTvFeature)}
-          {renderSection('Tipo de comida', foodTypes, selectedFoodTypes, toggleFoodType)}
-          {renderSection('Características', barFeatures, selectedFeatures, toggleFeature)}
-        </ScrollView>
-
-        {/* Botones fijos al fondo */}
-        {getActiveFiltersCount() > 0 && (
-          <View style={styles.footerDivider} />
-        )}
-        <View style={[styles.footerRow, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-          {getActiveFiltersCount() > 0 && (
-            <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
-              <Ionicons name="trash-outline" size={15} color="#EF4444" />
-              <AppText style={styles.clearAllButtonText}>Limpiar</AppText>
-            </TouchableOpacity>
-          )}
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={styles.modalContainer}>
+          {/* Close button */}
           <TouchableOpacity
-            style={styles.applyButton}
-            onPress={handleApplyFilters}
-          >
-            <AppText style={styles.applyButtonText}>
-              {getActiveFiltersCount() > 0 ? `Aplicar (${getActiveFiltersCount()})` : 'Aplicar filtros'}
-            </AppText>
+            style={styles.closeButton}
+            onPress={onClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="close" size={20} color="rgba(163, 179, 204, 0.6)" />
           </TouchableOpacity>
+
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}>
+            <AppText style={styles.title}>🎯 Filtros disponibles</AppText>
+
+            {renderSection('Tipo de bar', barCategories, selectedBarCategories, toggleCategory)}
+            {renderSection(
+              'Características de TV',
+              tvFeatures,
+              selectedTvFeatures,
+              toggleTvFeature
+            )}
+            {renderSection('Tipo de comida', foodTypes, selectedFoodTypes, toggleFoodType)}
+            {renderSection('Características', barFeatures, selectedFeatures, toggleFeature)}
+          </ScrollView>
+
+          {/* Botones fijos al fondo */}
+          {getActiveFiltersCount() > 0 && <View style={styles.footerDivider} />}
+          <View style={[styles.footerRow, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+            {getActiveFiltersCount() > 0 && (
+              <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
+                <Ionicons name="trash-outline" size={15} color="#EF4444" />
+                <AppText style={styles.clearAllButtonText}>Limpiar</AppText>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.applyButton} onPress={handleApplyFilters}>
+              <AppText style={styles.applyButtonText}>
+                {getActiveFiltersCount() > 0
+                  ? `Aplicar (${getActiveFiltersCount()})`
+                  : 'Aplicar filtros'}
+              </AppText>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
-  </Modal>
+    </Modal>
   );
 }
 
@@ -450,5 +447,4 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingTop: 10,
   },
-  
 });

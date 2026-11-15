@@ -25,7 +25,7 @@ export const useCategories = () => {
       setLoading(true);
       setError(null);
       setUsingFallback(false);
-      
+
       // Fetch categories directly
       const { data, error } = await supabase
         .from('bar_categories')
@@ -67,4 +67,4 @@ export const useCategories = () => {
     usingFallback,
     refetch: fetchCategories,
   };
-}; 
+};

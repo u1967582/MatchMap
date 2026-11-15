@@ -49,7 +49,7 @@ export const useLikesStore = create<LikesState>((set, get) => ({
         return;
       }
 
-      const likedReviewIds = new Set(data?.map(l => l.review_id) || []);
+      const likedReviewIds = new Set(data?.map((l) => l.review_id) || []);
       set({ likes: likedReviewIds, initialized: true });
       console.log('✅ Likes initialized:', likedReviewIds.size);
     } catch (error) {

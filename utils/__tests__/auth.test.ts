@@ -627,7 +627,9 @@ describe('checkAndPromotePreRegisteredBar - selección del pre-registro', () => 
       { id: 'pre-rechazado', name: 'A', status: 'rejected', converted_bar_id: null },
       { id: 'pre-ok', name: 'B', status: 'pre_registered', converted_bar_id: null },
     ];
-    mockedSupabase.from.mockImplementation(() => createQueryBuilderMock({ data: rows, error: null }));
+    mockedSupabase.from.mockImplementation(() =>
+      createQueryBuilderMock({ data: rows, error: null })
+    );
     mockedSupabase.auth.getSession.mockResolvedValueOnce({ data: { session }, error: null });
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, barId: 'bar-1' }));
 
@@ -671,15 +673,43 @@ describe('getAuthErrorMessage', () => {
   });
 
   it.each([
-    [{ code: 'invalid_credentials', message: 'Invalid login credentials' }, 'invalid_credentials', 'Email o contraseña incorrectos'],
-    [{ message: 'Invalid login credentials' }, 'invalid_credentials', 'Email o contraseña incorrectos'],
+    [
+      { code: 'invalid_credentials', message: 'Invalid login credentials' },
+      'invalid_credentials',
+      'Email o contraseña incorrectos',
+    ],
+    [
+      { message: 'Invalid login credentials' },
+      'invalid_credentials',
+      'Email o contraseña incorrectos',
+    ],
     [{ code: 'email_not_confirmed' }, 'email_not_confirmed', 'Email no verificado'],
     [{ message: 'User already registered' }, 'user_exists', 'Este email ya está registrado'],
-    [{ code: 'weak_password', message: 'Password is known to be weak and easy to guess' }, 'weak_password', 'Contraseña poco segura'],
-    [{ message: 'Password should be at least 6 characters.' }, 'weak_password', 'Contraseña poco segura'],
-    [{ code: 'same_password' }, 'same_password', 'La nueva contraseña debe ser distinta de la anterior'],
-    [{ code: 'over_email_send_rate_limit', message: 'email rate limit exceeded' }, 'rate_limit', 'Demasiados intentos'],
-    [{ message: 'For security purposes, you can only request this after 42 seconds.' }, 'rate_limit', 'Demasiados intentos'],
+    [
+      { code: 'weak_password', message: 'Password is known to be weak and easy to guess' },
+      'weak_password',
+      'Contraseña poco segura',
+    ],
+    [
+      { message: 'Password should be at least 6 characters.' },
+      'weak_password',
+      'Contraseña poco segura',
+    ],
+    [
+      { code: 'same_password' },
+      'same_password',
+      'La nueva contraseña debe ser distinta de la anterior',
+    ],
+    [
+      { code: 'over_email_send_rate_limit', message: 'email rate limit exceeded' },
+      'rate_limit',
+      'Demasiados intentos',
+    ],
+    [
+      { message: 'For security purposes, you can only request this after 42 seconds.' },
+      'rate_limit',
+      'Demasiados intentos',
+    ],
     [{ status: 429, message: 'x' }, 'rate_limit', 'Demasiados intentos'],
     [{ code: 'email_address_invalid' }, 'invalid_email', 'El email no es válido'],
     [{ code: 'signup_disabled' }, 'signup_disabled', 'El registro no está disponible ahora mismo'],
@@ -729,7 +759,10 @@ describe('promptDeleteAccount', () => {
 
   it('tras las dos confirmaciones borra la cuenta y llama a onDeleted', async () => {
     const cb = callbacks();
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: session.user }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: session.user },
+      error: null,
+    });
     mockedSupabase.auth.getSession.mockResolvedValueOnce({ data: { session }, error: null });
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: true }));
 
@@ -745,7 +778,10 @@ describe('promptDeleteAccount', () => {
 
   it('si falla muestra el error en español y no llama a onDeleted', async () => {
     const cb = callbacks();
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: session.user }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: session.user },
+      error: null,
+    });
     mockedSupabase.auth.getSession.mockResolvedValueOnce({ data: { session }, error: null });
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: false }, false, 500));
 
@@ -755,7 +791,10 @@ describe('promptDeleteAccount', () => {
 
     expect(cb.onDeleted).not.toHaveBeenCalled();
     expect(cb.onFinish).toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenLastCalledWith('Error', expect.stringMatching(/No se pudo eliminar/));
+    expect(alertSpy).toHaveBeenLastCalledWith(
+      'Error',
+      expect.stringMatching(/No se pudo eliminar/)
+    );
   });
 });
 
@@ -890,7 +929,10 @@ describe('logs sin datos personales (HALLAZGOS #17)', () => {
     await checkAndPromotePreRegisteredBar('user-1', 'owner@bar.com');
 
     // Usuario actual y sesión
-    mockedSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: session.user }, error: null });
+    mockedSupabase.auth.getUser.mockResolvedValueOnce({
+      data: { user: session.user },
+      error: null,
+    });
     await getCurrentUser();
     mockedSupabase.auth.getSession.mockResolvedValueOnce({
       data: { session: { ...session, expires_at: 1 } },

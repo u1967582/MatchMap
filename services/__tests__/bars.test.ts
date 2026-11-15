@@ -143,7 +143,10 @@ describe('createAutoPreRegisterBar', () => {
 describe('approveBars', () => {
   it('aprueba los bares indicados y devuelve los ids actualizados', async () => {
     mockedGetUser.mockResolvedValueOnce({ data: { user: { id: 'admin-1' } }, error: null });
-    const builder = createQueryBuilderMock({ data: [{ id: 'bar-1' }, { id: 'bar-2' }], error: null });
+    const builder = createQueryBuilderMock({
+      data: [{ id: 'bar-1' }, { id: 'bar-2' }],
+      error: null,
+    });
     mockedFrom.mockReturnValueOnce(builder);
 
     const result = await approveBars(['bar-1', 'bar-2']);
@@ -178,7 +181,9 @@ describe('approveBars', () => {
 
   it('propaga el error de Supabase', async () => {
     mockedGetUser.mockResolvedValueOnce({ data: { user: { id: 'admin-1' } }, error: null });
-    mockedFrom.mockReturnValueOnce(createQueryBuilderMock({ data: null, error: { message: 'rls' } }));
+    mockedFrom.mockReturnValueOnce(
+      createQueryBuilderMock({ data: null, error: { message: 'rls' } })
+    );
 
     await expect(approveBars(['bar-1'])).rejects.toEqual({ message: 'rls' });
   });

@@ -1,10 +1,6 @@
 import React, { useCallback } from 'react';
 import { StyleSheet, ActivityIndicator, ViewStyle, Pressable } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import AppText from './AppText';
 import { colors } from '../tokens/colors';
@@ -92,8 +88,7 @@ export default function AppButton({
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      disabled={disabled || loading}
-    >
+      disabled={disabled || loading}>
       {loading ? (
         <ActivityIndicator color={variantLoadingColor[variant]} size="small" />
       ) : (

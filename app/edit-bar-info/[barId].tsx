@@ -9,7 +9,6 @@ import {
   Image,
   Platform,
   Switch,
-
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -63,13 +62,13 @@ interface Category {
 export default function EditBarInfoScreen() {
   const router = useRouter();
   const { barId } = useLocalSearchParams<{ barId: string }>();
-  
+
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [bar, setBar] = React.useState<Bar | null>(null);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [isOwner, setIsOwner] = React.useState(false);
-  
+
   // Form fields
   const [name, setName] = React.useState('');
   const [description, setDescription] = React.useState('');
@@ -82,7 +81,7 @@ export default function EditBarInfoScreen() {
   // Si el bar ya está marcado como local de apuestas, el propietario no puede
   // desmarcarlo: lo bloquea el trigger trg_bars_protect_privileged_columns.
   const [bettingVenueLocked, setBettingVenueLocked] = React.useState(false);
-  
+
   // Images state
   const [barImages, setBarImages] = React.useState<BarImage[]>([]);
   const [menuImages, setMenuImages] = React.useState<BarImage[]>([]);
@@ -91,12 +90,12 @@ export default function EditBarInfoScreen() {
   // Original images state for change detection
   const [originalBarImages, setOriginalBarImages] = React.useState<BarImage[]>([]);
   const [originalMenuImages, setOriginalMenuImages] = React.useState<BarImage[]>([]);
-  
+
   // Categories state
   const [foodTypes, setFoodTypes] = React.useState<BarCategory[]>([]);
   const [tvFeatures, setTvFeatures] = React.useState<BarCategory[]>([]);
   const [features, setFeatures] = React.useState<BarCategory[]>([]);
-  
+
   // Available categories for selection
   const [availableFoodTypes, setAvailableFoodTypes] = React.useState<Category[]>([]);
   const [availableTvFeatures, setAvailableTvFeatures] = React.useState<Category[]>([]);
@@ -109,7 +108,9 @@ export default function EditBarInfoScreen() {
 
       try {
         // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           Alert.alert('Error', 'Debes iniciar sesión para editar información del bar');
           router.back();
@@ -141,7 +142,7 @@ export default function EditBarInfoScreen() {
         }
 
         setBar(barData);
-        
+
         // Set form fields
         setName(barData.name);
         setDescription(barData.description || '');
@@ -162,7 +163,7 @@ export default function EditBarInfoScreen() {
 
         if (!barImagesError && barImagesData) {
           setBarImages(barImagesData);
-          setOriginalBarImages(barImagesData);  // Save original state
+          setOriginalBarImages(barImagesData); // Save original state
           console.log('📸 Bar images loaded:', barImagesData.length);
         }
 
@@ -175,7 +176,7 @@ export default function EditBarInfoScreen() {
 
         if (!menuImagesError && menuImagesData) {
           setMenuImages(menuImagesData);
-          setOriginalMenuImages(menuImagesData);  // Save original state
+          setOriginalMenuImages(menuImagesData); // Save original state
           console.log('🍽️ Menu images loaded:', menuImagesData.length);
         }
 
@@ -199,27 +200,27 @@ export default function EditBarInfoScreen() {
           foodTypes: foodTypes?.length || 0,
           tvFeatures: tvFeatures?.length || 0,
           features: features?.length || 0,
-          foodTypeIds: foodTypes?.map(item => item.food_type_id) || [],
-          tvFeatureIds: tvFeatures?.map(item => item.tv_feature_id) || [],
-          featureIds: features?.map(item => item.feature_id) || []
+          foodTypeIds: foodTypes?.map((item) => item.food_type_id) || [],
+          tvFeatureIds: tvFeatures?.map((item) => item.tv_feature_id) || [],
+          featureIds: features?.map((item) => item.feature_id) || [],
         });
 
         // Load food type names
-        const foodTypeIds = foodTypes?.map(item => item.food_type_id) || [];
+        const foodTypeIds = foodTypes?.map((item) => item.food_type_id) || [];
         const { data: foodTypeNames } = await supabase
           .from('food_types')
           .select('id, name')
           .in('id', foodTypeIds);
 
         // Load TV feature names
-        const tvFeatureIds = tvFeatures?.map(item => item.tv_feature_id) || [];
+        const tvFeatureIds = tvFeatures?.map((item) => item.tv_feature_id) || [];
         const { data: tvFeatureNames } = await supabase
           .from('bar_tv_features')
           .select('id, name')
           .in('id', tvFeatureIds);
 
         // Load feature names
-        const featureIds = features?.map(item => item.feature_id) || [];
+        const featureIds = features?.map((item) => item.feature_id) || [];
         const { data: featureNames } = await supabase
           .from('bar_features')
           .select('id, name')
@@ -227,13 +228,13 @@ export default function EditBarInfoScreen() {
 
         // Create maps for quick lookup
         const foodTypeMap = new Map();
-        foodTypeNames?.forEach(item => foodTypeMap.set(item.id, item.name));
+        foodTypeNames?.forEach((item) => foodTypeMap.set(item.id, item.name));
 
         const tvFeatureMap = new Map();
-        tvFeatureNames?.forEach(item => tvFeatureMap.set(item.id, item.name));
+        tvFeatureNames?.forEach((item) => tvFeatureMap.set(item.id, item.name));
 
         const featureMap = new Map();
-        featureNames?.forEach(item => featureMap.set(item.id, item.name));
+        featureNames?.forEach((item) => featureMap.set(item.id, item.name));
 
         console.log('🔍 Edit bar names loaded:', {
           foodTypeNames: foodTypeNames?.length || 0,
@@ -241,39 +242,42 @@ export default function EditBarInfoScreen() {
           featureNames: featureNames?.length || 0,
           foodTypeMap: Object.fromEntries(foodTypeMap),
           tvFeatureMap: Object.fromEntries(tvFeatureMap),
-          featureMap: Object.fromEntries(featureMap)
+          featureMap: Object.fromEntries(featureMap),
         });
 
         // Set food types
-        const foodTypesData: BarCategory[] = foodTypes?.map(item => ({
-          id: `${item.bar_id}-food-${item.food_type_id}`,
-          bar_id: barId,
-          category_type: 'food_type',
-          category_id: item.food_type_id,
-          category_name: foodTypeMap.get(item.food_type_id) || 'Unknown',
-        })) || [];
+        const foodTypesData: BarCategory[] =
+          foodTypes?.map((item) => ({
+            id: `${item.bar_id}-food-${item.food_type_id}`,
+            bar_id: barId,
+            category_type: 'food_type',
+            category_id: item.food_type_id,
+            category_name: foodTypeMap.get(item.food_type_id) || 'Unknown',
+          })) || [];
         setFoodTypes(foodTypesData);
         console.log('🍕 Food types loaded:', foodTypesData.length);
 
         // Set TV features
-        const tvFeaturesData: BarCategory[] = tvFeatures?.map(item => ({
-          id: `${item.bar_id}-tvfeature-${item.tv_feature_id}`,
-          bar_id: barId,
-          category_type: 'tv_feature',
-          category_id: item.tv_feature_id,
-          category_name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown',
-        })) || [];
+        const tvFeaturesData: BarCategory[] =
+          tvFeatures?.map((item) => ({
+            id: `${item.bar_id}-tvfeature-${item.tv_feature_id}`,
+            bar_id: barId,
+            category_type: 'tv_feature',
+            category_id: item.tv_feature_id,
+            category_name: tvFeatureMap.get(item.tv_feature_id) || 'Unknown',
+          })) || [];
         setTvFeatures(tvFeaturesData);
         console.log('📺 TV Features loaded:', tvFeaturesData.length);
 
         // Set features
-        const featuresData: BarCategory[] = features?.map(item => ({
-          id: `${item.bar_id}-feature-${item.feature_id}`,
-          bar_id: barId,
-          category_type: 'feature',
-          category_id: item.feature_id,
-          category_name: featureMap.get(item.feature_id) || 'Unknown',
-        })) || [];
+        const featuresData: BarCategory[] =
+          features?.map((item) => ({
+            id: `${item.bar_id}-feature-${item.feature_id}`,
+            bar_id: barId,
+            category_type: 'feature',
+            category_id: item.feature_id,
+            category_name: featureMap.get(item.feature_id) || 'Unknown',
+          })) || [];
         setFeatures(featuresData);
         console.log('⭐ Features loaded:', featuresData.length);
 
@@ -312,7 +316,6 @@ export default function EditBarInfoScreen() {
         if (!featuresError && availableFeaturesData) {
           setAvailableFeatures(availableFeaturesData);
         }
-
       } catch (error) {
         console.error('Error in fetchBarData:', error);
         Alert.alert('Error', 'Ocurrió un error al cargar la información del bar');
@@ -400,10 +403,10 @@ export default function EditBarInfoScreen() {
     try {
       // La primera carpeta tiene que ser el id del bar (política de Storage).
       const fileName = barImagePath(barId as string, imageType, Date.now());
-      
+
       // 🔥 FIX: Usar FormData en lugar de Blob (funciona mejor en React Native)
       const fileUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
-      
+
       // Crear FormData con la imagen
       const formData = new FormData();
       formData.append('file', {
@@ -411,7 +414,7 @@ export default function EditBarInfoScreen() {
         type: 'image/jpeg',
         name: fileName,
       } as any);
-      
+
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(STORAGE_BUCKETS.barImages)
         .upload(fileName, formData as any, {
@@ -426,17 +429,18 @@ export default function EditBarInfoScreen() {
 
       console.log('✅ Upload successful:', uploadData);
 
-      const { data: { publicUrl } } = supabase.storage
-        .from(STORAGE_BUCKETS.barImages)
-        .getPublicUrl(fileName);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(STORAGE_BUCKETS.barImages).getPublicUrl(fileName);
 
       // Get max order for this type
       const currentImages = imageType === 'bar' ? barImages : menuImages;
-      const maxOrder = currentImages.length > 0 ? Math.max(...currentImages.map(img => img.image_order)) : 0;
+      const maxOrder =
+        currentImages.length > 0 ? Math.max(...currentImages.map((img) => img.image_order)) : 0;
 
       // Insert new image in correct table
       const tableName = imageType === 'bar' ? 'bar_images' : 'bar_menus';
-      
+
       const { data: newImage, error: insertError } = await supabase
         .from(tableName)
         .insert({
@@ -455,10 +459,10 @@ export default function EditBarInfoScreen() {
 
       // Update local state
       if (imageType === 'bar') {
-        setBarImages(prev => [...prev, newImage]);
+        setBarImages((prev) => [...prev, newImage]);
         console.log('✅ Bar image added:', newImage.id);
       } else {
-        setMenuImages(prev => [...prev, newImage]);
+        setMenuImages((prev) => [...prev, newImage]);
         console.log('✅ Menu image added:', newImage.id);
       }
 
@@ -470,45 +474,38 @@ export default function EditBarInfoScreen() {
   };
 
   const handleDeleteImage = async (imageId: string, imageType: 'bar' | 'menu') => {
-    Alert.alert(
-      'Eliminar Imagen',
-      '¿Estás seguro de que quieres eliminar esta imagen?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const tableName = imageType === 'bar' ? 'bar_images' : 'bar_menus';
-              
-              const { error } = await supabase
-                .from(tableName)
-                .delete()
-                .eq('id', imageId);
+    Alert.alert('Eliminar Imagen', '¿Estás seguro de que quieres eliminar esta imagen?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const tableName = imageType === 'bar' ? 'bar_images' : 'bar_menus';
 
-              if (error) {
-                console.error('Error deleting image:', error);
-                toast.error('No se pudo eliminar la imagen');
-                return;
-              }
+            const { error } = await supabase.from(tableName).delete().eq('id', imageId);
 
-              // Update local state
-              if (imageType === 'bar') {
-                setBarImages(prev => prev.filter(img => img.id !== imageId));
-              } else {
-                setMenuImages(prev => prev.filter(img => img.id !== imageId));
-              }
-
-              toast.success('Imagen eliminada');
-            } catch (error) {
-              console.error('Error in handleDeleteImage:', error);
-              Alert.alert('Error', 'Ocurrió un error al eliminar la imagen');
+            if (error) {
+              console.error('Error deleting image:', error);
+              toast.error('No se pudo eliminar la imagen');
+              return;
             }
-          },
+
+            // Update local state
+            if (imageType === 'bar') {
+              setBarImages((prev) => prev.filter((img) => img.id !== imageId));
+            } else {
+              setMenuImages((prev) => prev.filter((img) => img.id !== imageId));
+            }
+
+            toast.success('Imagen eliminada');
+          } catch (error) {
+            console.error('Error in handleDeleteImage:', error);
+            Alert.alert('Error', 'Ocurrió un error al eliminar la imagen');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleReorderImages = async (imageType: 'bar' | 'menu', images: BarImage[]) => {
@@ -527,7 +524,7 @@ export default function EditBarInfoScreen() {
       );
 
       const results = await Promise.all(updatePromises);
-      const error = results.find(result => result.error)?.error;
+      const error = results.find((result) => result.error)?.error;
 
       if (error) {
         console.error('Error reordering images:', error);
@@ -573,11 +570,11 @@ export default function EditBarInfoScreen() {
 
   const handleToggleFoodType = async (foodTypeId: number, foodTypeName: string) => {
     try {
-      const isSelected = foodTypes.some(ft => ft.category_id === foodTypeId);
+      const isSelected = foodTypes.some((ft) => ft.category_id === foodTypeId);
 
       if (isSelected) {
         // Remove
-        const itemToRemove = foodTypes.find(ft => ft.category_id === foodTypeId);
+        const itemToRemove = foodTypes.find((ft) => ft.category_id === foodTypeId);
         if (itemToRemove) {
           const { error } = await supabase
             .from('bar_food_types')
@@ -586,7 +583,7 @@ export default function EditBarInfoScreen() {
             .eq('food_type_id', foodTypeId);
 
           if (error) throw error;
-          setFoodTypes(foodTypes.filter(ft => ft.category_id !== foodTypeId));
+          setFoodTypes(foodTypes.filter((ft) => ft.category_id !== foodTypeId));
         }
       } else {
         // Add
@@ -595,13 +592,16 @@ export default function EditBarInfoScreen() {
           .insert({ bar_id: barId, food_type_id: foodTypeId });
 
         if (error) throw error;
-        setFoodTypes([...foodTypes, {
-          id: `${barId}-food-${foodTypeId}`,
-          bar_id: barId,
-          category_type: 'food_type',
-          category_id: foodTypeId,
-          category_name: foodTypeName,
-        }]);
+        setFoodTypes([
+          ...foodTypes,
+          {
+            id: `${barId}-food-${foodTypeId}`,
+            bar_id: barId,
+            category_type: 'food_type',
+            category_id: foodTypeId,
+            category_name: foodTypeName,
+          },
+        ]);
       }
     } catch (error) {
       console.error('Error toggling food type:', error);
@@ -611,11 +611,11 @@ export default function EditBarInfoScreen() {
 
   const handleToggleTvFeature = async (tvFeatureId: number, tvFeatureName: string) => {
     try {
-      const isSelected = tvFeatures.some(tvf => tvf.category_id === tvFeatureId);
+      const isSelected = tvFeatures.some((tvf) => tvf.category_id === tvFeatureId);
 
       if (isSelected) {
         // Remove
-        const itemToRemove = tvFeatures.find(tvf => tvf.category_id === tvFeatureId);
+        const itemToRemove = tvFeatures.find((tvf) => tvf.category_id === tvFeatureId);
         if (itemToRemove) {
           const { error } = await supabase
             .from('bar_selected_tv_features')
@@ -624,7 +624,7 @@ export default function EditBarInfoScreen() {
             .eq('tv_feature_id', tvFeatureId);
 
           if (error) throw error;
-          setTvFeatures(tvFeatures.filter(tvf => tvf.category_id !== tvFeatureId));
+          setTvFeatures(tvFeatures.filter((tvf) => tvf.category_id !== tvFeatureId));
         }
       } else {
         // Add
@@ -633,13 +633,16 @@ export default function EditBarInfoScreen() {
           .insert({ bar_id: barId, tv_feature_id: tvFeatureId });
 
         if (error) throw error;
-        setTvFeatures([...tvFeatures, {
-          id: `${barId}-tvfeature-${tvFeatureId}`,
-          bar_id: barId,
-          category_type: 'tv_feature',
-          category_id: tvFeatureId,
-          category_name: tvFeatureName,
-        }]);
+        setTvFeatures([
+          ...tvFeatures,
+          {
+            id: `${barId}-tvfeature-${tvFeatureId}`,
+            bar_id: barId,
+            category_type: 'tv_feature',
+            category_id: tvFeatureId,
+            category_name: tvFeatureName,
+          },
+        ]);
       }
     } catch (error) {
       console.error('Error toggling TV feature:', error);
@@ -649,11 +652,11 @@ export default function EditBarInfoScreen() {
 
   const handleToggleFeature = async (featureId: number, featureName: string) => {
     try {
-      const isSelected = features.some(f => f.category_id === featureId);
+      const isSelected = features.some((f) => f.category_id === featureId);
 
       if (isSelected) {
         // Remove
-        const itemToRemove = features.find(f => f.category_id === featureId);
+        const itemToRemove = features.find((f) => f.category_id === featureId);
         if (itemToRemove) {
           const { error } = await supabase
             .from('bar_selected_features')
@@ -662,7 +665,7 @@ export default function EditBarInfoScreen() {
             .eq('feature_id', featureId);
 
           if (error) throw error;
-          setFeatures(features.filter(f => f.category_id !== featureId));
+          setFeatures(features.filter((f) => f.category_id !== featureId));
         }
       } else {
         // Add
@@ -671,13 +674,16 @@ export default function EditBarInfoScreen() {
           .insert({ bar_id: barId, feature_id: featureId });
 
         if (error) throw error;
-        setFeatures([...features, {
-          id: `${barId}-feature-${featureId}`,
-          bar_id: barId,
-          category_type: 'feature',
-          category_id: featureId,
-          category_name: featureName,
-        }]);
+        setFeatures([
+          ...features,
+          {
+            id: `${barId}-feature-${featureId}`,
+            bar_id: barId,
+            category_type: 'feature',
+            category_id: featureId,
+            category_name: featureName,
+          },
+        ]);
       }
     } catch (error) {
       console.error('Error toggling feature:', error);
@@ -711,17 +717,19 @@ export default function EditBarInfoScreen() {
 
     try {
       // Detect if image order changed
-      const hasBarImagesChanged = JSON.stringify(barImages.map(img => img.id)) !==
-                                  JSON.stringify(originalBarImages.map(img => img.id));
-      const hasMenuImagesChanged = JSON.stringify(menuImages.map(img => img.id)) !==
-                                   JSON.stringify(originalMenuImages.map(img => img.id));
+      const hasBarImagesChanged =
+        JSON.stringify(barImages.map((img) => img.id)) !==
+        JSON.stringify(originalBarImages.map((img) => img.id));
+      const hasMenuImagesChanged =
+        JSON.stringify(menuImages.map((img) => img.id)) !==
+        JSON.stringify(originalMenuImages.map((img) => img.id));
 
       // Save image order if changed
       if (hasBarImagesChanged && barImages.length > 0) {
         console.log('💾 Saving bar images order...');
         const success = await handleReorderImages('bar', barImages);
         if (success) {
-          setOriginalBarImages(barImages);  // Update original state after saving
+          setOriginalBarImages(barImages); // Update original state after saving
         }
       }
 
@@ -729,7 +737,7 @@ export default function EditBarInfoScreen() {
         console.log('💾 Saving menu images order...');
         const success = await handleReorderImages('menu', menuImages);
         if (success) {
-          setOriginalMenuImages(menuImages);  // Update original state after saving
+          setOriginalMenuImages(menuImages); // Update original state after saving
         }
       }
 
@@ -755,7 +763,6 @@ export default function EditBarInfoScreen() {
 
       toast.success('Información actualizada');
       router.back();
-
     } catch (error) {
       console.error('Error in handleSave:', error);
       toast.error('Error al guardar', 'Inténtalo de nuevo');
@@ -765,22 +772,26 @@ export default function EditBarInfoScreen() {
   };
 
   // Detect if there are unsaved changes in images
-  const hasBarImagesChanged = React.useMemo(() =>
-    JSON.stringify(barImages.map(img => img.id)) !==
-    JSON.stringify(originalBarImages.map(img => img.id))
-  , [barImages, originalBarImages]);
+  const hasBarImagesChanged = React.useMemo(
+    () =>
+      JSON.stringify(barImages.map((img) => img.id)) !==
+      JSON.stringify(originalBarImages.map((img) => img.id)),
+    [barImages, originalBarImages]
+  );
 
-  const hasMenuImagesChanged = React.useMemo(() =>
-    JSON.stringify(menuImages.map(img => img.id)) !==
-    JSON.stringify(originalMenuImages.map(img => img.id))
-  , [menuImages, originalMenuImages]);
+  const hasMenuImagesChanged = React.useMemo(
+    () =>
+      JSON.stringify(menuImages.map((img) => img.id)) !==
+      JSON.stringify(originalMenuImages.map((img) => img.id)),
+    [menuImages, originalMenuImages]
+  );
 
   const hasImagesChanged = hasBarImagesChanged || hasMenuImagesChanged;
 
   if (loading) {
     return (
       <GestureHandlerRootView style={styles.flex}>
-        <SafeAreaView style={styles.container} edges={['top','bottom']}>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
           <EditBarSkeleton />
         </SafeAreaView>
       </GestureHandlerRootView>
@@ -790,7 +801,7 @@ export default function EditBarInfoScreen() {
   if (!bar) {
     return (
       <GestureHandlerRootView style={styles.flex}>
-        <SafeAreaView style={styles.container} edges={['top','bottom']}>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
           <View style={styles.loadingContainer}>
             <AppText style={styles.loadingText}>Bar no encontrado</AppText>
           </View>
@@ -801,289 +812,279 @@ export default function EditBarInfoScreen() {
 
   return (
     <GestureHandlerRootView style={styles.flex}>
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Header */}
         <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <AppText style={styles.headerTitle}>Editar Información</AppText>
-        <TouchableOpacity
-          onPress={handleSave}
-          style={[
-            styles.saveButton,
-            hasImagesChanged && styles.saveButtonHighlight,
-          ]}
-          disabled={saving}
-        >
-          <AppText style={[styles.saveButtonText, saving && styles.saveButtonTextDisabled]}>
-            {saving ? 'Guardando...' : hasImagesChanged ? '★ Guardar Cambios' : 'Guardar'}
-          </AppText>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Bar Info */}
-        <View style={styles.barInfo}>
-          <AppText style={styles.barName}>{bar.name}</AppText>
-          <AppText style={styles.barSubtitle}>Editando información del bar</AppText>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <AppText style={styles.headerTitle}>Editar Información</AppText>
+          <TouchableOpacity
+            onPress={handleSave}
+            style={[styles.saveButton, hasImagesChanged && styles.saveButtonHighlight]}
+            disabled={saving}>
+            <AppText style={[styles.saveButtonText, saving && styles.saveButtonTextDisabled]}>
+              {saving ? 'Guardando...' : hasImagesChanged ? '★ Guardar Cambios' : 'Guardar'}
+            </AppText>
+          </TouchableOpacity>
         </View>
 
-        {/* Name Input */}
-        <View style={styles.inputContainer}>
-          <AppText style={styles.inputLabel}>Nombre del Bar *</AppText>
-          <TextInput
-            style={styles.textInput}
-            value={name}
-            onChangeText={setName}
-            placeholder="Nombre del bar"
-            placeholderTextColor="#8E8E93"
-            maxLength={100}
-          />
-        </View>
-
-        {/* Description Input */}
-        <View style={styles.inputContainer}>
-          <AppText style={styles.inputLabel}>Descripción</AppText>
-          <TextInput
-            style={[styles.textInput, styles.textArea]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Describe tu bar..."
-            placeholderTextColor="#8E8E93"
-            multiline
-            numberOfLines={4}
-            maxLength={500}
-          />
-        </View>
-
-        {/* Food Types Section */}
-        <View style={styles.inputContainer}>
-          <AppText style={styles.inputLabel}>Tipos de Comida</AppText>
-          <View style={styles.categoryContainer}>
-            {availableFoodTypes.map((foodType) => {
-              const isSelected = foodTypes.some(ft => ft.category_id === foodType.id);
-              return (
-                <TouchableOpacity
-                  key={foodType.id}
-                  style={[
-                    styles.categoryButton,
-                    isSelected && styles.categoryButtonActive
-                  ]}
-                  onPress={() => handleToggleFoodType(foodType.id, foodType.name)}
-                >
-                  <AppText style={[
-                    styles.categoryButtonText,
-                    isSelected && styles.categoryButtonTextActive
-                  ]}>
-                    {foodType.name}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Bar Info */}
+          <View style={styles.barInfo}>
+            <AppText style={styles.barName}>{bar.name}</AppText>
+            <AppText style={styles.barSubtitle}>Editando información del bar</AppText>
           </View>
-        </View>
 
-        {/* TV Features Section */}
-        <View style={styles.inputContainer}>
-          <AppText style={styles.inputLabel}>Características de TV</AppText>
-          <View style={styles.categoryContainer}>
-            {availableTvFeatures.map((tvFeature) => {
-              const isSelected = tvFeatures.some(tvf => tvf.category_id === tvFeature.id);
-              return (
-                <TouchableOpacity
-                  key={tvFeature.id}
-                  style={[
-                    styles.categoryButton,
-                    isSelected && styles.categoryButtonActive
-                  ]}
-                  onPress={() => handleToggleTvFeature(tvFeature.id, tvFeature.name)}
-                >
-                  <AppText style={[
-                    styles.categoryButtonText,
-                    isSelected && styles.categoryButtonTextActive
-                  ]}>
-                    {tvFeature.name}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
+          {/* Name Input */}
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Nombre del Bar *</AppText>
+            <TextInput
+              style={styles.textInput}
+              value={name}
+              onChangeText={setName}
+              placeholder="Nombre del bar"
+              placeholderTextColor="#8E8E93"
+              maxLength={100}
+            />
           </View>
-        </View>
 
-        {/* Features Section */}
-        <View style={styles.inputContainer}>
-          <AppText style={styles.inputLabel}>Características</AppText>
-          <View style={styles.categoryContainer}>
-            {availableFeatures.map((feature) => {
-              const isSelected = features.some(f => f.category_id === feature.id);
-              return (
-                <TouchableOpacity
-                  key={feature.id}
-                  style={[
-                    styles.categoryButton,
-                    isSelected && styles.categoryButtonActive
-                  ]}
-                  onPress={() => handleToggleFeature(feature.id, feature.name)}
-                >
-                  <AppText style={[
-                    styles.categoryButtonText,
-                    isSelected && styles.categoryButtonTextActive
-                  ]}>
-                    {feature.name}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
+          {/* Description Input */}
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Descripción</AppText>
+            <TextInput
+              style={[styles.textInput, styles.textArea]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe tu bar..."
+              placeholderTextColor="#8E8E93"
+              multiline
+              numberOfLines={4}
+              maxLength={500}
+            />
           </View>
-        </View>
 
-        {/* Betting Venue Toggle */}
-        <View style={styles.inputContainer}>
-          <View style={styles.bettingVenueRow}>
-            <View style={styles.bettingVenueTextContainer}>
-              <AppText style={styles.inputLabel}>Es un local de apuestas deportivas</AppText>
-              <AppText style={styles.helperText}>
-                Se ocultará por defecto en el mapa y la búsqueda; solo lo verán los usuarios que
-                hayan optado por ver este tipo de locales.
-              </AppText>
-              {bettingVenueLocked && (
-                <AppText style={styles.helperText}>
-                  Para desmarcarlo, escríbenos desde Perfil › Soporte y Tickets.
-                </AppText>
-              )}
+          {/* Food Types Section */}
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Tipos de Comida</AppText>
+            <View style={styles.categoryContainer}>
+              {availableFoodTypes.map((foodType) => {
+                const isSelected = foodTypes.some((ft) => ft.category_id === foodType.id);
+                return (
+                  <TouchableOpacity
+                    key={foodType.id}
+                    style={[styles.categoryButton, isSelected && styles.categoryButtonActive]}
+                    onPress={() => handleToggleFoodType(foodType.id, foodType.name)}>
+                    <AppText
+                      style={[
+                        styles.categoryButtonText,
+                        isSelected && styles.categoryButtonTextActive,
+                      ]}>
+                      {foodType.name}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <Switch
-              value={isBettingVenue}
-              onValueChange={setIsBettingVenue}
-              disabled={bettingVenueLocked}
-              testID="betting-venue-switch"
-              trackColor={{ true: colors.brand.primary }}
-            />
           </View>
-        </View>
 
-        {/* Phone Input */}
-        <View style={styles.inputContainer}>
-          <AppText style={styles.inputLabel}>Teléfono</AppText>
-          <TextInput
-            style={styles.textInput}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="+34 123 456 789"
-            placeholderTextColor="#8E8E93"
-            maxLength={20}
-            keyboardType="phone-pad"
-          />
-        </View>
+          {/* TV Features Section */}
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Características de TV</AppText>
+            <View style={styles.categoryContainer}>
+              {availableTvFeatures.map((tvFeature) => {
+                const isSelected = tvFeatures.some((tvf) => tvf.category_id === tvFeature.id);
+                return (
+                  <TouchableOpacity
+                    key={tvFeature.id}
+                    style={[styles.categoryButton, isSelected && styles.categoryButtonActive]}
+                    onPress={() => handleToggleTvFeature(tvFeature.id, tvFeature.name)}>
+                    <AppText
+                      style={[
+                        styles.categoryButtonText,
+                        isSelected && styles.categoryButtonTextActive,
+                      ]}>
+                      {tvFeature.name}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
 
-        {/* Website Input */}
-        <View style={styles.inputContainer}>
-          <AppText style={styles.inputLabel}>Web / Redes Sociales</AppText>
-          <TextInput
-            style={styles.textInput}
-            value={website}
-            onChangeText={setWebsite}
-            placeholder="Instagram, Facebook, web, etc."
-            placeholderTextColor="#8E8E93"
-            maxLength={200}
-            autoCapitalize="none"
-          />
-        </View>
+          {/* Features Section */}
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Características</AppText>
+            <View style={styles.categoryContainer}>
+              {availableFeatures.map((feature) => {
+                const isSelected = features.some((f) => f.category_id === feature.id);
+                return (
+                  <TouchableOpacity
+                    key={feature.id}
+                    style={[styles.categoryButton, isSelected && styles.categoryButtonActive]}
+                    onPress={() => handleToggleFeature(feature.id, feature.name)}>
+                    <AppText
+                      style={[
+                        styles.categoryButtonText,
+                        isSelected && styles.categoryButtonTextActive,
+                      ]}>
+                      {feature.name}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
 
-        {/* Category Selection */}
-        <View style={styles.inputContainer}>
-          <AppText style={styles.inputLabel}>Categoría</AppText>
-          <View style={styles.categoryContainer}>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryButton,
-                  selectedCategoryId === category.id && styles.categoryButtonActive
-                ]}
-                onPress={() => setSelectedCategoryId(
-                  selectedCategoryId === category.id ? null : category.id
-                )}
-              >
-                <AppText style={[
-                  styles.categoryButtonText,
-                  selectedCategoryId === category.id && styles.categoryButtonTextActive
-                ]}>
-                  {category.name}
+          {/* Betting Venue Toggle */}
+          <View style={styles.inputContainer}>
+            <View style={styles.bettingVenueRow}>
+              <View style={styles.bettingVenueTextContainer}>
+                <AppText style={styles.inputLabel}>Es un local de apuestas deportivas</AppText>
+                <AppText style={styles.helperText}>
+                  Se ocultará por defecto en el mapa y la búsqueda; solo lo verán los usuarios que
+                  hayan optado por ver este tipo de locales.
                 </AppText>
-              </TouchableOpacity>
-            ))}
+                {bettingVenueLocked && (
+                  <AppText style={styles.helperText}>
+                    Para desmarcarlo, escríbenos desde Perfil › Soporte y Tickets.
+                  </AppText>
+                )}
+              </View>
+              <Switch
+                value={isBettingVenue}
+                onValueChange={setIsBettingVenue}
+                disabled={bettingVenueLocked}
+                testID="betting-venue-switch"
+                trackColor={{ true: colors.brand.primary }}
+              />
+            </View>
           </View>
-        </View>
 
-        {/* Bar Images Section */}
-        <View style={styles.inputContainer}>
-          <View style={styles.sectionHeader}>
-            <AppText style={styles.inputLabel}>Imágenes del Bar</AppText>
-            {barImages.length > 0 && (
-              <AppText style={styles.helperText}>Mantén presionado para reordenar</AppText>
-            )}
-          </View>
-
-          {barImages.length > 0 ? (
-            <DraggableImageGrid
-              images={barImages}
-              onReorder={(images) => handleReorderBarImages(images as BarImage[])}
-              onDelete={(imageId) => handleDeleteImage(imageId, 'bar')}
-              columns={4}
-              itemSize={80}
-              gap={8}
+          {/* Phone Input */}
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Teléfono</AppText>
+            <TextInput
+              style={styles.textInput}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="+34 123 456 789"
+              placeholderTextColor="#8E8E93"
+              maxLength={20}
+              keyboardType="phone-pad"
             />
-          ) : (
-            <AppText style={styles.noImagesText}>No hay imágenes del bar</AppText>
-          )}
+          </View>
 
-          {barImages.length < barImagesLimit && (
-            <TouchableOpacity style={styles.addImageButton} onPress={handleAddBarImage}>
-              <Ionicons name="add" size={24} color="#A3B3CC" />
-              <AppText style={styles.addImageText}>Añadir</AppText>
-            </TouchableOpacity>
-          )}
+          {/* Website Input */}
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Web / Redes Sociales</AppText>
+            <TextInput
+              style={styles.textInput}
+              value={website}
+              onChangeText={setWebsite}
+              placeholder="Instagram, Facebook, web, etc."
+              placeholderTextColor="#8E8E93"
+              maxLength={200}
+              autoCapitalize="none"
+            />
+          </View>
 
-          <AppText style={styles.imageCounter}>{barImages.length}/{barImagesLimit} fotos</AppText>
-        </View>
+          {/* Category Selection */}
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Categoría</AppText>
+            <View style={styles.categoryContainer}>
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryButton,
+                    selectedCategoryId === category.id && styles.categoryButtonActive,
+                  ]}
+                  onPress={() =>
+                    setSelectedCategoryId(selectedCategoryId === category.id ? null : category.id)
+                  }>
+                  <AppText
+                    style={[
+                      styles.categoryButtonText,
+                      selectedCategoryId === category.id && styles.categoryButtonTextActive,
+                    ]}>
+                    {category.name}
+                  </AppText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
 
-        {/* Menu Images Section */}
-        {menuImagesLimit > 0 && (
+          {/* Bar Images Section */}
           <View style={styles.inputContainer}>
             <View style={styles.sectionHeader}>
-              <AppText style={styles.inputLabel}>Imágenes del Menú</AppText>
-              {menuImages.length > 0 && (
+              <AppText style={styles.inputLabel}>Imágenes del Bar</AppText>
+              {barImages.length > 0 && (
                 <AppText style={styles.helperText}>Mantén presionado para reordenar</AppText>
               )}
             </View>
 
-            {menuImages.length > 0 ? (
+            {barImages.length > 0 ? (
               <DraggableImageGrid
-                images={menuImages}
-                onReorder={(images) => handleReorderMenuImages(images as BarImage[])}
-                onDelete={(imageId) => handleDeleteImage(imageId, 'menu')}
+                images={barImages}
+                onReorder={(images) => handleReorderBarImages(images as BarImage[])}
+                onDelete={(imageId) => handleDeleteImage(imageId, 'bar')}
                 columns={4}
                 itemSize={80}
                 gap={8}
               />
             ) : (
-              <AppText style={styles.noImagesText}>No hay imágenes del menú</AppText>
+              <AppText style={styles.noImagesText}>No hay imágenes del bar</AppText>
             )}
 
-            {menuImages.length < menuImagesLimit && (
-              <TouchableOpacity style={styles.addImageButton} onPress={handleAddMenuImage}>
+            {barImages.length < barImagesLimit && (
+              <TouchableOpacity style={styles.addImageButton} onPress={handleAddBarImage}>
                 <Ionicons name="add" size={24} color="#A3B3CC" />
                 <AppText style={styles.addImageText}>Añadir</AppText>
               </TouchableOpacity>
             )}
 
-            <AppText style={styles.imageCounter}>{menuImages.length}/{menuImagesLimit} fotos</AppText>
+            <AppText style={styles.imageCounter}>
+              {barImages.length}/{barImagesLimit} fotos
+            </AppText>
           </View>
-        )}
 
-      </ScrollView>
+          {/* Menu Images Section */}
+          {menuImagesLimit > 0 && (
+            <View style={styles.inputContainer}>
+              <View style={styles.sectionHeader}>
+                <AppText style={styles.inputLabel}>Imágenes del Menú</AppText>
+                {menuImages.length > 0 && (
+                  <AppText style={styles.helperText}>Mantén presionado para reordenar</AppText>
+                )}
+              </View>
+
+              {menuImages.length > 0 ? (
+                <DraggableImageGrid
+                  images={menuImages}
+                  onReorder={(images) => handleReorderMenuImages(images as BarImage[])}
+                  onDelete={(imageId) => handleDeleteImage(imageId, 'menu')}
+                  columns={4}
+                  itemSize={80}
+                  gap={8}
+                />
+              ) : (
+                <AppText style={styles.noImagesText}>No hay imágenes del menú</AppText>
+              )}
+
+              {menuImages.length < menuImagesLimit && (
+                <TouchableOpacity style={styles.addImageButton} onPress={handleAddMenuImage}>
+                  <Ionicons name="add" size={24} color="#A3B3CC" />
+                  <AppText style={styles.addImageText}>Añadir</AppText>
+                </TouchableOpacity>
+              )}
+
+              <AppText style={styles.imageCounter}>
+                {menuImages.length}/{menuImagesLimit} fotos
+              </AppText>
+            </View>
+          )}
+        </ScrollView>
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -1135,7 +1136,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonHighlight: {
-    backgroundColor: '#007AFF',  // Same blue as normal (only text changes)
+    backgroundColor: '#007AFF', // Same blue as normal (only text changes)
   },
   content: {
     flex: 1,
@@ -1352,4 +1353,4 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: 8,
   },
-}); 
+});

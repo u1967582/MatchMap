@@ -1,12 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,7 +60,7 @@ function SupportAdminScreen() {
   const fetchTickets = useCallback(async () => {
     try {
       console.log('📋 Fetching support tickets...');
-      
+
       let query = supabase
         .from('support_tickets')
         .select('*')
@@ -115,8 +108,8 @@ function SupportAdminScreen() {
       if (error) throw error;
 
       // Update local state
-      setTickets(prevTickets =>
-        prevTickets.map(ticket =>
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) =>
           ticket.id === ticketId ? { ...ticket, status: newStatus } : ticket
         )
       );
@@ -130,7 +123,7 @@ function SupportAdminScreen() {
 
   const renderStatusOptions = (ticket: SupportTicket) => {
     const statuses: SupportTicket['status'][] = ['open', 'in_progress', 'resolved', 'closed'];
-    
+
     return (
       <View style={styles.statusOptions}>
         {statuses.map((status) => (
@@ -141,14 +134,12 @@ function SupportAdminScreen() {
               ticket.status === status && styles.statusOptionActive,
               { backgroundColor: STATUS_COLORS[status] + '20' },
             ]}
-            onPress={() => handleUpdateStatus(ticket.id, status)}
-          >
+            onPress={() => handleUpdateStatus(ticket.id, status)}>
             <AppText
               style={[
                 styles.statusOptionText,
                 ticket.status === status && { color: STATUS_COLORS[status] },
-              ]}
-            >
+              ]}>
               {STATUS_LABELS[status]}
             </AppText>
           </TouchableOpacity>
@@ -158,7 +149,7 @@ function SupportAdminScreen() {
   };
 
   const toggleExpanded = (ticketId: string) => {
-    setExpandedTickets(prev => {
+    setExpandedTickets((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(ticketId)) {
         newSet.delete(ticketId);
@@ -177,14 +168,9 @@ function SupportAdminScreen() {
         <TouchableOpacity
           style={styles.ticketHeader}
           onPress={() => toggleExpanded(item.id)}
-          activeOpacity={0.7}
-        >
+          activeOpacity={0.7}>
           <View style={styles.ticketHeaderLeft}>
-            <Ionicons
-              name={CATEGORY_ICONS[item.category] as any}
-              size={20}
-              color="#1976D2"
-            />
+            <Ionicons name={CATEGORY_ICONS[item.category] as any} size={20} color="#1976D2" />
             <View style={styles.ticketHeaderText}>
               <AppText style={styles.ticketSubject} numberOfLines={1}>
                 {item.subject}
@@ -198,11 +184,7 @@ function SupportAdminScreen() {
             <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] }]}>
               <AppText style={styles.statusBadgeText}>{STATUS_LABELS[item.status]}</AppText>
             </View>
-            <Ionicons
-              name={isExpanded ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color="#A3B3CC"
-            />
+            <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#A3B3CC" />
           </View>
         </TouchableOpacity>
 
@@ -248,14 +230,12 @@ function SupportAdminScreen() {
         <TouchableOpacity
           key={filterOption}
           style={[styles.filterButton, filter === filterOption && styles.filterButtonActive]}
-          onPress={() => setFilter(filterOption)}
-        >
+          onPress={() => setFilter(filterOption)}>
           <AppText
             style={[
               styles.filterButtonText,
               filter === filterOption && styles.filterButtonTextActive,
-            ]}
-          >
+            ]}>
             {filterOption === 'all' ? 'Todos' : STATUS_LABELS[filterOption]}
           </AppText>
         </TouchableOpacity>

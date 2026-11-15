@@ -26,8 +26,12 @@ const BoostCountdown: React.FC<BoostCountdownProps> = ({ endAt, style }) => {
     <View style={[styles.container, style]}>
       <View style={styles.content}>
         <Ionicons name="flash" size={16} color="#FFD700" />
-        <AppText maxScale={1.0} style={styles.label}>Boost activo:</AppText>
-        <AppText maxScale={1.0} style={styles.time}>{formattedTime}</AppText>
+        <AppText maxScale={1.0} style={styles.label}>
+          Boost activo:
+        </AppText>
+        <AppText maxScale={1.0} style={styles.time}>
+          {formattedTime}
+        </AppText>
       </View>
     </View>
   );

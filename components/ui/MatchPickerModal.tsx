@@ -52,13 +52,30 @@ interface MatchPickerModalProps {
 function getCompetitionLogoFilename(compName: string): string | null {
   const nameLower = compName.toLowerCase();
 
-  if (nameLower.includes('champions') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer'))) return 'champions_femen.png';
+  if (
+    nameLower.includes('champions') &&
+    (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer'))
+  )
+    return 'champions_femen.png';
   if (nameLower.includes('champions')) return 'champions.png';
   if (nameLower.includes('copa del rey')) return 'copa-del-rey.png';
   if (nameLower.includes('europa league')) return 'europa-league.png';
-  if (nameLower.includes('liga f') || (nameLower.includes('primera') && (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))) return 'ligaf.png';
-  if (nameLower.includes('primera') && (nameLower.includes('división') || nameLower.includes('division'))) return 'primera-division-ea.png';
-  if (nameLower.includes('segunda') && (nameLower.includes('división') || nameLower.includes('division'))) return 'segunda-division-hypermotion.png';
+  if (
+    nameLower.includes('liga f') ||
+    (nameLower.includes('primera') &&
+      (nameLower.includes('femen') || nameLower.includes('women') || nameLower.includes('mujer')))
+  )
+    return 'ligaf.png';
+  if (
+    nameLower.includes('primera') &&
+    (nameLower.includes('división') || nameLower.includes('division'))
+  )
+    return 'primera-division-ea.png';
+  if (
+    nameLower.includes('segunda') &&
+    (nameLower.includes('división') || nameLower.includes('division'))
+  )
+    return 'segunda-division-hypermotion.png';
 
   return null;
 }
@@ -74,7 +91,9 @@ export default function MatchPickerModal({
   const [matches, setMatches] = useState<Match[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<number | null>(null);
-  const [tempSelectedMatchId, setTempSelectedMatchId] = useState<string | null>(selectedMatchId || null);
+  const [tempSelectedMatchId, setTempSelectedMatchId] = useState<string | null>(
+    selectedMatchId || null
+  );
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -84,20 +103,27 @@ export default function MatchPickerModal({
     setLoadError(false);
     try {
       // Format date as YYYY-MM-DD
-      const dateString = date.getFullYear() + '-' + 
-        String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+      const dateString =
+        date.getFullYear() +
+        '-' +
+        String(date.getMonth() + 1).padStart(2, '0') +
+        '-' +
         String(date.getDate()).padStart(2, '0');
-      
+
       const today = new Date();
-      const todayString = today.getFullYear() + '-' + 
-        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+      const todayString =
+        today.getFullYear() +
+        '-' +
+        String(today.getMonth() + 1).padStart(2, '0') +
+        '-' +
         String(today.getDate()).padStart(2, '0');
-      
+
       console.log('📅 Fetching matches for date:', dateString);
-      
+
       const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
-        .select(`
+        .select(
+          `
           id,
           date,
           time,
@@ -105,7 +131,8 @@ export default function MatchPickerModal({
           away_team_id,
           competition_id,
           status
-        `)
+        `
+        )
         .eq('date', dateString)
         .eq('status', 'scheduled')
         .gte('date', todayString)
@@ -122,16 +149,18 @@ export default function MatchPickerModal({
       }
 
       console.log('📅 Raw matches found:', matchesData?.length || 0);
-      
+
       if (matchesData && matchesData.length > 0) {
         // Get unique team IDs
-        const teamIds = [...new Set([
-          ...matchesData.map(m => m.home_team_id),
-          ...matchesData.map(m => m.away_team_id)
-        ])];
+        const teamIds = [
+          ...new Set([
+            ...matchesData.map((m) => m.home_team_id),
+            ...matchesData.map((m) => m.away_team_id),
+          ]),
+        ];
 
         // Get unique competition IDs
-        const competitionIds = [...new Set(matchesData.map(m => m.competition_id))];
+        const competitionIds = [...new Set(matchesData.map((m) => m.competition_id))];
 
         // Fetch teams
         const { data: teamsData } = await supabase
@@ -150,13 +179,13 @@ export default function MatchPickerModal({
 
         // Create maps for quick lookup
         const teamsMap = new Map();
-        teamsData?.forEach(team => teamsMap.set(team.id, team));
+        teamsData?.forEach((team) => teamsMap.set(team.id, team));
 
         const competitionsMap = new Map();
-        competitionsData?.forEach(comp => competitionsMap.set(comp.id, comp));
+        competitionsData?.forEach((comp) => competitionsMap.set(comp.id, comp));
 
         // Enrich matches with team and competition data
-        const enrichedMatches: Match[] = matchesData.map(match => ({
+        const enrichedMatches: Match[] = matchesData.map((match) => ({
           ...match,
           home_team: teamsMap.get(match.home_team_id),
           away_team: teamsMap.get(match.away_team_id),
@@ -203,7 +232,7 @@ export default function MatchPickerModal({
 
   const handleApply = () => {
     if (tempSelectedMatchId) {
-      const selectedMatch = matches.find(m => m.id === tempSelectedMatchId);
+      const selectedMatch = matches.find((m) => m.id === tempSelectedMatchId);
       onSelectMatch(selectedMatch || null);
     } else {
       onSelectMatch(null);
@@ -223,14 +252,15 @@ export default function MatchPickerModal({
     return (
       <TouchableOpacity
         style={[styles.matchCard, isSelected && styles.matchCardSelected]}
-        onPress={() => setTempSelectedMatchId(isSelected ? null : item.id)}
-      >
+        onPress={() => setTempSelectedMatchId(isSelected ? null : item.id)}>
         <View style={styles.matchHeader}>
           <View style={styles.teamsContainer}>
             <View style={styles.teamContainer}>
               <Image
                 source={{
-                  uri: item.home_team?.logo_url || `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${item.home_team_id}.png`
+                  uri:
+                    item.home_team?.logo_url ||
+                    `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${item.home_team_id}.png`,
                 }}
                 style={styles.teamLogo}
               />
@@ -246,7 +276,9 @@ export default function MatchPickerModal({
             <View style={styles.teamContainer}>
               <Image
                 source={{
-                  uri: item.away_team?.logo_url || `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${item.away_team_id}.png`
+                  uri:
+                    item.away_team?.logo_url ||
+                    `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${item.away_team_id}.png`,
                 }}
                 style={styles.teamLogo}
               />
@@ -258,9 +290,7 @@ export default function MatchPickerModal({
         </View>
 
         <View style={styles.matchDetails}>
-          <AppText style={styles.matchTime}>
-            {formatMatchTime(item.date, item.time)}
-          </AppText>
+          <AppText style={styles.matchTime}>{formatMatchTime(item.date, item.time)}</AppText>
           <AppText style={styles.competitionName}>
             {item.competition?.name || 'Competición'}
           </AppText>
@@ -275,18 +305,18 @@ export default function MatchPickerModal({
     );
   };
 
-  const filteredMatches = selectedCompetitionId == null
-    ? matches
-    : matches.filter(m => m.competition_id === selectedCompetitionId);
+  const filteredMatches =
+    selectedCompetitionId == null
+      ? matches
+      : matches.filter((m) => m.competition_id === selectedCompetitionId);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={[styles.modalBackdrop, { paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 20) }]}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View
+        style={[
+          styles.modalBackdrop,
+          { paddingTop: insets.top + 16, paddingBottom: Math.max(insets.bottom, 20) },
+        ]}>
         <View style={styles.modalContainer}>
           <View style={styles.header}>
             <AppText style={styles.modalTitle}>Seleccionar Partido</AppText>
@@ -313,7 +343,9 @@ export default function MatchPickerModal({
                 showsHorizontalScrollIndicator={false}
                 renderItem={({ item }) => {
                   const isAll = item.id === -1;
-                  const selected = isAll ? selectedCompetitionId === null : selectedCompetitionId === item.id;
+                  const selected = isAll
+                    ? selectedCompetitionId === null
+                    : selectedCompetitionId === item.id;
                   const label = isAll ? 'Todas' : item.name;
                   const logoFilename = !isAll ? getCompetitionLogoFilename(item.name) : null;
                   const logoUrl = logoFilename
@@ -323,11 +355,7 @@ export default function MatchPickerModal({
                   return (
                     <TouchableOpacity
                       onPress={() => setSelectedCompetitionId(isAll ? null : item.id)}
-                      style={[
-                        styles.competitionChip,
-                        selected && styles.competitionChipSelected
-                      ]}
-                    >
+                      style={[styles.competitionChip, selected && styles.competitionChipSelected]}>
                       {logoUrl && (
                         <Image
                           source={{ uri: logoUrl }}
@@ -335,10 +363,11 @@ export default function MatchPickerModal({
                           defaultSource={require('~/assets/icon.png')}
                         />
                       )}
-                      <AppText style={[
-                        styles.competitionChipText,
-                        selected && styles.competitionChipTextSelected,
-                      ]}>
+                      <AppText
+                        style={[
+                          styles.competitionChipText,
+                          selected && styles.competitionChipTextSelected,
+                        ]}>
                         {label}
                       </AppText>
                     </TouchableOpacity>
@@ -383,15 +412,13 @@ export default function MatchPickerModal({
           <View style={styles.modalButtonsRow}>
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonSecondary]}
-              onPress={handleClearSelection}
-            >
+              onPress={handleClearSelection}>
               <AppText style={styles.modalButtonText}>Quitar selección</AppText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonPrimary]}
               onPress={handleApply}
-              disabled={loading}
-            >
+              disabled={loading}>
               <AppText style={styles.modalButtonText}>Aplicar</AppText>
             </TouchableOpacity>
           </View>
@@ -591,4 +618,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

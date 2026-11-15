@@ -17,12 +17,10 @@ const BackgroundImage: React.FC<BackgroundImageProps> = ({
   return (
     <ImageBackground source={source} style={styles.backgroundImage} resizeMode="cover">
       <StatusBar barStyle="light-content" />
-      
+
       {overlay && <View style={[styles.overlay, { backgroundColor: overlayColor }]} />}
-      
-      <View style={styles.content}>
-        {children}
-      </View>
+
+      <View style={styles.content}>{children}</View>
     </ImageBackground>
   );
 };
@@ -42,4 +40,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BackgroundImage; 
+export default BackgroundImage;

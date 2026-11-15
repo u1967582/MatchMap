@@ -12,7 +12,8 @@ import AddressSearch from '~/components/AddressSearch';
 
 const Step3Location: React.FC = () => {
   const router = useRouter();
-  const { address, city, postalCode, latitude, longitude, doorNumber, setField } = useBarRegisterStore();
+  const { address, city, postalCode, latitude, longitude, doorNumber, setField } =
+    useBarRegisterStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [showManualCoordinates, setShowManualCoordinates] = useState(false);
@@ -59,7 +60,9 @@ const Step3Location: React.FC = () => {
     console.log('📍 Door number:', doorNumberStr);
 
     // Set address with door number
-    const fullAddress = doorNumberStr ? `${feature?.place_name} ${doorNumberStr}` : feature?.place_name;
+    const fullAddress = doorNumberStr
+      ? `${feature?.place_name} ${doorNumberStr}`
+      : feature?.place_name;
     setField('address', fullAddress || '');
 
     // Set door number as integer
@@ -70,15 +73,15 @@ const Step3Location: React.FC = () => {
     if (coords && coords.length >= 2) {
       const longitude = coords[0];
       const latitude = coords[1];
-      
+
       setField('longitude', longitude);
       setField('latitude', latitude);
-      
-      console.log('📍 Precise coordinates set:', { 
-        longitude, 
+
+      console.log('📍 Precise coordinates set:', {
+        longitude,
         latitude,
         precision: doorNumberStr ? 'High (with door number)' : 'Medium (street level)',
-        coordinates: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+        coordinates: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
       });
     } else {
       console.warn('⚠️ No coordinates found in feature');
@@ -103,7 +106,7 @@ const Step3Location: React.FC = () => {
       doorNumber: doorNumberInt,
       coordinates: coords,
       isPreciseSearch: !!doorNumberStr,
-      precision: doorNumberStr ? 'High' : 'Medium'
+      precision: doorNumberStr ? 'High' : 'Medium',
     });
   };
 
@@ -112,7 +115,7 @@ const Step3Location: React.FC = () => {
     try {
       // Request location permissions
       const { status } = await Location.requestForegroundPermissionsAsync();
-      
+
       if (status !== 'granted') {
         Alert.alert(
           'Permisos requeridos',
@@ -138,7 +141,10 @@ const Step3Location: React.FC = () => {
       );
     } catch (error) {
       console.error('Error getting location:', error);
-      Alert.alert('Error', 'No se pudo obtener la ubicación actual. Verifica que tengas GPS activado.');
+      Alert.alert(
+        'Error',
+        'No se pudo obtener la ubicación actual. Verifica que tengas GPS activado.'
+      );
     } finally {
       setLoading(false);
     }
@@ -146,7 +152,9 @@ const Step3Location: React.FC = () => {
 
   const handleNext = () => {
     if (validateForm()) {
-      const query = useBarRegisterStore.getState().isAutoPreRegister ? '?mode=auto_pre_register' : '';
+      const query = useBarRegisterStore.getState().isAutoPreRegister
+        ? '?mode=auto_pre_register'
+        : '';
       router.push(`/register-bar/step4${query}` as any);
     }
   };
@@ -186,7 +194,7 @@ const Step3Location: React.FC = () => {
       {/* Manual Address Fields */}
       <View style={styles.manualSection}>
         <AppText style={styles.sectionTitle}>Información de dirección</AppText>
-        
+
         <TextInputField
           label="Dirección"
           value={address}
@@ -230,21 +238,20 @@ const Step3Location: React.FC = () => {
       <View style={styles.coordinatesSection}>
         <View style={styles.sectionHeader}>
           <AppText style={styles.sectionTitle}>Coordenadas</AppText>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setShowManualCoordinates(!showManualCoordinates)}
-            style={styles.toggleButton}
-          >
+            style={styles.toggleButton}>
             <AppText style={styles.toggleButtonText}>
               {showManualCoordinates ? 'Ocultar' : 'Mostrar'} coordenadas
             </AppText>
-            <Ionicons 
-              name={showManualCoordinates ? "chevron-up" : "chevron-down"} 
-              size={16} 
-              color="#007AFF" 
+            <Ionicons
+              name={showManualCoordinates ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color="#007AFF"
             />
           </TouchableOpacity>
         </View>
-        
+
         {(latitude !== 0 || longitude !== 0) && (
           <View style={styles.coordinatesStatus}>
             <Ionicons name="checkmark-circle" size={16} color="#10B981" />
@@ -257,7 +264,7 @@ const Step3Location: React.FC = () => {
             <AppText style={styles.sectionSubtitle}>
               Introduce las coordenadas manualmente o usa tu ubicación actual
             </AppText>
-            
+
             <View style={styles.coordinatesRow}>
               <View style={styles.coordinateInput}>
                 <TextInputField
@@ -281,11 +288,10 @@ const Step3Location: React.FC = () => {
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={styles.locationButton} 
+            <TouchableOpacity
+              style={styles.locationButton}
               onPress={handleGetCurrentLocation}
-              disabled={loading}
-            >
+              disabled={loading}>
               <Ionicons name="location" size={20} color="#007AFF" />
               <AppText style={styles.locationButtonText}>
                 {loading ? 'Obteniendo ubicación...' : 'Usar ubicación actual'}
@@ -300,7 +306,7 @@ const Step3Location: React.FC = () => {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -329,11 +335,7 @@ const Step3Location: React.FC = () => {
         />
 
         <View style={styles.buttonContainer}>
-          <PrimaryButton
-            title="Siguiente"
-            onPress={handleNext}
-            loading={loading}
-          />
+          <PrimaryButton title="Siguiente" onPress={handleNext} loading={loading} />
         </View>
       </SafeAreaView>
     </>
@@ -517,4 +519,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Step3Location; 
+export default Step3Location;

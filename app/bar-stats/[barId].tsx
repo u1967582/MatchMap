@@ -4,7 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
-import { fetchBarStatsSummary, fetchBarStatsDaily, fetchBarStatsRangeStart } from '~/services/barAnalytics';
+import {
+  fetchBarStatsSummary,
+  fetchBarStatsDaily,
+  fetchBarStatsRangeStart,
+} from '~/services/barAnalytics';
 import {
   AppText,
   AppCard,
@@ -68,7 +72,9 @@ export default function BarStatsScreen() {
       if (!barId) return;
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           router.back();
           return;
@@ -166,7 +172,10 @@ export default function BarStatsScreen() {
     };
   }, [range, authorized, barId]);
 
-  const chartPoints = React.useMemo(() => buildChartPoints(daily, selectedMetric), [daily, selectedMetric]);
+  const chartPoints = React.useMemo(
+    () => buildChartPoints(daily, selectedMetric),
+    [daily, selectedMetric]
+  );
 
   if (pageLoading) {
     return (
@@ -207,7 +216,10 @@ export default function BarStatsScreen() {
     unique_visitors: { value: summary.unique_visitors },
     favorites_total: {
       value: summary.favorites_count,
-      sublabel: summary.favorites_added_period > 0 ? `+${summary.favorites_added_period} en el período` : undefined,
+      sublabel:
+        summary.favorites_added_period > 0
+          ? `+${summary.favorites_added_period} en el período`
+          : undefined,
     },
     reviews_total: {
       value: summary.reviews_count,
@@ -223,14 +235,21 @@ export default function BarStatsScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <AppText variant="title" maxScale={1.2}>Estadísticas</AppText>
-        <TouchableOpacity style={styles.infoButton} onPress={() => setInfoModalVisible(true)} activeOpacity={0.7}>
+        <AppText variant="title" maxScale={1.2}>
+          Estadísticas
+        </AppText>
+        <TouchableOpacity
+          style={styles.infoButton}
+          onPress={() => setInfoModalVisible(true)}
+          activeOpacity={0.7}>
           <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <AppText variant="subtitle" style={styles.barName} maxScale={1.2}>{barName}</AppText>
+        <AppText variant="subtitle" style={styles.barName} maxScale={1.2}>
+          {barName}
+        </AppText>
         <AppText variant="caption" style={styles.periodLabel}>
           {getPeriodLabel(range, sinceStartDateRef.current)}
         </AppText>
@@ -287,10 +306,15 @@ export default function BarStatsScreen() {
         visible={infoModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setInfoModalVisible(false)}
-      >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setInfoModalVisible(false)}>
-          <TouchableOpacity style={styles.modalContent} activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+        onRequestClose={() => setInfoModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setInfoModalVisible(false)}>
+          <TouchableOpacity
+            style={styles.modalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
               <AppText variant="subtitle" color={colors.text.primary} style={styles.modalTitleFlex}>
                 Qué significa cada métrica
@@ -307,9 +331,16 @@ export default function BarStatsScreen() {
                   <React.Fragment key={metric}>
                     {index > 0 && <Divider spacing={spacing.sm} />}
                     <View style={styles.metricRow}>
-                      <Ionicons name={cfg.icon} size={18} color={cfg.color} style={styles.metricIcon} />
+                      <Ionicons
+                        name={cfg.icon}
+                        size={18}
+                        color={cfg.color}
+                        style={styles.metricIcon}
+                      />
                       <View style={styles.metricTextCol}>
-                        <AppText variant="label" color={colors.text.primary}>{cfg.cardLabel}</AppText>
+                        <AppText variant="label" color={colors.text.primary}>
+                          {cfg.cardLabel}
+                        </AppText>
                         <AppText variant="caption" color={colors.text.secondary}>
                           {METRIC_DESCRIPTIONS[metric]}
                         </AppText>
@@ -324,7 +355,11 @@ export default function BarStatsScreen() {
               No contamos tus propias visitas, ni más de una vez al día por persona.
             </AppText>
 
-            <AppButton text="Entendido" variant="secondary" onPress={() => setInfoModalVisible(false)} />
+            <AppButton
+              text="Entendido"
+              variant="secondary"
+              onPress={() => setInfoModalVisible(false)}
+            />
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
@@ -350,15 +385,29 @@ function StatCard({
   return (
     <AppCard
       onPress={() => onSelect(metric)}
-      style={StyleSheet.flatten([styles.statCard, isSelected ? { borderColor: cfg.color, borderWidth: 1.5 } : undefined]) ?? undefined}
-    >
+      style={
+        StyleSheet.flatten([
+          styles.statCard,
+          isSelected ? { borderColor: cfg.color, borderWidth: 1.5 } : undefined,
+        ]) ?? undefined
+      }>
       <View style={styles.statCardHeader}>
         <Ionicons name={cfg.icon} size={20} color={cfg.color} />
-        <Ionicons name="stats-chart-outline" size={14} color={isSelected ? cfg.color : colors.text.muted} />
+        <Ionicons
+          name="stats-chart-outline"
+          size={14}
+          color={isSelected ? cfg.color : colors.text.muted}
+        />
       </View>
-      <AppText variant="h2" maxScale={1.1} style={styles.statValue}>{value}</AppText>
+      <AppText variant="h2" maxScale={1.1} style={styles.statValue}>
+        {value}
+      </AppText>
       <AppText variant="caption">{cfg.cardLabel}</AppText>
-      {sublabel ? <AppText variant="caption" color={colors.status.success}>{sublabel}</AppText> : null}
+      {sublabel ? (
+        <AppText variant="caption" color={colors.status.success}>
+          {sublabel}
+        </AppText>
+      ) : null}
     </AppCard>
   );
 }

@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppText } from '~/components/ds';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -122,11 +118,13 @@ export default function CustomCalendar({
   };
 
   const days = getDays();
-  const canGoPrev = !isCurrentOrFutureMonth() || (() => {
-    const firstOfCurrent = new Date(today.getFullYear(), today.getMonth(), 1);
-    const firstOfShown = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    return firstOfShown > firstOfCurrent;
-  })();
+  const canGoPrev =
+    !isCurrentOrFutureMonth() ||
+    (() => {
+      const firstOfCurrent = new Date(today.getFullYear(), today.getMonth(), 1);
+      const firstOfShown = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      return firstOfShown > firstOfCurrent;
+    })();
 
   return (
     <View style={styles.container}>
@@ -136,14 +134,11 @@ export default function CustomCalendar({
           <TouchableOpacity
             style={[styles.navButton, !canGoPrev && styles.navButtonDisabled]}
             onPress={() => navigateMonth('prev')}
-            disabled={!canGoPrev}
-          >
+            disabled={!canGoPrev}>
             <Ionicons name="chevron-back" size={20} color={canGoPrev ? '#FFFFFF' : '#4A5568'} />
           </TouchableOpacity>
 
-          <AppText style={styles.monthYearText}>
-            {formatMonthYear(currentMonth)}
-          </AppText>
+          <AppText style={styles.monthYearText}>{formatMonthYear(currentMonth)}</AppText>
 
           <TouchableOpacity style={styles.navButton} onPress={() => navigateMonth('next')}>
             <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
@@ -153,7 +148,9 @@ export default function CustomCalendar({
         {/* Cabecera días de semana */}
         <View style={styles.daysHeader}>
           {DAYS_OF_WEEK.map((day) => (
-            <AppText key={day} style={styles.dayHeaderText}>{day}</AppText>
+            <AppText key={day} style={styles.dayHeaderText}>
+              {day}
+            </AppText>
           ))}
         </View>
 
@@ -162,21 +159,16 @@ export default function CustomCalendar({
           {days.map((day, index) => (
             <TouchableOpacity
               key={index}
-              style={[
-                styles.dayButton,
-                day.isSelected && styles.selectedDay,
-              ]}
+              style={[styles.dayButton, day.isSelected && styles.selectedDay]}
               onPress={() => onDateChange(day.date)}
               disabled={day.isDisabled || !day.isCurrentMonth}
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               <AppText
                 style={[
                   styles.dayText,
                   day.isSelected && styles.selectedDayText,
                   (!day.isCurrentMonth || day.isDisabled) && styles.disabledDayText,
-                ]}
-              >
+                ]}>
                 {day.date.getDate()}
               </AppText>
             </TouchableOpacity>

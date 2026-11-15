@@ -35,8 +35,7 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
             key={option.id}
             style={styles.option}
             onPress={() => onSelectionChange(option.id)}
-            activeOpacity={0.7}
-          >
+            activeOpacity={0.7}>
             <View style={styles.radioContainer}>
               <View style={[styles.radio, selectedId === option.id && styles.radioSelected]}>
                 {selectedId === option.id && <View style={styles.radioInner} />}
@@ -105,4 +104,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RadioGroup; 
+export default RadioGroup;

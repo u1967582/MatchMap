@@ -1,14 +1,13 @@
 import * as React from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
-  Alert, 
-  ScrollView, 
+import {
+  View,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
   Image,
   Platform,
-  
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -44,18 +43,20 @@ interface Bar {
 export default function EditPostScreen() {
   const router = useRouter();
   const { postId } = useLocalSearchParams<{ postId: string }>();
-  
+
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [post, setPost] = React.useState<Post | null>(null);
   const [bar, setBar] = React.useState<Bar | null>(null);
   const [isOwner, setIsOwner] = React.useState(false);
-  
+
   // Form fields
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [imageUrl, setImageUrl] = React.useState<string | undefined>(undefined);
-  const [postType, setPostType] = React.useState<'promocion' | 'evento' | 'noticia' | 'oferta'>('noticia');
+  const [postType, setPostType] = React.useState<'promocion' | 'evento' | 'noticia' | 'oferta'>(
+    'noticia'
+  );
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
   const [isActive, setIsActive] = React.useState(true);
@@ -70,7 +71,9 @@ export default function EditPostScreen() {
 
       try {
         // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           Alert.alert('Error', 'Debes iniciar sesión para editar posts');
           router.back();
@@ -80,14 +83,16 @@ export default function EditPostScreen() {
         // Fetch post with bar info
         const { data: postData, error: postError } = await supabase
           .from('bar_posts')
-          .select(`
+          .select(
+            `
             *,
             bars!inner(
               id,
               name,
               owner_id
             )
-          `)
+          `
+          )
           .eq('id', postId)
           .single();
 
@@ -110,7 +115,7 @@ export default function EditPostScreen() {
 
         setPost(postData);
         setBar(postData.bars);
-        
+
         // Set form fields
         setTitle(postData.title);
         setDescription(postData.description);
@@ -120,7 +125,6 @@ export default function EditPostScreen() {
         setEndDate(postData.end_date ? formatDateForDisplay(postData.end_date) : '');
         setIsActive(postData.is_active);
         setPinned(postData.pinned);
-
       } catch (error) {
         console.error('Error in fetchPost:', error);
         Alert.alert('Error', 'Ocurrió un error al cargar el post');
@@ -218,11 +222,11 @@ export default function EditPostScreen() {
           // Mismo bucket y ruta que create-post: la primera carpeta es el bar
           // (el bucket post-images no existe y la política exige <barId>/…).
           const fileName = barPostImagePath(post.bar_id, post.id);
-          
+
           // Convert URI to Blob
           const response = await fetch(imageUrl);
           const blob = await response.blob();
-          
+
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from(STORAGE_BUCKETS.barImages)
             .upload(fileName, blob, {
@@ -235,9 +239,9 @@ export default function EditPostScreen() {
             return;
           }
 
-          const { data: { publicUrl } } = supabase.storage
-            .from(STORAGE_BUCKETS.barImages)
-            .getPublicUrl(fileName);
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from(STORAGE_BUCKETS.barImages).getPublicUrl(fileName);
 
           finalImageUrl = publicUrl;
         } catch (error) {
@@ -271,7 +275,6 @@ export default function EditPostScreen() {
 
       toast.success('Post actualizado');
       router.back();
-
     } catch (error) {
       console.error('Error in handleSave:', error);
       toast.error('Error al guardar el post', 'Inténtalo de nuevo');
@@ -281,43 +284,36 @@ export default function EditPostScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Eliminar Post',
-      '¿Estás seguro de que quieres eliminar este post?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('bar_posts')
-                .delete()
-                .eq('id', postId);
+    Alert.alert('Eliminar Post', '¿Estás seguro de que quieres eliminar este post?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { error } = await supabase.from('bar_posts').delete().eq('id', postId);
 
-              if (error) {
-                console.error('Error deleting post:', error);
-                Alert.alert('Error', 'No se pudo eliminar el post');
-                return;
-              }
-
-              Alert.alert('Éxito', 'Post eliminado correctamente', [
-                { text: 'OK', onPress: () => router.back() },
-              ]);
-            } catch (error) {
-              console.error('Error in handleDelete:', error);
-              Alert.alert('Error', 'Ocurrió un error al eliminar el post');
+            if (error) {
+              console.error('Error deleting post:', error);
+              Alert.alert('Error', 'No se pudo eliminar el post');
+              return;
             }
-          },
+
+            Alert.alert('Éxito', 'Post eliminado correctamente', [
+              { text: 'OK', onPress: () => router.back() },
+            ]);
+          } catch (error) {
+            console.error('Error in handleDelete:', error);
+            Alert.alert('Error', 'Ocurrió un error al eliminar el post');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.loadingContainer}>
           <AppText style={styles.loadingText}>Cargando...</AppText>
         </View>
@@ -327,7 +323,7 @@ export default function EditPostScreen() {
 
   if (!post || !bar) {
     return (
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.loadingContainer}>
           <AppText style={styles.loadingText}>Post no encontrado</AppText>
         </View>
@@ -336,7 +332,7 @@ export default function EditPostScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -393,9 +389,9 @@ export default function EditPostScreen() {
               <TouchableOpacity
                 key={type}
                 style={[styles.typeButton, postType === type && styles.typeButtonActive]}
-                onPress={() => setPostType(type)}
-              >
-                <AppText style={[styles.typeButtonText, postType === type && styles.typeButtonTextActive]}>
+                onPress={() => setPostType(type)}>
+                <AppText
+                  style={[styles.typeButtonText, postType === type && styles.typeButtonTextActive]}>
                   {type.charAt(0).toUpperCase() + type.slice(1)}
                 </AppText>
               </TouchableOpacity>
@@ -451,26 +447,20 @@ export default function EditPostScreen() {
         <View style={styles.inputContainer}>
           <AppText style={styles.inputLabel}>Opciones</AppText>
           <View style={styles.optionsContainer}>
-            <TouchableOpacity
-              style={styles.optionRow}
-              onPress={() => setIsActive(!isActive)}
-            >
-              <Ionicons 
-                name={isActive ? "checkmark-circle" : "ellipse-outline"} 
-                size={20} 
-                color={isActive ? "#10B981" : "#A3B3CC"} 
+            <TouchableOpacity style={styles.optionRow} onPress={() => setIsActive(!isActive)}>
+              <Ionicons
+                name={isActive ? 'checkmark-circle' : 'ellipse-outline'}
+                size={20}
+                color={isActive ? '#10B981' : '#A3B3CC'}
               />
               <AppText style={styles.optionText}>Post activo</AppText>
             </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.optionRow}
-              onPress={() => setPinned(!pinned)}
-            >
-              <Ionicons 
-                name={pinned ? "checkmark-circle" : "ellipse-outline"} 
-                size={20} 
-                color={pinned ? "#10B981" : "#A3B3CC"} 
+
+            <TouchableOpacity style={styles.optionRow} onPress={() => setPinned(!pinned)}>
+              <Ionicons
+                name={pinned ? 'checkmark-circle' : 'ellipse-outline'}
+                size={20}
+                color={pinned ? '#10B981' : '#A3B3CC'}
               />
               <AppText style={styles.optionText}>Destacar post</AppText>
             </TouchableOpacity>
@@ -667,4 +657,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-}); 
+});

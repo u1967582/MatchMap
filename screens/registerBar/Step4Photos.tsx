@@ -47,202 +47,205 @@ const Step4Photos: React.FC = () => {
   // No plan fetching needed
 
   // Upload single image to Supabase Storage
-  const uploadSingleImage = useCallback(async (uri: string, barId: string, type: 'bar' | 'menu', order: number): Promise<string> => {
-    try {
-      console.log(`📸 Subiendo imagen ${type} para bar:`, barId, 'orden:', order);
-      console.log('📁 URI:', uri);
-
-      // Verificar que el archivo existe
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      console.log('📋 Info del archivo:', fileInfo);
-
-      if (!fileInfo.exists) {
-        throw new Error('El archivo no existe');
-      }
-
-      if (fileInfo.size === 0) {
-        throw new Error('El archivo está vacío');
-      }
-
-      // Crear path del archivo
-      const timestamp = Date.now();
-      const fileName = barImagePath(barId, type, `${order}_${timestamp}`);
-
-      // Método 1: Usando base64 (más confiable en simuladores iOS)
-      let uploadData, uploadError;
-
+  const uploadSingleImage = useCallback(
+    async (uri: string, barId: string, type: 'bar' | 'menu', order: number): Promise<string> => {
       try {
-        console.log('🔄 Intentando método base64...');
+        console.log(`📸 Subiendo imagen ${type} para bar:`, barId, 'orden:', order);
+        console.log('📁 URI:', uri);
 
+        // Verificar que el archivo existe
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        console.log('📋 Info del archivo:', fileInfo);
+
+        if (!fileInfo.exists) {
+          throw new Error('El archivo no existe');
+        }
+
+        if (fileInfo.size === 0) {
+          throw new Error('El archivo está vacío');
+        }
+
+        // Crear path del archivo
+        const timestamp = Date.now();
+        const fileName = barImagePath(barId, type, `${order}_${timestamp}`);
+
+        // Método 1: Usando base64 (más confiable en simuladores iOS)
+        let uploadData, uploadError;
+
+        try {
+          console.log('🔄 Intentando método base64...');
+
+          const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+
+          console.log('📦 Base64 length:', base64.length);
+
+          if (!base64 || base64.length === 0) {
+            throw new Error('Base64 string vacío');
+          }
+
+          // Convertir base64 a ArrayBuffer
+          const binaryString = atob(base64);
+          const arrayBuffer = new Uint8Array(binaryString.length);
+
+          for (let i = 0; i < binaryString.length; i++) {
+            arrayBuffer[i] = binaryString.charCodeAt(i);
+          }
+
+          console.log('📦 ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
+
+          const result = await supabase.storage
+            .from(STORAGE_BUCKETS.barImages)
+            .upload(fileName, arrayBuffer, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+
+          uploadData = result.data;
+          uploadError = result.error;
+
+          if (!uploadError) {
+            console.log('✅ Subida exitosa con base64');
+          }
+        } catch (base64Error) {
+          console.warn('⚠️ Método base64 falló, intentando con fetch:', base64Error);
+
+          // Método 2: Usando fetch como fallback
+          const response = await fetch(uri);
+          console.log('🌐 Fetch response status:', response.status);
+
+          if (!response.ok) {
+            throw new Error(`Fetch failed with status: ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          console.log('📦 Blob size:', blob.size, 'bytes');
+
+          if (blob.size === 0) {
+            throw new Error('El blob está vacío');
+          }
+
+          const result = await supabase.storage
+            .from(STORAGE_BUCKETS.barImages)
+            .upload(fileName, blob, {
+              contentType: blob.type || 'image/jpeg',
+              upsert: true,
+            });
+
+          uploadData = result.data;
+          uploadError = result.error;
+
+          if (!uploadError) {
+            console.log('✅ Subida exitosa con fetch');
+          }
+        }
+
+        if (uploadError) {
+          console.error('❌ Error subiendo imagen:', uploadError);
+          throw uploadError;
+        }
+
+        // Obtener URL pública
+        const { data: urlData } = supabase.storage
+          .from(STORAGE_BUCKETS.barImages)
+          .getPublicUrl(fileName);
+
+        const publicUrl = urlData?.publicUrl;
+
+        if (!publicUrl) {
+          throw new Error('No se pudo obtener la URL pública');
+        }
+
+        console.log('🔗 Public URL:', publicUrl);
+        return publicUrl;
+      } catch (error) {
+        console.error('❌ Error en uploadSingleImage:', error);
+        throw error;
+      }
+    },
+    []
+  );
+
+  // Upload single image for auto_pre_register_bars (cold registration)
+  const uploadAutoPreRegisterImage = useCallback(
+    async (
+      uri: string,
+      autoPreBarId: string,
+      type: 'bar' | 'menu',
+      order: number
+    ): Promise<{ filePath: string; publicUrl: string }> => {
+      try {
+        console.log(`\n=== SUBIENDO IMAGEN PRE-REGISTRO ===`);
+        console.log(`❄️ Tipo: ${type.toUpperCase()}`);
+        console.log(`❄️ Auto Pre Bar ID: ${autoPreBarId}`);
+        console.log(`❄️ Orden: ${order}`);
+
+        // Verificar que el archivo existe
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (!fileInfo.exists || fileInfo.size === 0) {
+          throw new Error('El archivo no existe o está vacío');
+        }
+
+        // Create file path: <autoPreBarId>/<type>/file.jpg (bar or menu folder)
+        const timestamp = Date.now();
+        const fileName = `image_${type}_${order}.png`;
+        const filePath = `${autoPreBarId}/${type}/${fileName}`;
+
+        console.log(`📁 Estructura completa del path:`);
+        console.log(`   - autoPreBarId: ${autoPreBarId}`);
+        console.log(`   - type (carpeta): ${type}`);
+        console.log(`   - fileName: ${fileName}`);
+        console.log(`   - filePath FINAL: ${filePath}`);
+
+        // Read and upload file (same method as uploadSingleImage)
         const base64 = await FileSystem.readAsStringAsync(uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-
-        console.log('📦 Base64 length:', base64.length);
 
         if (!base64 || base64.length === 0) {
           throw new Error('Base64 string vacío');
         }
 
-        // Convertir base64 a ArrayBuffer
+        // Convert base64 to ArrayBuffer
         const binaryString = atob(base64);
         const arrayBuffer = new Uint8Array(binaryString.length);
-
         for (let i = 0; i < binaryString.length; i++) {
           arrayBuffer[i] = binaryString.charCodeAt(i);
         }
 
-        console.log('📦 ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
-
-        const result = await supabase.storage
+        // Upload to storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from(STORAGE_BUCKETS.barImages)
-          .upload(fileName, arrayBuffer, {
+          .upload(filePath, arrayBuffer.buffer, {
             contentType: 'image/jpeg',
-            upsert: true,
+            upsert: false,
           });
 
-        uploadData = result.data;
-        uploadError = result.error;
-
-        if (!uploadError) {
-          console.log('✅ Subida exitosa con base64');
+        if (uploadError) {
+          throw uploadError;
         }
 
-      } catch (base64Error) {
-        console.warn('⚠️ Método base64 falló, intentando con fetch:', base64Error);
-
-        // Método 2: Usando fetch como fallback
-        const response = await fetch(uri);
-        console.log('🌐 Fetch response status:', response.status);
-
-        if (!response.ok) {
-          throw new Error(`Fetch failed with status: ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        console.log('📦 Blob size:', blob.size, 'bytes');
-
-        if (blob.size === 0) {
-          throw new Error('El blob está vacío');
-        }
-
-        const result = await supabase.storage
+        // Get public URL
+        const { data: urlData } = supabase.storage
           .from(STORAGE_BUCKETS.barImages)
-          .upload(fileName, blob, {
-            contentType: blob.type || 'image/jpeg',
-            upsert: true,
-          });
+          .getPublicUrl(filePath);
 
-        uploadData = result.data;
-        uploadError = result.error;
+        const publicUrl = urlData.publicUrl;
 
-        if (!uploadError) {
-          console.log('✅ Subida exitosa con fetch');
-        }
+        console.log(`✅ Imagen de ${type.toUpperCase()} subida exitosamente`);
+        console.log(`   - Storage path: ${filePath}`);
+        console.log(`   - Public URL: ${publicUrl}`);
+        console.log(`=== FIN SUBIDA ===\n`);
+
+        return { filePath, publicUrl };
+      } catch (error) {
+        console.error('❌ Error en uploadAutoPreRegisterImage:', error);
+        throw error;
       }
-
-      if (uploadError) {
-        console.error('❌ Error subiendo imagen:', uploadError);
-        throw uploadError;
-      }
-
-      // Obtener URL pública
-      const { data: urlData } = supabase.storage
-        .from(STORAGE_BUCKETS.barImages)
-        .getPublicUrl(fileName);
-
-      const publicUrl = urlData?.publicUrl;
-
-      if (!publicUrl) {
-        throw new Error('No se pudo obtener la URL pública');
-      }
-
-      console.log('🔗 Public URL:', publicUrl);
-      return publicUrl;
-
-    } catch (error) {
-      console.error('❌ Error en uploadSingleImage:', error);
-      throw error;
-    }
-  }, []);
-
-  // Upload single image for auto_pre_register_bars (cold registration)
-  const uploadAutoPreRegisterImage = useCallback(async (
-    uri: string,
-    autoPreBarId: string,
-    type: 'bar' | 'menu',
-    order: number
-  ): Promise<{ filePath: string; publicUrl: string }> => {
-    try {
-      console.log(`\n=== SUBIENDO IMAGEN PRE-REGISTRO ===`);
-      console.log(`❄️ Tipo: ${type.toUpperCase()}`);
-      console.log(`❄️ Auto Pre Bar ID: ${autoPreBarId}`);
-      console.log(`❄️ Orden: ${order}`);
-
-      // Verificar que el archivo existe
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      if (!fileInfo.exists || fileInfo.size === 0) {
-        throw new Error('El archivo no existe o está vacío');
-      }
-
-      // Create file path: <autoPreBarId>/<type>/file.jpg (bar or menu folder)
-      const timestamp = Date.now();
-      const fileName = `image_${type}_${order}.png`;
-      const filePath = `${autoPreBarId}/${type}/${fileName}`;
-
-      console.log(`📁 Estructura completa del path:`);
-      console.log(`   - autoPreBarId: ${autoPreBarId}`);
-      console.log(`   - type (carpeta): ${type}`);
-      console.log(`   - fileName: ${fileName}`);
-      console.log(`   - filePath FINAL: ${filePath}`);
-
-      // Read and upload file (same method as uploadSingleImage)
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      if (!base64 || base64.length === 0) {
-        throw new Error('Base64 string vacío');
-      }
-
-      // Convert base64 to ArrayBuffer
-      const binaryString = atob(base64);
-      const arrayBuffer = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        arrayBuffer[i] = binaryString.charCodeAt(i);
-      }
-
-      // Upload to storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(STORAGE_BUCKETS.barImages)
-        .upload(filePath, arrayBuffer.buffer, {
-          contentType: 'image/jpeg',
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from(STORAGE_BUCKETS.barImages)
-        .getPublicUrl(filePath);
-
-      const publicUrl = urlData.publicUrl;
-
-      console.log(`✅ Imagen de ${type.toUpperCase()} subida exitosamente`);
-      console.log(`   - Storage path: ${filePath}`);
-      console.log(`   - Public URL: ${publicUrl}`);
-      console.log(`=== FIN SUBIDA ===\n`);
-
-      return { filePath, publicUrl };
-
-    } catch (error) {
-      console.error('❌ Error en uploadAutoPreRegisterImage:', error);
-      throw error;
-    }
-  }, []);
+    },
+    []
+  );
 
   // Request permissions
   const requestPermissions = useCallback(async () => {
@@ -259,85 +262,91 @@ const Step4Photos: React.FC = () => {
   }, []);
 
   // Pick images from gallery
-  const pickImages = useCallback(async (type: 'bar' | 'menu') => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
+  const pickImages = useCallback(
+    async (type: 'bar' | 'menu') => {
+      const hasPermission = await requestPermissions();
+      if (!hasPermission) return;
 
-    try {
-      console.log(`📱 Seleccionando imágenes para ${type}...`);
+      try {
+        console.log(`📱 Seleccionando imágenes para ${type}...`);
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-        quality: 0.75,
-        aspect: type === 'bar' ? [16, 9] : [3, 4],
-        allowsEditing: false,
-      });
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsMultipleSelection: true,
+          quality: 0.75,
+          aspect: type === 'bar' ? [16, 9] : [3, 4],
+          allowsEditing: false,
+        });
 
-      console.log(`📱 Resultado del picker:`, {
-        canceled: result.canceled,
-        assetsLength: result.assets?.length,
-      });
+        console.log(`📱 Resultado del picker:`, {
+          canceled: result.canceled,
+          assetsLength: result.assets?.length,
+        });
 
-      if (!result.canceled && result.assets) {
-        const currentImages = type === 'bar' ? barImages : menuImages;
-        const maxImages = type === 'bar' ? MAX_BAR_PHOTOS : MAX_MENU_PHOTOS;
+        if (!result.canceled && result.assets) {
+          const currentImages = type === 'bar' ? barImages : menuImages;
+          const maxImages = type === 'bar' ? MAX_BAR_PHOTOS : MAX_MENU_PHOTOS;
 
-        // Check if we can add more images based on user's plan
-        const remainingSlots = maxImages - currentImages.length;
-        if (remainingSlots <= 0) {
-          Alert.alert('Límite alcanzado', `Permite hasta ${maxImages} imágenes para ${type === 'bar' ? 'fotos del bar' : 'fotos del menú'}.`);
-          return;
-        }
+          // Check if we can add more images based on user's plan
+          const remainingSlots = maxImages - currentImages.length;
+          if (remainingSlots <= 0) {
+            Alert.alert(
+              'Límite alcanzado',
+              `Permite hasta ${maxImages} imágenes para ${type === 'bar' ? 'fotos del bar' : 'fotos del menú'}.`
+            );
+            return;
+          }
 
-        // Take only the images that fit
-        const imagesToAdd = result.assets.slice(0, remainingSlots);
+          // Take only the images that fit
+          const imagesToAdd = result.assets.slice(0, remainingSlots);
 
-        // Verificar cada imagen antes de agregar
-        const validImages = [];
-        for (const asset of imagesToAdd) {
-          try {
-            const fileInfo = await FileSystem.getInfoAsync(asset.uri);
-            console.log(`📋 Verificando ${asset.uri}:`, fileInfo);
+          // Verificar cada imagen antes de agregar
+          const validImages = [];
+          for (const asset of imagesToAdd) {
+            try {
+              const fileInfo = await FileSystem.getInfoAsync(asset.uri);
+              console.log(`📋 Verificando ${asset.uri}:`, fileInfo);
 
-            if (fileInfo.exists && fileInfo.size > 0) {
-              validImages.push(asset);
-            } else {
-              console.warn(`⚠️ Imagen inválida: ${asset.uri}`);
+              if (fileInfo.exists && fileInfo.size > 0) {
+                validImages.push(asset);
+              } else {
+                console.warn(`⚠️ Imagen inválida: ${asset.uri}`);
+              }
+            } catch (error) {
+              console.warn(`⚠️ Error verificando imagen ${asset.uri}:`, error);
             }
-          } catch (error) {
-            console.warn(`⚠️ Error verificando imagen ${asset.uri}:`, error);
+          }
+
+          const resizedUris = await Promise.all(
+            validImages.map((asset) => resizeForUpload(asset, type))
+          );
+
+          const newImages = validImages.map((asset, index) => ({
+            id: generateId(),
+            uri: resizedUris[index],
+            uploading: false,
+            order: currentImages.length + index + 1,
+          }));
+
+          console.log(`✅ Agregando ${newImages.length} imágenes válidas para ${type}`);
+
+          if (type === 'bar') {
+            setBarImages((prev) => [...prev, ...newImages]);
+          } else {
+            setMenuImages((prev) => [...prev, ...newImages]);
           }
         }
-
-        const resizedUris = await Promise.all(
-          validImages.map((asset) => resizeForUpload(asset, type))
-        );
-
-        const newImages = validImages.map((asset, index) => ({
-          id: generateId(),
-          uri: resizedUris[index],
-          uploading: false,
-          order: currentImages.length + index + 1,
-        }));
-
-        console.log(`✅ Agregando ${newImages.length} imágenes válidas para ${type}`);
-
-        if (type === 'bar') {
-          setBarImages(prev => [...prev, ...newImages]);
-        } else {
-          setMenuImages(prev => [...prev, ...newImages]);
-        }
+      } catch (error) {
+        console.error('Error picking images:', error);
+        Alert.alert('Error', 'No se pudieron seleccionar las imágenes');
       }
-    } catch (error) {
-      console.error('Error picking images:', error);
-      Alert.alert('Error', 'No se pudieron seleccionar las imágenes');
-    }
-  }, [barImages, menuImages, requestPermissions]);
+    },
+    [barImages, menuImages, requestPermissions]
+  );
 
   // Convierte ImageItem[] → DraggableImage[] para el grid
   const toGridImages = (images: ImageItem[]): DraggableImage[] =>
-    images.map(img => ({
+    images.map((img) => ({
       id: img.id,
       image_url: img.uri,
       image_order: img.order,
@@ -345,7 +354,7 @@ const Step4Photos: React.FC = () => {
 
   // Callback onReorder: DraggableImageGrid devuelve array ya reordenado
   const handleReorderImages = useCallback((reordered: DraggableImage[], type: 'bar' | 'menu') => {
-    const converted = reordered.map(img => ({
+    const converted = reordered.map((img) => ({
       id: img.id,
       uri: img.image_url,
       uploading: false,
@@ -358,9 +367,8 @@ const Step4Photos: React.FC = () => {
   // Callback onDelete: elimina por id y recalcula order
   const handleDeleteImage = useCallback((imageId: string, type: 'bar' | 'menu') => {
     const setter = type === 'bar' ? setBarImages : setMenuImages;
-    setter(prev =>
-      prev.filter(img => img.id !== imageId)
-          .map((img, i) => ({ ...img, order: i + 1 }))
+    setter((prev) =>
+      prev.filter((img) => img.id !== imageId).map((img, i) => ({ ...img, order: i + 1 }))
     );
   }, []);
 
@@ -369,24 +377,27 @@ const Step4Photos: React.FC = () => {
     const relationships = [
       {
         table: 'bar_selected_tv_features',
-        data: formData.tvFeatureIds?.map((id: string) => ({
-          bar_id: barId,
-          tv_feature_id: parseInt(id)
-        })) || [],
+        data:
+          formData.tvFeatureIds?.map((id: string) => ({
+            bar_id: barId,
+            tv_feature_id: parseInt(id),
+          })) || [],
       },
       {
         table: 'bar_food_types',
-        data: formData.foodTypeIds?.map((id: string) => ({
-          bar_id: barId,
-          food_type_id: parseInt(id)
-        })) || [],
+        data:
+          formData.foodTypeIds?.map((id: string) => ({
+            bar_id: barId,
+            food_type_id: parseInt(id),
+          })) || [],
       },
       {
         table: 'bar_selected_features',
-        data: formData.featureIds?.map((id: string) => ({
-          bar_id: barId,
-          feature_id: parseInt(id)
-        })) || [],
+        data:
+          formData.featureIds?.map((id: string) => ({
+            bar_id: barId,
+            feature_id: parseInt(id),
+          })) || [],
       },
     ];
 
@@ -401,69 +412,72 @@ const Step4Photos: React.FC = () => {
   }, []);
 
   // Upload images and save to database with order
-  const uploadImages = useCallback(async (barId: string, images: ImageItem[], type: 'bar' | 'menu') => {
-    const table = type === 'bar' ? 'bar_images' : 'bar_menus';
+  const uploadImages = useCallback(
+    async (barId: string, images: ImageItem[], type: 'bar' | 'menu') => {
+      const table = type === 'bar' ? 'bar_images' : 'bar_menus';
 
-    try {
-      console.log(`📤 Subiendo ${images.length} imágenes de ${type}...`);
+      try {
+        console.log(`📤 Subiendo ${images.length} imágenes de ${type}...`);
 
-      // Marcar imágenes como subiendo
-      if (type === 'bar') {
-        setBarImages(prev => prev.map(img => ({ ...img, uploading: true })));
-      } else {
-        setMenuImages(prev => prev.map(img => ({ ...img, uploading: true })));
-      }
-
-      const uploadPromises = images.map(async (image) => {
-        try {
-          // Subir imagen
-          const imageUrl = await uploadSingleImage(image.uri, barId, type, image.order);
-
-          // Guardar en base de datos
-          const insertData = {
-            bar_id: barId,
-            image_url: imageUrl,
-            image_order: image.order,
-          };
-
-          const { error } = await supabase.from(table).insert(insertData);
-
-          if (error) {
-            console.error(`Error saving ${type} image to database:`, error);
-            throw error;
-          }
-
-          console.log(`✅ ${type} image saved with order ${image.order}`);
-          return { success: true, order: image.order };
-
-        } catch (error) {
-          console.error(`❌ Error uploading ${type} image order ${image.order}:`, error);
-          return { success: false, order: image.order, error };
+        // Marcar imágenes como subiendo
+        if (type === 'bar') {
+          setBarImages((prev) => prev.map((img) => ({ ...img, uploading: true })));
+        } else {
+          setMenuImages((prev) => prev.map((img) => ({ ...img, uploading: true })));
         }
-      });
 
-      const results = await Promise.all(uploadPromises);
-      const successful = results.filter(r => r.success).length;
-      const failed = results.filter(r => !r.success).length;
+        const uploadPromises = images.map(async (image) => {
+          try {
+            // Subir imagen
+            const imageUrl = await uploadSingleImage(image.uri, barId, type, image.order);
 
-      console.log(`📊 ${type} upload results: ${successful} exitosas, ${failed} fallidas`);
+            // Guardar en base de datos
+            const insertData = {
+              bar_id: barId,
+              image_url: imageUrl,
+              image_order: image.order,
+            };
 
-      if (failed > 0) {
-        throw new UserFacingError(`${failed} de ${images.length} imágenes de ${type} no se pudieron subir`);
+            const { error } = await supabase.from(table).insert(insertData);
+
+            if (error) {
+              console.error(`Error saving ${type} image to database:`, error);
+              throw error;
+            }
+
+            console.log(`✅ ${type} image saved with order ${image.order}`);
+            return { success: true, order: image.order };
+          } catch (error) {
+            console.error(`❌ Error uploading ${type} image order ${image.order}:`, error);
+            return { success: false, order: image.order, error };
+          }
+        });
+
+        const results = await Promise.all(uploadPromises);
+        const successful = results.filter((r) => r.success).length;
+        const failed = results.filter((r) => !r.success).length;
+
+        console.log(`📊 ${type} upload results: ${successful} exitosas, ${failed} fallidas`);
+
+        if (failed > 0) {
+          throw new UserFacingError(
+            `${failed} de ${images.length} imágenes de ${type} no se pudieron subir`
+          );
+        }
+      } catch (error) {
+        console.error(`Error uploading ${type} images:`, error);
+        throw error;
+      } finally {
+        // Quitar estado de subiendo
+        if (type === 'bar') {
+          setBarImages((prev) => prev.map((img) => ({ ...img, uploading: false })));
+        } else {
+          setMenuImages((prev) => prev.map((img) => ({ ...img, uploading: false })));
+        }
       }
-
-    } catch (error) {
-      console.error(`Error uploading ${type} images:`, error);
-      throw error;
-    } finally {
-      // Quitar estado de subiendo
-      if (type === 'bar') {
-        setBarImages(prev => prev.map(img => ({ ...img, uploading: false })));
-      } else {
-        setMenuImages(prev => prev.map(img => ({ ...img, uploading: false })));
-      }
-    }
-  }, [uploadSingleImage]);
+    },
+    [uploadSingleImage]
+  );
 
   // Main submit handler
   const handleSubmit = useCallback(async () => {
@@ -474,7 +488,10 @@ const Step4Photos: React.FC = () => {
       const isAutoPreRegister = formData.isAutoPreRegister || false;
 
       // Get current user for plan validation
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
       if (userError || !user) {
         Alert.alert('Error', 'Debes estar autenticado para registrar un bar');
         return;
@@ -517,7 +534,9 @@ const Step4Photos: React.FC = () => {
         doorNumber: formData.doorNumber,
         latitude: formData.latitude,
         longitude: formData.longitude,
-        isPreciseLocation: formData.doorNumber ? 'Sí (con número de puerta)' : 'No (ubicación aproximada)'
+        isPreciseLocation: formData.doorNumber
+          ? 'Sí (con número de puerta)'
+          : 'No (ubicación aproximada)',
       });
 
       // User already validated above
@@ -554,14 +573,18 @@ const Step4Photos: React.FC = () => {
         let imageCount = 0;
 
         if (barImages.length > 0 || menuImages.length > 0) {
-          console.log(`📷 Subiendo ${barImages.length + menuImages.length} imágenes para pre-registro...`);
+          console.log(
+            `📷 Subiendo ${barImages.length + menuImages.length} imágenes para pre-registro...`
+          );
 
           try {
             // Upload bar images
             console.log(`📸 Subiendo ${barImages.length} imágenes del BAR para auto-registro`);
             for (const image of barImages) {
               try {
-                console.log(`📸 [BAR IMAGE] Procesando imagen ${image.order} de ${barImages.length}`);
+                console.log(
+                  `📸 [BAR IMAGE] Procesando imagen ${image.order} de ${barImages.length}`
+                );
                 const { filePath, publicUrl } = await uploadAutoPreRegisterImage(
                   image.uri,
                   barData.id,
@@ -578,7 +601,10 @@ const Step4Photos: React.FC = () => {
                   image_order: image.order,
                   description: 'bar',
                 };
-                console.log(`💾 [BAR IMAGE] Insertando en auto_pre_register_bar_images:`, insertPayload);
+                console.log(
+                  `💾 [BAR IMAGE] Insertando en auto_pre_register_bar_images:`,
+                  insertPayload
+                );
 
                 const { error: insertError } = await supabase
                   .from('auto_pre_register_bar_images')
@@ -588,7 +614,9 @@ const Step4Photos: React.FC = () => {
                   console.error('❌ Error inserting auto_pre_register_bar_images:', insertError);
                 } else {
                   imageCount++;
-                  console.log(`✅ [BAR IMAGE] Imagen ${image.order} guardada en auto_pre_register_bar_images`);
+                  console.log(
+                    `✅ [BAR IMAGE] Imagen ${image.order} guardada en auto_pre_register_bar_images`
+                  );
                 }
               } catch (imageError) {
                 console.error('❌ Error uploading pre-register BAR image:', imageError);
@@ -600,7 +628,9 @@ const Step4Photos: React.FC = () => {
             console.log(`🍽️ Subiendo ${menuImages.length} imágenes del MENÚ para auto-registro`);
             for (const image of menuImages) {
               try {
-                console.log(`🍽️ [MENU IMAGE] Procesando imagen ${image.order} de ${menuImages.length}`);
+                console.log(
+                  `🍽️ [MENU IMAGE] Procesando imagen ${image.order} de ${menuImages.length}`
+                );
                 const { filePath, publicUrl } = await uploadAutoPreRegisterImage(
                   image.uri,
                   barData.id,
@@ -616,17 +646,25 @@ const Step4Photos: React.FC = () => {
                   file_path: filePath,
                   image_order: image.order,
                 };
-                console.log(`💾 [MENU IMAGE] Insertando en auto_pre_register_bar_menus:`, insertPayload);
+                console.log(
+                  `💾 [MENU IMAGE] Insertando en auto_pre_register_bar_menus:`,
+                  insertPayload
+                );
 
                 const { error: insertError } = await supabase
                   .from('auto_pre_register_bar_menus')
                   .insert(insertPayload);
 
                 if (insertError) {
-                  console.error('❌ [MENU IMAGE] Error inserting auto_pre_register_bar_menus:', insertError);
+                  console.error(
+                    '❌ [MENU IMAGE] Error inserting auto_pre_register_bar_menus:',
+                    insertError
+                  );
                 } else {
                   imageCount++;
-                  console.log(`✅ [MENU IMAGE] Imagen ${image.order} guardada en auto_pre_register_bar_menus`);
+                  console.log(
+                    `✅ [MENU IMAGE] Imagen ${image.order} guardada en auto_pre_register_bar_menus`
+                  );
                 }
               } catch (imageError) {
                 console.error('❌ Error uploading pre-register MENU image:', imageError);
@@ -651,42 +689,41 @@ const Step4Photos: React.FC = () => {
               onPress: () => {
                 resetForm();
                 router.replace('/(protected)/profile' as any);
-              }
-            }
+              },
+            },
           ]
         );
 
         return; // Exit early for auto pre-register
-
       } else {
         // Normal registration flow
         const { data: insertedBarData, error: barError } = await supabase
-        .from('bars')
-        .insert({
-          name: formData.name,
-          description: formData.description,
-          phone: formData.phone,
-          website: formData.website || null,
-          category_id: formData.categoryId,
-          address: formData.address,
-          city: formData.city,
-          postal_code: formData.postalCode,
-          latitude: formData.latitude || 0,
-          longitude: formData.longitude || 0,
-          doorNumber: formData.doorNumber,
-        })
-        .select()
-        .single();
+          .from('bars')
+          .insert({
+            name: formData.name,
+            description: formData.description,
+            phone: formData.phone,
+            website: formData.website || null,
+            category_id: formData.categoryId,
+            address: formData.address,
+            city: formData.city,
+            postal_code: formData.postalCode,
+            latitude: formData.latitude || 0,
+            longitude: formData.longitude || 0,
+            doorNumber: formData.doorNumber,
+          })
+          .select()
+          .single();
 
-      if (barError) {
-        throw barError;
-      }
+        if (barError) {
+          throw barError;
+        }
 
         barData = insertedBarData;
-      console.log('✅ Bar creado:', barData.id);
+        console.log('✅ Bar creado:', barData.id);
 
-      // Insert relationships
-      await insertRelationships(barData.id, formData);
+        // Insert relationships
+        await insertRelationships(barData.id, formData);
       }
 
       // Upload images with order (only for normal registration)
@@ -720,14 +757,25 @@ const Step4Photos: React.FC = () => {
 
       // Mostrar pantalla de "enviado para verificación" (mejor UX que un alert)
       router.replace(`/register-bar/submitted?barId=${barData.id}` as any);
-
     } catch (error: any) {
       console.error('Error submitting form:', error);
-      Alert.alert('Error', userFacingErrorMessage(error, 'No se pudo completar el registro. Inténtalo de nuevo.'));
+      Alert.alert(
+        'Error',
+        userFacingErrorMessage(error, 'No se pudo completar el registro. Inténtalo de nuevo.')
+      );
     } finally {
       setLoading(false);
     }
-  }, [getFormData, insertRelationships, uploadImages, uploadAutoPreRegisterImage, barImages, menuImages, resetForm, router]);
+  }, [
+    getFormData,
+    insertRelationships,
+    uploadImages,
+    uploadAutoPreRegisterImage,
+    barImages,
+    menuImages,
+    resetForm,
+    router,
+  ]);
 
   const handleBack = useCallback(() => {
     // Si el bar ya fue creado, mostrar alerta en lugar de navegar hacia atrás
@@ -752,7 +800,7 @@ const Step4Photos: React.FC = () => {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Stack.Screen options={{ title: 'Fotos del Bar', headerShown: false }} />
 
         <View style={styles.header}>
@@ -780,17 +828,21 @@ const Step4Photos: React.FC = () => {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <AppText style={styles.sectionTitle}>Fotos del Bar</AppText>
-                <AppText style={styles.sectionSubtitle}>Máximo {MAX_BAR_PHOTOS} imágenes (16:9) - Mantén presionado y arrastra para reordenar</AppText>
+                <AppText style={styles.sectionSubtitle}>
+                  Máximo {MAX_BAR_PHOTOS} imágenes (16:9) - Mantén presionado y arrastra para
+                  reordenar
+                </AppText>
               </View>
 
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => pickImages('bar')}
-                disabled={loading || barImages.length >= MAX_BAR_PHOTOS}
-              >
+                disabled={loading || barImages.length >= MAX_BAR_PHOTOS}>
                 <Ionicons name="camera" size={24} color="#007AFF" />
                 <AppText style={styles.addButtonText}>
-                  {barImages.length >= MAX_BAR_PHOTOS ? 'Máximo alcanzado' : 'Agregar fotos del bar'}
+                  {barImages.length >= MAX_BAR_PHOTOS
+                    ? 'Máximo alcanzado'
+                    : 'Agregar fotos del bar'}
                 </AppText>
               </TouchableOpacity>
 
@@ -805,7 +857,9 @@ const Step4Photos: React.FC = () => {
                 />
               )}
 
-              <AppText style={styles.counter}>{barImages.length}/{MAX_BAR_PHOTOS} fotos</AppText>
+              <AppText style={styles.counter}>
+                {barImages.length}/{MAX_BAR_PHOTOS} fotos
+              </AppText>
             </View>
 
             {/* Menu Images Section (hidden for free plan) */}
@@ -813,17 +867,21 @@ const Step4Photos: React.FC = () => {
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <AppText style={styles.sectionTitle}>Fotos del Menú</AppText>
-                  <AppText style={styles.sectionSubtitle}>Máximo {MAX_MENU_PHOTOS} imágenes (3:4) - Mantén presionado y arrastra para reordenar</AppText>
+                  <AppText style={styles.sectionSubtitle}>
+                    Máximo {MAX_MENU_PHOTOS} imágenes (3:4) - Mantén presionado y arrastra para
+                    reordenar
+                  </AppText>
                 </View>
 
                 <TouchableOpacity
                   style={styles.addButton}
                   onPress={() => pickImages('menu')}
-                  disabled={loading || menuImages.length >= MAX_MENU_PHOTOS}
-                >
+                  disabled={loading || menuImages.length >= MAX_MENU_PHOTOS}>
                   <Ionicons name="restaurant" size={24} color="#007AFF" />
                   <AppText style={styles.addButtonText}>
-                    {menuImages.length >= MAX_MENU_PHOTOS ? 'Máximo alcanzado' : 'Agregar fotos del menú'}
+                    {menuImages.length >= MAX_MENU_PHOTOS
+                      ? 'Máximo alcanzado'
+                      : 'Agregar fotos del menú'}
                   </AppText>
                 </TouchableOpacity>
 
@@ -838,7 +896,9 @@ const Step4Photos: React.FC = () => {
                   />
                 )}
 
-                <AppText style={styles.counter}>{menuImages.length}/{MAX_MENU_PHOTOS} fotos</AppText>
+                <AppText style={styles.counter}>
+                  {menuImages.length}/{MAX_MENU_PHOTOS} fotos
+                </AppText>
               </View>
             )}
 
@@ -846,19 +906,15 @@ const Step4Photos: React.FC = () => {
             <View style={styles.infoBox}>
               <Ionicons name="information-circle" size={20} color="#007AFF" />
               <AppText style={styles.infoText}>
-                Las imágenes son opcionales. El orden de las fotos importa - la primera será la imagen principal.
-                Mantén presionado y arrastra para reordenar.
+                Las imágenes son opcionales. El orden de las fotos importa - la primera será la
+                imagen principal. Mantén presionado y arrastra para reordenar.
               </AppText>
             </View>
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <PrimaryButton
-            title="Finalizar Registro"
-            onPress={handleSubmit}
-            loading={loading}
-          />
+          <PrimaryButton title="Finalizar Registro" onPress={handleSubmit} loading={loading} />
         </View>
       </SafeAreaView>
     </GestureHandlerRootView>

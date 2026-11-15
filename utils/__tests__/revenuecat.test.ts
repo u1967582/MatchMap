@@ -136,7 +136,10 @@ describe('getOfferings', () => {
 describe('purchasePackage', () => {
   it('devuelve success=true y la info del cliente tras una compra correcta', async () => {
     const customerInfo = { entitlements: { active: {} } };
-    mockedPurchasePackage.mockResolvedValueOnce({ customerInfo, transaction: { transactionIdentifier: 'tx_1' } });
+    mockedPurchasePackage.mockResolvedValueOnce({
+      customerInfo,
+      transaction: { transactionIdentifier: 'tx_1' },
+    });
 
     const result = await purchasePackage({ identifier: 'pkg_1' } as any);
 
@@ -150,7 +153,9 @@ describe('purchasePackage', () => {
   it('relanza el error cuando la compra falla, para que el llamante pueda reaccionar', async () => {
     mockedPurchasePackage.mockRejectedValueOnce(new Error('payment declined'));
 
-    await expect(purchasePackage({ identifier: 'pkg_1' } as any)).rejects.toThrow('payment declined');
+    await expect(purchasePackage({ identifier: 'pkg_1' } as any)).rejects.toThrow(
+      'payment declined'
+    );
   });
 
   it('relanza también cuando el usuario cancela, preservando el flag userCancelled', async () => {

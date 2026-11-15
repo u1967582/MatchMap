@@ -1,9 +1,6 @@
 // src/lib/planCapabilities.ts
 export type Tier = 'free' | 'pro' | 'elite';
-export type PlanType =
-  | 'free'
-  | 'pro_monthly' | 'pro_yearly'
-  | 'elite_monthly' | 'elite_yearly';
+export type PlanType = 'free' | 'pro_monthly' | 'pro_yearly' | 'elite_monthly' | 'elite_yearly';
 
 export const tierFromPlanType = (p: PlanType): Tier => {
   if (p === 'free') return 'free';
@@ -71,4 +68,4 @@ export const labelForTier: Record<Tier, string> = {
   free: 'Gratis',
   pro: 'Pro',
   elite: 'Elite',
-}; 
+};

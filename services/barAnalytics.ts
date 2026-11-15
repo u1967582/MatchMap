@@ -21,9 +21,11 @@ export function trackBarEvent(
 ): void {
   if (!barId || isOwner) return;
 
-  supabase.rpc('fn_track_bar_event', { p_bar_id: barId, p_event_type: eventType }).then(({ error }) => {
-    if (error) console.error(`Error tracking ${eventType}:`, error);
-  });
+  supabase
+    .rpc('fn_track_bar_event', { p_bar_id: barId, p_event_type: eventType })
+    .then(({ error }) => {
+      if (error) console.error(`Error tracking ${eventType}:`, error);
+    });
 }
 
 /**

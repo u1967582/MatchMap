@@ -1,10 +1,6 @@
 import { useCallback } from 'react';
 import { StyleSheet, Pressable } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import AppText from './AppText';
 import { colors } from '../tokens/colors';
@@ -53,23 +49,15 @@ export default function AppChip({
 
   return (
     <AnimatedPressable
-      style={[
-        styles.chip,
-        selected && styles.chipSelected,
-        animatedStyle,
-      ]}
+      style={[styles.chip, selected && styles.chipSelected, animatedStyle]}
       onPress={handlePress}
       onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-    >
-      {icon && (
-        <AppText style={styles.icon}>{icon}</AppText>
-      )}
+      onPressOut={handlePressOut}>
+      {icon && <AppText style={styles.icon}>{icon}</AppText>}
       <AppText
         variant="label"
         color={selected ? colors.text.primary : colors.text.secondary}
-        style={styles.label}
-      >
+        style={styles.label}>
         {label}
       </AppText>
     </AnimatedPressable>

@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Dimensions } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Dimensions,
+} from 'react-native';
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
@@ -11,7 +19,7 @@ const { width } = Dimensions.get('window');
 const numColumns = 3;
 const spacing = 12;
 const containerPadding = 20 * 2; // 20px padding on each side
-const imageWidth = (width - containerPadding - (spacing * (numColumns - 1))) / numColumns;
+const imageWidth = (width - containerPadding - spacing * (numColumns - 1)) / numColumns;
 
 interface MenuImage {
   id: string;
@@ -36,11 +44,7 @@ const BarMenuScreen: React.FC = () => {
 
   const fetchBarName = async () => {
     try {
-      const { data, error } = await supabase
-        .from('bars')
-        .select('name')
-        .eq('id', barId)
-        .single();
+      const { data, error } = await supabase.from('bars').select('name').eq('id', barId).single();
 
       if (error) {
         console.error('Error fetching bar name:', error);
@@ -73,7 +77,7 @@ const BarMenuScreen: React.FC = () => {
         // Construir URLs públicas para las imágenes
         const imagesWithUrls = data.map((item: any) => ({
           ...item,
-          url: item.image_url // La URL ya viene completa desde Supabase
+          url: item.image_url, // La URL ya viene completa desde Supabase
         }));
 
         console.log('✅ Menu images loaded:', imagesWithUrls.length);
@@ -92,15 +96,8 @@ const BarMenuScreen: React.FC = () => {
   };
 
   const renderMenuImage = ({ item, index }: { item: MenuImage; index: number }) => (
-    <TouchableOpacity
-      style={styles.menuThumbnailContainer}
-      onPress={() => openImageViewer(index)}
-    >
-      <Image
-        source={{ uri: item.url }}
-        style={styles.menuThumbnail}
-        resizeMode="cover"
-      />
+    <TouchableOpacity style={styles.menuThumbnailContainer} onPress={() => openImageViewer(index)}>
+      <Image source={{ uri: item.url }} style={styles.menuThumbnail} resizeMode="cover" />
       <View style={styles.imageOverlay}>
         <Ionicons name="expand" size={20} color="#FFFFFF" />
       </View>
@@ -109,7 +106,7 @@ const BarMenuScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Stack.Screen options={{ title: 'Carta del Bar', headerShown: false }} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -121,7 +118,7 @@ const BarMenuScreen: React.FC = () => {
 
   if (menuImages.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Stack.Screen options={{ title: 'Carta del Bar', headerShown: false }} />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -142,9 +139,9 @@ const BarMenuScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Stack.Screen options={{ title: 'Carta del Bar', headerShown: false }} />
-      
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -155,9 +152,7 @@ const BarMenuScreen: React.FC = () => {
 
       <View style={styles.content}>
         <AppText style={styles.barName}>{barName}</AppText>
-        <AppText style={styles.subtitle}>
-          Toca una imagen para verla a pantalla completa
-        </AppText>
+        <AppText style={styles.subtitle}>Toca una imagen para verla a pantalla completa</AppText>
 
         <FlatList
           data={menuImages}
@@ -171,7 +166,7 @@ const BarMenuScreen: React.FC = () => {
       </View>
 
       <ImageViewing
-        images={menuImages.map(img => ({ uri: img.url }))}
+        images={menuImages.map((img) => ({ uri: img.url }))}
         imageIndex={currentIndex}
         visible={viewerVisible}
         onRequestClose={() => setViewerVisible(false)}
@@ -290,4 +285,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BarMenuScreen; 
+export default BarMenuScreen;

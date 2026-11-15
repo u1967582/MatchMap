@@ -15,11 +15,7 @@ export default function Divider({
 }: DividerProps) {
   return (
     <View
-      style={[
-        styles.divider,
-        { marginVertical: verticalSpacing, backgroundColor: color },
-        style,
-      ]}
+      style={[styles.divider, { marginVertical: verticalSpacing, backgroundColor: color }, style]}
     />
   );
 }

@@ -167,7 +167,10 @@ const DraggableImageItem: React.FC<DraggableImageItemProps> = ({
     });
 
   // Un toque corto abre el visor; mantener pulsado y arrastrar reordena.
-  const composedGesture = Gesture.Race(tapGesture, Gesture.Simultaneous(longPressGesture, panGesture));
+  const composedGesture = Gesture.Race(
+    tapGesture,
+    Gesture.Simultaneous(longPressGesture, panGesture)
+  );
 
   const animatedStyle = useAnimatedStyle(() => {
     const position = positions.value[image.id];
@@ -204,9 +207,7 @@ const DraggableImageItem: React.FC<DraggableImageItemProps> = ({
   }));
 
   const handleStyle = useAnimatedStyle(() => ({
-    backgroundColor: isActive.value
-      ? 'rgba(0, 122, 255, 0.9)'
-      : 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: isActive.value ? 'rgba(0, 122, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
     transform: [{ scale: withSpring(isActive.value ? 1.2 : 1) }],
   }));
 
@@ -216,16 +217,15 @@ const DraggableImageItem: React.FC<DraggableImageItemProps> = ({
         <Image source={{ uri: image.image_url }} style={styles.image} />
 
         {/* Delete button */}
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => onDelete(image.id)}
-        >
+        <TouchableOpacity style={styles.deleteButton} onPress={() => onDelete(image.id)}>
           <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
         </TouchableOpacity>
 
         {/* Order badge */}
         <View style={styles.orderBadge}>
-          <AppText maxScale={1.0} style={styles.orderText}>{image.image_order}</AppText>
+          <AppText maxScale={1.0} style={styles.orderText}>
+            {image.image_order}
+          </AppText>
         </View>
 
         {/* Drag handle */}

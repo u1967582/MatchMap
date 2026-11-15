@@ -1,4 +1,17 @@
-import { View, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Alert, Clipboard, Modal, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  FlatList,
+  Dimensions,
+  Alert,
+  Clipboard,
+  Modal,
+  ScrollView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +25,15 @@ import BarReviewsSection from '~/components/BarReviewsSection';
 import BoostCountdown from '~/components/boost/BoostCountdown';
 import BoostPaywallSheet from '~/components/boost/BoostPaywallSheet';
 import { useBarBoost } from '~/hooks/useBoostBars';
-import { AppText, colors, spacing, radius, BarProfileSkeleton, ErrorState, toast } from '~/components/ds';
+import {
+  AppText,
+  colors,
+  spacing,
+  radius,
+  BarProfileSkeleton,
+  ErrorState,
+  toast,
+} from '~/components/ds';
 import { formatMatchDateTime } from '~/utils/dateFormat';
 import { openInMaps, openPhoneDialer } from '~/utils/openInMaps';
 import { useFavoritesStore } from '~/stores/favoritesStore';
@@ -76,8 +97,8 @@ export default function BarProfileScreen() {
   const { barId } = useLocalSearchParams<{ barId: string }>();
 
   // Store de favoritos (actualizaciones optimistas)
-  const isFavorite = useFavoritesStore(state => state.isFavorite);
-  const toggleFavorite = useFavoritesStore(state => state.toggleFavorite);
+  const isFavorite = useFavoritesStore((state) => state.isFavorite);
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
 
   const [bar, setBar] = useState<BarProfile | null>(null);
   const [posts, setPosts] = useState<BarPost[]>([]);
@@ -88,10 +109,17 @@ export default function BarProfileScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([]);
   const [canShowMenuButton, setCanShowMenuButton] = useState<boolean>(true);
-  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<
+    'pending' | 'approved' | 'rejected' | null
+  >(null);
   const [verificationNotes, setVerificationNotes] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
-  const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: any; actionLabel?: string; onAction?: () => void }>({ title: '', content: null });
+  const [infoModalContent, setInfoModalContent] = useState<{
+    title: string;
+    content: any;
+    actionLabel?: string;
+    onAction?: () => void;
+  }>({ title: '', content: null });
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
 
@@ -116,10 +144,12 @@ export default function BarProfileScreen() {
       content: (
         <View>
           <AppText variant="body" color={colors.text.light}>
-            Esta opción te permite seleccionar y añadir partidos específicos que quieras retransmitir en tu bar.
+            Esta opción te permite seleccionar y añadir partidos específicos que quieras
+            retransmitir en tu bar.
           </AppText>
           <AppText variant="body" color={colors.text.light} style={{ marginTop: spacing.md }}>
-            Ideal para cuando tienes eventos especiales o partidos concretos que sabes que tus clientes quieren ver.
+            Ideal para cuando tienes eventos especiales o partidos concretos que sabes que tus
+            clientes quieren ver.
           </AppText>
         </View>
       ),
@@ -133,7 +163,8 @@ export default function BarProfileScreen() {
       content: (
         <View>
           <AppText variant="body" color={colors.text.light}>
-            Configura tus equipos y competiciones favoritas para que automáticamente se añadan todos sus partidos a tu calendario de retransmisiones.
+            Configura tus equipos y competiciones favoritas para que automáticamente se añadan todos
+            sus partidos a tu calendario de retransmisiones.
           </AppText>
           <AppText variant="body" color={colors.text.light} style={{ marginTop: spacing.md }}>
             ¡Ahorra tiempo! Una vez configurado, no tendrás que añadir partidos manualmente.
@@ -154,8 +185,12 @@ export default function BarProfileScreen() {
               <Ionicons name="arrow-up-circle" size={22} color="#4ADE80" />
             </View>
             <View style={styles.benefitContent}>
-              <AppText variant="label" color={colors.text.primary}>Apareces primero</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Tu bar sale antes que la competencia en el mapa y búsquedas</AppText>
+              <AppText variant="label" color={colors.text.primary}>
+                Apareces primero
+              </AppText>
+              <AppText variant="caption" color={colors.text.secondary}>
+                Tu bar sale antes que la competencia en el mapa y búsquedas
+              </AppText>
             </View>
           </View>
 
@@ -164,8 +199,12 @@ export default function BarProfileScreen() {
               <Ionicons name="star" size={22} color={colors.status.boost} />
             </View>
             <View style={styles.benefitContent}>
-              <AppText variant="label" color={colors.text.primary}>Badge destacado</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Etiqueta visible que llama la atención de los usuarios</AppText>
+              <AppText variant="label" color={colors.text.primary}>
+                Badge destacado
+              </AppText>
+              <AppText variant="caption" color={colors.text.secondary}>
+                Etiqueta visible que llama la atención de los usuarios
+              </AppText>
             </View>
           </View>
 
@@ -174,17 +213,27 @@ export default function BarProfileScreen() {
               <Ionicons name="people" size={22} color="#60A5FA" />
             </View>
             <View style={styles.benefitContent}>
-              <AppText variant="label" color={colors.text.primary}>Más clientes los días de partido</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Capta aficionados que buscan bar en tiempo real</AppText>
+              <AppText variant="label" color={colors.text.primary}>
+                Más clientes los días de partido
+              </AppText>
+              <AppText variant="caption" color={colors.text.secondary}>
+                Capta aficionados que buscan bar en tiempo real
+              </AppText>
             </View>
           </View>
 
           <View style={styles.boostRoiCard}>
             <Ionicons name="trending-up" size={14} color="#4ADE80" />
             <View style={styles.boostRoiText}>
-              <AppText variant="caption" color={colors.text.secondary}>Cada cliente gasta ~13€ de media</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Desde 19,99€</AppText>
-              <AppText variant="caption" color={colors.text.secondary}>Sin suscripción</AppText>
+              <AppText variant="caption" color={colors.text.secondary}>
+                Cada cliente gasta ~13€ de media
+              </AppText>
+              <AppText variant="caption" color={colors.text.secondary}>
+                Desde 19,99€
+              </AppText>
+              <AppText variant="caption" color={colors.text.secondary}>
+                Sin suscripción
+              </AppText>
             </View>
           </View>
         </View>
@@ -204,10 +253,13 @@ export default function BarProfileScreen() {
       content: (
         <View>
           <AppText variant="body" color={colors.text.light}>
-            Consulta cuánta gente ve la ficha de tu bar, abre tu carta o hace clic en tu teléfono, dirección o web.
+            Consulta cuánta gente ve la ficha de tu bar, abre tu carta o hace clic en tu teléfono,
+            dirección o web.
           </AppText>
           <AppText variant="body" color={colors.text.light} style={{ marginTop: spacing.md }}>
-            También verás cuántos favoritos y reseñas acumulas, con gráficas de la evolución día a día — desde los últimos 30 días hasta todo el histórico desde que empezamos a registrar datos de tu bar.
+            También verás cuántos favoritos y reseñas acumulas, con gráficas de la evolución día a
+            día — desde los últimos 30 días hasta todo el histórico desde que empezamos a registrar
+            datos de tu bar.
           </AppText>
         </View>
       ),
@@ -299,7 +351,9 @@ export default function BarProfileScreen() {
               <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
             </TouchableOpacity>
             <View style={styles.headerContent}>
-              <AppText variant="h2" align="center">{bar?.name}</AppText>
+              <AppText variant="h2" align="center">
+                {bar?.name}
+              </AppText>
               {isOwner && verificationStatus ? (
                 <View
                   style={[
@@ -309,8 +363,7 @@ export default function BarProfileScreen() {
                       : verificationStatus === 'rejected'
                         ? styles.verificationPillRejected
                         : styles.verificationPillPending,
-                  ]}
-                >
+                  ]}>
                   <Ionicons
                     name={
                       verificationStatus === 'approved'
@@ -337,8 +390,7 @@ export default function BarProfileScreen() {
                           ? colors.status.error
                           : colors.status.boost
                     }
-                    style={styles.verificationPillTextBold}
-                  >
+                    style={styles.verificationPillTextBold}>
                     {verificationStatus === 'approved'
                       ? 'Verificado'
                       : verificationStatus === 'rejected'
@@ -350,8 +402,17 @@ export default function BarProfileScreen() {
 
               {isOwner && verificationStatus === 'rejected' && verificationNotes ? (
                 <View style={styles.verificationNotesBox}>
-                  <Ionicons name="information-circle-outline" size={14} color={colors.text.secondary} />
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.verificationNotesFlex}>{verificationNotes}</AppText>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={14}
+                    color={colors.text.secondary}
+                  />
+                  <AppText
+                    variant="caption"
+                    color={colors.text.secondary}
+                    style={styles.verificationNotesFlex}>
+                    {verificationNotes}
+                  </AppText>
                 </View>
               ) : null}
             </View>
@@ -380,7 +441,7 @@ export default function BarProfileScreen() {
                     setCurrentImageIndex(index);
                   }}
                 />
-                
+
                 {/* Page indicators */}
                 {bar.images.length > 1 && (
                   <View style={styles.pageIndicators}>
@@ -389,20 +450,22 @@ export default function BarProfileScreen() {
                         key={`indicator-${bar.id}-${index}-${imgUrl}`}
                         style={[
                           styles.pageIndicator,
-                          index === currentImageIndex && styles.pageIndicatorActive
+                          index === currentImageIndex && styles.pageIndicatorActive,
                         ]}
                       />
                     ))}
                   </View>
                 )}
-                
+
                 {!isOwner && (
-                  <TouchableOpacity 
-                    style={[styles.favoritesButton, barId && isFavorite(barId) && styles.favoritesButtonActive]}
-                    onPress={handleFavoriteToggle}
-                  >
+                  <TouchableOpacity
+                    style={[
+                      styles.favoritesButton,
+                      barId && isFavorite(barId) && styles.favoritesButtonActive,
+                    ]}
+                    onPress={handleFavoriteToggle}>
                     <Ionicons
-                      name={barId && isFavorite(barId) ? "heart" : "heart-outline"}
+                      name={barId && isFavorite(barId) ? 'heart' : 'heart-outline'}
                       size={20}
                       color="#FFFFFF"
                     />
@@ -412,14 +475,21 @@ export default function BarProfileScreen() {
             ) : (
               <View style={styles.defaultImageContainer}>
                 <Ionicons name="storefront" size={64} color={colors.text.secondary} />
-                <AppText variant="body" color={colors.text.secondary} style={styles.noImagesTextSpacing}>No hay imágenes disponibles</AppText>
+                <AppText
+                  variant="body"
+                  color={colors.text.secondary}
+                  style={styles.noImagesTextSpacing}>
+                  No hay imágenes disponibles
+                </AppText>
               </View>
             )}
 
-                {isOwner && (
+            {isOwner && (
               <TouchableOpacity style={styles.editButton} onPress={handleEditInfo}>
                 <Ionicons name="create-outline" size={16} color={colors.text.primary} />
-                <AppText variant="label" color={colors.text.primary}>Editar información</AppText>
+                <AppText variant="label" color={colors.text.primary}>
+                  Editar información
+                </AppText>
               </TouchableOpacity>
             )}
           </View>
@@ -427,12 +497,16 @@ export default function BarProfileScreen() {
 
       case 'nav': {
         const navItems = [
-          ...(isOwner ? [{
-            key: 'matches',
-            label: 'Gestión',
-            icon: '⚽',
-            color: colors.brand.link,
-          }] : []),
+          ...(isOwner
+            ? [
+                {
+                  key: 'matches',
+                  label: 'Gestión',
+                  icon: '⚽',
+                  color: colors.brand.link,
+                },
+              ]
+            : []),
           {
             key: 'upcoming-matches',
             label: 'Partidos',
@@ -445,12 +519,16 @@ export default function BarProfileScreen() {
             icon: '📝',
             color: colors.tags.category,
           },
-          ...(canShowMenuButton ? [{
-            key: 'menu',
-            label: 'Carta',
-            icon: '🍽️',
-            color: colors.tags.food,
-          }] : []),
+          ...(canShowMenuButton
+            ? [
+                {
+                  key: 'menu',
+                  label: 'Carta',
+                  icon: '🍽️',
+                  color: colors.tags.food,
+                },
+              ]
+            : []),
           {
             key: 'posts',
             label: 'Posts',
@@ -470,20 +548,18 @@ export default function BarProfileScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.navScrollContent}
-            style={styles.navSection}
-          >
-            {navItems.map(navItem => (
+            style={styles.navSection}>
+            {navItems.map((navItem) => (
               <TouchableOpacity
                 key={navItem.key}
                 style={[styles.navChip, { backgroundColor: navItem.color }]}
                 onPress={() => {
-                  const target = sections.find(s => s.key === navItem.key);
+                  const target = sections.find((s) => s.key === navItem.key);
                   if (target) {
                     flatListRef.current?.scrollToItem({ item: target, animated: true });
                   }
                 }}
-                activeOpacity={0.75}
-              >
+                activeOpacity={0.75}>
                 <AppText variant="label" color={colors.text.primary}>
                   {navItem.icon} {navItem.label}
                 </AppText>
@@ -496,14 +572,24 @@ export default function BarProfileScreen() {
       case 'info':
         return (
           <View style={styles.infoSection}>
-            <AppText variant="title" style={styles.sectionTitleSpacing}>📝 Información del Bar</AppText>
+            <AppText variant="title" style={styles.sectionTitleSpacing}>
+              📝 Información del Bar
+            </AppText>
 
             {bar?.description && (
               <View style={styles.infoItem}>
-                <Ionicons name="information-circle-outline" size={20} color={colors.text.secondary} />
+                <Ionicons
+                  name="information-circle-outline"
+                  size={20}
+                  color={colors.text.secondary}
+                />
                 <View style={styles.infoContent}>
-                  <AppText variant="label" color={colors.text.secondary}>Descripción</AppText>
-                  <AppText variant="body" color={colors.text.primary}>{bar.description}</AppText>
+                  <AppText variant="label" color={colors.text.secondary}>
+                    Descripción
+                  </AppText>
+                  <AppText variant="body" color={colors.text.primary}>
+                    {bar.description}
+                  </AppText>
                 </View>
               </View>
             )}
@@ -511,16 +597,19 @@ export default function BarProfileScreen() {
             <View style={styles.infoItem}>
               <Ionicons name="location-outline" size={20} color={colors.text.secondary} />
               <View style={styles.infoContent}>
-                <AppText variant="label" color={colors.text.secondary}>Dirección</AppText>
-                <AppText variant="body" color={colors.text.primary}>{bar?.address}, {bar?.city}</AppText>
+                <AppText variant="label" color={colors.text.secondary}>
+                  Dirección
+                </AppText>
+                <AppText variant="body" color={colors.text.primary}>
+                  {bar?.address}, {bar?.city}
+                </AppText>
               </View>
               {typeof bar?.latitude === 'number' && typeof bar?.longitude === 'number' && (
                 <TouchableOpacity
                   style={[styles.copyButton, styles.actionButtonSpacing]}
                   onPress={handleOpenInMaps}
                   accessibilityRole="button"
-                  accessibilityLabel="Abrir en Mapas"
-                >
+                  accessibilityLabel="Abrir en Mapas">
                   <Ionicons name="navigate-outline" size={18} color={colors.brand.link} />
                 </TouchableOpacity>
               )}
@@ -533,15 +622,18 @@ export default function BarProfileScreen() {
               <View style={styles.infoItem}>
                 <Ionicons name="call-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
-                  <AppText variant="label" color={colors.text.secondary}>Teléfono</AppText>
-                  <AppText variant="body" color={colors.text.primary}>{bar.phone}</AppText>
+                  <AppText variant="label" color={colors.text.secondary}>
+                    Teléfono
+                  </AppText>
+                  <AppText variant="body" color={colors.text.primary}>
+                    {bar.phone}
+                  </AppText>
                 </View>
                 <TouchableOpacity
                   style={[styles.copyButton, styles.actionButtonSpacing]}
                   onPress={handleCallPhone}
                   accessibilityRole="button"
-                  accessibilityLabel="Llamar"
-                >
+                  accessibilityLabel="Llamar">
                   <Ionicons name="call" size={18} color={colors.brand.link} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.copyButton} onPress={copyPhone}>
@@ -554,8 +646,12 @@ export default function BarProfileScreen() {
               <View style={styles.infoItem}>
                 <Ionicons name="globe-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
-                  <AppText variant="label" color={colors.text.secondary}>Sitio Web</AppText>
-                  <AppText variant="body" color={colors.text.primary}>{bar.website}</AppText>
+                  <AppText variant="label" color={colors.text.secondary}>
+                    Sitio Web
+                  </AppText>
+                  <AppText variant="body" color={colors.text.primary}>
+                    {bar.website}
+                  </AppText>
                 </View>
                 <TouchableOpacity style={styles.copyButton} onPress={copyWebsite}>
                   <Ionicons name="copy-outline" size={18} color={colors.brand.link} />
@@ -566,92 +662,113 @@ export default function BarProfileScreen() {
         );
 
       case 'tags':
-        return (
-          (bar?.category || (bar?.bar_food_types?.length ?? 0) > 0 || (bar?.bar_selected_tv_features?.length ?? 0) > 0 || (bar?.bar_selected_features?.length ?? 0) > 0 || bar?.is_betting_venue) ? (
-            <View style={styles.tagsSection}>
-              <FlatList
-                data={[
-                  ...(bar?.category ? [{ type: 'category', data: bar.category, id: 'category' }] : []),
-                  ...(bar?.is_betting_venue ? [{ type: 'betting', data: null, id: 'betting' }] : []),
-                  ...(bar?.bar_food_types?.map((item) => ({ type: 'food', data: item, id: `food-${item.food_type_id}` })) || []),
-                  ...(bar?.bar_selected_tv_features?.map((item) => ({ type: 'tv_feature', data: item, id: `tv-${item.tv_feature_id}` })) || []),
-                  ...(bar?.bar_selected_features?.map((item) => ({ type: 'feature', data: item, id: `feature-${item.feature_id}` })) || [])
-                ]}
-                renderItem={({ item }) => {
-                  let backgroundColor = '#1976D2';
-                  let icon = '📂';
-                  let text = '';
+        return bar?.category ||
+          (bar?.bar_food_types?.length ?? 0) > 0 ||
+          (bar?.bar_selected_tv_features?.length ?? 0) > 0 ||
+          (bar?.bar_selected_features?.length ?? 0) > 0 ||
+          bar?.is_betting_venue ? (
+          <View style={styles.tagsSection}>
+            <FlatList
+              data={[
+                ...(bar?.category
+                  ? [{ type: 'category', data: bar.category, id: 'category' }]
+                  : []),
+                ...(bar?.is_betting_venue ? [{ type: 'betting', data: null, id: 'betting' }] : []),
+                ...(bar?.bar_food_types?.map((item) => ({
+                  type: 'food',
+                  data: item,
+                  id: `food-${item.food_type_id}`,
+                })) || []),
+                ...(bar?.bar_selected_tv_features?.map((item) => ({
+                  type: 'tv_feature',
+                  data: item,
+                  id: `tv-${item.tv_feature_id}`,
+                })) || []),
+                ...(bar?.bar_selected_features?.map((item) => ({
+                  type: 'feature',
+                  data: item,
+                  id: `feature-${item.feature_id}`,
+                })) || []),
+              ]}
+              renderItem={({ item }) => {
+                let backgroundColor = '#1976D2';
+                let icon = '📂';
+                let text = '';
 
-                  switch (item.type) {
-                    case 'category':
-                      backgroundColor = colors.tags.category;
-                      icon = '📂';
-                      text = (item.data as { name: string }).name;
-                      break;
-                    case 'betting':
-                      backgroundColor = colors.tags.betting;
-                      icon = '🎰';
-                      text = 'Apuestas Deportivas';
-                      break;
-                    case 'food':
-                      backgroundColor = colors.tags.food;
-                      icon = '🍽️';
-                      text = (item.data as { food_type: { name: string } }).food_type.name;
-                      break;
-                    case 'tv_feature':
-                      backgroundColor = colors.tags.tv;
-                      icon = '📺';
-                      text = (item.data as { tv_feature: { name: string } }).tv_feature.name;
-                      break;
-                    case 'feature':
-                      backgroundColor = colors.tags.feature;
-                      icon = '✨';
-                      text = (item.data as { feature: { name: string } }).feature.name;
-                      break;
-                  }
+                switch (item.type) {
+                  case 'category':
+                    backgroundColor = colors.tags.category;
+                    icon = '📂';
+                    text = (item.data as { name: string }).name;
+                    break;
+                  case 'betting':
+                    backgroundColor = colors.tags.betting;
+                    icon = '🎰';
+                    text = 'Apuestas Deportivas';
+                    break;
+                  case 'food':
+                    backgroundColor = colors.tags.food;
+                    icon = '🍽️';
+                    text = (item.data as { food_type: { name: string } }).food_type.name;
+                    break;
+                  case 'tv_feature':
+                    backgroundColor = colors.tags.tv;
+                    icon = '📺';
+                    text = (item.data as { tv_feature: { name: string } }).tv_feature.name;
+                    break;
+                  case 'feature':
+                    backgroundColor = colors.tags.feature;
+                    icon = '✨';
+                    text = (item.data as { feature: { name: string } }).feature.name;
+                    break;
+                }
 
-                  return (
-                    <View style={[styles.tag, { backgroundColor }]}>
-                      <AppText variant="label" color={colors.text.primary}>{icon} {text}</AppText>
-                    </View>
-                  );
-                }}
-                keyExtractor={(item) => (item as any).id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.tagsScrollContainer}
-              />
-            </View>
-          ) : null
-        );
+                return (
+                  <View style={[styles.tag, { backgroundColor }]}>
+                    <AppText variant="label" color={colors.text.primary}>
+                      {icon} {text}
+                    </AppText>
+                  </View>
+                );
+              }}
+              keyExtractor={(item) => (item as any).id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tagsScrollContainer}
+            />
+          </View>
+        ) : null;
 
       case 'menu':
-        return (
-          canShowMenuButton ? (
-            <View style={styles.menuSection}>
-              <AppText variant="subtitle" style={styles.menuSectionTitleSpacing}>🍽️ La Carta</AppText>
-              <TouchableOpacity
-                style={styles.menuButton}
-                onPress={() => {
-                  trackBarEvent(barId, 'menu_view', isOwner);
-                  router.push(`/bar-menu/${barId}` as any);
-                }}
-              >
-                <AppText variant="label" color={colors.text.primary}>Ver Carta</AppText>
-              </TouchableOpacity>
-            </View>
-          ) : null
-        );
+        return canShowMenuButton ? (
+          <View style={styles.menuSection}>
+            <AppText variant="subtitle" style={styles.menuSectionTitleSpacing}>
+              🍽️ La Carta
+            </AppText>
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={() => {
+                trackBarEvent(barId, 'menu_view', isOwner);
+                router.push(`/bar-menu/${barId}` as any);
+              }}>
+              <AppText variant="label" color={colors.text.primary}>
+                Ver Carta
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        ) : null;
 
       case 'posts':
         return (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <AppText variant="title">📰 Posts</AppText>
-            {isOwner && (
+              {isOwner && (
                 <TouchableOpacity style={styles.createPostButton} onPress={handleCreatePost}>
                   <Ionicons name="add" size={16} color={colors.text.primary} />
-                  <AppText variant="label" color={colors.text.primary}>Crear Post</AppText>
+                  <AppText variant="label" color={colors.text.primary}>
+                    Crear Post
+                  </AppText>
                 </TouchableOpacity>
               )}
             </View>
@@ -668,9 +785,20 @@ export default function BarProfileScreen() {
             ) : (
               <View style={styles.noPostsContainer}>
                 <Ionicons name="document-text-outline" size={48} color={colors.text.secondary} />
-                <AppText variant="subtitle" color={colors.text.primary} style={styles.noPostsTextSpacing}>No hay posts disponibles</AppText>
-                <AppText variant="body" color={colors.text.secondary} align="center" style={styles.noPostsSubtextSpacing}>
-                  {isOwner ? 'Crea tu primer post para compartir novedades' : 'Este bar aún no ha publicado nada'}
+                <AppText
+                  variant="subtitle"
+                  color={colors.text.primary}
+                  style={styles.noPostsTextSpacing}>
+                  No hay posts disponibles
+                </AppText>
+                <AppText
+                  variant="body"
+                  color={colors.text.secondary}
+                  align="center"
+                  style={styles.noPostsSubtextSpacing}>
+                  {isOwner
+                    ? 'Crea tu primer post para compartir novedades'
+                    : 'Este bar aún no ha publicado nada'}
                 </AppText>
               </View>
             )}
@@ -681,143 +809,153 @@ export default function BarProfileScreen() {
 
       case 'reviews':
         return (
-              <View style={styles.section}>
-            <AppText variant="title" style={styles.sectionTitleSpacing}>⭐ Reseñas</AppText>
+          <View style={styles.section}>
+            <AppText variant="title" style={styles.sectionTitleSpacing}>
+              ⭐ Reseñas
+            </AppText>
             {/* Siempre mostrar BarReviewsSection - maneja el caso sin reseñas internamente */}
-              <BarReviewsSection key={`reviews-${reviewsRefreshKey}`} barId={barId} showHeader title="Reseñas" />
+            <BarReviewsSection
+              key={`reviews-${reviewsRefreshKey}`}
+              barId={barId}
+              showHeader
+              title="Reseñas"
+            />
           </View>
         );
 
       case 'matches':
-        return (
-          isOwner ? (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <AppText variant="title">⚽ Gestión de Partidos</AppText>
-              </View>
+        return isOwner ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <AppText variant="title">⚽ Gestión de Partidos</AppText>
+            </View>
 
-              <View style={styles.matchesContainer}>
-                {/* Añadir partido manualmente */}
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={styles.barActionButton}
-                    onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.barActionIcon, styles.barActionIconBlue]}>
-                      <Ionicons name="calendar-outline" size={18} color={colors.brand.primary} />
-                    </View>
-                    <View style={styles.barActionContent}>
-                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
-                        Añadir partido manualmente
-                      </AppText>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.infoButton}
-                    onPress={showManualMatchInfo}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Automatizar retransmisiones */}
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={styles.barActionButton}
-                    onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.barActionIcon, styles.barActionIconPurple]}>
-                      <Ionicons name="settings-outline" size={18} color={colors.brand.link} />
-                    </View>
-                    <View style={styles.barActionContent}>
-                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
-                        Automatizar retransmisiones
-                      </AppText>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.infoButton}
-                    onPress={showAutoMatchInfo}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Aumentar la visibilidad */}
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={styles.barActionButton}
-                    onPress={() => setPaywallVisible(true)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.barActionIcon, styles.barActionIconBoost]}>
-                      <Ionicons name="flash" size={18} color={colors.status.boost} />
-                    </View>
-                    <View style={styles.barActionContent}>
-                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
-                        Aumenta la visibilidad de tu bar
-                      </AppText>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.infoButton}
-                    onPress={showBoostInfo}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Boost Countdown - shown when boost is active */}
-                {isBoostActivating ? (
-                  <View style={styles.boostActivatingRow}>
-                    <ActivityIndicator size="small" color={colors.status.boost} />
-                    <AppText variant="caption" color={colors.text.secondary}>
-                      Activando tu boost…
+            <View style={styles.matchesContainer}>
+              {/* Añadir partido manualmente */}
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.barActionButton}
+                  onPress={() => router.push(`/manual-match-selection/${barId}` as any)}
+                  activeOpacity={0.8}>
+                  <View style={[styles.barActionIcon, styles.barActionIconBlue]}>
+                    <Ionicons name="calendar-outline" size={18} color={colors.brand.primary} />
+                  </View>
+                  <View style={styles.barActionContent}>
+                    <AppText
+                      variant="body"
+                      color={colors.text.primary}
+                      style={styles.barActionTitle}>
+                      Añadir partido manualmente
                     </AppText>
                   </View>
-                ) : (
-                  boost?.isActive && boost?.endAt && (
-                    <BoostCountdown endAt={boost.endAt} style={{ marginTop: spacing.md }} />
-                  )
-                )}
+                  <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.infoButton}
+                  onPress={showManualMatchInfo}
+                  activeOpacity={0.7}>
+                  <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
+                </TouchableOpacity>
+              </View>
 
-                {/* Ver estadísticas */}
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={styles.barActionButton}
-                    onPress={() => router.push(`/bar-stats/${barId}` as any)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.barActionIcon, styles.barActionIconGreen]}>
-                      <Ionicons name="bar-chart-outline" size={18} color={colors.status.success} />
-                    </View>
-                    <View style={styles.barActionContent}>
-                      <AppText variant="body" color={colors.text.primary} style={styles.barActionTitle}>
-                        Ver estadísticas
-                      </AppText>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.infoButton}
-                    onPress={showStatsInfo}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
-                  </TouchableOpacity>
+              {/* Automatizar retransmisiones */}
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.barActionButton}
+                  onPress={() => router.push(`/auto-broadcasts/${barId}` as any)}
+                  activeOpacity={0.8}>
+                  <View style={[styles.barActionIcon, styles.barActionIconPurple]}>
+                    <Ionicons name="settings-outline" size={18} color={colors.brand.link} />
+                  </View>
+                  <View style={styles.barActionContent}>
+                    <AppText
+                      variant="body"
+                      color={colors.text.primary}
+                      style={styles.barActionTitle}>
+                      Automatizar retransmisiones
+                    </AppText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.infoButton}
+                  onPress={showAutoMatchInfo}
+                  activeOpacity={0.7}>
+                  <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Aumentar la visibilidad */}
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.barActionButton}
+                  onPress={() => setPaywallVisible(true)}
+                  activeOpacity={0.8}>
+                  <View style={[styles.barActionIcon, styles.barActionIconBoost]}>
+                    <Ionicons name="flash" size={18} color={colors.status.boost} />
+                  </View>
+                  <View style={styles.barActionContent}>
+                    <AppText
+                      variant="body"
+                      color={colors.text.primary}
+                      style={styles.barActionTitle}>
+                      Aumenta la visibilidad de tu bar
+                    </AppText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.infoButton}
+                  onPress={showBoostInfo}
+                  activeOpacity={0.7}>
+                  <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Boost Countdown - shown when boost is active */}
+              {isBoostActivating ? (
+                <View style={styles.boostActivatingRow}>
+                  <ActivityIndicator size="small" color={colors.status.boost} />
+                  <AppText variant="caption" color={colors.text.secondary}>
+                    Activando tu boost…
+                  </AppText>
                 </View>
+              ) : (
+                boost?.isActive &&
+                boost?.endAt && (
+                  <BoostCountdown endAt={boost.endAt} style={{ marginTop: spacing.md }} />
+                )
+              )}
+
+              {/* Ver estadísticas */}
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.barActionButton}
+                  onPress={() => router.push(`/bar-stats/${barId}` as any)}
+                  activeOpacity={0.8}>
+                  <View style={[styles.barActionIcon, styles.barActionIconGreen]}>
+                    <Ionicons name="bar-chart-outline" size={18} color={colors.status.success} />
+                  </View>
+                  <View style={styles.barActionContent}>
+                    <AppText
+                      variant="body"
+                      color={colors.text.primary}
+                      style={styles.barActionTitle}>
+                      Ver estadísticas
+                    </AppText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.infoButton}
+                  onPress={showStatsInfo}
+                  activeOpacity={0.7}>
+                  <Ionicons name="information-circle-outline" size={20} color={colors.text.muted} />
+                </TouchableOpacity>
               </View>
             </View>
-          ) : null
-        );
+          </View>
+        ) : null;
 
       case 'upcoming-matches':
         return (
@@ -825,7 +963,7 @@ export default function BarProfileScreen() {
             <View style={styles.sectionHeader}>
               <AppText variant="title">📺 Próximos partidos</AppText>
             </View>
-            
+
             {upcomingMatches.length > 0 ? (
               <View style={styles.upcomingMatchesContainer}>
                 {upcomingMatches.map((match) => (
@@ -834,51 +972,72 @@ export default function BarProfileScreen() {
                       <View style={styles.upcomingTeamContainer}>
                         <Image
                           source={{
-                            uri: match.home_team_logo_url || `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${match.home_team_id}.png`
+                            uri:
+                              match.home_team_logo_url ||
+                              `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${match.home_team_id}.png`,
                           }}
                           style={styles.upcomingTeamLogo}
                           defaultSource={require('~/assets/icon.png')}
                         />
-                        <AppText variant="body" color={colors.text.primary} align="center" numberOfLines={2}>
+                        <AppText
+                          variant="body"
+                          color={colors.text.primary}
+                          align="center"
+                          numberOfLines={2}>
                           {match.home_team_name}
                         </AppText>
                       </View>
 
                       <View style={styles.upcomingVsContainer}>
-                        <AppText variant="body" color={colors.text.secondary}>VS</AppText>
+                        <AppText variant="body" color={colors.text.secondary}>
+                          VS
+                        </AppText>
                       </View>
 
                       <View style={styles.upcomingTeamContainer}>
                         <Image
                           source={{
-                            uri: match.away_team_logo_url || `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${match.away_team_id}.png`
+                            uri:
+                              match.away_team_logo_url ||
+                              `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logo_teams/${match.away_team_id}.png`,
                           }}
                           style={styles.upcomingTeamLogo}
                           defaultSource={require('~/assets/icon.png')}
                         />
-                        <AppText variant="body" color={colors.text.primary} align="center" numberOfLines={2}>
+                        <AppText
+                          variant="body"
+                          color={colors.text.primary}
+                          align="center"
+                          numberOfLines={2}>
                           {match.away_team_name}
                         </AppText>
                       </View>
                     </View>
 
-
-
-                    <AppText variant="body" color={colors.brand.accent} align="center" style={styles.upcomingMatchTimeSpacing}>
+                    <AppText
+                      variant="body"
+                      color={colors.brand.accent}
+                      align="center"
+                      style={styles.upcomingMatchTimeSpacing}>
                       {formatMatchDateTime(match.date, match.time)}
                     </AppText>
 
                     <AppText variant="caption" color={colors.text.secondary} align="center">
                       {match.competition_name}
                     </AppText>
-                    
+
                     {isOwner && (
                       <TouchableOpacity
                         style={styles.deleteMatchButton}
-                        onPress={() => handleDeleteMatch(match.id)}
-                      >
-                        <Ionicons name="trash-outline" size={16} color={colors.status.destructive} />
-                        <AppText variant="caption" color={colors.status.destructive}>Eliminar</AppText>
+                        onPress={() => handleDeleteMatch(match.id)}>
+                        <Ionicons
+                          name="trash-outline"
+                          size={16}
+                          color={colors.status.destructive}
+                        />
+                        <AppText variant="caption" color={colors.status.destructive}>
+                          Eliminar
+                        </AppText>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -886,7 +1045,11 @@ export default function BarProfileScreen() {
               </View>
             ) : (
               <View style={styles.emptyUpcomingMatches}>
-                <AppText variant="body" color={colors.text.muted} align="center" style={styles.emptyUpcomingMatchesTextItalic}>
+                <AppText
+                  variant="body"
+                  color={colors.text.muted}
+                  align="center"
+                  style={styles.emptyUpcomingMatchesTextItalic}>
                   Este bar no tiene retransmisiones programadas actualmente
                 </AppText>
               </View>
@@ -895,32 +1058,37 @@ export default function BarProfileScreen() {
         );
 
       case 'danger':
-        return (
-          isOwner ? (
-            <View style={styles.dangerSection}>
-              <TouchableOpacity style={styles.deleteBarButton} onPress={handleDeleteBar}>
-                <Ionicons name="trash-outline" size={20} color={colors.status.destructive} />
-                <AppText variant="body" color={colors.status.destructive} style={styles.deleteBarButtonTextMedium}>Eliminar Bar</AppText>
-              </TouchableOpacity>
-            </View>
-          ) : null
-        );
+        return isOwner ? (
+          <View style={styles.dangerSection}>
+            <TouchableOpacity style={styles.deleteBarButton} onPress={handleDeleteBar}>
+              <Ionicons name="trash-outline" size={20} color={colors.status.destructive} />
+              <AppText
+                variant="body"
+                color={colors.status.destructive}
+                style={styles.deleteBarButtonTextMedium}>
+                Eliminar Bar
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        ) : null;
 
       case 'unclaimed-actions':
-        return (
-          !isOwner && bar?.owner_id === null ? (
-            <View style={styles.unclaimedActionsRow}>
-              <TouchableOpacity style={styles.reportButton} onPress={handleReportBar}>
-                <Ionicons name="flag-outline" size={14} color={colors.text.secondary} />
-                <AppText variant="label" color={colors.text.secondary}>Reportar información</AppText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.claimButton} onPress={handleClaimBar}>
-                <Ionicons name="storefront-outline" size={14} color={colors.brand.link} />
-                <AppText variant="label" color={colors.brand.link}>¿Eres el propietario?</AppText>
-              </TouchableOpacity>
-            </View>
-          ) : null
-        );
+        return !isOwner && bar?.owner_id === null ? (
+          <View style={styles.unclaimedActionsRow}>
+            <TouchableOpacity style={styles.reportButton} onPress={handleReportBar}>
+              <Ionicons name="flag-outline" size={14} color={colors.text.secondary} />
+              <AppText variant="label" color={colors.text.secondary}>
+                Reportar información
+              </AppText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.claimButton} onPress={handleClaimBar}>
+              <Ionicons name="storefront-outline" size={14} color={colors.brand.link} />
+              <AppText variant="label" color={colors.brand.link}>
+                ¿Eres el propietario?
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        ) : null;
 
       default:
         return null;
@@ -929,10 +1097,7 @@ export default function BarProfileScreen() {
 
   const fetchBarPosts = useCallback(async (barId: string, authUser: any, isOwnerCheck: boolean) => {
     try {
-      let query = supabase
-        .from('bar_posts')
-        .select('*')
-        .eq('bar_id', barId);
+      let query = supabase.from('bar_posts').select('*').eq('bar_id', barId);
 
       // If not the owner, only show active posts within valid date range
       if (!authUser || !isOwnerCheck) {
@@ -944,8 +1109,7 @@ export default function BarProfileScreen() {
       }
 
       // Order by pinned first, then by creation date (newest first)
-      query = query.order('pinned', { ascending: false })
-                  .order('created_at', { ascending: false });
+      query = query.order('pinned', { ascending: false }).order('created_at', { ascending: false });
 
       const { data: postsData, error: postsError } = await query;
 
@@ -963,7 +1127,8 @@ export default function BarProfileScreen() {
     try {
       const { data: matchesData, error: matchesError } = await supabase
         .from('events')
-        .select(`
+        .select(
+          `
           start_time,
           matches!inner(
             id,
@@ -976,7 +1141,8 @@ export default function BarProfileScreen() {
             away_team:teams!matches_away_team_id_fkey(id, name, logo_url),
             competition:competitions!inner(id, name)
           )
-        `)
+        `
+        )
         .eq('bar_id', barId)
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true })
@@ -1018,13 +1184,16 @@ export default function BarProfileScreen() {
     try {
       // Round 1: auth + bar data con joins anidados en paralelo
       const [
-        { data: { user: authUser } },
+        {
+          data: { user: authUser },
+        },
         { data: barData, error: barError },
       ] = await Promise.all([
         supabase.auth.getUser(),
         supabase
           .from('bars')
-          .select(`
+          .select(
+            `
             id,
             name,
             description,
@@ -1043,7 +1212,8 @@ export default function BarProfileScreen() {
             is_betting_venue,
             verification_status,
             verification_notes
-          `)
+          `
+          )
           .eq('id', barId)
           .single(),
       ]);
@@ -1068,9 +1238,7 @@ export default function BarProfileScreen() {
         const categoryRaw = Array.isArray((barData as any).bar_categories)
           ? (barData as any).bar_categories[0]
           : (barData as any).bar_categories;
-        const category = categoryRaw
-          ? { id: categoryRaw.id, name: categoryRaw.name }
-          : undefined;
+        const category = categoryRaw ? { id: categoryRaw.id, name: categoryRaw.name } : undefined;
 
         setBar({
           id: barData.id,
@@ -1083,31 +1251,44 @@ export default function BarProfileScreen() {
           latitude: (barData as any).latitude,
           longitude: (barData as any).longitude,
           owner_id: (barData as any).owner_id ?? null,
-          images: (barData as any).bar_images
-            ?.sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))
-            .map((img: any) => img.image_url) || [],
+          images:
+            (barData as any).bar_images
+              ?.sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))
+              .map((img: any) => img.image_url) || [],
           category,
           bar_food_types: ((barData as any).bar_food_types || []).map((item: any) => ({
             food_type_id: item.food_type_id,
             food_type: { name: item.food_types?.name || 'Otro' },
           })),
-          bar_selected_tv_features: ((barData as any).bar_selected_tv_features || []).map((item: any) => ({
-            tv_feature_id: item.tv_feature_id,
-            tv_feature: { name: item.bar_tv_features?.name || 'Otro' },
-          })),
-          bar_selected_features: ((barData as any).bar_selected_features || []).map((item: any) => ({
-            feature_id: item.feature_id,
-            feature: { name: item.bar_features?.name || 'Otro' },
-          })),
+          bar_selected_tv_features: ((barData as any).bar_selected_tv_features || []).map(
+            (item: any) => ({
+              tv_feature_id: item.tv_feature_id,
+              tv_feature: { name: item.bar_tv_features?.name || 'Otro' },
+            })
+          ),
+          bar_selected_features: ((barData as any).bar_selected_features || []).map(
+            (item: any) => ({
+              feature_id: item.feature_id,
+              feature: { name: item.bar_features?.name || 'Otro' },
+            })
+          ),
           is_betting_venue: (barData as any).is_betting_venue ?? false,
         });
 
         // Round 2: ownership primer, després posts + matches
         const ownerResult = authUser
-          ? await supabase.from('users').select('bar_id, is_super_user').eq('id', authUser.id).single()
+          ? await supabase
+              .from('users')
+              .select('bar_id, is_super_user')
+              .eq('id', authUser.id)
+              .single()
           : { data: null, error: null };
 
-        const ownerCheck = !!(authUser && ownerResult.data && (ownerResult.data as any).bar_id === barData.id);
+        const ownerCheck = !!(
+          authUser &&
+          ownerResult.data &&
+          (ownerResult.data as any).bar_id === barData.id
+        );
         setIsOwner(ownerCheck);
 
         await Promise.all([
@@ -1115,7 +1296,6 @@ export default function BarProfileScreen() {
           fetchUpcomingMatches(barData.id),
         ]);
       }
-
     } catch (error) {
       console.error('Error in fetchBarProfile:', error);
       setLoadError(true);
@@ -1189,10 +1369,7 @@ export default function BarProfileScreen() {
 
               // Note: In a real implementation, you might want to soft delete the bar
               // or handle related data (images, posts, etc.) before deletion
-              const { error: barError } = await supabase
-                .from('bars')
-                .delete()
-                .eq('id', barId);
+              const { error: barError } = await supabase.from('bars').delete().eq('id', barId);
 
               if (barError) {
                 console.error('Error deleting bar:', barError);
@@ -1200,16 +1377,12 @@ export default function BarProfileScreen() {
                 return;
               }
 
-              Alert.alert(
-                'Bar Eliminado',
-                'El bar ha sido eliminado correctamente.',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => router.replace('/(protected)/profile' as any),
-                  },
-                ]
-              );
+              Alert.alert('Bar Eliminado', 'El bar ha sido eliminado correctamente.', [
+                {
+                  text: 'OK',
+                  onPress: () => router.replace('/(protected)/profile' as any),
+                },
+              ]);
             } catch (error) {
               console.error('Error in handleDeleteBar:', error);
               Alert.alert('Error', 'Ocurrió un error al eliminar el bar');
@@ -1285,7 +1458,9 @@ export default function BarProfileScreen() {
       {item.pinned && (
         <View style={styles.pinnedBadge}>
           <Ionicons name="pin" size={12} color={colors.text.primary} />
-          <AppText variant="caption" color={colors.text.primary} style={styles.pinnedTextBold}>Destacado</AppText>
+          <AppText variant="caption" color={colors.text.primary} style={styles.pinnedTextBold}>
+            Destacado
+          </AppText>
         </View>
       )}
 
@@ -1296,19 +1471,26 @@ export default function BarProfileScreen() {
             size={16}
             color={getPostTypeColor(item.post_type)}
           />
-          <AppText variant="caption" color={getPostTypeColor(item.post_type)} style={styles.postTypeTextUppercase}>
+          <AppText
+            variant="caption"
+            color={getPostTypeColor(item.post_type)}
+            style={styles.postTypeTextUppercase}>
             {getPostTypeLabel(item.post_type)}
           </AppText>
         </View>
-        <AppText variant="caption" color={colors.text.secondary}>{formatDate(item.created_at)}</AppText>
+        <AppText variant="caption" color={colors.text.secondary}>
+          {formatDate(item.created_at)}
+        </AppText>
       </View>
 
-      <AppText variant="subtitle" color={colors.text.primary} style={styles.postTitleSpacing}>{item.title}</AppText>
-      <AppText variant="body" color={colors.text.secondary} style={styles.postDescriptionSpacing}>{item.description}</AppText>
+      <AppText variant="subtitle" color={colors.text.primary} style={styles.postTitleSpacing}>
+        {item.title}
+      </AppText>
+      <AppText variant="body" color={colors.text.secondary} style={styles.postDescriptionSpacing}>
+        {item.description}
+      </AppText>
 
-      {item.image_url && (
-        <Image source={{ uri: item.image_url }} style={styles.postImage} />
-      )}
+      {item.image_url && <Image source={{ uri: item.image_url }} style={styles.postImage} />}
 
       {(item.start_date || item.end_date) && (
         <View style={styles.postDates}>
@@ -1317,9 +1499,8 @@ export default function BarProfileScreen() {
             {item.start_date && item.end_date
               ? `${formatDate(item.start_date)} - ${formatDate(item.end_date)}`
               : item.start_date
-              ? `Desde ${formatDate(item.start_date)}`
-              : `Hasta ${formatDate(item.end_date!)}`
-            }
+                ? `Desde ${formatDate(item.start_date)}`
+                : `Hasta ${formatDate(item.end_date!)}`}
           </AppText>
         </View>
       )}
@@ -1328,39 +1509,42 @@ export default function BarProfileScreen() {
         <View style={styles.postActions}>
           <TouchableOpacity
             style={styles.postActionButton}
-            onPress={() => router.push(`/edit-post/${item.id}` as any)}
-          >
+            onPress={() => router.push(`/edit-post/${item.id}` as any)}>
             <Ionicons name="create-outline" size={16} color={colors.brand.link} />
-            <AppText variant="caption" color={colors.brand.link} style={styles.postActionTextMedium}>Editar</AppText>
+            <AppText
+              variant="caption"
+              color={colors.brand.link}
+              style={styles.postActionTextMedium}>
+              Editar
+            </AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.postActionButton, styles.deletePostButton]}
-            onPress={() => handleDeletePost(item.id)}
-          >
+            onPress={() => handleDeletePost(item.id)}>
             <Ionicons name="trash-outline" size={16} color={colors.status.destructive} />
-            <AppText variant="caption" color={colors.status.destructive} style={styles.postActionTextMedium}>Eliminar</AppText>
+            <AppText
+              variant="caption"
+              color={colors.status.destructive}
+              style={styles.postActionTextMedium}>
+              Eliminar
+            </AppText>
           </TouchableOpacity>
         </View>
       )}
     </View>
   );
 
-  const handleDeletePost = useCallback(async (postId: string) => {
-    Alert.alert(
-      'Eliminar Post',
-      '¿Estás seguro de que quieres eliminar este post?',
-      [
+  const handleDeletePost = useCallback(
+    async (postId: string) => {
+      Alert.alert('Eliminar Post', '¿Estás seguro de que quieres eliminar este post?', [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Eliminar',
           style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase
-                .from('bar_posts')
-                .delete()
-                .eq('id', postId);
+              const { error } = await supabase.from('bar_posts').delete().eq('id', postId);
 
               if (error) {
                 console.error('Error deleting post:', error);
@@ -1378,9 +1562,10 @@ export default function BarProfileScreen() {
             }
           },
         },
-      ]
-    );
-  }, [bar, user, fetchBarPosts]);
+      ]);
+    },
+    [bar, user, fetchBarPosts]
+  );
 
   // Load bar profile on initial mount and when screen comes back into focus
   useFocusEffect(
@@ -1457,7 +1642,7 @@ export default function BarProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <BarProfileSkeleton />
       </SafeAreaView>
     );
@@ -1465,14 +1650,13 @@ export default function BarProfileScreen() {
 
   if (!bar) {
     return (
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Stack.Screen options={{ headerShown: false }} />
         <TouchableOpacity
           style={styles.errorBackButton}
           onPress={handleBack}
           accessibilityRole="button"
-          accessibilityLabel="Volver"
-        >
+          accessibilityLabel="Volver">
           <Ionicons name="chevron-back" size={28} color={colors.text.primary} />
         </TouchableOpacity>
         {loadError ? (
@@ -1497,9 +1681,9 @@ export default function BarProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       <FlatList
         ref={flatListRef}
         data={sections}
@@ -1515,44 +1699,44 @@ export default function BarProfileScreen() {
         visible={infoModalVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setInfoModalVisible(false)}
-      >
-        <TouchableOpacity 
+        onRequestClose={() => setInfoModalVisible(false)}>
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setInfoModalVisible(false)}
-        >
-          <TouchableOpacity 
+          onPress={() => setInfoModalVisible(false)}>
+          <TouchableOpacity
             style={styles.modalContent}
             activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <ScrollView 
+            onPress={(e) => e.stopPropagation()}>
+            <ScrollView
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.modalScrollContent}
-            >
+              contentContainerStyle={styles.modalScrollContent}>
               <View style={styles.modalHeader}>
-                <AppText variant="title" color={colors.text.primary} style={styles.modalTitleFlex}>{infoModalContent.title}</AppText>
+                <AppText variant="title" color={colors.text.primary} style={styles.modalTitleFlex}>
+                  {infoModalContent.title}
+                </AppText>
                 <TouchableOpacity
                   onPress={() => setInfoModalVisible(false)}
-                  style={styles.modalCloseButton}
-                >
+                  style={styles.modalCloseButton}>
                   <Ionicons name="close" size={24} color={colors.text.secondary} />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.modalBody}>
-                {infoModalContent.content}
-              </View>
+              <View style={styles.modalBody}>{infoModalContent.content}</View>
 
               <TouchableOpacity
-                style={[styles.modalOkButton, infoModalContent.onAction && styles.modalOkButtonAccent]}
+                style={[
+                  styles.modalOkButton,
+                  infoModalContent.onAction && styles.modalOkButtonAccent,
+                ]}
                 onPress={() => {
                   setInfoModalVisible(false);
                   infoModalContent.onAction?.();
-                }}
-              >
-                <AppText variant="body" color={colors.text.primary} style={styles.modalOkButtonTextBold}>
+                }}>
+                <AppText
+                  variant="body"
+                  color={colors.text.primary}
+                  style={styles.modalOkButtonTextBold}>
                   {infoModalContent.actionLabel ?? 'Entendido'}
                 </AppText>
               </TouchableOpacity>
@@ -2526,4 +2710,4 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-}); 
+});

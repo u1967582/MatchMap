@@ -12,14 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ToastRoot from 'react-native-toast-message';
 import { supabase } from '~/utils/supabase';
 import { getAuthErrorMessage, getOAuthRedirectUrl, MIN_PASSWORD_LENGTH } from '~/utils/auth';
-import {
-  AppText,
-  AppInput,
-  AppButton,
-  toast,
-  colors,
-  spacing,
-} from '~/components/ds';
+import { AppText, AppInput, AppButton, toast, colors, spacing } from '~/components/ds';
 import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 
 interface RegisterModalProps {
@@ -28,11 +21,7 @@ interface RegisterModalProps {
   onRegisterSuccess: () => void;
 }
 
-export default function RegisterModal({
-  visible,
-  onClose,
-  onRegisterSuccess,
-}: RegisterModalProps) {
+export default function RegisterModal({ visible, onClose, onRegisterSuccess }: RegisterModalProps) {
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -165,12 +154,10 @@ export default function RegisterModal({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
+      onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+        style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
@@ -179,8 +166,7 @@ export default function RegisterModal({
               style={styles.closeButton}
               onPress={handleClose}
               disabled={loading}
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               <Ionicons name="close" size={28} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
@@ -235,9 +221,7 @@ export default function RegisterModal({
               label="Confirmar contraseña"
               placeholder="••••••••"
               value={formData.confirmPassword}
-              onChangeText={(confirmPassword) =>
-                setFormData({ ...formData, confirmPassword })
-              }
+              onChangeText={(confirmPassword) => setFormData({ ...formData, confirmPassword })}
               secureTextEntry
               autoCapitalize="none"
               editable={!loading}
@@ -289,4 +273,3 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
 });
-

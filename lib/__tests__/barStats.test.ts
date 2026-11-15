@@ -67,11 +67,23 @@ describe('METRIC_ORDER / METRIC_CONFIG', () => {
 
 describe('sumContactClicks', () => {
   it('suma los 3 tipos de clic de contacto', () => {
-    expect(sumContactClicks({ contact_clicks_phone: 3, contact_clicks_address: 1, contact_clicks_website: 2 })).toBe(6);
+    expect(
+      sumContactClicks({
+        contact_clicks_phone: 3,
+        contact_clicks_address: 1,
+        contact_clicks_website: 2,
+      })
+    ).toBe(6);
   });
 
   it('devuelve 0 cuando los 3 son 0', () => {
-    expect(sumContactClicks({ contact_clicks_phone: 0, contact_clicks_address: 0, contact_clicks_website: 0 })).toBe(0);
+    expect(
+      sumContactClicks({
+        contact_clicks_phone: 0,
+        contact_clicks_address: 0,
+        contact_clicks_website: 0,
+      })
+    ).toBe(0);
   });
 });
 
@@ -134,7 +146,9 @@ describe('getPeriodLabel', () => {
   });
 
   it('para "all" muestra la fecha real de inicio cuando está disponible', () => {
-    expect(getPeriodLabel('all', '2025-08-06')).toBe('Desde el 6 ago 2025 · no incluye tus propias visitas');
+    expect(getPeriodLabel('all', '2025-08-06')).toBe(
+      'Desde el 6 ago 2025 · no incluye tus propias visitas'
+    );
   });
 
   it('para "all" cae en un texto genérico si aún no se resolvió la fecha', () => {

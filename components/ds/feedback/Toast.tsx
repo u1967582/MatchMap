@@ -34,7 +34,6 @@ export const toast = {
    * @param fallbackMsg Mensaje por defecto si no se puede parsear el error
    */
   supabaseError(error: any, fallbackMsg: string) {
-
     let message = fallbackMsg;
     let subtitle: string | undefined;
 

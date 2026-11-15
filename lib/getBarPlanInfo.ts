@@ -16,7 +16,7 @@ export async function getBarPlanInfo(barId: string) {
   if (error || !data || data.length === 0) {
     return {
       plan_type: 'free' as PlanType,
-      name: 'Gratuito'
+      name: 'Gratuito',
     };
   }
 
@@ -31,12 +31,14 @@ export async function getBarPlanInfo(barId: string) {
   const planType = (data[0].plan_type as string) || 'free';
   return {
     plan_type: planType,
-    name: planLabels[planType as PlanType] || 'Desconocido'
+    name: planLabels[planType as PlanType] || 'Desconocido',
   };
 }
 
 /** Devuelve el tier efectivo (free/pro/elite) y sus capacidades para un bar dado */
-export async function getBarTierAndCapabilities(barId: string): Promise<{ tier: Tier; capabilities: Capabilities }> {
+export async function getBarTierAndCapabilities(
+  barId: string
+): Promise<{ tier: Tier; capabilities: Capabilities }> {
   // Always return PRO capabilities
   const tier: Tier = 'pro';
   const capabilities = CAP_BY_TIER.pro;

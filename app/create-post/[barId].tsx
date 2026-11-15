@@ -43,7 +43,7 @@ const POST_TYPES = [
 export default function CreatePostScreen() {
   const router = useRouter();
   const { barId } = useLocalSearchParams<{ barId: string }>();
-  
+
   const [formData, setFormData] = useState<PostFormData>({
     title: '',
     description: '',
@@ -53,7 +53,7 @@ export default function CreatePostScreen() {
     is_active: true,
     pinned: false,
   });
-  
+
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -86,15 +86,11 @@ export default function CreatePostScreen() {
       return;
     }
 
-    Alert.alert(
-      'Seleccionar imagen',
-      'Elige una opción',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Galería', onPress: () => pickImageFromGallery() },
-        { text: 'Cámara', onPress: () => pickImageFromCamera() },
-      ]
-    );
+    Alert.alert('Seleccionar imagen', 'Elige una opción', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Galería', onPress: () => pickImageFromGallery() },
+      { text: 'Cámara', onPress: () => pickImageFromCamera() },
+    ]);
   }, []);
 
   const pickImageFromGallery = useCallback(async () => {
@@ -150,77 +146,80 @@ export default function CreatePostScreen() {
     }
   }, []);
 
-  const uploadPostImage = useCallback(async (uri: string, postId: string): Promise<string | null> => {
-    try {
-      setUploadingImage(true);
-      console.log('📸 Uploading post image for:', postId);
-
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      if (!fileInfo.exists || fileInfo.size === 0) {
-        throw new Error('Invalid file');
-      }
-
-      const timestamp = Date.now();
-      const fileName = barPostImagePath(barId as string, postId, timestamp);
-
-      // Use the same robust upload method as profile images
+  const uploadPostImage = useCallback(
+    async (uri: string, postId: string): Promise<string | null> => {
       try {
-        const base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
+        setUploadingImage(true);
+        console.log('📸 Uploading post image for:', postId);
 
-        if (!base64) throw new Error('Base64 conversion failed');
-
-        const binaryString = atob(base64);
-        const arrayBuffer = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          arrayBuffer[i] = binaryString.charCodeAt(i);
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (!fileInfo.exists || fileInfo.size === 0) {
+          throw new Error('Invalid file');
         }
 
-        const { data, error } = await supabase.storage
-          .from(STORAGE_BUCKETS.barImages)
-          .upload(fileName, arrayBuffer, {
-            contentType: 'image/jpeg',
-            upsert: true,
+        const timestamp = Date.now();
+        const fileName = barPostImagePath(barId as string, postId, timestamp);
+
+        // Use the same robust upload method as profile images
+        try {
+          const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
           });
 
-        if (error) throw error;
+          if (!base64) throw new Error('Base64 conversion failed');
 
-        const { data: urlData } = supabase.storage
-          .from(STORAGE_BUCKETS.barImages)
-          .getPublicUrl(fileName);
+          const binaryString = atob(base64);
+          const arrayBuffer = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            arrayBuffer[i] = binaryString.charCodeAt(i);
+          }
 
-        return urlData?.publicUrl || null;
-      } catch (base64Error) {
-        // Fallback to fetch method
-        const response = await fetch(uri);
-        if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-        
-        const blob = await response.blob();
-        if (blob.size === 0) throw new Error('Empty blob');
+          const { data, error } = await supabase.storage
+            .from(STORAGE_BUCKETS.barImages)
+            .upload(fileName, arrayBuffer, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
 
-        const { data, error } = await supabase.storage
-          .from(STORAGE_BUCKETS.barImages)
-          .upload(fileName, blob, {
-            contentType: blob.type || 'image/jpeg',
-            upsert: true,
-          });
+          if (error) throw error;
 
-        if (error) throw error;
+          const { data: urlData } = supabase.storage
+            .from(STORAGE_BUCKETS.barImages)
+            .getPublicUrl(fileName);
 
-        const { data: urlData } = supabase.storage
-          .from(STORAGE_BUCKETS.barImages)
-          .getPublicUrl(fileName);
+          return urlData?.publicUrl || null;
+        } catch (base64Error) {
+          // Fallback to fetch method
+          const response = await fetch(uri);
+          if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
 
-        return urlData?.publicUrl || null;
+          const blob = await response.blob();
+          if (blob.size === 0) throw new Error('Empty blob');
+
+          const { data, error } = await supabase.storage
+            .from(STORAGE_BUCKETS.barImages)
+            .upload(fileName, blob, {
+              contentType: blob.type || 'image/jpeg',
+              upsert: true,
+            });
+
+          if (error) throw error;
+
+          const { data: urlData } = supabase.storage
+            .from(STORAGE_BUCKETS.barImages)
+            .getPublicUrl(fileName);
+
+          return urlData?.publicUrl || null;
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        throw error;
+      } finally {
+        setUploadingImage(false);
       }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw error;
-    } finally {
-      setUploadingImage(false);
-    }
-  }, [barId]);
+    },
+    [barId]
+  );
 
   // Load bar capabilities
   useEffect(() => {
@@ -253,14 +252,18 @@ export default function CreatePostScreen() {
 
     try {
       // Enforce posts_limit per bar plan
-      const maxPosts = capabilities.posts_limit === 'unlimited' ? Infinity : capabilities.posts_limit;
+      const maxPosts =
+        capabilities.posts_limit === 'unlimited' ? Infinity : capabilities.posts_limit;
       if (maxPosts !== Infinity) {
         const { count } = await supabase
           .from('bar_posts')
           .select('id', { count: 'exact', head: true })
           .eq('bar_id', barId);
         if (typeof count === 'number' && count >= maxPosts) {
-          Alert.alert('Límite de publicaciones', `Tu plan ${planTier} permite máximo ${maxPosts} publicaciones.`);
+          Alert.alert(
+            'Límite de publicaciones',
+            `Tu plan ${planTier} permite máximo ${maxPosts} publicaciones.`
+          );
           setLoading(false);
           return;
         }
@@ -295,7 +298,7 @@ export default function CreatePostScreen() {
       if (selectedImage && newPost) {
         try {
           imageUrl = await uploadPostImage(selectedImage, newPost.id);
-          
+
           if (imageUrl) {
             // Update post with image URL
             const { error: updateError } = await supabase
@@ -317,11 +320,10 @@ export default function CreatePostScreen() {
 
       toast.success('Post creado correctamente');
       router.back();
-
     } catch (error) {
       console.error('Error in handleCreatePost:', error);
       toast.error('Error al crear el post', 'Inténtalo de nuevo');
-    } finally{
+    } finally {
       setLoading(false);
     }
   }, [formData, barId, selectedImage, uploadPostImage, router]);
@@ -353,7 +355,7 @@ export default function CreatePostScreen() {
 
   const handleDateChange = useCallback((field: 'start_date' | 'end_date', value: string) => {
     // Store the display format in state, will convert to ISO when saving
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -364,16 +366,12 @@ export default function CreatePostScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBack}
-            disabled={loading}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={handleBack} disabled={loading}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <ScreenTitle 
-            title="Crear Post" 
-            color="#FFFFFF" 
+          <ScreenTitle
+            title="Crear Post"
+            color="#FFFFFF"
             shadow={false}
             marginBottom={0}
             fontSize={20}
@@ -383,7 +381,6 @@ export default function CreatePostScreen() {
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.contentContainer}>
-            
             {/* Post Type Selection */}
             <View style={styles.fieldContainer}>
               <AppText style={styles.fieldLabel}>Tipo de Post</AppText>
@@ -395,21 +392,23 @@ export default function CreatePostScreen() {
                       styles.postTypeButton,
                       formData.post_type === type.value && [
                         styles.postTypeButtonActive,
-                        { borderColor: type.color }
-                      ]
+                        { borderColor: type.color },
+                      ],
                     ]}
-                    onPress={() => setFormData(prev => ({ ...prev, post_type: type.value as any }))}
-                    disabled={loading}
-                  >
-                    <Ionicons 
-                      name={type.icon as any} 
-                      size={20} 
-                      color={formData.post_type === type.value ? type.color : '#A3B3CC'} 
+                    onPress={() =>
+                      setFormData((prev) => ({ ...prev, post_type: type.value as any }))
+                    }
+                    disabled={loading}>
+                    <Ionicons
+                      name={type.icon as any}
+                      size={20}
+                      color={formData.post_type === type.value ? type.color : '#A3B3CC'}
                     />
-                    <AppText style={[
-                      styles.postTypeButtonText,
-                      formData.post_type === type.value && { color: type.color }
-                    ]}>
+                    <AppText
+                      style={[
+                        styles.postTypeButtonText,
+                        formData.post_type === type.value && { color: type.color },
+                      ]}>
                       {type.label}
                     </AppText>
                   </TouchableOpacity>
@@ -425,7 +424,7 @@ export default function CreatePostScreen() {
                 placeholder="Ingresa el título del post"
                 placeholderTextColor="#8E8E93"
                 value={formData.title}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, title: text }))}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, title: text }))}
                 editable={!loading}
                 maxLength={100}
               />
@@ -439,7 +438,7 @@ export default function CreatePostScreen() {
                 placeholder="Describe tu post..."
                 placeholderTextColor="#8E8E93"
                 value={formData.description}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -454,8 +453,7 @@ export default function CreatePostScreen() {
               <TouchableOpacity
                 style={styles.imageSelector}
                 onPress={handleSelectImage}
-                disabled={loading || uploadingImage}
-              >
+                disabled={loading || uploadingImage}>
                 {selectedImage ? (
                   <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
                 ) : (
@@ -492,8 +490,7 @@ export default function CreatePostScreen() {
                         const year = today.getFullYear();
                         handleDateChange('start_date', `${day}/${month}/${year}`);
                       }}
-                      disabled={loading}
-                    >
+                      disabled={loading}>
                       <AppText style={styles.todayButtonText}>Hoy</AppText>
                     </TouchableOpacity>
                   </View>
@@ -516,26 +513,26 @@ export default function CreatePostScreen() {
             {/* Options */}
             <View style={styles.fieldContainer}>
               <AppText style={styles.fieldLabel}>Opciones</AppText>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.optionRow}
-                onPress={() => setFormData(prev => ({ ...prev, is_active: !prev.is_active }))}
-                disabled={loading}
-              >
+                onPress={() => setFormData((prev) => ({ ...prev, is_active: !prev.is_active }))}
+                disabled={loading}>
                 <View style={styles.optionLeft}>
                   <Ionicons name="eye" size={20} color="#A3B3CC" />
                   <AppText style={styles.optionText}>Post activo</AppText>
                 </View>
                 <View style={[styles.toggle, formData.is_active && styles.toggleActive]}>
-                  <View style={[styles.toggleThumb, formData.is_active && styles.toggleThumbActive]} />
+                  <View
+                    style={[styles.toggleThumb, formData.is_active && styles.toggleThumbActive]}
+                  />
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.optionRow}
-                onPress={() => setFormData(prev => ({ ...prev, pinned: !prev.pinned }))}
-                disabled={loading}
-              >
+                onPress={() => setFormData((prev) => ({ ...prev, pinned: !prev.pinned }))}
+                disabled={loading}>
                 <View style={styles.optionLeft}>
                   <Ionicons name="pin" size={20} color="#A3B3CC" />
                   <AppText style={styles.optionText}>Post destacado</AppText>

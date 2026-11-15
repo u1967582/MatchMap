@@ -104,7 +104,10 @@ describe('ResetPasswordScreen', () => {
     mockedUpdatePassword.mockResolvedValueOnce({
       success: false,
       error: 'Password is known to be weak and easy to guess',
-      rawError: { code: 'weak_password', message: 'Password is known to be weak and easy to guess' },
+      rawError: {
+        code: 'weak_password',
+        message: 'Password is known to be weak and easy to guess',
+      },
     });
     const { getByPlaceholderText, getByText } = await renderWithSession();
     await fireEvent.changeText(getByPlaceholderText('Nueva contraseña'), 'nueva123');

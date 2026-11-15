@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 
-const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
+const MAPBOX_ACCESS_TOKEN =
+  process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ||
+  'pk.eyJ1Ijoicm9nZXIxN2dvc3QiLCJhIjoiY21jdDlxaG9lMDNveDJqcXVsMTJvMXlvaSJ9.K41sVHLz2k0T8OI0agyp6w';
 
 interface Coordinates {
   latitude: number;
@@ -50,90 +52,94 @@ export const useMapboxDirections = () => {
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [travelMode, setTravelMode] = useState<'walking' | 'driving'>('walking');
 
-  const getDirections = useCallback(async (
-    origin: Coordinates,
-    destination: Coordinates,
-    mode: 'walking' | 'driving' = 'walking'
-  ): Promise<RouteData | null> => {
-    setLoading(true);
-    setError(null);
+  const getDirections = useCallback(
+    async (
+      origin: Coordinates,
+      destination: Coordinates,
+      mode: 'walking' | 'driving' = 'walking'
+    ): Promise<RouteData | null> => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      // MapBox Directions API endpoint
-      // Format: {longitude},{latitude};{longitude},{latitude}
-      const coordinatesParam = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
-      
-      // Use driving-traffic for real-time traffic data when driving
-      const profile = mode === 'driving' ? 'driving-traffic' : mode;
+      try {
+        // MapBox Directions API endpoint
+        // Format: {longitude},{latitude};{longitude},{latitude}
+        const coordinatesParam = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
 
-      const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${coordinatesParam}?` +
-        `geometries=geojson&` +
-        `steps=true&` +
-        `language=es&` +
-        `alternatives=false&` +
-        `access_token=${MAPBOX_ACCESS_TOKEN}`;
-      
-      setTravelMode(mode);
+        // Use driving-traffic for real-time traffic data when driving
+        const profile = mode === 'driving' ? 'driving-traffic' : mode;
 
-      console.log('🗺️ Fetching directions from MapBox:', {
-        origin: `${origin.latitude}, ${origin.longitude}`,
-        destination: `${destination.latitude}, ${destination.longitude}`
-      });
+        const url =
+          `https://api.mapbox.com/directions/v5/mapbox/${profile}/${coordinatesParam}?` +
+          `geometries=geojson&` +
+          `steps=true&` +
+          `language=es&` +
+          `alternatives=false&` +
+          `access_token=${MAPBOX_ACCESS_TOKEN}`;
 
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`MapBox API error: ${response.status}`);
+        setTravelMode(mode);
+
+        console.log('🗺️ Fetching directions from MapBox:', {
+          origin: `${origin.latitude}, ${origin.longitude}`,
+          destination: `${destination.latitude}, ${destination.longitude}`,
+        });
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`MapBox API error: ${response.status}`);
+        }
+
+        const data: DirectionsResponse = await response.json();
+
+        if (!data.routes || data.routes.length === 0) {
+          throw new Error('No se encontró ninguna ruta');
+        }
+
+        const route = data.routes[0];
+
+        // Extract coordinates from geometry
+        const coordinates = route.geometry.coordinates;
+
+        // Convert distance from meters to km
+        const distanceKm = route.distance / 1000;
+
+        // Convert duration from seconds to minutes
+        const durationMin = route.duration / 60;
+
+        // Extract steps for turn-by-turn navigation
+        const steps =
+          route.legs[0]?.steps.map((step) => ({
+            instruction: step.maneuver.instruction,
+            distance: step.distance,
+          })) || [];
+
+        const routeInfo: RouteData = {
+          coordinates,
+          distance: distanceKm,
+          duration: durationMin,
+          steps,
+        };
+
+        console.log('✅ Directions fetched successfully:', {
+          distance: `${distanceKm.toFixed(2)} km`,
+          duration: `${durationMin.toFixed(0)} min`,
+          points: coordinates.length,
+        });
+
+        setRouteData(routeInfo);
+        return routeInfo;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Error al obtener direcciones';
+        console.error('❌ Error fetching directions:', err);
+        setError(errorMessage);
+        return null;
+      } finally {
+        setLoading(false);
       }
-
-      const data: DirectionsResponse = await response.json();
-
-      if (!data.routes || data.routes.length === 0) {
-        throw new Error('No se encontró ninguna ruta');
-      }
-
-      const route = data.routes[0];
-      
-      // Extract coordinates from geometry
-      const coordinates = route.geometry.coordinates;
-      
-      // Convert distance from meters to km
-      const distanceKm = route.distance / 1000;
-      
-      // Convert duration from seconds to minutes
-      const durationMin = route.duration / 60;
-
-      // Extract steps for turn-by-turn navigation
-      const steps = route.legs[0]?.steps.map(step => ({
-        instruction: step.maneuver.instruction,
-        distance: step.distance
-      })) || [];
-
-      const routeInfo: RouteData = {
-        coordinates,
-        distance: distanceKm,
-        duration: durationMin,
-        steps
-      };
-
-      console.log('✅ Directions fetched successfully:', {
-        distance: `${distanceKm.toFixed(2)} km`,
-        duration: `${durationMin.toFixed(0)} min`,
-        points: coordinates.length
-      });
-
-      setRouteData(routeInfo);
-      return routeInfo;
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al obtener direcciones';
-      console.error('❌ Error fetching directions:', err);
-      setError(errorMessage);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   const clearRoute = useCallback(() => {
     setRouteData(null);
@@ -146,6 +152,6 @@ export const useMapboxDirections = () => {
     routeData,
     travelMode,
     getDirections,
-    clearRoute
+    clearRoute,
   };
 };

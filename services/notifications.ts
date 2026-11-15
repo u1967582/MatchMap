@@ -37,8 +37,7 @@ export function configureNotificationHandler(): void {
 export async function getExpoPushToken(): Promise<string | null> {
   if (!Device.isDevice) return null;
 
-  const projectId =
-    Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
   if (!projectId) {
     console.error('No se encontró eas.projectId para generar el Expo Push Token');

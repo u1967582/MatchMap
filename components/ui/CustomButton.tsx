@@ -27,10 +27,10 @@ const CustomButton: React.FC<CustomButtonProps> = ({
 }) => {
   const getButtonStyle = () => {
     const baseStyle: ViewStyle[] = [styles.button];
-    
+
     if (fullWidth) baseStyle.push(styles.fullWidth);
     if (disabled || loading) baseStyle.push(styles.disabled);
-    
+
     switch (variant) {
       case 'primary':
         baseStyle.push(styles.primary);
@@ -48,13 +48,13 @@ const CustomButton: React.FC<CustomButtonProps> = ({
         baseStyle.push(styles.social);
         break;
     }
-    
+
     return baseStyle;
   };
 
   const getTextStyle = () => {
     const baseStyle: TextStyle[] = [styles.buttonText];
-    
+
     switch (variant) {
       case 'primary':
         baseStyle.push(styles.primaryText);
@@ -72,7 +72,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
         baseStyle.push(styles.socialText);
         break;
     }
-    
+
     return baseStyle;
   };
 
@@ -95,12 +95,13 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       style={getButtonStyle()}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
-    >
+      activeOpacity={0.8}>
       {loading ? (
         <ActivityIndicator color={getLoadingColor()} size="small" />
       ) : (
-        <AppText maxScale={1.0} style={getTextStyle()}>{text}</AppText>
+        <AppText maxScale={1.0} style={getTextStyle()}>
+          {text}
+        </AppText>
       )}
     </TouchableOpacity>
   );
@@ -159,4 +160,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CustomButton; 
+export default CustomButton;

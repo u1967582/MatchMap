@@ -61,10 +61,7 @@ export const useReviews = () => {
     setError(null);
 
     try {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('rating')
-        .eq('bar_id', barId);
+      const { data, error } = await supabase.from('reviews').select('rating').eq('bar_id', barId);
 
       if (error) {
         console.error('❌ Error fetching review stats:', error);
@@ -76,7 +73,7 @@ export const useReviews = () => {
         return {
           average_rating: 0,
           total_reviews: 0,
-          rating_distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+          rating_distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
         };
       }
 
@@ -86,14 +83,14 @@ export const useReviews = () => {
 
       // Calculate rating distribution
       const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      data.forEach(review => {
+      data.forEach((review) => {
         distribution[review.rating as keyof typeof distribution]++;
       });
 
       return {
         average_rating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
         total_reviews: totalReviews,
-        rating_distribution: distribution
+        rating_distribution: distribution,
       };
     } catch (err) {
       console.error('❌ Error fetching review stats:', err);
@@ -105,96 +102,94 @@ export const useReviews = () => {
   }, []);
 
   // Check if user has already reviewed a bar
-  const getUserReview = useCallback(async (barId: string, userId: string): Promise<Review | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('bar_id', barId)
-        .eq('user_id', userId)
-        .single();
+  const getUserReview = useCallback(
+    async (barId: string, userId: string): Promise<Review | null> => {
+      try {
+        const { data, error } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('bar_id', barId)
+          .eq('user_id', userId)
+          .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('❌ Error fetching user review:', error);
+        if (error && error.code !== 'PGRST116') {
+          console.error('❌ Error fetching user review:', error);
+          return null;
+        }
+
+        return data;
+      } catch (err) {
+        console.error('❌ Error fetching user review:', err);
         return null;
       }
-
-      return data;
-    } catch (err) {
-      console.error('❌ Error fetching user review:', err);
-      return null;
-    }
-  }, []);
+    },
+    []
+  );
 
   // Create a new review
-  const createReview = useCallback(async (
-    barId: string, 
-    userId: string, 
-    rating: number, 
-    comment?: string
-  ): Promise<boolean> => {
-    setLoading(true);
-    setError(null);
+  const createReview = useCallback(
+    async (barId: string, userId: string, rating: number, comment?: string): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const { error } = await supabase
-        .from('reviews')
-        .insert({
+      try {
+        const { error } = await supabase.from('reviews').insert({
           bar_id: barId,
           user_id: userId,
           rating,
-          comment: comment?.trim() || null
+          comment: comment?.trim() || null,
         });
 
-      if (error) {
-        console.error('❌ Error creating review:', error);
+        if (error) {
+          console.error('❌ Error creating review:', error);
+          setError('Failed to create review');
+          return false;
+        }
+
+        return true;
+      } catch (err) {
+        console.error('❌ Error creating review:', err);
         setError('Failed to create review');
         return false;
+      } finally {
+        setLoading(false);
       }
-
-      return true;
-    } catch (err) {
-      console.error('❌ Error creating review:', err);
-      setError('Failed to create review');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   // Update an existing review
-  const updateReview = useCallback(async (
-    reviewId: string,
-    rating: number,
-    comment?: string
-  ): Promise<boolean> => {
-    setLoading(true);
-    setError(null);
+  const updateReview = useCallback(
+    async (reviewId: string, rating: number, comment?: string): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const { error } = await supabase
-        .from('reviews')
-        .update({
-          rating,
-          comment: comment?.trim() || null
-        })
-        .eq('id', reviewId);
+      try {
+        const { error } = await supabase
+          .from('reviews')
+          .update({
+            rating,
+            comment: comment?.trim() || null,
+          })
+          .eq('id', reviewId);
 
-      if (error) {
-        console.error('❌ Error updating review:', error);
+        if (error) {
+          console.error('❌ Error updating review:', error);
+          setError('Failed to update review');
+          return false;
+        }
+
+        return true;
+      } catch (err) {
+        console.error('❌ Error updating review:', err);
         setError('Failed to update review');
         return false;
+      } finally {
+        setLoading(false);
       }
-
-      return true;
-    } catch (err) {
-      console.error('❌ Error updating review:', err);
-      setError('Failed to update review');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   // Delete a review
   const deleteReview = useCallback(async (reviewId: string): Promise<boolean> => {
@@ -202,10 +197,7 @@ export const useReviews = () => {
     setError(null);
 
     try {
-      const { error } = await supabase
-        .from('reviews')
-        .delete()
-        .eq('id', reviewId);
+      const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
 
       if (error) {
         console.error('❌ Error deleting review:', error);
@@ -231,6 +223,6 @@ export const useReviews = () => {
     getUserReview,
     createReview,
     updateReview,
-    deleteReview
+    deleteReview,
   };
-}; 
+};

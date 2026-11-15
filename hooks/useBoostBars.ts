@@ -67,7 +67,8 @@ export function useBoostBars({
         // Query bars with active boosts
         let boostsQuery = supabase
           .from('bar_boosts')
-          .select(`
+          .select(
+            `
             bar_id,
             end_at,
             bars!inner (
@@ -81,7 +82,8 @@ export function useBoostBars({
               is_betting_venue,
               bar_images (image_url, image_order)
             )
-          `)
+          `
+          )
           .eq('status', 'active')
           .gt('end_at', now);
 
@@ -116,8 +118,7 @@ export function useBoostBars({
             };
             const images = bar.bar_images || [];
             const mainImage =
-              images.find((img) => img.image_order === 1)?.image_url ||
-              images[0]?.image_url;
+              images.find((img) => img.image_order === 1)?.image_url || images[0]?.image_url;
             return {
               id: bar.id,
               name: bar.name,
@@ -188,9 +189,7 @@ export function useBoostBars({
     }));
 
     // Sort by distance and take top 5
-    const top5 = barsWithDistance
-      .sort((a, b) => a.distance! - b.distance!)
-      .slice(0, 5);
+    const top5 = barsWithDistance.sort((a, b) => a.distance! - b.distance!).slice(0, 5);
 
     // Pick 3 randomly from top 5
     const countToSelect = Math.min(3, top5.length);
@@ -293,7 +292,9 @@ export function useBarBoost(barId: string | null) {
   // Tras una compra, el boost lo activa el webhook de RevenueCat unos
   // segundos después. Reconsultamos hasta ver un end_at nuevo (o agotar
   // intentos). undefined = no estamos esperando ninguna activación.
-  const [activationBaseline, setActivationBaseline] = useState<string | null | undefined>(undefined);
+  const [activationBaseline, setActivationBaseline] = useState<string | null | undefined>(
+    undefined
+  );
   const activationAttemptsRef = useRef(0);
 
   const waitForActivation = useCallback(() => {

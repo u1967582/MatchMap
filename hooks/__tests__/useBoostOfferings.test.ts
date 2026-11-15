@@ -186,7 +186,11 @@ describe('useBoostOfferings - purchaseBoost', () => {
 
     let success: boolean = false;
     await act(async () => {
-      success = await result.current.purchaseBoost(makePackage('boost_7d_v2') as any, 'bar-1', 'user-1');
+      success = await result.current.purchaseBoost(
+        makePackage('boost_7d_v2') as any,
+        'bar-1',
+        'user-1'
+      );
     });
 
     // El pago ya se realizó y el webhook activa el boost con boost_bar_id.
@@ -206,7 +210,11 @@ describe('useBoostOfferings - purchaseBoost', () => {
 
     let success: boolean = false;
     await act(async () => {
-      success = await result.current.purchaseBoost(makePackage('boost_7d_v2') as any, 'bar-1', 'user-1');
+      success = await result.current.purchaseBoost(
+        makePackage('boost_7d_v2') as any,
+        'bar-1',
+        'user-1'
+      );
     });
 
     expect(success).toBe(true);
@@ -219,7 +227,11 @@ describe('useBoostOfferings - purchaseBoost', () => {
 
     let success: boolean = true;
     await act(async () => {
-      success = await result.current.purchaseBoost(makePackage('unknown_product') as any, 'bar-1', 'user-1');
+      success = await result.current.purchaseBoost(
+        makePackage('unknown_product') as any,
+        'bar-1',
+        'user-1'
+      );
     });
 
     expect(success).toBe(false);
@@ -234,7 +246,11 @@ describe('useBoostOfferings - purchaseBoost', () => {
 
     let success: boolean = true;
     await act(async () => {
-      success = await result.current.purchaseBoost(makePackage('boost_1y_v2') as any, 'bar-1', 'user-1');
+      success = await result.current.purchaseBoost(
+        makePackage('boost_1y_v2') as any,
+        'bar-1',
+        'user-1'
+      );
     });
 
     expect(success).toBe(false);
@@ -250,7 +266,11 @@ describe('useBoostOfferings - purchaseBoost', () => {
 
     let success: boolean = true;
     await act(async () => {
-      success = await result.current.purchaseBoost(makePackage('boost_1y_v2') as any, 'bar-1', 'user-1');
+      success = await result.current.purchaseBoost(
+        makePackage('boost_1y_v2') as any,
+        'bar-1',
+        'user-1'
+      );
     });
 
     expect(success).toBe(false);

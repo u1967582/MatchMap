@@ -13,14 +13,7 @@ import ToastRoot from 'react-native-toast-message';
 import { supabase } from '~/utils/supabase';
 import { checkAndPromotePreRegisteredBar, getAuthErrorMessage } from '~/utils/auth';
 import ForgotPasswordModal from './ForgotPasswordModal';
-import {
-  AppText,
-  AppInput,
-  AppButton,
-  toast,
-  colors,
-  spacing,
-} from '~/components/ds';
+import { AppText, AppInput, AppButton, toast, colors, spacing } from '~/components/ds';
 import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 
 interface LoginModalProps {
@@ -84,7 +77,7 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
   const handleForgotPassword = () => {
     // Cerrar el modal de login primero
     onClose();
-    
+
     // Esperar a que termine la animación de cierre
     setTimeout(() => {
       setForgotPasswordModalVisible(true);
@@ -101,84 +94,80 @@ export default function LoginModal({ visible, onClose, onLoginSuccess }: LoginMo
 
   return (
     <>
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Header */}
-          <View style={styles.header}>
-            <AppText variant="h2">Iniciar Sesión</AppText>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleClose}
-              disabled={loading}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={28} color={colors.text.primary} />
-            </TouchableOpacity>
-          </View>
+      <Modal
+        visible={visible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleClose}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {/* Header */}
+            <View style={styles.header}>
+              <AppText variant="h2">Iniciar Sesión</AppText>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleClose}
+                disabled={loading}
+                activeOpacity={0.7}>
+                <Ionicons name="close" size={28} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
 
-          {/* Form */}
-          <View style={styles.form}>
-            <AppInput
-              label="Correo electrónico"
-              placeholder="tu@email.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!loading}
-            />
+            {/* Form */}
+            <View style={styles.form}>
+              <AppInput
+                label="Correo electrónico"
+                placeholder="tu@email.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!loading}
+              />
 
-            <AppInput
-              label="Contraseña"
-              placeholder="••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              editable={!loading}
-            />
+              <AppInput
+                label="Contraseña"
+                placeholder="••••••••"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                editable={!loading}
+              />
 
-            <TouchableOpacity
-              onPress={handleForgotPassword}
-              style={styles.forgotPassword}
-              disabled={loading}
-              activeOpacity={0.7}
-            >
-              <AppText variant="label" color={colors.brand.link}>
-                ¿Olvidaste tu contraseña?
-              </AppText>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleForgotPassword}
+                style={styles.forgotPassword}
+                disabled={loading}
+                activeOpacity={0.7}>
+                <AppText variant="label" color={colors.brand.link}>
+                  ¿Olvidaste tu contraseña?
+                </AppText>
+              </TouchableOpacity>
 
-            <AppButton
-              text="Iniciar Sesión"
-              onPress={handleLogin}
-              variant="primary"
-              loading={loading}
-              disabled={!isFormValid || loading}
-            />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-      {/* Toast dentro del modal para que sea visible sobre la capa nativa del Modal */}
-      <ToastRoot config={toastConfig} position="top" topOffset={60} />
-    </Modal>
+              <AppButton
+                text="Iniciar Sesión"
+                onPress={handleLogin}
+                variant="primary"
+                loading={loading}
+                disabled={!isFormValid || loading}
+              />
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+        {/* Toast dentro del modal para que sea visible sobre la capa nativa del Modal */}
+        <ToastRoot config={toastConfig} position="top" topOffset={60} />
+      </Modal>
 
-    {/* Modal de recuperación de contraseña */}
-    <ForgotPasswordModal
-      visible={forgotPasswordModalVisible}
-      onClose={() => setForgotPasswordModalVisible(false)}
-    />
-  </>
+      {/* Modal de recuperación de contraseña */}
+      <ForgotPasswordModal
+        visible={forgotPasswordModalVisible}
+        onClose={() => setForgotPasswordModalVisible(false)}
+      />
+    </>
   );
 }
 
@@ -211,4 +200,3 @@ const styles = StyleSheet.create({
     marginTop: -spacing.xs,
   },
 });
-

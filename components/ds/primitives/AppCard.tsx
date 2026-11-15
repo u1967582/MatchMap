@@ -1,10 +1,6 @@
 import { useCallback, ReactNode, forwardRef } from 'react';
 import { StyleSheet, ViewStyle, Pressable } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { colors } from '../tokens/colors';
 import { radius } from '../tokens/radius';
 import { spacing } from '../tokens/spacing';
@@ -21,13 +17,10 @@ interface AppCardProps {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const AppCard = forwardRef<any, AppCardProps>(function AppCard({
-  children,
-  onPress,
-  onLongPress,
-  style,
-  pressable = !!onPress || !!onLongPress,
-}, ref) {
+const AppCard = forwardRef<any, AppCardProps>(function AppCard(
+  { children, onPress, onLongPress, style, pressable = !!onPress || !!onLongPress },
+  ref
+) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -54,8 +47,7 @@ const AppCard = forwardRef<any, AppCardProps>(function AppCard({
       onLongPress={onLongPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      disabled={!pressable}
-    >
+      disabled={!pressable}>
       {children}
     </AnimatedPressable>
   );

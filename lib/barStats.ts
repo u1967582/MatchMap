@@ -108,9 +108,14 @@ export interface ChartPoint {
 }
 
 export function sumContactClicks(
-  summary: Pick<StatsSummary, 'contact_clicks_phone' | 'contact_clicks_address' | 'contact_clicks_website'>
+  summary: Pick<
+    StatsSummary,
+    'contact_clicks_phone' | 'contact_clicks_address' | 'contact_clicks_website'
+  >
 ): number {
-  return summary.contact_clicks_phone + summary.contact_clicks_address + summary.contact_clicks_website;
+  return (
+    summary.contact_clicks_phone + summary.contact_clicks_address + summary.contact_clicks_website
+  );
 }
 
 export function buildChartPoints(daily: DailyPoint[], metric: MetricKey): ChartPoint[] {
@@ -121,7 +126,9 @@ export const MAX_RANGE_DAYS = 3650;
 
 export function daysSince(startDateISO: string, todayISO?: string): number {
   const start = new Date(`${startDateISO}T00:00:00Z`).getTime();
-  const today = new Date(`${todayISO ?? new Date().toISOString().slice(0, 10)}T00:00:00Z`).getTime();
+  const today = new Date(
+    `${todayISO ?? new Date().toISOString().slice(0, 10)}T00:00:00Z`
+  ).getTime();
   const diffDays = Math.round((today - start) / (1000 * 60 * 60 * 24)) + 1;
   return Math.min(MAX_RANGE_DAYS, Math.max(1, diffDays));
 }

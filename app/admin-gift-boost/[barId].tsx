@@ -12,14 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '~/utils/supabase';
-import {
-  AppText,
-  AppButton,
-  colors,
-  spacing,
-  radius,
-  toast,
-} from '~/components/ds';
+import { AppText, AppButton, colors, spacing, radius, toast } from '~/components/ds';
 import { withAdminOnly } from '~/components/AdminOnly';
 
 interface BarInfo {
@@ -204,7 +197,6 @@ function AdminGiftBoostDetailScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-
         {/* Bar info */}
         <View style={styles.barCard}>
           {barInfo.image_url ? (
@@ -239,10 +231,7 @@ function AdminGiftBoostDetailScreen() {
         ) : (
           <View style={styles.noBoostBanner}>
             <Ionicons name="flash-off-outline" size={18} color={colors.text.muted} />
-            <AppText
-              variant="caption"
-              color={colors.text.muted}
-              style={{ marginLeft: spacing.sm }}>
+            <AppText variant="caption" color={colors.text.muted} style={{ marginLeft: spacing.sm }}>
               Sin boost activo
             </AppText>
           </View>

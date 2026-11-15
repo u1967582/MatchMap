@@ -1,4 +1,13 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useRef, useMemo, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useRef,
+  useMemo,
+  useEffect,
+} from 'react';
 import { haversineDistance, type LatLng } from '~/utils/geo';
 
 interface BoostSelectionContextValue {
@@ -8,9 +17,7 @@ interface BoostSelectionContextValue {
   setCenterLatLng: (center: LatLng | null) => void;
 }
 
-const BoostSelectionContext = createContext<BoostSelectionContextValue | undefined>(
-  undefined
-);
+const BoostSelectionContext = createContext<BoostSelectionContextValue | undefined>(undefined);
 
 interface BoostSelectionProviderProps {
   children: ReactNode;
@@ -31,7 +38,11 @@ function arraysEqual(a: string[], b: string[]): boolean {
 /**
  * Check if distance between two points exceeds threshold
  */
-function exceedsDistanceThreshold(a: LatLng | null, b: LatLng | null, thresholdKm: number): boolean {
+function exceedsDistanceThreshold(
+  a: LatLng | null,
+  b: LatLng | null,
+  thresholdKm: number
+): boolean {
   if (a === null || b === null) return true;
   const distanceKm = haversineDistance(a, b);
   return distanceKm > thresholdKm;
@@ -40,9 +51,7 @@ function exceedsDistanceThreshold(a: LatLng | null, b: LatLng | null, thresholdK
 /**
  * Provider for sharing boost selection state between list and map
  */
-export const BoostSelectionProvider: React.FC<BoostSelectionProviderProps> = ({
-  children,
-}) => {
+export const BoostSelectionProvider: React.FC<BoostSelectionProviderProps> = ({ children }) => {
   const [selectedBoostBarIds, setSelectedBoostBarIdsState] = useState<string[]>([]);
   const [centerLatLng, setCenterLatLngState] = useState<LatLng | null>(null);
 
@@ -90,18 +99,17 @@ export const BoostSelectionProvider: React.FC<BoostSelectionProviderProps> = ({
     };
   }, []);
 
-  const value: BoostSelectionContextValue = useMemo(() => ({
-    selectedBoostBarIds,
-    centerLatLng,
-    setSelectedBoostBarIds,
-    setCenterLatLng,
-  }), [selectedBoostBarIds, centerLatLng, setSelectedBoostBarIds, setCenterLatLng]);
-
-  return (
-    <BoostSelectionContext.Provider value={value}>
-      {children}
-    </BoostSelectionContext.Provider>
+  const value: BoostSelectionContextValue = useMemo(
+    () => ({
+      selectedBoostBarIds,
+      centerLatLng,
+      setSelectedBoostBarIds,
+      setCenterLatLng,
+    }),
+    [selectedBoostBarIds, centerLatLng, setSelectedBoostBarIds, setCenterLatLng]
   );
+
+  return <BoostSelectionContext.Provider value={value}>{children}</BoostSelectionContext.Provider>;
 };
 
 /**

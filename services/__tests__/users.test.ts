@@ -20,7 +20,10 @@ beforeEach(() => {
 
 describe('fetchFavoriteTeamStatus', () => {
   it('devuelve el estado del equipo favorito del usuario', async () => {
-    const status = { favorite_team_id: 'team-1', favorite_team_prompted_at: '2026-01-01T00:00:00.000Z' };
+    const status = {
+      favorite_team_id: 'team-1',
+      favorite_team_prompted_at: '2026-01-01T00:00:00.000Z',
+    };
     const builder = createQueryBuilderMock({ data: status, error: null });
     mockedFrom.mockReturnValueOnce(builder);
 

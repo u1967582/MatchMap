@@ -1,4 +1,13 @@
-import { View, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent, Platform, ActivityIndicator } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  Dimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { AppText } from '~/components/ds';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,29 +45,33 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       key: 'nearby',
       icon: 'map',
       title: 'Encuentra bares cerca de ti',
-      description: 'Explora tu zona y descubre los mejores lugares para ver el partido.'
+      description: 'Explora tu zona y descubre los mejores lugares para ver el partido.',
     },
     {
       key: 'events',
       icon: 'calendar',
       title: 'Descubre eventos y partidos',
-      description: 'Consulta la agenda de retransmisiones y no te pierdas nada.'
+      description: 'Consulta la agenda de retransmisiones y no te pierdas nada.',
     },
     {
       key: 'favorites',
       icon: 'heart',
       title: 'Guarda tus bares favoritos',
-      description: 'Accede rápido a los sitios que más te gustan.'
-    }
+      description: 'Accede rápido a los sitios que más te gustan.',
+    },
   ] as const;
 
-  const renderSlide = ({ item }: { item: typeof slides[number] }) => (
-    <View style={[styles.slide, { width }]}>      
+  const renderSlide = ({ item }: { item: (typeof slides)[number] }) => (
+    <View style={[styles.slide, { width }]}>
       <View style={styles.illustration}>
         <Ionicons name={item.icon as any} size={120} color="#7FB3FF" />
       </View>
-      <AppText maxScale={1.2} style={styles.title}>{item.title}</AppText>
-      <AppText maxScale={1.3} style={styles.description}>{item.description}</AppText>
+      <AppText maxScale={1.2} style={styles.title}>
+        {item.title}
+      </AppText>
+      <AppText maxScale={1.3} style={styles.description}>
+        {item.description}
+      </AppText>
     </View>
   );
 
@@ -87,22 +100,25 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             {/* Pagination dots */}
             <View style={styles.dotsContainer}>
               {slides.map((_, i) => (
-                <View key={`dot-${i}`} style={[styles.dot, i === currentIndex && styles.dotActive]} />
+                <View
+                  key={`dot-${i}`}
+                  style={[styles.dot, i === currentIndex && styles.dotActive]}
+                />
               ))}
             </View>
           </View>
 
           {/* Sticky bottom buttons */}
           <View style={styles.footer}>
-            <CustomButton 
-              text="Iniciar sesión" 
-              onPress={onLoginPress} 
+            <CustomButton
+              text="Iniciar sesión"
+              onPress={onLoginPress}
               variant="primary"
               disabled={loadingGoogle}
             />
-            <CustomButton 
-              text="Registrarse" 
-              onPress={onRegisterPress} 
+            <CustomButton
+              text="Registrarse"
+              onPress={onRegisterPress}
               variant="secondary"
               disabled={loadingGoogle}
             />
@@ -110,7 +126,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <AppText maxScale={1.0} style={styles.dividerText}>o</AppText>
+              <AppText maxScale={1.0} style={styles.dividerText}>
+                o
+              </AppText>
               <View style={styles.dividerLine} />
             </View>
 
@@ -137,16 +155,22 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               <AppText
                 maxScale={1.0}
                 style={styles.legalLink}
-                onPress={() => WebBrowser.openBrowserAsync('https://shared-orange-c4f.notion.site/MatchMap-Terms-of-Service-32cfe32774b580fe8ad4d06d0ec552ae')}
-              >
+                onPress={() =>
+                  WebBrowser.openBrowserAsync(
+                    'https://shared-orange-c4f.notion.site/MatchMap-Terms-of-Service-32cfe32774b580fe8ad4d06d0ec552ae'
+                  )
+                }>
                 Términos de Servicio
-              </AppText>
-              {' '}y{' '}
+              </AppText>{' '}
+              y{' '}
               <AppText
                 maxScale={1.0}
                 style={styles.legalLink}
-                onPress={() => WebBrowser.openBrowserAsync('https://shared-orange-c4f.notion.site/MatchMap-Privacy-Policy-2fdfe32774b580e4b19ae0b7898c1ce8')}
-              >
+                onPress={() =>
+                  WebBrowser.openBrowserAsync(
+                    'https://shared-orange-c4f.notion.site/MatchMap-Privacy-Policy-2fdfe32774b580e4b19ae0b7898c1ce8'
+                  )
+                }>
                 Política de Privacidad
               </AppText>
             </AppText>
@@ -154,8 +178,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <AppText
               maxScale={1.0}
               style={styles.guestLink}
-              onPress={!loadingGuest && !loadingGoogle && !loadingApple ? onGuestPress : undefined}
-            >
+              onPress={!loadingGuest && !loadingGoogle && !loadingApple ? onGuestPress : undefined}>
               {loadingGuest ? (
                 <ActivityIndicator size="small" color="#8E8E93" />
               ) : (
@@ -267,4 +290,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default WelcomeScreen; 
+export default WelcomeScreen;

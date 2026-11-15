@@ -15,9 +15,7 @@ export interface CountdownTime {
  * @returns Countdown time object updated every second
  */
 export function useCountdown(endAt: string | Date | null | undefined): CountdownTime {
-  const [countdown, setCountdown] = useState<CountdownTime>(() =>
-    calculateCountdown(endAt)
-  );
+  const [countdown, setCountdown] = useState<CountdownTime>(() => calculateCountdown(endAt));
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   // Dependemos del timestamp, no de la identidad: un `new Date()` inline
   // cambiaría en cada render y relanzaría el efecto en bucle.
@@ -94,7 +92,9 @@ export function formatCountdown(countdown: CountdownTime): string {
   const parts: string[] = [];
 
   if (days > 0) parts.push(`${days}d`);
-  parts.push(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+  parts.push(
+    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  );
 
   return parts.join(' ');
 }

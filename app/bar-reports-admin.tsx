@@ -48,7 +48,11 @@ export default function BarReportsAdminScreen() {
       setIsAdmin(false);
       return;
     }
-    const { data, error } = await supabase.from('users').select('is_super_user').eq('id', user.id).single();
+    const { data, error } = await supabase
+      .from('users')
+      .select('is_super_user')
+      .eq('id', user.id)
+      .single();
     if (error) {
       console.error('❌ Error loading admin flag:', error);
       setIsAdmin(false);
@@ -96,15 +100,14 @@ export default function BarReportsAdminScreen() {
   useFocusEffect(
     useCallback(() => {
       if (isAdmin) fetchPendingReports().catch(() => {});
-    }, [fetchPendingReports, isAdmin]),
+    }, [fetchPendingReports, isAdmin])
   );
 
   const renderItem = ({ item }: { item: ReportRow }) => (
     <TouchableOpacity
       activeOpacity={0.85}
       style={styles.card}
-      onPress={() => router.push(`/bar-reports-admin/${item.id}` as any)}
-    >
+      onPress={() => router.push(`/bar-reports-admin/${item.id}` as any)}>
       <View style={styles.cardRow}>
         <View style={styles.iconWrap}>
           <Ionicons name="flag-outline" size={20} color="#EF4444" />
@@ -151,7 +154,9 @@ export default function BarReportsAdminScreen() {
         <View style={styles.emptyWrap}>
           <Ionicons name="lock-closed-outline" size={34} color="#A3B3CC" />
           <AppText style={styles.emptyTitle}>Acceso restringido</AppText>
-          <AppText style={styles.emptySub}>Esta pantalla solo está disponible para superusuarios.</AppText>
+          <AppText style={styles.emptySub}>
+            Esta pantalla solo está disponible para superusuarios.
+          </AppText>
         </View>
       </SafeAreaView>
     );
@@ -176,12 +181,16 @@ export default function BarReportsAdminScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={reports.length ? styles.listContent : styles.listEmptyContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#FFD700" />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#FFD700" />
+        }
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="checkmark-done-outline" size={34} color="#10B981" />
             <AppText style={styles.emptyTitle}>No hay reportes pendientes</AppText>
-            <AppText style={styles.emptySub}>Cuando un usuario reporte un bar, aparecerá aquí.</AppText>
+            <AppText style={styles.emptySub}>
+              Cuando un usuario reporte un bar, aparecerá aquí.
+            </AppText>
           </View>
         }
       />
@@ -232,5 +241,10 @@ const styles = StyleSheet.create({
 
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   emptyTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
-  emptySub: { color: 'rgba(255,255,255,0.6)', fontSize: 13, textAlign: 'center', paddingHorizontal: 20 },
+  emptySub: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
 });

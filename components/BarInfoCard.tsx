@@ -52,7 +52,9 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
   isBoosted = false,
 }) => {
   const router = useRouter();
-  const [nextMatch, setNextMatch] = React.useState<{ date: string; time: string | null } | null>(null);
+  const [nextMatch, setNextMatch] = React.useState<{ date: string; time: string | null } | null>(
+    null
+  );
 
   // Favoritos desde el store compartido (actualización optimista con rollback),
   // así el corazón coincide con búsqueda, ficha del bar y "Mis favoritos".
@@ -134,31 +136,21 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
       Alert.alert('Error', 'No hay coordenadas disponibles para este bar');
       return;
     }
-    
+
     if (onStartNavigation) {
       onStartNavigation({
         latitude: bar.latitude,
         longitude: bar.longitude,
-        name: bar.name
+        name: bar.name,
       });
       onClose(); // Close the card when starting navigation
     }
   };
 
-
-
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.overlay} 
-        onPress={onClose}
-        activeOpacity={1}
-      />
-      <TouchableOpacity
-        style={styles.card}
-        onPress={handleCardPress}
-        activeOpacity={0.8}
-      >
+      <TouchableOpacity style={styles.overlay} onPress={onClose} activeOpacity={1} />
+      <TouchableOpacity style={styles.card} onPress={handleCardPress} activeOpacity={0.8}>
         {isBoosted && (
           <>
             <LinearGradient
@@ -199,13 +191,8 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
             onPress={(e) => {
               e.stopPropagation();
               handleFavoriteToggle();
-            }}
-          >
-            <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
-              size={20}
-              color="#FFFFFF"
-            />
+            }}>
+            <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={20} color="#FFFFFF" />
           </TouchableOpacity>
 
           {/* Close Button */}
@@ -215,28 +202,28 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
               onClose();
             }}
             style={styles.closeButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="close" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
         {/* Bar Info */}
         <View style={styles.barInfo}>
-          <AppText maxScale={1.2} numberOfLines={1} ellipsizeMode="tail" style={styles.barName}>{typeof bar.name === 'string' ? bar.name : 'Bar sin nombre'}</AppText>
+          <AppText maxScale={1.2} numberOfLines={1} ellipsizeMode="tail" style={styles.barName}>
+            {typeof bar.name === 'string' ? bar.name : 'Bar sin nombre'}
+          </AppText>
 
           <View style={styles.barMeta}>
             <View style={styles.ratingContainer}>
               <Ionicons name="star" size={16} color="#F59E0B" />
               <AppText style={styles.ratingText}>
-                {(typeof bar.rating === 'number' ? bar.rating.toFixed(1) : 'N/A')} ({bar.review_count || 0} reseñas)
+                {typeof bar.rating === 'number' ? bar.rating.toFixed(1) : 'N/A'} (
+                {bar.review_count || 0} reseñas)
               </AppText>
             </View>
 
             {typeof bar.distance_km === 'number' && !isNaN(bar.distance_km) && (
-              <AppText style={styles.distanceText}>
-                {bar.distance_km.toFixed(1)} km
-              </AppText>
+              <AppText style={styles.distanceText}>{bar.distance_km.toFixed(1)} km</AppText>
             )}
           </View>
 
@@ -255,7 +242,9 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
             <View>
               <View style={styles.addressRow}>
                 <Ionicons name="location-outline" size={14} color="#A3B3CC" />
-                <AppText numberOfLines={1} ellipsizeMode="tail" style={styles.barAddress}>{bar.address}, {bar.city}</AppText>
+                <AppText numberOfLines={1} ellipsizeMode="tail" style={styles.barAddress}>
+                  {bar.address}, {bar.city}
+                </AppText>
               </View>
 
               {/* Botones de navegación: ruta dentro de la app y app de mapas nativa */}
@@ -268,23 +257,29 @@ const BarInfoCard: React.FC<BarInfoCardProps> = ({
                         e.stopPropagation();
                         handleStartNavigation();
                       }}
-                      accessibilityRole="button"
-                    >
+                      accessibilityRole="button">
                       <Ionicons name="navigate" size={18} color="#FFFFFF" />
-                      <AppText maxScale={1.0} style={styles.navigateButtonText}>Cómo llegar</AppText>
+                      <AppText maxScale={1.0} style={styles.navigateButtonText}>
+                        Cómo llegar
+                      </AppText>
                     </TouchableOpacity>
                   )}
                   {onNavigate && (
                     <TouchableOpacity
-                      style={[styles.navigateButton, styles.navigateButtonFlex, styles.openMapsButton]}
+                      style={[
+                        styles.navigateButton,
+                        styles.navigateButtonFlex,
+                        styles.openMapsButton,
+                      ]}
                       onPress={(e) => {
                         e.stopPropagation();
                         handleOpenInMaps();
                       }}
-                      accessibilityRole="button"
-                    >
+                      accessibilityRole="button">
                       <Ionicons name="map-outline" size={18} color="#FFFFFF" />
-                      <AppText maxScale={1.0} style={styles.navigateButtonText}>Abrir en Mapas</AppText>
+                      <AppText maxScale={1.0} style={styles.navigateButtonText}>
+                        Abrir en Mapas
+                      </AppText>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -574,4 +569,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BarInfoCard; 
+export default BarInfoCard;

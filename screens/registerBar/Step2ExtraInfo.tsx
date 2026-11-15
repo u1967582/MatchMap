@@ -35,7 +35,7 @@ const Step2ExtraInfo: React.FC = () => {
         return;
       }
 
-      setTvFeatures(data?.map(feat => ({ id: feat.id.toString(), label: feat.name })) || []);
+      setTvFeatures(data?.map((feat) => ({ id: feat.id.toString(), label: feat.name })) || []);
     } catch (error) {
       console.error('Error fetching TV features:', error);
     }
@@ -44,17 +44,14 @@ const Step2ExtraInfo: React.FC = () => {
   // Fetch food types from database
   const fetchFoodTypes = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('food_types')
-        .select('id, name')
-        .order('name');
+      const { data, error } = await supabase.from('food_types').select('id, name').order('name');
 
       if (error) {
         console.error('Error fetching food types:', error);
         return;
       }
 
-      setFoodTypes(data?.map(food => ({ id: food.id.toString(), label: food.name })) || []);
+      setFoodTypes(data?.map((food) => ({ id: food.id.toString(), label: food.name })) || []);
     } catch (error) {
       console.error('Error fetching food types:', error);
     }
@@ -63,17 +60,16 @@ const Step2ExtraInfo: React.FC = () => {
   // Fetch features from database
   const fetchFeatures = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('bar_features')
-        .select('id, name')
-        .order('name');
+      const { data, error } = await supabase.from('bar_features').select('id, name').order('name');
 
       if (error) {
         console.error('Error fetching features:', error);
         return;
       }
 
-      setFeatures(data?.map(feature => ({ id: feature.id.toString(), label: feature.name })) || []);
+      setFeatures(
+        data?.map((feature) => ({ id: feature.id.toString(), label: feature.name })) || []
+      );
     } catch (error) {
       console.error('Error fetching features:', error);
     }
@@ -83,11 +79,7 @@ const Step2ExtraInfo: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([
-        fetchTvFeatures(),
-        fetchFoodTypes(),
-        fetchFeatures(),
-      ]);
+      await Promise.all([fetchTvFeatures(), fetchFoodTypes(), fetchFeatures()]);
       setLoading(false);
     };
 
@@ -106,7 +98,7 @@ const Step2ExtraInfo: React.FC = () => {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={styles.container} edges={['top','bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -156,11 +148,7 @@ const Step2ExtraInfo: React.FC = () => {
         </ScrollView>
 
         <View style={styles.buttonContainer}>
-          <PrimaryButton
-            title="Siguiente"
-            onPress={handleNext}
-            loading={loading}
-          />
+          <PrimaryButton title="Siguiente" onPress={handleNext} loading={loading} />
         </View>
       </SafeAreaView>
     </>
@@ -238,4 +226,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Step2ExtraInfo; 
+export default Step2ExtraInfo;

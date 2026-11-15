@@ -45,14 +45,15 @@ const AddBarScreen: React.FC = () => {
   // Memoized form validation
   const formValidation = useMemo((): FormValidation => {
     const errors: string[] = [];
-    
+
     if (!formData.name.trim()) errors.push('El nombre del bar es requerido');
     if (!formData.description.trim()) errors.push('La descripción es requerida');
     if (!formData.address.trim()) errors.push('La dirección es requerida');
     if (!formData.city.trim()) errors.push('La ciudad es requerida');
     if (!formData.phone.trim()) errors.push('El teléfono es requerido');
     if (!formData.email.trim()) errors.push('El email es requerido');
-    if (formData.email.trim() && !formData.email.includes('@')) errors.push('Ingresa un email válido');
+    if (formData.email.trim() && !formData.email.includes('@'))
+      errors.push('Ingresa un email válido');
     if (!formData.category.trim()) errors.push('La categoría es requerida');
 
     return {
@@ -63,39 +64,39 @@ const AddBarScreen: React.FC = () => {
 
   // Optimized form update handlers
   const handleNameChange = useCallback((name: string) => {
-    setFormData(prev => ({ ...prev, name }));
+    setFormData((prev) => ({ ...prev, name }));
   }, []);
 
   const handleDescriptionChange = useCallback((description: string) => {
-    setFormData(prev => ({ ...prev, description }));
+    setFormData((prev) => ({ ...prev, description }));
   }, []);
 
   const handleAddressChange = useCallback((address: string) => {
-    setFormData(prev => ({ ...prev, address }));
+    setFormData((prev) => ({ ...prev, address }));
   }, []);
 
   const handleCityChange = useCallback((city: string) => {
-    setFormData(prev => ({ ...prev, city }));
+    setFormData((prev) => ({ ...prev, city }));
   }, []);
 
   const handlePhoneChange = useCallback((phone: string) => {
-    setFormData(prev => ({ ...prev, phone }));
+    setFormData((prev) => ({ ...prev, phone }));
   }, []);
 
   const handleEmailChange = useCallback((email: string) => {
-    setFormData(prev => ({ ...prev, email }));
+    setFormData((prev) => ({ ...prev, email }));
   }, []);
 
   const handleWebsiteChange = useCallback((website: string) => {
-    setFormData(prev => ({ ...prev, website }));
+    setFormData((prev) => ({ ...prev, website }));
   }, []);
 
   const handleOpeningHoursChange = useCallback((openingHours: string) => {
-    setFormData(prev => ({ ...prev, openingHours }));
+    setFormData((prev) => ({ ...prev, openingHours }));
   }, []);
 
   const handleCategoryChange = useCallback((category: string) => {
-    setFormData(prev => ({ ...prev, category }));
+    setFormData((prev) => ({ ...prev, category }));
   }, []);
 
   // Form validation helper
@@ -112,11 +113,14 @@ const AddBarScreen: React.FC = () => {
     if (!validateAndShowErrors()) return;
 
     setLoading(true);
-    
+
     try {
       // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
       if (userError || !user) {
         Alert.alert('Error', 'Debes estar autenticado para añadir un bar');
         return;
@@ -146,7 +150,7 @@ const AddBarScreen: React.FC = () => {
 
       if (barData) {
         Alert.alert('Éxito', 'Bar añadido correctamente', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       }
     } catch (error: any) {
@@ -167,16 +171,12 @@ const AddBarScreen: React.FC = () => {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBackPress}
-            disabled={loading}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={handleBackPress} disabled={loading}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <ScreenTitle 
-            title="Añadir Bar" 
-            color="#FFFFFF" 
+          <ScreenTitle
+            title="Añadir Bar"
+            color="#FFFFFF"
             shadow={false}
             marginBottom={0}
             fontSize={20}
@@ -188,7 +188,9 @@ const AddBarScreen: React.FC = () => {
           <View style={styles.contentContainer}>
             <View style={styles.formContainer}>
               <View style={styles.fieldContainer}>
-                <AppText maxScale={1.1} style={styles.fieldLabel}>Nombre del Bar</AppText>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>
+                  Nombre del Bar
+                </AppText>
                 <InputField
                   placeholder="Ingresa el nombre del bar"
                   value={formData.name}
@@ -201,7 +203,9 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <AppText maxScale={1.1} style={styles.fieldLabel}>Descripción</AppText>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>
+                  Descripción
+                </AppText>
                 <InputField
                   placeholder="Describe tu bar"
                   value={formData.description}
@@ -216,7 +220,9 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <AppText maxScale={1.1} style={styles.fieldLabel}>Dirección</AppText>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>
+                  Dirección
+                </AppText>
                 <InputField
                   placeholder="Dirección completa"
                   value={formData.address}
@@ -229,7 +235,9 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <AppText maxScale={1.1} style={styles.fieldLabel}>Ciudad</AppText>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>
+                  Ciudad
+                </AppText>
                 <InputField
                   placeholder="Ciudad"
                   value={formData.city}
@@ -242,7 +250,9 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <AppText maxScale={1.1} style={styles.fieldLabel}>Teléfono</AppText>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>
+                  Teléfono
+                </AppText>
                 <InputField
                   placeholder="Número de teléfono"
                   value={formData.phone}
@@ -256,7 +266,9 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <AppText maxScale={1.1} style={styles.fieldLabel}>Email</AppText>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>
+                  Email
+                </AppText>
                 <InputField
                   placeholder="Email del bar"
                   value={formData.email}
@@ -270,7 +282,9 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <AppText maxScale={1.1} style={styles.fieldLabel}>Sitio Web (Opcional)</AppText>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>
+                  Sitio Web (Opcional)
+                </AppText>
                 <InputField
                   placeholder="www.ejemplo.com"
                   value={formData.website}
@@ -284,7 +298,9 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <AppText maxScale={1.1} style={styles.fieldLabel}>Horario (Opcional)</AppText>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>
+                  Horario (Opcional)
+                </AppText>
                 <InputField
                   placeholder="Ej: Lun-Dom 18:00-02:00"
                   value={formData.openingHours}
@@ -297,7 +313,9 @@ const AddBarScreen: React.FC = () => {
               </View>
 
               <View style={styles.fieldContainer}>
-                <AppText maxScale={1.1} style={styles.fieldLabel}>Categoría</AppText>
+                <AppText maxScale={1.1} style={styles.fieldLabel}>
+                  Categoría
+                </AppText>
                 <InputField
                   placeholder="Ej: Cocktail Bar, Pub, Lounge"
                   value={formData.category}
@@ -369,4 +387,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default memo(AddBarScreen); 
+export default memo(AddBarScreen);

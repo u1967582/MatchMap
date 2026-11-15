@@ -52,18 +52,26 @@ interface FavoriteBarCardProps {
   onViewOnMap: (bar: FavoriteBar) => void;
 }
 
-function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap }: FavoriteBarCardProps) {
+function FavoriteBarCard({
+  bar,
+  userLocation,
+  onPress,
+  onRemove,
+  onViewOnMap,
+}: FavoriteBarCardProps) {
   let distance: number | null = null;
   if (userLocation?.coords && bar.latitude && bar.longitude) {
     const R = 6371;
     const lat1 = userLocation.coords.latitude;
     const lon1 = userLocation.coords.longitude;
-    const dLat = (bar.latitude - lat1) * Math.PI / 180;
-    const dLon = (bar.longitude - lon1) * Math.PI / 180;
+    const dLat = ((bar.latitude - lat1) * Math.PI) / 180;
+    const dLon = ((bar.longitude - lon1) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(bar.latitude * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((bar.latitude * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
@@ -104,13 +112,16 @@ function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap }: 
       </View>
 
       <View style={styles.barInfo}>
-        <AppText variant="title" style={styles.barName}>{bar.name}</AppText>
+        <AppText variant="title" style={styles.barName}>
+          {bar.name}
+        </AppText>
 
         <View style={styles.barMeta}>
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color={colors.status.warning} />
             <AppText variant="body">
-              {(typeof bar.rating === 'number' ? bar.rating.toFixed(1) : 'N/A')} ({bar.review_count || 0} reseñas)
+              {typeof bar.rating === 'number' ? bar.rating.toFixed(1) : 'N/A'} (
+              {bar.review_count || 0} reseñas)
             </AppText>
           </View>
 
@@ -132,7 +143,9 @@ function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap }: 
 
         <TouchableOpacity style={styles.viewOnMapButton} onPress={handleViewOnMap}>
           <Ionicons name="map-outline" size={16} color={colors.brand.link} />
-          <AppText variant="label" color={colors.brand.link}>Ver en el Mapa</AppText>
+          <AppText variant="label" color={colors.brand.link}>
+            Ver en el Mapa
+          </AppText>
         </TouchableOpacity>
       </View>
     </AppCard>
@@ -141,9 +154,9 @@ function FavoriteBarCard({ bar, userLocation, onPress, onRemove, onViewOnMap }: 
 
 export default function MyFavoritesScreen() {
   const router = useRouter();
-  const getFavoriteBars = useFavoritesStore(state => state.getFavoriteBars);
-  const removeFavorite = useFavoritesStore(state => state.removeFavorite);
-  const favorites = useFavoritesStore(state => state.favorites);
+  const getFavoriteBars = useFavoritesStore((state) => state.getFavoriteBars);
+  const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
+  const favorites = useFavoritesStore((state) => state.favorites);
 
   const [favoriteBars, setFavoriteBars] = useState<FavoriteBar[]>([]);
   const [filteredBars, setFilteredBars] = useState<FavoriteBar[]>([]);
@@ -152,7 +165,9 @@ export default function MyFavoritesScreen() {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'recommended' | 'nearby' | 'top_rated'>('recommended');
+  const [activeFilter, setActiveFilter] = useState<'recommended' | 'nearby' | 'top_rated'>(
+    'recommended'
+  );
 
   const filterOptions: { key: typeof activeFilter; label: string }[] = [
     { key: 'recommended', label: 'Recomendados' },
@@ -169,16 +184,21 @@ export default function MyFavoritesScreen() {
     } catch {}
   }, []);
 
-  const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }, []);
+  const calculateDistance = useCallback(
+    (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const R = 6371;
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+          Math.cos((lat2 * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    },
+    []
+  );
 
   const loadFavoriteBars = useCallback(async () => {
     setLoading(true);
@@ -197,13 +217,25 @@ export default function MyFavoritesScreen() {
   const applyFilters = useCallback(() => {
     let current = [...favoriteBars];
     if (searchText.trim()) {
-      current = current.filter(b => b.name.toLowerCase().includes(searchText.toLowerCase()));
+      current = current.filter((b) => b.name.toLowerCase().includes(searchText.toLowerCase()));
     }
     if (activeFilter === 'nearby' && userLocation?.coords) {
       current.sort((a, b) => {
         if (!a.latitude || !b.latitude) return 0;
-        return calculateDistance(userLocation.coords.latitude, userLocation.coords.longitude, a.latitude, a.longitude!) -
-          calculateDistance(userLocation.coords.latitude, userLocation.coords.longitude, b.latitude, b.longitude!);
+        return (
+          calculateDistance(
+            userLocation.coords.latitude,
+            userLocation.coords.longitude,
+            a.latitude,
+            a.longitude!
+          ) -
+          calculateDistance(
+            userLocation.coords.latitude,
+            userLocation.coords.longitude,
+            b.latitude,
+            b.longitude!
+          )
+        );
       });
     } else if (activeFilter === 'top_rated') {
       current.sort((a, b) => (b.rating || 0) - (a.rating || 0));
@@ -211,59 +243,93 @@ export default function MyFavoritesScreen() {
     setFilteredBars(current);
   }, [favoriteBars, searchText, activeFilter, userLocation, calculateDistance]);
 
-  useEffect(() => { loadFavoriteBars(); getUserLocation(); }, [loadFavoriteBars, getUserLocation]);
-  useEffect(() => { loadFavoriteBars(); }, [favorites, loadFavoriteBars]);
-  useEffect(() => { applyFilters(); }, [applyFilters]);
+  useEffect(() => {
+    loadFavoriteBars();
+    getUserLocation();
+  }, [loadFavoriteBars, getUserLocation]);
+  useEffect(() => {
+    loadFavoriteBars();
+  }, [favorites, loadFavoriteBars]);
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
-  const handleBarPress = useCallback((barId: string) => {
-    router.push(`/bar-profile/${barId}` as any);
-  }, [router]);
+  const handleBarPress = useCallback(
+    (barId: string) => {
+      router.push(`/bar-profile/${barId}` as any);
+    },
+    [router]
+  );
 
-  const handleRemove = useCallback(async (barId: string, barName: string) => {
-    Alert.alert('Eliminar de favoritos', `¿Eliminar "${barName}" de tus favoritos?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar', style: 'destructive',
-        onPress: async () => {
-          const ok = await removeFavorite(barId);
-          ok ? toast.success('Eliminado de favoritos') : toast.error('No se pudo eliminar');
+  const handleRemove = useCallback(
+    async (barId: string, barName: string) => {
+      Alert.alert('Eliminar de favoritos', `¿Eliminar "${barName}" de tus favoritos?`, [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const ok = await removeFavorite(barId);
+            ok ? toast.success('Eliminado de favoritos') : toast.error('No se pudo eliminar');
+          },
         },
-      },
-    ]);
-  }, [removeFavorite]);
+      ]);
+    },
+    [removeFavorite]
+  );
 
-  const handleViewOnMap = useCallback((bar: FavoriteBar) => {
-    router.push({ pathname: '/(protected)/map', params: { selectedBarId: bar.id, selectedBarLat: bar.latitude, selectedBarLng: bar.longitude, selectedBarName: bar.name } });
-  }, [router]);
+  const handleViewOnMap = useCallback(
+    (bar: FavoriteBar) => {
+      router.push({
+        pathname: '/(protected)/map',
+        params: {
+          selectedBarId: bar.id,
+          selectedBarLat: bar.latitude,
+          selectedBarLng: bar.longitude,
+          selectedBarName: bar.name,
+        },
+      });
+    },
+    [router]
+  );
 
-  const renderBar = useCallback(({ item }: { item: FavoriteBar }) => (
-    <FavoriteBarCard
-      bar={item}
-      userLocation={userLocation}
-      onPress={handleBarPress}
-      onRemove={handleRemove}
-      onViewOnMap={handleViewOnMap}
-    />
-  ), [handleBarPress, handleRemove, handleViewOnMap, userLocation]);
+  const renderBar = useCallback(
+    ({ item }: { item: FavoriteBar }) => (
+      <FavoriteBarCard
+        bar={item}
+        userLocation={userLocation}
+        onPress={handleBarPress}
+        onRemove={handleRemove}
+        onViewOnMap={handleViewOnMap}
+      />
+    ),
+    [handleBarPress, handleRemove, handleViewOnMap, userLocation]
+  );
 
   const listRows = useMemo(
     () => interleaveWithAds(filteredBars, (bar) => bar.id, 3),
     [filteredBars]
   );
 
-  const renderRow = useCallback(({ item }: { item: (typeof listRows)[number] }) => {
-    if (item.kind === 'ad') {
-      return <AdBanner placement="favorites-inline" />;
-    }
-    return renderBar({ item: item.data });
-  }, [renderBar]);
+  const renderRow = useCallback(
+    ({ item }: { item: (typeof listRows)[number] }) => {
+      if (item.kind === 'ad') {
+        return <AdBanner placement="favorites-inline" />;
+      }
+      return renderBar({ item: item.data });
+    },
+    [renderBar]
+  );
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <AppText variant="title">Mis Favoritos</AppText>
@@ -284,11 +350,17 @@ export default function MyFavoritesScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <AppText variant="title">Mis Favoritos</AppText>
-        <TouchableOpacity style={styles.searchButton} onPress={() => setSearchVisible(v => !v)} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.searchButton}
+          onPress={() => setSearchVisible((v) => !v)}
+          activeOpacity={0.7}>
           <Ionicons name="search" size={24} color={colors.text.primary} />
         </TouchableOpacity>
       </View>
@@ -296,7 +368,12 @@ export default function MyFavoritesScreen() {
       {searchVisible && (
         <View style={styles.searchContainer}>
           <View style={styles.searchInputWrapper}>
-            <Ionicons name="search" size={18} color={colors.text.secondary} style={styles.searchIcon} />
+            <Ionicons
+              name="search"
+              size={18}
+              color={colors.text.secondary}
+              style={styles.searchIcon}
+            />
             <TextInput
               style={styles.searchInput}
               placeholder="Buscar bares..."
@@ -317,8 +394,11 @@ export default function MyFavoritesScreen() {
       )}
 
       <View style={styles.sortContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortScrollContent}>
-          {filterOptions.map(opt => {
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sortScrollContent}>
+          {filterOptions.map((opt) => {
             const isActive = activeFilter === opt.key;
             return (
               <TouchableOpacity
@@ -328,9 +408,10 @@ export default function MyFavoritesScreen() {
                   Haptics.selectionAsync();
                   setActiveFilter(opt.key);
                 }}
-                activeOpacity={0.75}
-              >
-                <AppText variant="label" color={isActive ? colors.text.primary : colors.brand.primary}>
+                activeOpacity={0.75}>
+                <AppText
+                  variant="label"
+                  color={isActive ? colors.text.primary : colors.brand.primary}>
                   {opt.label}
                 </AppText>
               </TouchableOpacity>
@@ -350,7 +431,7 @@ export default function MyFavoritesScreen() {
           <FlatList
             data={listRows}
             renderItem={renderRow}
-            keyExtractor={row => row.key}
+            keyExtractor={(row) => row.key}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.barsList}
           />
@@ -472,7 +553,12 @@ const styles = StyleSheet.create({
   },
   ratingContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   distanceText: { fontWeight: '500' },
-  addressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
   barAddress: { flex: 1 },
   viewOnMapButton: {
     flexDirection: 'row',

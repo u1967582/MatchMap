@@ -105,7 +105,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 export default function ContactSupportScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('my-tickets');
-  
+
   // Form states
   const [selectedCategory, setSelectedCategory] = useState<SupportCategory | null>(null);
   const [subject, setSubject] = useState('');
@@ -121,7 +121,9 @@ export default function ContactSupportScreen() {
   // Get user email on mount
   useEffect(() => {
     const getUserEmail = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user?.email) {
         setEmail(user.email);
       }
@@ -138,8 +140,10 @@ export default function ContactSupportScreen() {
 
   const fetchMyTickets = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) return;
 
       const { data, error } = await supabase
@@ -191,7 +195,9 @@ export default function ContactSupportScreen() {
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       // Map frontend categories to backend-friendly values
       const categoryMap: Record<SupportCategory, string> = {
@@ -243,9 +249,10 @@ export default function ContactSupportScreen() {
       );
     } catch (error: any) {
       console.error('❌ Error submitting support ticket:', error);
-      
+
       // Provide specific error messages
-      const errorMessage = error?.message || 'No se pudo enviar tu mensaje. Por favor intenta de nuevo.';
+      const errorMessage =
+        error?.message || 'No se pudo enviar tu mensaje. Por favor intenta de nuevo.';
       Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
@@ -253,7 +260,7 @@ export default function ContactSupportScreen() {
   };
 
   const toggleExpanded = (ticketId: string) => {
-    setExpandedTickets(prev => {
+    setExpandedTickets((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(ticketId)) {
         newSet.delete(ticketId);
@@ -278,10 +285,10 @@ export default function ContactSupportScreen() {
     } else if (diffInHours < 168) {
       return `Hace ${Math.floor(diffInHours / 24)} días`;
     } else {
-      return date.toLocaleDateString('es-ES', { 
-        day: 'numeric', 
-        month: 'short', 
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined 
+      return date.toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'short',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
       });
     }
   };
@@ -303,24 +310,18 @@ export default function ContactSupportScreen() {
 
   const renderTicket = ({ item }: { item: SupportTicket }) => {
     const isExpanded = expandedTickets.has(item.id);
-    const messagePreview = item.message.length > 100 
-      ? item.message.substring(0, 100) + '...' 
-      : item.message;
+    const messagePreview =
+      item.message.length > 100 ? item.message.substring(0, 100) + '...' : item.message;
 
     return (
       <View style={styles.ticketCard}>
         <TouchableOpacity
           style={styles.ticketHeader}
           onPress={() => toggleExpanded(item.id)}
-          activeOpacity={0.7}
-        >
+          activeOpacity={0.7}>
           <View style={styles.ticketHeaderTop}>
             <View style={styles.ticketHeaderLeft}>
-              <Ionicons
-                name={CATEGORY_ICONS[item.category] as any}
-                size={22}
-                color="#1976D2"
-              />
+              <Ionicons name={CATEGORY_ICONS[item.category] as any} size={22} color="#1976D2" />
               <View style={styles.ticketHeaderText}>
                 <AppText style={styles.ticketSubject} numberOfLines={1}>
                   {item.subject}
@@ -330,11 +331,7 @@ export default function ContactSupportScreen() {
                 </AppText>
               </View>
             </View>
-            <Ionicons
-              name={isExpanded ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color="#A3B3CC"
-            />
+            <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#A3B3CC" />
           </View>
 
           {/* Status Badge */}
@@ -357,12 +354,12 @@ export default function ContactSupportScreen() {
         {isExpanded && (
           <View style={styles.ticketBody}>
             {/* Status Message */}
-            <View style={[styles.statusMessage, { backgroundColor: STATUS_COLORS[item.status] + '15' }]}>
-              <Ionicons 
-                name="information-circle" 
-                size={20} 
-                color={STATUS_COLORS[item.status]} 
-              />
+            <View
+              style={[
+                styles.statusMessage,
+                { backgroundColor: STATUS_COLORS[item.status] + '15' },
+              ]}>
+              <Ionicons name="information-circle" size={20} color={STATUS_COLORS[item.status]} />
               <AppText style={[styles.statusMessageText, { color: STATUS_COLORS[item.status] }]}>
                 {getStatusMessage(item.status)}
               </AppText>
@@ -409,19 +406,15 @@ export default function ContactSupportScreen() {
   const renderNewTicketForm = () => (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
+      style={{ flex: 1 }}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         {/* Info Box */}
         <View style={styles.infoBox}>
           <Ionicons name="information-circle" size={24} color="#1976D2" />
-          <AppText style={styles.infoText}>
-            Nuestro equipo responde en menos de 48 horas
-          </AppText>
+          <AppText style={styles.infoText}>Nuestro equipo responde en menos de 48 horas</AppText>
         </View>
 
         {/* Category Selection */}
@@ -436,8 +429,7 @@ export default function ContactSupportScreen() {
                   selectedCategory === category.id && styles.categoryCardActive,
                 ]}
                 onPress={() => setSelectedCategory(category.id)}
-                activeOpacity={0.7}
-              >
+                activeOpacity={0.7}>
                 <Ionicons
                   name={category.icon as any}
                   size={28}
@@ -447,8 +439,7 @@ export default function ContactSupportScreen() {
                   style={[
                     styles.categoryLabel,
                     selectedCategory === category.id && styles.categoryLabelActive,
-                  ]}
-                >
+                  ]}>
                   {category.label}
                 </AppText>
                 <AppText style={styles.categoryDescription}>{category.description}</AppText>
@@ -547,8 +538,7 @@ export default function ContactSupportScreen() {
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleSubmit}
           disabled={loading}
-          activeOpacity={0.8}
-        >
+          activeOpacity={0.8}>
           {loading ? (
             <AppText style={styles.submitButtonText}>Enviando...</AppText>
           ) : (
@@ -572,9 +562,7 @@ export default function ContactSupportScreen() {
           tickets.length > 0 ? (
             <View style={styles.ticketsHeader}>
               <Ionicons name="time-outline" size={18} color="#1976D2" />
-              <AppText style={styles.ticketsHeaderText}>
-                Respondemos en menos de 48 horas
-              </AppText>
+              <AppText style={styles.ticketsHeaderText}>Respondemos en menos de 48 horas</AppText>
             </View>
           ) : undefined
         }
@@ -585,10 +573,7 @@ export default function ContactSupportScreen() {
             <AppText style={styles.emptySubtext}>
               ¿Necesitas ayuda? Crea tu primer ticket de soporte
             </AppText>
-            <TouchableOpacity
-              style={styles.createTicketButton}
-              onPress={() => setActiveTab('new')}
-            >
+            <TouchableOpacity style={styles.createTicketButton} onPress={() => setActiveTab('new')}>
               <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
               <AppText style={styles.createTicketButtonText}>Crear Ticket</AppText>
             </TouchableOpacity>
@@ -622,12 +607,11 @@ export default function ContactSupportScreen() {
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'my-tickets' && styles.tabActive]}
-          onPress={() => setActiveTab('my-tickets')}
-        >
-          <Ionicons 
-            name="chatbubbles-outline" 
-            size={20} 
-            color={activeTab === 'my-tickets' ? '#1976D2' : '#A3B3CC'} 
+          onPress={() => setActiveTab('my-tickets')}>
+          <Ionicons
+            name="chatbubbles-outline"
+            size={20}
+            color={activeTab === 'my-tickets' ? '#1976D2' : '#A3B3CC'}
           />
           <AppText style={[styles.tabText, activeTab === 'my-tickets' && styles.tabTextActive]}>
             Mis Tickets
@@ -636,12 +620,11 @@ export default function ContactSupportScreen() {
 
         <TouchableOpacity
           style={[styles.tab, activeTab === 'new' && styles.tabActive]}
-          onPress={() => setActiveTab('new')}
-        >
-          <Ionicons 
-            name="add-circle-outline" 
-            size={20} 
-            color={activeTab === 'new' ? '#1976D2' : '#A3B3CC'} 
+          onPress={() => setActiveTab('new')}>
+          <Ionicons
+            name="add-circle-outline"
+            size={20}
+            color={activeTab === 'new' ? '#1976D2' : '#A3B3CC'}
           />
           <AppText style={[styles.tabText, activeTab === 'new' && styles.tabTextActive]}>
             Nuevo Ticket

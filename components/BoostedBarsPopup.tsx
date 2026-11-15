@@ -42,7 +42,12 @@ interface BoostedBarsPopupProps {
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_WIDTH = SCREEN_WIDTH * 0.85;
 
-export default function BoostedBarsPopup({ visible, onClose, bars, isLoading: loading = false }: BoostedBarsPopupProps) {
+export default function BoostedBarsPopup({
+  visible,
+  onClose,
+  bars,
+  isLoading: loading = false,
+}: BoostedBarsPopupProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -97,8 +102,7 @@ export default function BoostedBarsPopup({ visible, onClose, bars, isLoading: lo
         <TouchableOpacity
           style={styles.closeButton}
           onPress={onClose}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="close" size={16} color="rgba(255,255,255,0.5)" />
         </TouchableOpacity>
       </View>
@@ -118,7 +122,9 @@ export default function BoostedBarsPopup({ visible, onClose, bars, isLoading: lo
         ) : (
           <View style={styles.placeholderContainer}>
             <Ionicons name="image-outline" size={32} color={colors.text.muted} />
-            <AppText variant="caption" color={colors.text.muted}>Sin imagen</AppText>
+            <AppText variant="caption" color={colors.text.muted}>
+              Sin imagen
+            </AppText>
           </View>
         )}
       </View>
@@ -142,14 +148,15 @@ export default function BoostedBarsPopup({ visible, onClose, bars, isLoading: lo
           {/* Botón "Ver en el Mapa" — mismo estilo que search.tsx/favorites.tsx */}
           <TouchableOpacity style={styles.viewOnMapButton} onPress={onClose} activeOpacity={0.8}>
             <Ionicons name="map-outline" size={16} color={colors.brand.link} />
-            <AppText variant="label" color={colors.brand.link}>Ver en el Mapa</AppText>
+            <AppText variant="label" color={colors.brand.link}>
+              Ver en el Mapa
+            </AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => handleViewProfile(item.id)}
-            activeOpacity={0.8}
-          >
+            activeOpacity={0.8}>
             <Text style={styles.secondaryButtonText}>Ver perfil</Text>
           </TouchableOpacity>
         </View>
@@ -161,8 +168,7 @@ export default function BoostedBarsPopup({ visible, onClose, bars, isLoading: lo
     <View style={styles.overlay} pointerEvents="box-none">
       <Animated.View
         style={[styles.container, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}
-        pointerEvents="auto"
-      >
+        pointerEvents="auto">
         {/* Gradient de fondo del card — siempre visible */}
         <LinearGradient
           colors={['rgba(25,118,210,0.18)', C.bg, C.bg]}
@@ -197,7 +203,10 @@ export default function BoostedBarsPopup({ visible, onClose, bars, isLoading: lo
             {bars.length > 1 && (
               <View style={styles.dotsContainer}>
                 {bars.map((_, index) => (
-                  <View key={index} style={[styles.dot, index === activeIndex && styles.dotActive]} />
+                  <View
+                    key={index}
+                    style={[styles.dot, index === activeIndex && styles.dotActive]}
+                  />
                 ))}
               </View>
             )}

@@ -82,8 +82,7 @@ export default function AppText({
         align !== undefined && { textAlign: align },
         style,
       ]}
-      {...rest}
-    >
+      {...rest}>
       {children}
     </Text>
   );

@@ -10,15 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import ToastRoot from 'react-native-toast-message';
 import { getAuthErrorMessage, sendPasswordResetEmail } from '~/utils/auth';
-import {
-  AppText,
-  AppInput,
-  AppButton,
-  toast,
-  colors,
-  spacing,
-  radius,
-} from '~/components/ds';
+import { AppText, AppInput, AppButton, toast, colors, spacing, radius } from '~/components/ds';
 import { toastConfig } from '~/components/ds/feedback/ToastConfig';
 
 interface ForgotPasswordModalProps {
@@ -26,10 +18,7 @@ interface ForgotPasswordModalProps {
   onClose: () => void;
 }
 
-export default function ForgotPasswordModal({
-  visible,
-  onClose,
-}: ForgotPasswordModalProps) {
+export default function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -79,12 +68,10 @@ export default function ForgotPasswordModal({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
+      onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+        style={styles.container}>
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
@@ -93,16 +80,14 @@ export default function ForgotPasswordModal({
               style={styles.closeButton}
               onPress={handleClose}
               disabled={loading}
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               <Ionicons name="close" size={28} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           {/* Descripción */}
           <AppText variant="body" color={colors.text.secondary} style={styles.description}>
-            Ingresa tu email y te enviaremos instrucciones para restablecer tu
-            contraseña.
+            Ingresa tu email y te enviaremos instrucciones para restablecer tu contraseña.
           </AppText>
 
           {/* Form */}
@@ -189,4 +174,3 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
 });
-

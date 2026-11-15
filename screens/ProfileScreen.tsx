@@ -67,9 +67,10 @@ const SettingsRow: React.FC<SettingsRowProps> = ({ title, onPress, isLast = fals
   <TouchableOpacity
     style={[styles.settingsRow, isLast && styles.settingsRowLast]}
     onPress={onPress}
-    activeOpacity={0.7}
-  >
-    <AppText variant="body" color={color || colors.text.primary}>{title}</AppText>
+    activeOpacity={0.7}>
+    <AppText variant="body" color={color || colors.text.primary}>
+      {title}
+    </AppText>
     <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
   </TouchableOpacity>
 );
@@ -91,9 +92,13 @@ const SettingsToggleRow: React.FC<SettingsToggleRowProps> = ({
 }) => (
   <View style={[styles.settingsRow, isLast && styles.settingsRowLast]}>
     <View style={styles.settingsToggleText}>
-      <AppText variant="body" color={colors.text.primary}>{title}</AppText>
+      <AppText variant="body" color={colors.text.primary}>
+        {title}
+      </AppText>
       {subtitle && (
-        <AppText variant="caption" color={colors.text.secondary}>{subtitle}</AppText>
+        <AppText variant="caption" color={colors.text.secondary}>
+          {subtitle}
+        </AppText>
       )}
     </View>
     <Switch
@@ -103,7 +108,6 @@ const SettingsToggleRow: React.FC<SettingsToggleRowProps> = ({
     />
   </View>
 );
-
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -127,7 +131,9 @@ export default function ProfileScreen() {
   const toggleShowTestBars = useTestBarsVisibilityStore((state) => state.toggleShowTestBars);
 
   // Preferencia (para todos los usuarios) de mostrar bares de apuestas deportivas
-  const setBettingBarsShowValue = useBettingBarsVisibilityStore((state) => state.setShowBettingBars);
+  const setBettingBarsShowValue = useBettingBarsVisibilityStore(
+    (state) => state.setShowBettingBars
+  );
 
   // All users are PRO; no subscription gating
 
@@ -140,12 +146,30 @@ export default function ProfileScreen() {
       { count: ticketsCount },
       { count: reviewReportsCount },
     ] = await Promise.all([
-      supabase.from('bar_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('bar_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('bars_scraped').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('bars').select('id', { count: 'exact', head: true }).eq('verification_status', 'pending'),
-      supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
-      supabase.from('review_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase
+        .from('bar_reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+      supabase
+        .from('bar_claims')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+      supabase
+        .from('bars_scraped')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+      supabase
+        .from('bars')
+        .select('id', { count: 'exact', head: true })
+        .eq('verification_status', 'pending'),
+      supabase
+        .from('support_tickets')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'open'),
+      supabase
+        .from('review_reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending'),
     ]);
     setPendingReviewReportsCount(reviewReportsCount || 0);
     setPendingReportsCount(reportsCount || 0);
@@ -156,7 +180,10 @@ export default function ProfileScreen() {
 
   const fetchUserProfile = useCallback(async () => {
     try {
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser();
 
       if (authUser?.is_anonymous) {
         setIsGuestUser(true);
@@ -173,7 +200,9 @@ export default function ProfileScreen() {
       // Try to get additional profile data from users table
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select('full_name, username, profile_image_url, bar_id, is_super_user, favorite_team_id, favorite_team:teams!favorite_team_id(id, name, logo_url), match_notifications_enabled, is_adult_confirmed, show_betting_bars')
+        .select(
+          'full_name, username, profile_image_url, bar_id, is_super_user, favorite_team_id, favorite_team:teams!favorite_team_id(id, name, logo_url), match_notifications_enabled, is_adult_confirmed, show_betting_bars'
+        )
         .eq('id', authUser.id)
         .single();
 
@@ -216,9 +245,9 @@ export default function ProfileScreen() {
         verification_notes: barData.verification_notes ?? null,
         image_url:
           barData.bar_images && barData.bar_images.length > 0
-            ? barData.bar_images
-                .sort((a: any, b: any) => (a.image_order || 0) - (b.image_order || 0))[0]
-                ?.image_url
+            ? barData.bar_images.sort(
+                (a: any, b: any) => (a.image_order || 0) - (b.image_order || 0)
+              )[0]?.image_url
             : undefined,
       });
 
@@ -233,7 +262,7 @@ export default function ProfileScreen() {
             verification_status,
             verification_notes,
             bar_images(image_url, image_order)
-          `,
+          `
           )
           .eq('id', profileData.bar_id)
           .single();
@@ -256,7 +285,7 @@ export default function ProfileScreen() {
             verification_status,
             verification_notes,
             bar_images(image_url, image_order)
-          `,
+          `
           )
           .eq('owner_id', authUser.id)
           .order('created_at', { ascending: false })
@@ -270,15 +299,14 @@ export default function ProfileScreen() {
       }
 
       setUserBars(barsToShow);
-          
+
       // Plan info (si hay bar)
       if (barsToShow.length > 0) {
         await getBarPlanInfo(barsToShow[0].id);
-          setPlanName('Pro');
+        setPlanName('Pro');
       } else {
         setPlanName('No asignado');
       }
-
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
     } finally {
@@ -287,30 +315,26 @@ export default function ProfileScreen() {
   }, [router, fetchAdminCounts]);
 
   const handleLogout = useCallback(async () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
+    Alert.alert('Cerrar Sesión', '¿Estás seguro de que quieres cerrar sesión?', [
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+      {
+        text: 'Cerrar Sesión',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { error } = await signOut();
+            if (error) throw error;
+            router.replace('/');
+          } catch (error) {
+            console.error('Error signing out:', error);
+            Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
+          }
         },
-        {
-          text: 'Cerrar Sesión',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await signOut();
-              if (error) throw error;
-              router.replace('/');
-            } catch (error) {
-              console.error('Error signing out:', error);
-              Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   }, [router]);
 
   // Borrado de cuenta accesible directamente desde Perfil (Apple 5.1.1(v) / Google Play)
@@ -335,9 +359,7 @@ export default function ProfileScreen() {
       try {
         await syncMatchNotificationsToggle(user.id, value);
       } catch (error) {
-        setUser((prev) =>
-          prev ? { ...prev, match_notifications_enabled: previousValue } : prev
-        );
+        setUser((prev) => (prev ? { ...prev, match_notifications_enabled: previousValue } : prev));
         toast.supabaseError(error, 'No se pudo actualizar la preferencia');
       }
     },
@@ -365,7 +387,11 @@ export default function ProfileScreen() {
     (result: { isAdultConfirmed: boolean; showBettingBars: boolean }) => {
       setUser((prev) =>
         prev
-          ? { ...prev, is_adult_confirmed: result.isAdultConfirmed, show_betting_bars: result.showBettingBars }
+          ? {
+              ...prev,
+              is_adult_confirmed: result.isAdultConfirmed,
+              show_betting_bars: result.showBettingBars,
+            }
           : prev
       );
     },
@@ -385,13 +411,16 @@ export default function ProfileScreen() {
   }, [router]);
 
   const handlePrivacyPolicy = useCallback(() => {
-    WebBrowser.openBrowserAsync('https://shared-orange-c4f.notion.site/MatchMap-Privacy-Policy-2fdfe32774b580e4b19ae0b7898c1ce8');
+    WebBrowser.openBrowserAsync(
+      'https://shared-orange-c4f.notion.site/MatchMap-Privacy-Policy-2fdfe32774b580e4b19ae0b7898c1ce8'
+    );
   }, []);
 
   const handleTermsOfService = useCallback(() => {
-    WebBrowser.openBrowserAsync('https://shared-orange-c4f.notion.site/MatchMap-Terms-of-Service-32cfe32774b580fe8ad4d06d0ec552ae');
+    WebBrowser.openBrowserAsync(
+      'https://shared-orange-c4f.notion.site/MatchMap-Terms-of-Service-32cfe32774b580fe8ad4d06d0ec552ae'
+    );
   }, []);
-
 
   const handleAddBar = useCallback(async () => {
     const isGuest = await getIsGuest();
@@ -406,9 +435,12 @@ export default function ProfileScreen() {
     router.push('/register-bar/step1?mode=auto_pre_register' as any);
   }, [router]);
 
-  const handleViewBarProfile = useCallback((barId: string) => {
-    router.push(`/bar-profile/${barId}` as any);
-  }, [router]);
+  const handleViewBarProfile = useCallback(
+    (barId: string) => {
+      router.push(`/bar-profile/${barId}` as any);
+    },
+    [router]
+  );
 
   useEffect(() => {
     fetchUserProfile();
@@ -437,19 +469,36 @@ export default function ProfileScreen() {
   if (isGuestUser) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xxxl }}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: spacing.xxxl,
+          }}>
           <Ionicons name="person-circle-outline" size={80} color={colors.text.muted} />
           <AppText variant="title" align="center" style={{ marginTop: spacing.xl }}>
             Inicia sesión para ver tu perfil
           </AppText>
-          <AppText variant="body" color={colors.text.secondary} align="center" style={{ marginTop: spacing.sm }}>
+          <AppText
+            variant="body"
+            color={colors.text.secondary}
+            align="center"
+            style={{ marginTop: spacing.sm }}>
             Necesitas una cuenta para acceder a tu perfil y gestionar tus bares.
           </AppText>
           <TouchableOpacity
-            style={{ marginTop: spacing.xxl, backgroundColor: colors.brand.primary, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md, borderRadius: radius.pill }}
-            onPress={() => router.replace('/')}
-          >
-            <AppText variant="button" color={colors.text.light}>Iniciar sesión</AppText>
+            style={{
+              marginTop: spacing.xxl,
+              backgroundColor: colors.brand.primary,
+              paddingHorizontal: spacing.xxl,
+              paddingVertical: spacing.md,
+              borderRadius: radius.pill,
+            }}
+            onPress={() => router.replace('/')}>
+            <AppText variant="button" color={colors.text.light}>
+              Iniciar sesión
+            </AppText>
           </TouchableOpacity>
         </View>
         <BottomTabBar />
@@ -459,26 +508,29 @@ export default function ProfileScreen() {
 
   const displayName = user?.full_name || user?.username || 'Usuario';
   const displayHandle = user?.username ? `@${user.username}` : user?.email || '';
-  
+
   // Default profile image URL when user doesn't have one
   const getProfileImageUrl = () => {
     if (user?.profile_image_url) {
       return user.profile_image_url;
     }
     // Default avatar URL - you can replace this with your preferred default image
-    return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=2A3A4A&color=A3B3CC&size=240';
+    return (
+      'https://ui-avatars.com/api/?name=' +
+      encodeURIComponent(displayName) +
+      '&background=2A3A4A&color=A3B3CC&size=240'
+    );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="always"
         keyboardShouldPersistTaps="handled"
-        scrollIndicatorInsets={{ bottom: 100 }}
-      >
+        scrollIndicatorInsets={{ bottom: 100 }}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -499,32 +551,37 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.favoriteTeamBadge}
               onPress={() => setShowTeamPicker(true)}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
               {user?.favorite_team?.logo_url ? (
-                <Image source={{ uri: user.favorite_team.logo_url }} style={styles.favoriteTeamBadgeImage} />
+                <Image
+                  source={{ uri: user.favorite_team.logo_url }}
+                  style={styles.favoriteTeamBadgeImage}
+                />
               ) : (
                 <Ionicons name="add" size={18} color={colors.text.secondary} />
               )}
             </TouchableOpacity>
           </View>
           <AppText variant="h2">{displayName}</AppText>
-          <AppText variant="body" color={colors.text.secondary} style={styles.userHandleSpacing}>{displayHandle}</AppText>
+          <AppText variant="body" color={colors.text.secondary} style={styles.userHandleSpacing}>
+            {displayHandle}
+          </AppText>
         </View>
 
         <AdBanner placement="profile" />
 
         {/* Bar Management Section */}
         <View style={styles.section}>
-          <AppText variant="title" style={styles.sectionTitleSpacing}>Gestiona tu Bar</AppText>
+          <AppText variant="title" style={styles.sectionTitleSpacing}>
+            Gestiona tu Bar
+          </AppText>
           {userBars.length > 0 ? (
             <View>
               {userBars.map((bar) => (
                 <TouchableOpacity
                   key={bar.id}
                   style={styles.barCard}
-                  onPress={() => handleViewBarProfile(bar.id)}
-                >
+                  onPress={() => handleViewBarProfile(bar.id)}>
                   <View style={styles.barImageContainer}>
                     {bar.image_url ? (
                       <Image source={{ uri: bar.image_url }} style={styles.barImage} />
@@ -550,8 +607,7 @@ export default function ProfileScreen() {
                               : bar.verification_status === 'rejected'
                                 ? styles.verificationPillRejected
                                 : styles.verificationPillPending,
-                          ]}
-                        >
+                          ]}>
                           <Ionicons
                             name={
                               bar.verification_status === 'approved'
@@ -578,8 +634,7 @@ export default function ProfileScreen() {
                                   ? colors.status.error
                                   : colors.status.boost
                             }
-                            style={styles.verificationPillTextBold}
-                          >
+                            style={styles.verificationPillTextBold}>
                             {bar.verification_status === 'approved'
                               ? 'Verificado'
                               : bar.verification_status === 'rejected'
@@ -591,26 +646,43 @@ export default function ProfileScreen() {
                     </View>
 
                     {bar.verification_status === 'pending' ? (
-                      <AppText variant="caption" color={colors.text.muted} style={styles.verificationHintSpacing}>
+                      <AppText
+                        variant="caption"
+                        color={colors.text.muted}
+                        style={styles.verificationHintSpacing}>
                         Tu bar aparecerá en el mapa cuando lo aprobemos.
                       </AppText>
                     ) : null}
 
                     {bar.verification_status === 'rejected' ? (
-                      <AppText variant="caption" color={colors.text.muted} style={styles.verificationHintSpacing}>
+                      <AppText
+                        variant="caption"
+                        color={colors.text.muted}
+                        style={styles.verificationHintSpacing}>
                         Revisa el motivo y actualiza la información.
                       </AppText>
                     ) : null}
 
                     {bar.verification_status === 'rejected' && bar.verification_notes ? (
                       <View style={styles.verificationNotesBox}>
-                        <Ionicons name="information-circle-outline" size={14} color={colors.text.secondary} />
-                        <AppText variant="caption" color={colors.text.secondary} style={styles.verificationNotesFlex}>{bar.verification_notes}</AppText>
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={14}
+                          color={colors.text.secondary}
+                        />
+                        <AppText
+                          variant="caption"
+                          color={colors.text.secondary}
+                          style={styles.verificationNotesFlex}>
+                          {bar.verification_notes}
+                        </AppText>
                       </View>
                     ) : null}
 
                     <View style={styles.viewProfileButton}>
-                      <AppText variant="label" color={colors.brand.primary}>Ver Perfil del Bar</AppText>
+                      <AppText variant="label" color={colors.brand.primary}>
+                        Ver Perfil del Bar
+                      </AppText>
                       <Ionicons name="chevron-forward" size={16} color={colors.brand.primary} />
                     </View>
                   </View>
@@ -620,7 +692,12 @@ export default function ProfileScreen() {
           ) : (
             <TouchableOpacity style={styles.addBarButton} onPress={handleAddBar}>
               <Ionicons name="add-circle-outline" size={24} color={colors.text.primary} />
-              <AppText variant="body" color={colors.text.primary} style={styles.addBarButtonTextBold}>Añadir Bar</AppText>
+              <AppText
+                variant="body"
+                color={colors.text.primary}
+                style={styles.addBarButtonTextBold}>
+                Añadir Bar
+              </AppText>
             </TouchableOpacity>
           )}
         </View>
@@ -628,27 +705,37 @@ export default function ProfileScreen() {
         {/* Super User - Admin Dashboard */}
         {user?.is_super_user && (
           <View style={styles.section}>
-            <AppText variant="title" style={styles.sectionTitleSpacing}>Super Usuario</AppText>
+            <AppText variant="title" style={styles.sectionTitleSpacing}>
+              Super Usuario
+            </AppText>
 
             {/* Gestión de Bares */}
             <View style={styles.adminCategory}>
-              <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
+              <AppText
+                variant="subtitle"
+                color={colors.text.secondary}
+                style={styles.adminCategoryTitle}>
                 Gestión de Bares
               </AppText>
 
               <TouchableOpacity
                 style={styles.adminButton}
                 onPress={handleColdRegisterBar}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View style={[styles.adminButtonIcon, styles.adminButtonIconBlue]}>
                   <Ionicons name="business-outline" size={24} color={colors.brand.primary} />
                 </View>
                 <View style={styles.adminButtonContent}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                  <AppText
+                    variant="body"
+                    color={colors.text.primary}
+                    style={styles.adminButtonTitle}>
                     Registrar Bar en Frío
                   </AppText>
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                  <AppText
+                    variant="caption"
+                    color={colors.text.secondary}
+                    style={styles.adminButtonSubtitle}>
                     Pre-registra un bar para que su propietario lo reclame después
                   </AppText>
                 </View>
@@ -658,22 +745,34 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.adminButton}
                 onPress={() => router.push('/bar-verification-admin' as any)}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View style={[styles.adminButtonIcon, styles.adminButtonIconGreen]}>
-                  <Ionicons name="shield-checkmark-outline" size={24} color={colors.status.success} />
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={24}
+                    color={colors.status.success}
+                  />
                 </View>
                 <View style={styles.adminButtonContent}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                  <AppText
+                    variant="body"
+                    color={colors.text.primary}
+                    style={styles.adminButtonTitle}>
                     Verificar Bares
                   </AppText>
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                  <AppText
+                    variant="caption"
+                    color={colors.text.secondary}
+                    style={styles.adminButtonSubtitle}>
                     Aprobar o rechazar bares pendientes de verificación
                   </AppText>
                 </View>
                 {pendingVerificationCount > 0 && (
                   <View style={styles.adminBadge}>
-                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                    <AppText
+                      variant="caption"
+                      color={colors.text.primary}
+                      style={styles.adminBadgeText}>
                       {pendingVerificationCount}
                     </AppText>
                   </View>
@@ -684,22 +783,30 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.adminButton}
                 onPress={() => router.push('/bar-reports-admin' as any)}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View style={[styles.adminButtonIcon, styles.adminButtonIconRed]}>
                   <Ionicons name="flag-outline" size={24} color={colors.status.error} />
                 </View>
                 <View style={styles.adminButtonContent}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                  <AppText
+                    variant="body"
+                    color={colors.text.primary}
+                    style={styles.adminButtonTitle}>
                     Reportes de bares
                   </AppText>
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                  <AppText
+                    variant="caption"
+                    color={colors.text.secondary}
+                    style={styles.adminButtonSubtitle}>
                     Información incorrecta reportada por usuarios
                   </AppText>
                 </View>
                 {pendingReportsCount > 0 && (
                   <View style={styles.adminBadge}>
-                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                    <AppText
+                      variant="caption"
+                      color={colors.text.primary}
+                      style={styles.adminBadgeText}>
                       {pendingReportsCount}
                     </AppText>
                   </View>
@@ -710,22 +817,34 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.adminButton}
                 onPress={() => router.push('/review-reports-admin' as any)}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View style={[styles.adminButtonIcon, styles.adminButtonIconRed]}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={24} color={colors.status.error} />
+                  <Ionicons
+                    name="chatbubble-ellipses-outline"
+                    size={24}
+                    color={colors.status.error}
+                  />
                 </View>
                 <View style={styles.adminButtonContent}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                  <AppText
+                    variant="body"
+                    color={colors.text.primary}
+                    style={styles.adminButtonTitle}>
                     Reseñas reportadas
                   </AppText>
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                  <AppText
+                    variant="caption"
+                    color={colors.text.secondary}
+                    style={styles.adminButtonSubtitle}>
                     Reseñas ofensivas reportadas por usuarios (revisar en 24 h)
                   </AppText>
                 </View>
                 {pendingReviewReportsCount > 0 && (
                   <View style={styles.adminBadge}>
-                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                    <AppText
+                      variant="caption"
+                      color={colors.text.primary}
+                      style={styles.adminBadgeText}>
                       {pendingReviewReportsCount}
                     </AppText>
                   </View>
@@ -736,22 +855,30 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.adminButton}
                 onPress={() => router.push('/bar-claims-admin' as any)}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View style={[styles.adminButtonIcon, styles.adminButtonIconBlue]}>
                   <Ionicons name="key-outline" size={24} color={colors.brand.primary} />
                 </View>
                 <View style={styles.adminButtonContent}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                  <AppText
+                    variant="body"
+                    color={colors.text.primary}
+                    style={styles.adminButtonTitle}>
                     Solicitudes de reclamo
                   </AppText>
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                  <AppText
+                    variant="caption"
+                    color={colors.text.secondary}
+                    style={styles.adminButtonSubtitle}>
                     Propietarios que reclaman un bar sin dueño
                   </AppText>
                 </View>
                 {pendingClaimsCount > 0 && (
                   <View style={styles.adminBadge}>
-                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                    <AppText
+                      variant="caption"
+                      color={colors.text.primary}
+                      style={styles.adminBadgeText}>
                       {pendingClaimsCount}
                     </AppText>
                   </View>
@@ -762,29 +889,40 @@ export default function ProfileScreen() {
 
             {/* Soporte */}
             <View style={styles.adminCategory}>
-              <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
+              <AppText
+                variant="subtitle"
+                color={colors.text.secondary}
+                style={styles.adminCategoryTitle}>
                 Soporte
               </AppText>
 
               <TouchableOpacity
                 style={styles.adminButton}
                 onPress={() => router.push('/support-admin' as any)}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View style={[styles.adminButtonIcon, styles.adminButtonIconOrange]}>
                   <Ionicons name="chatbubbles-outline" size={24} color={colors.status.warning} />
                 </View>
                 <View style={styles.adminButtonContent}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                  <AppText
+                    variant="body"
+                    color={colors.text.primary}
+                    style={styles.adminButtonTitle}>
                     Gestionar Tickets
                   </AppText>
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                  <AppText
+                    variant="caption"
+                    color={colors.text.secondary}
+                    style={styles.adminButtonSubtitle}>
                     Ver y responder tickets de usuarios
                   </AppText>
                 </View>
                 {pendingTicketsCount > 0 && (
                   <View style={styles.adminBadge}>
-                    <AppText variant="caption" color={colors.text.primary} style={styles.adminBadgeText}>
+                    <AppText
+                      variant="caption"
+                      color={colors.text.primary}
+                      style={styles.adminBadgeText}>
                       {pendingTicketsCount}
                     </AppText>
                   </View>
@@ -795,23 +933,31 @@ export default function ProfileScreen() {
 
             {/* Automatización */}
             <View style={styles.adminCategory}>
-              <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
+              <AppText
+                variant="subtitle"
+                color={colors.text.secondary}
+                style={styles.adminCategoryTitle}>
                 Automatización
               </AppText>
 
               <TouchableOpacity
                 style={styles.adminButton}
                 onPress={() => router.push('/admin-select-bar-auto-broadcasts' as any)}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View style={[styles.adminButtonIcon, styles.adminButtonIconPurple]}>
                   <Ionicons name="settings-outline" size={24} color={colors.brand.link} />
                 </View>
                 <View style={styles.adminButtonContent}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                  <AppText
+                    variant="body"
+                    color={colors.text.primary}
+                    style={styles.adminButtonTitle}>
                     Automatizar Partidos
                   </AppText>
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                  <AppText
+                    variant="caption"
+                    color={colors.text.secondary}
+                    style={styles.adminButtonSubtitle}>
                     Configurar automatización de partidos para cualquier bar
                   </AppText>
                 </View>
@@ -821,16 +967,21 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.adminButton}
                 onPress={() => router.push('/admin-gift-boost' as any)}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View style={[styles.adminButtonIcon, styles.adminButtonIconBoost]}>
                   <Ionicons name="flash-outline" size={24} color={colors.status.boost} />
                 </View>
                 <View style={styles.adminButtonContent}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.adminButtonTitle}>
+                  <AppText
+                    variant="body"
+                    color={colors.text.primary}
+                    style={styles.adminButtonTitle}>
                     Regalar Boost
                   </AppText>
-                  <AppText variant="caption" color={colors.text.secondary} style={styles.adminButtonSubtitle}>
+                  <AppText
+                    variant="caption"
+                    color={colors.text.secondary}
+                    style={styles.adminButtonSubtitle}>
                     Activar boost de visibilidad en el mapa para cualquier bar
                   </AppText>
                 </View>
@@ -840,7 +991,10 @@ export default function ProfileScreen() {
 
             {/* Depuración */}
             <View style={styles.adminCategory}>
-              <AppText variant="subtitle" color={colors.text.secondary} style={styles.adminCategoryTitle}>
+              <AppText
+                variant="subtitle"
+                color={colors.text.secondary}
+                style={styles.adminCategoryTitle}>
                 Depuración
               </AppText>
               <View style={styles.settingsContainer}>
@@ -859,10 +1013,11 @@ export default function ProfileScreen() {
         {/* Plan Information Section */}
         {/* Plan section removed: all users are PRO now */}
 
-
         {/* Account Settings Section */}
         <View style={styles.section}>
-          <AppText variant="title" style={styles.sectionTitleSpacing}>Configuración de Cuenta</AppText>
+          <AppText variant="title" style={styles.sectionTitleSpacing}>
+            Configuración de Cuenta
+          </AppText>
           <View style={styles.settingsContainer}>
             <SettingsRow title="Editar Perfil" onPress={handleEditProfile} />
             <SettingsRow title="Preguntas Frecuentes" onPress={handlePrivacy} />
@@ -1412,4 +1567,4 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 16,
   },
-}); 
+});
