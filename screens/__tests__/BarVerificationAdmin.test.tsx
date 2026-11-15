@@ -3,7 +3,6 @@ import { Alert } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 jest.mock('~/utils/supabase');
-jest.mock('@react-navigation/native', () => ({ useFocusEffect: jest.fn() }));
 jest.mock('~/services/bars', () => ({ approveBars: jest.fn() }));
 
 import { createQueryBuilderMock } from '../../test-utils/mockSupabase';
