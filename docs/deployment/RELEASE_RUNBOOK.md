@@ -76,6 +76,11 @@ eas whoami
 - [ ] Si se han cambiado dependencias nativas desde el último build: comprobar `npx expo install --check`.
 - [ ] Subir la versión de marketing si es una release nueva para el usuario: `expo.version` en `app.json` + `version` en `package.json` (semver; el número de build lo pone EAS).
 - [ ] Criterios Go/No-Go de la auditoría (`docs/audit/README.md`, G1–G10) para la **primera** salida a producción.
+- [ ] **API-Football con plan de pago** (solo la primera vez; ver §9). El plan Free no da la temporada en curso y `sync-football` falla en todas las competiciones. Tras pagar el plan en dashboard.api-football.com (misma cuenta, la clave `API_FOOTBALL_KEY` no cambia):
+  1. Lanzar el sync a mano desde el SQL Editor: `select public.invoke_cron_function('sync-football', 150000);` (devuelve un `id`).
+  2. Al cabo de 1–2 min: `select status_code, left(content, 300) from net._http_response where id = <id>;` → esperado `200` y `"success":true`.
+  3. Comprobar que entran partidos nuevos: `select max(created_at) from public.matches;` (fecha de hoy).
+  A partir de ahí el cron `sync-football-daily` (06:00 UTC) sigue solo.
 
 ### 3.2 Build
 ```bash
@@ -192,3 +197,7 @@ Estado verificado de cada credencial: ver §9.
 | 2026-10-15 | Credenciales iOS/Android (caducidad, APNs, SHA-1 del keystore) | ⏳ pendiente de verificar con `eas credentials` |
 | 2026-10-15 | Clave de API de ASC y cuenta de servicio de Play en EAS | ⏳ pendiente (hacen falta los ficheros) |
 | 2026-10-15 | Build de producción de `main` + TestFlight + prueba interna de Play | ⏳ pendiente |
+| 2026-11-15 | Supabase | ✅ plan Pro (se quita el 402 por cuota de Storage). Cerebro movido a la org Free «Roger Personal» para pagar solo los 25 $ |
+| 2026-11-15 | Migraciones `20261015130000` y `20261020000000` en prod | ✅ aplicadas |
+| 2026-11-15 | Edge functions (5) | ✅ redesplegadas desde `main` a1bff07 |
+| 2026-11-15 | API-Football | ⏳ **plan Free**: sin acceso a la temporada 2026, `sync-football` devuelve 502. La app sigue funcionando con los partidos ya cargados (último alta 2026-10-13; 890 futuros), pero no entran partidos nuevos ni cambios de horario. **Pagar el plan Pro justo antes de publicar** y seguir §3.1 |
