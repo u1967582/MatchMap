@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import WelcomeScreen from '~/screens/WelcomeScreen';
+import { useObserve } from 'expo-observe';
 import { supabase } from '~/utils/supabase';
 import { signInWithGoogle, signInWithApple, formatAuthErrorAlert } from '~/utils/auth';
 import LoginModal from './(auth)/components/LoginModal';
@@ -19,6 +20,12 @@ export default function Home() {
   useEffect(() => {
     checkAuthAndRedirect();
   }, []);
+
+  // Pantalla de entrada sin sesión: es interactiva cuando ya se ve la bienvenida.
+  const { markInteractive } = useObserve();
+  useEffect(() => {
+    if (!isCheckingAuth) markInteractive();
+  }, [isCheckingAuth, markInteractive]);
 
   const checkAuthAndRedirect = async () => {
     try {

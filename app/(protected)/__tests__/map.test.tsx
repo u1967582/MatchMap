@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { useObserve } from 'expo-observe';
 import { usePendingNotificationStore } from '~/stores/pendingNotificationStore';
 import MapScreen from '~/app/(protected)/map';
 
@@ -51,5 +52,14 @@ describe('MapScreen: partido de una notificación (06-H5)', () => {
     });
     expect(usePendingNotificationStore.getState().matchId).toBeNull();
     expect(lastMatchId()).toBeUndefined();
+  });
+});
+
+describe('MapScreen: EAS Observe (D4)', () => {
+  it('marca la pantalla como interactiva al montar', async () => {
+    const { markInteractive } = useObserve() as unknown as { markInteractive: jest.Mock };
+    markInteractive.mockClear();
+    await render(<MapScreen />);
+    expect(markInteractive).toHaveBeenCalledTimes(1);
   });
 });
